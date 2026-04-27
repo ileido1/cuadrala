@@ -1,0 +1,223 @@
+# TDD Guidelines — Test-Driven Development
+
+## Ciclo TDD (Red-Green-Refactor)
+
+```
+1. 🔴 RED: Escribir test que FALLE
+   - El test define el comportamiento esperado
+   - Ejecutar test y confirmar que falla
+   
+2. 🟢 GREEN: Escribir código MÍNIMO para pasar
+   - Solo el código necesario para pasar el test
+   - No optimizar, no agregar features extra
+   
+3. 🔵 REFACTOR: Mejorar sin cambiar comportamiento
+   - Limpiar código (DRY, nombres, estructura)
+   - Los tests deben seguir pasando
+```
+
+## Enfoque: Tests de Integración con BD Real
+
+Este proyecto usa **tests de integración** contra la base de datos real (de test).
+
+### Estructura de Tests de Integración
+
+```javascript
+describe('saveToDirectorySV - Integration', () => {
+  let dbTransaction;
+
+  // 1. Setup: Conectar a BD de test
+  beforeAll(async () => {
+    await connectTestDatabase();
+  });
+
+  // 2. Cada test inicia una transacción
+  beforeEach(async () => {
+    dbTransaction = await CMM_UTILS_SV.CmmNewDatabaseTransactionSV(mockReq, 'PG');
+  });
+
+  // 3. Rollback después de cada test (limpia datos)
+  afterEach(async () => {
+    if (dbTransaction) await dbTransaction.rollback();
+  });
+
+  // 4. Cerrar conexión al final
+  afterAll(async () => {
+    await closeTestDatabase();
+  });
+
+  it('should save beneficiary to database', async () => {
+    // Arrange
+    const PARAMS = {
+      idBank: 1,
+      idMember: '123',
+      idChannel: 1,
+      nickname: 'Test',
+      phoneNumber: '4121234567',
+      docId: 'V12345678',
+    };
+
+    // Act
+    const RESULT = await saveToDirectorySV(dbTransaction, PARAMS);
+
+    // Assert - Verificar contra BD real
+    expect(RESULT.id_bank_mobile).toBeDefined();
+    
+    // Verificar datos guardados
+    const SAVED = await BANK_MOBILE_MODEL.findOne({
+      where: { id_bank_mobile: RESULT.id_bank_mobile },
+      transaction: dbTransaction,
+    });
+    expect(SAVED.phone_number).toBe('4121234567');
+    expect(SAVED.nickname).toBe('Test');
+  });
+});
+```
+
+### Ventajas del Enfoque con BD Real
+
+1. **Realista**: Prueba la integración completa
+2. **Sin cambios al código**: No requiere inyección de dependencias
+3. **Detecta problemas reales**: Constraints, índices, triggers
+4. **Transacciones reales**: Rollback limpia automáticamente
+
+## Estructura de Tests
+
+### Patrón AAA (Arrange-Act-Assert)
+
+```javascript
+it('should return best match when exact amount exists', async () => {
+  // Arrange - Preparar datos de prueba
+  const PAYMENTS = [{ amount: 100 }, { amount: 200 }];
+  const TARGET_AMOUNT = 100;
+  
+  // Act - Ejecutar la función
+  const RESULT = findBestMatchSV(PAYMENTS, TARGET_AMOUNT);
+  
+  // Assert - Verificar resultado
+  expect(RESULT).toEqual({ amount: 100 });
+});
+```
+
+### Naming de Tests
+
+```javascript
+// Formato: should [comportamiento] when [condición]
+it('should return null when payment array is empty', () => {});
+it('should throw CmmErrorClass when bank not allowed', () => {});
+it('should save beneficiary when data is valid', async () => {});
+```
+
+## Tests para Funciones Puras (Sin BD)
+
+Las funciones puras se pueden testear directamente sin BD:
+
+```javascript
+describe('normalizePhoneNumberSV', () => {
+  it('should remove leading zero', () => {
+    expect(normalizePhoneNumberSV('04121234567')).toBe('4121234567');
+  });
+
+  it('should return same number if no leading zero', () => {
+    expect(normalizePhoneNumberSV('4121234567')).toBe('4121234567');
+  });
+
+  it('should return input if null or undefined', () => {
+    expect(normalizePhoneNumberSV(null)).toBe(null);
+    expect(normalizePhoneNumberSV(undefined)).toBe(undefined);
+  });
+});
+```
+
+### Servicios con Funciones Puras (testeables sin BD)
+
+| Servicio | Funciones Puras |
+|----------|-----------------|
+| `payment_matcher` | Todas (7 funciones) |
+| `payment_data` | Todas (4 funciones) |
+| `bank_api` | Todas (4 funciones) |
+| `load_notif` | Casi todas (10 funciones) |
+| `directory` | `normalizePhoneNumber`, `buildBeneficiaryData` |
+| `affiliate` | `extractUserData`, `canAffiliateToBank`, `buildAffiliateData` |
+| `media` | `getSenderPhoneNumber`, `buildMediaDestination`, `getTransportMethods`, `buildMediaBody` |
+| `aba_resolver` | 9 de 13 funciones |
+
+## Cobertura de Tests
+
+### Casos a Cubrir
+
+1. **Happy path**: Flujo normal exitoso
+2. **Edge cases**: null, undefined, [], '', 0
+3. **Error cases**: Excepciones esperadas
+4. **Boundary values**: Límites de rangos
+
+```javascript
+describe('findBestMatchSV', () => {
+  // Happy path
+  it('should return exact match when exists', () => {});
+  
+  // Edge cases
+  it('should return null when payments is empty', () => {});
+  it('should return null when payments is null', () => {});
+  
+  // Boundary
+  it('should handle amount of 0', () => {});
+  it('should handle very large amounts', () => {});
+});
+```
+
+## Anti-patrones
+
+### ❌ Test After (No TDD)
+Escribir código completo y luego tests "para cumplir".
+
+### ❌ Tests Frágiles
+Tests que dependen de implementación interna, no de comportamiento.
+
+### ❌ God Tests
+Un test que verifica múltiples comportamientos.
+
+### ❌ Ignorar Tests Rojos
+Comentar o skip de tests que fallan.
+
+### ❌ No hacer rollback
+Olvidar el rollback deja datos basura en la BD de test.
+
+## Comandos
+
+```bash
+# Ejecutar todos los tests
+npm test
+
+# Ejecutar tests de un módulo
+npm test -- --testPathPattern=payment_matcher
+
+# Ejecutar con coverage
+npm test -- --coverage
+
+# Watch mode (TDD recomendado)
+npm test -- --watch
+```
+
+## Setup de BD de Test
+
+```javascript
+// test/setup.js
+const { Sequelize } = require('sequelize');
+
+const TEST_DB = new Sequelize(process.env.TEST_DATABASE_URL, {
+  logging: false,
+});
+
+module.exports = {
+  connectTestDatabase: async () => {
+    await TEST_DB.authenticate();
+  },
+  closeTestDatabase: async () => {
+    await TEST_DB.close();
+  },
+  getTestTransaction: async () => {
+    return await TEST_DB.transaction();
+  },
+};
+```

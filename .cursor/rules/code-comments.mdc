@@ -1,0 +1,95 @@
+# Code Comments Guidelines
+
+## Regla Principal
+El código DEBE estar bien comentado para facilitar su comprensión y mantenimiento.
+
+## Comentarios Obligatorios
+
+### 1. Comentarios de Sección/Paso
+En funciones largas, usar comentarios numerados que indiquen el flujo:
+```javascript
+// 1. Extraer parámetros
+const { id_member, amount } = _req.body;
+
+// 2. Validar datos de entrada
+validateInputDVAL(id_member, amount);
+
+// 3. Procesar la operación
+const RESULT = await processOperationSV(id_member, amount);
+
+// 4. Enviar respuesta
+CC_RESPONSE.ok200(RESULT);
+```
+
+### 2. Comentarios de Lógica Compleja
+Explicar decisiones de negocio o lógica no obvia:
+```javascript
+// Si el monto es mayor a 1000, aplicar comisión diferenciada
+if (amount > 1000) {
+  commission = amount * 0.02;
+}
+
+// Calcular profits solo si hay distribución configurada y no es devolución
+if (FOUNDS_DISTRIBUTION?.length > 0 && !send_bank_mobile) {
+  deliverProfitToParsed = await calculateProfitsService(...);
+}
+```
+
+### 3. Comentarios en Catch Blocks
+Indicar el contexto del error:
+```javascript
+.catch((_error) => {
+  // Error al consultar pagos móviles pendientes
+  throw new CmmErrorClass(__filename, 'COPE001').parseCatch(_error);
+});
+```
+
+## Comentarios Prohibidos
+NO agregar comentarios obvios o redundantes:
+```javascript
+// MAL - Comentario obvio
+const CC_RESPONSE = new CmmHttpRespClass(_req, _res); // Crear respuesta
+
+// MAL - Comentario que repite el código
+i++; // Incrementar i
+
+// MAL - Comentario de importación
+const MODEL = require('./model'); // Importar modelo
+```
+
+## Formato de Comentarios
+
+### Comentarios de Una Línea
+```javascript
+// Texto del comentario
+```
+
+### Comentarios de Bloque (para explicaciones extensas)
+```javascript
+/**
+ * Este proceso realiza X porque:
+ * 1. Razón uno
+ * 2. Razón dos
+ */
+```
+
+### Comentarios JSDoc (para funciones exportadas)
+```javascript
+/**
+ * Procesa un pago móvil y retorna el resultado
+ * @param {Object} _data - Datos del pago
+ * @param {string} _data.idMember - ID del miembro
+ * @param {number} _data.amount - Monto del pago
+ * @returns {Object} Resultado del procesamiento
+ */
+async function processPaymentSV(_data) { ... }
+```
+
+## Idioma
+- Los comentarios DEBEN estar en **ESPAÑOL**
+- Mantener consistencia con el idioma de los mensajes de error/éxito
+
+## Durante Refactoring
+- NUNCA eliminar comentarios existentes que expliquen el flujo
+- Actualizar comentarios si el código cambia
+- Agregar comentarios faltantes si se detectan

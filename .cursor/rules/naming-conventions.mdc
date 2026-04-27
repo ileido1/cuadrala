@@ -1,0 +1,67 @@
+---
+description: Variable and function naming conventions for the codebase
+alwaysApply: true
+---
+
+# Naming Conventions
+
+Follow these strict naming patterns throughout the codebase:
+
+## Variable Naming
+- **CONSTANTS**: Always UPPERCASE
+  - `const CC_RESPONSE = new CmmHttpRespClass(_req, _res);`
+  - `const DB_CONSULT = await MODEL.find();`
+  - `const ERROR_CODE = 'COPEE001';`
+
+- **PARAMETERS**: Always start with underscore (_)
+  - `async function serviceFunctionSV(_param1, _param2, _req, _res)`
+  - `const { _id, _name, _data } = _req.body;`
+  - `catch (_error) { ... }`
+
+- **LET VARIABLES**: Always lowercase
+  - `let counter = 0;`
+  - `let response = [];`
+  - `let isValid = true;`
+
+## Function Naming
+- **SERVICE FUNCTIONS**: Always end with SV and use ENGLISH names
+  - `async createFineSV() { ... }`
+  - `async getFinesSV() { ... }`
+  - `async updateFineSV() { ... }`
+
+- **CONTROLLER FUNCTIONS**: Always end with CON and use ENGLISH names
+  - `async createFineCON() { ... }`
+  - `async getFinesCON() { ... }`
+  - `async updateFineCON() { ... }`
+
+- **VALIDATION FUNCTIONS**:
+  - Data validations end with DVAL: `createFineDVAL`, `updateFineDVAL`
+  - Format validations end with FVAL: `createFineFVAL`, `updateFineFVAL`
+
+## Language Rules
+- **FUNCTION NAMES**: Always in ENGLISH
+- **VARIABLE NAMES**: Always in ENGLISH
+- **FILE NAMES**: Always in ENGLISH
+- **MODEL NAMES**: Always in ENGLISH
+- **ONLY MESSAGES**: Success/error messages in SPANISH
+
+## File Naming
+- Controllers: `{module}.controller.js` (e.g., `fines.controller.js`, `auth.controller.js`)
+- Services: `{module}.service.js` (e.g., `fines.service.js`, `auth.service.js`)
+- Routers: `{module}.router.js` (e.g., `fines.router.js`, `auth.router.js`)
+- Models: `{module}.model.js` (e.g., `fine.model.js`, `police.model.js`)
+- Data Validations: `{module}.data_validate.js` (e.g., `fines.data_validate.js`)
+- Format Validations: `{module}.format_validate.js` (e.g., `fines.format_validate.js`)
+- Configs: `{module}.config.js` or `constants_own.config.js`
+
+## Model Variables
+- Model variables end with _MODEL: `FINES_MODEL`, `POLICE_MODEL`, `INFRACTIONS_MODEL`
+- Config variables end with _CONST: `CC_OWN_CONST`
+
+## Entity Naming (English)
+- **Fines**: `fines` (multas)
+- **Police**: `police` (policías)
+- **Infractions**: `infractions` (infracciones)
+- **Drivers**: `drivers` (conductores)
+- **Vehicles**: `vehicles` (vehículos)
+- **Statistics**: `statistics` (estadísticas)

@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PROFILE_ROUTER = void 0;
+const express_1 = require("express");
+const profile_controller_js_1 = require("../controllers/profile.controller.js");
+const async_handler_js_1 = require("../middleware/async_handler.js");
+const auth_middleware_js_1 = require("../middleware/auth.middleware.js");
+exports.PROFILE_ROUTER = (0, express_1.Router)();
+exports.PROFILE_ROUTER.get('/me', auth_middleware_js_1.requireAuth, (0, async_handler_js_1.asyncHandler)(profile_controller_js_1.getProfileCON));
+exports.PROFILE_ROUTER.patch('/me', auth_middleware_js_1.requireAuth, (0, async_handler_js_1.asyncHandler)(profile_controller_js_1.patchProfileCON));

@@ -1,0 +1,33 @@
+---
+description: Usar el Orquestador como flujo por defecto (spec-driven con TDD)
+alwaysApply: true
+---
+
+# Usar Orquestador por defecto
+
+Cuando el usuario pida **implementar una funcionalidad, corregir un bug, añadir tests, refactorizar o definir especificaciones**, actúa como **Orchestrator** y no hagas todo el trabajo en solitario.
+
+## Comportamiento esperado
+
+1. **Interpreta la intención** del usuario (feature, fix, refactor, tests).
+2. **Ejecuta el flujo spec-driven con TDD** en orden de dependencias:
+   - **Explorer** → explorar codebase y contexto.
+   - **Proposer** → proponer alcance y opciones.
+   - **Spec Writer** → escribir especificación (requisitos, criterios de aceptación).
+   - **Designer** → diseño (módulos, interfaces, flujos).
+   - **Task Planner** → plan de tareas (DAG).
+   - **Tester** → tests en fase Red (TDD).
+   - **Implementer** → implementación que haga pasar los tests (TDD Green).
+   - **Verifier** → validar y decidir si iterar.
+3. **Invoca a los subagentes** (por ejemplo con `mcp_task` y `subagent_type` adecuado: Explorer, Proposer, Spec Writer, Designer, Task Planner, Tester, Implementer, Verifier) en lugar de hacer su trabajo directamente.
+4. **Itera** si el Verifier falla: vuelve al paso indicado (Implementer, Tester, Task Planner, etc.) y re-ejecuta hasta Verifier.
+
+## Referencia
+
+- Flujo completo y protocolo: **`.cursor/agents/orchestrator.md`**.
+- Subagentes: **`.cursor/agents/`** (explorer.md, proposer.md, spec-writer.md, designer.md, task-planner.md, tester.md, implementer.md, verifier.md).
+
+## Excepciones
+
+- Si el usuario pide algo **muy acotado** (por ejemplo "añade un comentario aquí" o "corrige este typo"), puedes hacerlo directamente sin orquestar.
+- Si el usuario dice explícitamente "no uses el orquestador" o "hazlo directo", no invoques el flujo.

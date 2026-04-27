@@ -1,0 +1,297 @@
+// Esquema core Fase 3 — Cuadrala API (SDD mínimo viable)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Enums ---
+
+enum MatchType {
+  AMERICANO
+  REGULAR
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum TournamentStatus {
+  DRAFT
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  WITHDRAWN
+}
+
+enum SubscriptionType {
+  FREE
+  PRO
+}
+
+enum FeeScope {
+  MATCH
+}
+
+enum FeeType {
+  FIXED
+  PERCENTAGE
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  MANUAL
+}
+
+// --- Catálogo multi-deporte (E0) ---
+
+/// Deporte configurable (PADEL, etc.); el producto puede mostrar solo pádel en MVP.
+model Sport {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  formatPresets TournamentFormatPreset[]
+  matches       Match[]
+  tournaments   Tournament[]
+}
+
+/// Preset de formato de torneo por deporte (Americano, Round Robin, etc.).
+model TournamentFormatPreset {
+  id                String   @id @default(uuid())
+  sportId           String
+  sport             Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  code              String
+  name              String
+  /// Versión del esquema de `defaultParameters` / `formatParameters` en torneos existentes.
+  schemaVersion     Int      @default(1)
+  defaultParameters Json
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tournaments Tournament[]
+  matches     Match[]
+
+  @@unique([sportId, code])
+  @@index([sportId, isActive])
+}
+
+// --- Modelos ---
+
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  name               String
+  /// Hash bcrypt; nulo para usuarios creados antes de E1 o por seed sin contraseña.
+  passwordHash       String?
+  subscriptionType   SubscriptionType   @default(FREE)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  tournamentRegistrations TournamentRegistration[]
+  matchParticipants       MatchParticipant[]
+  rankingEntries          RankingEntry[]
+  matchResultScores       MatchResultScore[]
+  transactions            Transaction[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  matches        Match[]
+  rankingEntries RankingEntry[]
+  tournaments    Tournament[]
+}
+
+model Venue {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+
+  courts Court[]
+}
+
+model Court {
+  id        String   @id @default(uuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+
+  matches Match[]
+}
+
+model Tournament {
+  id         String           @id @default(uuid())
+  name       String
+  categoryId String
+  category   Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  sportId    String
+  sport      Sport            @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  formatPresetId String
+  formatPreset   TournamentFormatPreset @relation(fields: [formatPresetId], references: [id], onDelete: Restrict)
+  /// Parámetros concretos del torneo (pueden sobrescribir defaults del preset).
+  formatParameters    Json?
+  /// Copia de schemaVersion del preset al crear el torneo (inmutabilidad lógica).
+  presetSchemaVersion Int      @default(1)
+  status     TournamentStatus @default(DRAFT)
+  startsAt   DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  registrations TournamentRegistration[]
+  matches         Match[]
+
+  @@index([sportId])
+  @@index([formatPresetId])
+}
+
+model TournamentRegistration {
+  id           String             @id @default(uuid())
+  tournamentId String
+  tournament   Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       RegistrationStatus @default(PENDING)
+  createdAt    DateTime           @default(now())
+
+  @@unique([tournamentId, userId])
+}
+
+model Match {
+  id           String      @id @default(uuid())
+  categoryId   String
+  category     Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  sportId      String
+  sport        Sport       @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  formatPresetId String?
+  formatPreset   TournamentFormatPreset? @relation(fields: [formatPresetId], references: [id], onDelete: SetNull)
+  formatParameters Json?
+  courtId      String?
+  court        Court?      @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  tournamentId String?
+  tournament   Tournament? @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  /// Compatibilidad: tipo legacy; el formato parametrizable vive en preset + parameters.
+  type         MatchType
+  status       MatchStatus @default(SCHEDULED)
+  scheduledAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  participants MatchParticipant[]
+  results      MatchResult[]
+  transactions Transaction[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([sportId])
+}
+
+model MatchParticipant {
+  id        String   @id @default(uuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamLabel String?
+  createdAt DateTime @default(now())
+
+  @@unique([matchId, userId])
+  @@index([userId])
+}
+
+model MatchResult {
+  id         String   @id @default(uuid())
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  recordedAt DateTime @default(now())
+
+  scores MatchResultScore[]
+
+  @@index([matchId])
+}
+
+model MatchResultScore {
+  id       String      @id @default(uuid())
+  resultId String
+  result   MatchResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points   Int         @default(0)
+
+  @@unique([resultId, userId])
+  @@index([userId])
+}
+
+model RankingEntry {
+  id          String   @id @default(uuid())
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points      Int      @default(0)
+  gamesPlayed Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([categoryId, userId])
+  @@index([categoryId, points])
+}
+
+/// Regla de comisión de servicio por ámbito (MVP: solo MATCH).
+model FeeRule {
+  id        String   @id @default(uuid())
+  scope     FeeScope
+  type      FeeType
+  /// Monto fijo o porcentaje según type (porcentaje: 10 = 10%).
+  value     Decimal  @db.Decimal(14, 4)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scope, isActive])
+}
+
+/// Obligación de pago no custodial asociada a un partido y usuario.
+model Transaction {
+  id            String            @id @default(uuid())
+  matchId       String
+  match         Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountBase    Decimal           @db.Decimal(14, 4)
+  feeAmount     Decimal           @db.Decimal(14, 4)
+  amountTotal   Decimal           @db.Decimal(14, 4)
+  status        TransactionStatus @default(PENDING)
+  paymentMethod PaymentMethod     @default(MANUAL)
+  confirmedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([matchId])
+  @@index([userId])
+  @@index([matchId, status])
+}

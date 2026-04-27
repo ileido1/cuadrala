@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.MONETIZATION_ROUTER = void 0;
+const express_1 = require("express");
+const monetization_controller_js_1 = require("../controllers/monetization.controller.js");
+const async_handler_js_1 = require("../middleware/async_handler.js");
+exports.MONETIZATION_ROUTER = (0, express_1.Router)();
+exports.MONETIZATION_ROUTER.post('/matches/:matchId/transactions/create-obligations', (0, async_handler_js_1.asyncHandler)(monetization_controller_js_1.postCreateMatchObligationsCON));
+exports.MONETIZATION_ROUTER.get('/matches/:matchId/transactions/summary', (0, async_handler_js_1.asyncHandler)(monetization_controller_js_1.getMatchTransactionsSummaryCON));
+exports.MONETIZATION_ROUTER.patch('/transactions/:transactionId/confirm-manual', (0, async_handler_js_1.asyncHandler)(monetization_controller_js_1.patchConfirmTransactionManualCON));
+exports.MONETIZATION_ROUTER.get('/users/:userId/transactions', (0, async_handler_js_1.asyncHandler)(monetization_controller_js_1.getUserTransactionsCON));
+exports.MONETIZATION_ROUTER.patch('/users/:userId/subscription', (0, async_handler_js_1.asyncHandler)(monetization_controller_js_1.patchUserSubscriptionCON));

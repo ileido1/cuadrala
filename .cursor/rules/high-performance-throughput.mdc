@@ -1,0 +1,62 @@
+---
+description: Reglas de rendimiento y eficacia para alto throughput (millones de transacciones); evitar bloqueos, N+1, transacciones largas y cuellos de botella.
+globs: "**/*.js"
+alwaysApply: false
+---
+
+# Alto rendimiento y throughput (transacciones por segundo)
+
+Este proyecto debe soportar **alto volumen de transacciones**. Todo el código debe priorizar **latencia baja** y **no bloquear el event loop**. Las siguientes reglas son obligatorias en rutas críticas (controllers, services, acceso a BD y APIs externas).
+
+---
+
+## Lo que NO debes hacer (antipatrones de rendimiento)
+
+### Event loop y bloqueo
+- **Nunca usar I/O síncrono en la ruta de la petición**: `fs.readFileSync`, `fs.existsSync`, `require()` dinámico pesado. Bloquean el hilo y matan throughput.
+- **Evitar CPU intensiva en el request path**: Cálculos pesados, JSON.parse/stringify de payloads enormes, regex complejos sobre textos grandes. Mover a worker, cola o proceso aparte si es necesario.
+- **No hacer trabajo innecesario por request**: Crear objetos grandes “por si acaso”, concatenar strings en bucles (usar array + join o template), clonar objetos inmensos sin necesidad.
+
+### Base de datos
+- **N+1 queries**: No hacer un `find()` por cada ítem de un array; usar un solo query con `$in` / bulk o JOIN. Si tienes un bucle con `await MODEL.findOne()` dentro, replantear.
+- **Transacciones largas**: Mantener la transacción abierta solo el tiempo estrictamente necesario. No hacer llamadas HTTP o lógica lenta dentro de un `dbTransaction`; hacerlas antes o después, o en una fase separada.
+- **Queries sin índice**: Cualquier filtro por `where`/`find` en campos que se consultan frecuentemente debe tener índice. Sin índice = full scan = inaceptable a escala.
+- **Traer más datos de los necesarios**: No hacer `find()` sin `select`/proyección cuando la tabla tiene muchas columnas; pedir solo los campos que usas.
+- **Múltiples round-trips encadenados**: Varios `await` seguidos que podrían ser uno (varios finds independientes → valorar un solo query agregado o Promise.all si son independientes).
+
+### APIs externas y red
+- **Llamadas HTTP sin timeout**: Siempre definir timeout en cliente HTTP; una API colgada no puede colgar tu proceso.
+- **Llamadas secuenciales que pueden ser paralelas**: Si A y B son independientes, usar `Promise.all([A, B])` en lugar de `await A; await B`.
+- **Payloads enormes**: No enviar/recibir cuerpos gigantes si puedes paginar, filtrar o usar campos mínimos.
+- **Recrear cliente HTTP por request**: Reutilizar una única instancia de cliente (pool/keep-alive); no crear uno nuevo en cada petición.
+
+### Memoria y objetos
+- **Retener referencias a objetos grandes**: No guardar en variables de módulo o closures lo que solo necesitas para una request; permite que el GC libere.
+- **Clonar o serializar sin necesidad**: Evitar `JSON.parse(JSON.stringify(obj))` o clones profundos en hot path si no es estrictamente necesario.
+- **Acumular en arrays sin tope**: Crecimientos ilimitados (push en array sin límite por request) pueden llevar a OOM; paginar o limitar.
+
+---
+
+## Lo que SÍ debes hacer (buenas prácticas)
+
+### Async y concurrencia
+- **Paralelizar cuando no hay dependencia**: `const [a, b] = await Promise.all([getA(), getB()]);` en lugar de dos awaits seguidos.
+- **No await innecesario**: Si no necesitas el resultado de una promesa en ese punto, no hagas `await` (fire-and-forget con `.catch()` para logs, o encolar).
+- **Mantener transacciones cortas**: Abrir transacción → solo queries y lógica que deban ser atómicos → commit/rollback rápido. Todo lo que no sea estrictamente transaccional, fuera.
+
+### Base de datos
+- **Proyección**: `Model.find(cond, { field1: 1, field2: 1 })` o equivalente para no traer columnas que no usas.
+- **Índices**: Asegurar índices en columnas usadas en `where`/filtros y en ordenamientos de queries frecuentes.
+- **Bulk cuando aplique**: Inserts/updates en lote con `insertMany`, `bulkWrite` o APIs bulk del ORM en lugar de un save por ítem en un bucle.
+- **Pool de conexiones**: Usar pool configurado; no abrir/cerrar conexión por request.
+
+### Código
+- **Early exit / validación rápida**: Fallar pronto con return o throw si la request es inválida; no hacer trabajo costoso antes de validar.
+- **Constantes y config fuera del hot path**: Leer config/constantes una vez (módulo o inicio) y reutilizar; no recalcular ni re-leer en cada request.
+- **Logs en hot path**: Evitar serializar objetos enormes a string para log; loguear IDs o resúmenes. Si el nivel de log es “debug”, no hacer trabajo pesado cuando el nivel actual es “info”.
+
+### Resumen de prioridad
+1. **No bloquear el event loop** (sin sync I/O, sin CPU pesada en request path).
+2. **Menos round-trips**: menos queries, menos llamadas HTTP; paralelizar cuando sea posible.
+3. **Transacciones cortas y queries con índice y proyección**.
+4. **Reutilizar recursos**: cliente HTTP, pool de BD; no retener datos innecesarios en memoria.

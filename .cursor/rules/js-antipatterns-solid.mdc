@@ -1,0 +1,59 @@
+---
+description: JavaScript antipatterns to avoid, best practices and SOLID principles
+globs: "**/*.js"
+alwaysApply: false
+---
+
+# JavaScript: antipatrones, buenas prácticas y SOLID
+
+## Antipatrones que NO debes cometer
+
+### Código
+- **God object / God function**: Una función o módulo que hace demasiado. Extrae responsabilidades a funciones o servicios más pequeños.
+- **Callbacks anidados (callback hell)**: Usa `async/await` o promesas encadenadas en lugar de callbacks profundamente anidados.
+- **Mutación de parámetros**: No modificar objetos/arrays que te pasan por argumento; clonar o crear copias si necesitas transformar.
+- **Magic numbers/strings**: No literales sueltos (`if (x === 3)`); usar constantes con nombre (`const MAX_RETRIES = 3`).
+- **Try-catch vacío o que solo traga errores**: Siempre registrar o re-lanzar; nunca `catch (_e) {}` sin manejo.
+- **Variables globales implícitas**: Evitar asignar sin `const`/`let`/`var` (crea globals). Usar strict mode.
+- **Duplicación de lógica**: Si la misma lógica aparece en varios sitios, extraer a función o util compartida.
+- **Acoplamiento directo a implementación**: No instanciar dependencias concretas dentro de funciones; preferir inyección o parámetros cuando facilite tests y cambios.
+
+### Async y errores
+- **Promesas sin manejo de error**: Toda cadena `then()` debe tener `catch()` o el caller debe manejar el rechazo.
+- **Mezclar callbacks y promesas sin necesidad**: Elegir un estilo (preferir async/await) y ser consistente.
+- **No propagar contexto de error**: Al re-lanzar, usar `throw new Error('mensaje', { cause: _error })` o incluir el error original.
+
+### Estructura
+- **Lógica de negocio en controllers**: Controllers orquestan; la lógica va en servicios (ver `plan_separacion_servicios.md`).
+- **Validaciones dispersas**: Centralizar en capa de validación (DVAL/FVAL) en lugar de repetir en cada función.
+- **Archivos de miles de líneas**: Dividir por responsabilidad (un servicio por dominio o flujo coherente).
+
+---
+
+## Buenas prácticas
+
+- **Una responsabilidad por función/módulo**: Cada función hace una cosa y la hace bien (SRP).
+- **Nombres que revelen intención**: El nombre debe dejar claro qué hace la función o qué contiene la variable.
+- **Funciones pequeñas**: Preferir funciones cortas; si superan ~30–50 líneas, valorar extracción.
+- **Pocos niveles de anidación**: Reducir `if`/`for` anidados; usar early return, extraer a funciones o guard clauses.
+- **Manejo explícito de errores**: Validar entradas, lanzar errores descriptivos y manejar rechazos de promesas.
+- **Immutabilidad donde sea razonable**: No mutar arrays/objetos compartidos; devolver nuevos valores.
+- **Dependencias explícitas**: Pasar lo que la función necesita por parámetro en lugar de leer globals o módulos internos “por detrás”.
+- **Código en inglés; mensajes al usuario en español**: Nombres de funciones/variables/archivos en inglés; textos de éxito/error en español (según convención del proyecto).
+
+---
+
+## Principios SOLID (resumen aplicado)
+
+| Principio | Aplicación en JS/Node |
+|-----------|------------------------|
+| **S** – Single Responsibility | Una función/clase/módulo = una razón para cambiar. Ej.: controller solo orquesta, servicio solo lógica de pago. |
+| **O** – Open/Closed | Abrir para extensión (nuevos casos), cerrar para modificación. Ej.: estrategias o handlers por tipo en lugar de un `if/switch` gigante que crece. |
+| **L** – Liskov Substitution | Los subtipos deben ser sustituibles por el tipo base sin romper el contrato. En JS: implementaciones que respeten la misma interfaz/comportamiento esperado. |
+| **I** – Interface Segregation | Interfaces pequeñas y específicas. En JS: no obligar a recibir objetos con 20 propiedades si solo usas 3; parámetros o objetos más acotados. |
+| **D** – Dependency Inversion | Depender de abstracciones (contratos/interfaces), no de implementaciones concretas. Inyectar servicios o dependencias en lugar de hacer `require()` o `new` dentro de la función. |
+
+### Regla práctica
+- **Controllers**: solo reciben request, validan (o delegan validación), llaman a servicios y formatean respuesta.
+- **Services**: contienen la lógica de negocio; pueden usar otros servicios o utils, no acceder a `req`/`res`.
+- **Utils**: funciones puras o casi puras (misma entrada → misma salida); sin lógica de negocio específica del módulo.
