@@ -25,48 +25,50 @@ async function seedCatalog(): Promise<void> {
     update: { name: 'Pádel' },
   });
 
-  await PRISMA.tournamentFormatPreset.upsert({
-    where: {
-      sportId_code: {
+  const AMERICANO_EXISTING = await PRISMA.tournamentFormatPreset.findFirst({
+    where: { sportId: PADEL.id, code: 'AMERICANO', version: 1 },
+  });
+  if (AMERICANO_EXISTING === null) {
+    await PRISMA.tournamentFormatPreset.create({
+      data: {
         sportId: PADEL.id,
         code: 'AMERICANO',
+        version: 1,
+        name: 'Americano',
+        schemaVersion: 1,
+        defaultParameters: {},
+        isActive: true,
       },
-    },
-    create: {
-      sportId: PADEL.id,
-      code: 'AMERICANO',
-      name: 'Americano',
-      schemaVersion: 1,
-      defaultParameters: {},
-      isActive: true,
-    },
-    update: {
-      name: 'Americano',
-      isActive: true,
-    },
-  });
+    });
+  } else {
+    await PRISMA.tournamentFormatPreset.update({
+      where: { id: AMERICANO_EXISTING.id },
+      data: { name: 'Americano', isActive: true },
+    });
+  }
 
   // Ejemplo de segundo preset (round robin) — mismo deporte, parametrizable.
-  await PRISMA.tournamentFormatPreset.upsert({
-    where: {
-      sportId_code: {
+  const RR_EXISTING = await PRISMA.tournamentFormatPreset.findFirst({
+    where: { sportId: PADEL.id, code: 'ROUND_ROBIN', version: 1 },
+  });
+  if (RR_EXISTING === null) {
+    await PRISMA.tournamentFormatPreset.create({
+      data: {
         sportId: PADEL.id,
         code: 'ROUND_ROBIN',
+        version: 1,
+        name: 'Todos contra todos',
+        schemaVersion: 1,
+        defaultParameters: { doubleRound: false },
+        isActive: true,
       },
-    },
-    create: {
-      sportId: PADEL.id,
-      code: 'ROUND_ROBIN',
-      name: 'Todos contra todos',
-      schemaVersion: 1,
-      defaultParameters: { doubleRound: false },
-      isActive: true,
-    },
-    update: {
-      name: 'Todos contra todos',
-      isActive: true,
-    },
-  });
+    });
+  } else {
+    await PRISMA.tournamentFormatPreset.update({
+      where: { id: RR_EXISTING.id },
+      data: { name: 'Todos contra todos', isActive: true },
+    });
+  }
 
   console.log('[seed] Catálogo: deporte PADEL y presets AMERICANO, ROUND_ROBIN.');
 }

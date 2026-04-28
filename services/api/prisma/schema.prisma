@@ -81,19 +81,27 @@ model TournamentFormatPreset {
   sportId           String
   sport             Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
   code              String
+  /// Versión del preset (por sport+code). Incremental, inicia en 1.
+  version           Int      @default(1)
   name              String
   /// Versión del esquema de `defaultParameters` / `formatParameters` en torneos existentes.
   schemaVersion     Int      @default(1)
   defaultParameters Json
   isActive          Boolean  @default(true)
+  /// Desde cuándo esta versión es elegible como "vigente" (si isActive=true).
+  effectiveFrom     DateTime @default(now())
+  /// Versión previa del mismo preset (misma family sport+code) que esta versión reemplaza.
+  supersedesId      String?
+  supersedes        TournamentFormatPreset? @relation("TournamentFormatPresetSupersedes", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy      TournamentFormatPreset[] @relation("TournamentFormatPresetSupersedes")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   tournaments Tournament[]
   matches     Match[]
 
-  @@unique([sportId, code])
-  @@index([sportId, isActive])
+  @@unique([sportId, code, version])
+  @@index([sportId, code, isActive, effectiveFrom, version])
 }
 
 // --- Modelos ---
@@ -113,6 +121,21 @@ model User {
   rankingEntries          RankingEntry[]
   matchResultScores       MatchResultScore[]
   transactions            Transaction[]
+
+  categories UserCategory[]
+}
+
+/// Categoría actual del usuario (MVP). Permite validar unión a partidas por categoría.
+model UserCategory {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, categoryId])
+  @@index([categoryId])
 }
 
 model Category {
@@ -165,9 +188,23 @@ model Tournament {
 
   registrations TournamentRegistration[]
   matches         Match[]
+  americanoSchedule TournamentAmericanoSchedule?
 
   @@index([sportId])
   @@index([formatPresetId])
+}
+
+/// Schedule generado para formato AMERICANO a nivel torneo (idempotente por tournamentId).
+model TournamentAmericanoSchedule {
+  id          String   @id @default(uuid())
+  tournamentId String  @unique
+  tournament  Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  /// Key determinista derivada de inputs (participantes, parámetros, etc.). Evita duplicar schedules.
+  scheduleKey String
+  /// JSON con rondas/partidos (estructura definida por dominio; estable para API).
+  schedule    Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model TournamentRegistration {
@@ -199,6 +236,8 @@ model Match {
   type         MatchType
   status       MatchStatus @default(SCHEDULED)
   scheduledAt  DateTime?
+  /// Cupo máximo de participantes (MVP). Para Americano suele ser 4, pero se deja configurable.
+  maxParticipants Int      @default(4)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -209,6 +248,7 @@ model Match {
   @@index([categoryId])
   @@index([status])
   @@index([sportId])
+  @@index([scheduledAt])
 }
 
 model MatchParticipant {
@@ -294,4 +334,19 @@ model Transaction {
   @@index([matchId])
   @@index([userId])
   @@index([matchId, status])
+}
+
+/// Schedule persistido del formato Americano por torneo.
+/// Se genera una vez (idempotente) y se consulta por tournamentId.
+model TournamentAmericanoSchedule {
+  id           String     @id @default(uuid())
+  tournamentId String     @unique
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  /// Hash determinista del input normalizado (participantUserIds).
+  scheduleKey  String
+  schedule     Json
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([tournamentId])
 }

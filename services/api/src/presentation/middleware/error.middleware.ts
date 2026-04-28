@@ -19,6 +19,7 @@ export function errorMiddleware(
       success: false,
       code: _err.code,
       message: _err.message,
+      details: _err.details,
     });
     return;
   }

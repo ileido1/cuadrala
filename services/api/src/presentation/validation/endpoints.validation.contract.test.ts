@@ -16,6 +16,10 @@ import {
   USER_TRANSACTIONS_QUERY_SCHEMA,
 } from './monetization.validation.js';
 import { RECALCULATE_RANKING_PARAMS_SCHEMA } from './ranking.validation.js';
+import {
+  GENERATE_TOURNAMENT_AMERICANO_SCHEDULE_BODY_SCHEMA,
+  TOURNAMENT_ID_PARAM_SCHEMA,
+} from './tournament_americano_schedule.validation.js';
 
 const SAMPLE_UUID = '550e8400-e29b-41d4-a716-446655440000';
 const OTHER_UUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
@@ -33,6 +37,41 @@ describe('CREATE_AMERICANO_BODY_SCHEMA', () => {
     const RESULT = CREATE_AMERICANO_BODY_SCHEMA.safeParse({
       categoryId: SAMPLE_UUID,
       participantUserIds: [OTHER_UUID, SAMPLE_UUID],
+    });
+    expect(RESULT.success).toBe(true);
+  });
+});
+
+describe('TOURNAMENT_ID_PARAM_SCHEMA', () => {
+  it('rechaza tournamentId inválido', () => {
+    const RESULT = TOURNAMENT_ID_PARAM_SCHEMA.safeParse({ tournamentId: 'x' });
+    expect(RESULT.success).toBe(false);
+  });
+});
+
+describe('GENERATE_TOURNAMENT_AMERICANO_SCHEDULE_BODY_SCHEMA', () => {
+  it('rechaza duplicados', () => {
+    const RESULT = GENERATE_TOURNAMENT_AMERICANO_SCHEDULE_BODY_SCHEMA.safeParse({
+      participantUserIds: [SAMPLE_UUID, SAMPLE_UUID, OTHER_UUID, OTHER_UUID],
+    });
+    expect(RESULT.success).toBe(false);
+  });
+
+  it('rechaza conteo no múltiplo de 4', () => {
+    const RESULT = GENERATE_TOURNAMENT_AMERICANO_SCHEDULE_BODY_SCHEMA.safeParse({
+      participantUserIds: [SAMPLE_UUID, OTHER_UUID, SAMPLE_UUID, OTHER_UUID, SAMPLE_UUID],
+    });
+    expect(RESULT.success).toBe(false);
+  });
+
+  it('acepta cuerpo válido (múltiplo de 4)', () => {
+    const RESULT = GENERATE_TOURNAMENT_AMERICANO_SCHEDULE_BODY_SCHEMA.safeParse({
+      participantUserIds: [
+        '550e8400-e29b-41d4-a716-446655440001',
+        '550e8400-e29b-41d4-a716-446655440002',
+        '550e8400-e29b-41d4-a716-446655440003',
+        '550e8400-e29b-41d4-a716-446655440004',
+      ],
     });
     expect(RESULT.success).toBe(true);
   });

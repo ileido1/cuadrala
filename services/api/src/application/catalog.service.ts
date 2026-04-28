@@ -1,34 +1,30 @@
-import { listFormatPresetsBySportRepo } from '../infrastructure/repositories/format_preset.repository.js';
-import { listSportsRepo } from '../infrastructure/repositories/sport.repository.js';
+import type { FormatPresetRepository } from '../domain/ports/format_preset_repository.js';
+import type { SportRepository } from '../domain/ports/sport_repository.js';
 
-export async function listSportsSV(): Promise<{ id: string; code: string; name: string }[]> {
-  const ROWS = await listSportsRepo();
-  return ROWS.map((_r) => ({
-    id: _r.id,
-    code: _r.code,
-    name: _r.name,
-  }));
+import { ListFormatPresetsBySportUseCase } from './use_cases/list_format_presets_by_sport.use_case.js';
+import { ListSportsUseCase } from './use_cases/list_sports.use_case.js';
+
+export async function listSportsSV(
+  _sportRepository: SportRepository,
+): Promise<{ id: string; code: string; name: string }[]> {
+  const UC = new ListSportsUseCase(_sportRepository);
+  return UC.executeSV();
 }
 
 export async function listFormatPresetsBySportSV(
   _sportId: string,
+  _formatPresetRepository: FormatPresetRepository,
 ): Promise<
   {
     id: string;
     sportId: string;
     code: string;
+    version: number;
     name: string;
     schemaVersion: number;
     defaultParameters: unknown;
   }[]
 > {
-  const ROWS = await listFormatPresetsBySportRepo(_sportId);
-  return ROWS.map((_r) => ({
-    id: _r.id,
-    sportId: _r.sportId,
-    code: _r.code,
-    name: _r.name,
-    schemaVersion: _r.schemaVersion,
-    defaultParameters: _r.defaultParameters,
-  }));
+  const UC = new ListFormatPresetsBySportUseCase(_formatPresetRepository);
+  return UC.executeSV(_sportId);
 }

@@ -12,41 +12,39 @@ export async function ensureTestCatalogSV(): Promise<{
     update: {},
   });
 
-  const AMERICANO = await PRISMA.tournamentFormatPreset.upsert({
-    where: {
-      sportId_code: {
+  let AMERICANO = await PRISMA.tournamentFormatPreset.findFirst({
+    where: { sportId: PADEL.id, code: 'AMERICANO', version: 1 },
+  });
+  if (AMERICANO === null) {
+    AMERICANO = await PRISMA.tournamentFormatPreset.create({
+      data: {
         sportId: PADEL.id,
         code: 'AMERICANO',
+        version: 1,
+        name: 'Americano',
+        schemaVersion: 1,
+        defaultParameters: {},
+        isActive: true,
       },
-    },
-    create: {
-      sportId: PADEL.id,
-      code: 'AMERICANO',
-      name: 'Americano',
-      schemaVersion: 1,
-      defaultParameters: {},
-      isActive: true,
-    },
-    update: {},
-  });
+    });
+  }
 
-  const ROUND_ROBIN = await PRISMA.tournamentFormatPreset.upsert({
-    where: {
-      sportId_code: {
+  let ROUND_ROBIN = await PRISMA.tournamentFormatPreset.findFirst({
+    where: { sportId: PADEL.id, code: 'ROUND_ROBIN', version: 1 },
+  });
+  if (ROUND_ROBIN === null) {
+    ROUND_ROBIN = await PRISMA.tournamentFormatPreset.create({
+      data: {
         sportId: PADEL.id,
         code: 'ROUND_ROBIN',
+        version: 1,
+        name: 'Todos contra todos',
+        schemaVersion: 1,
+        defaultParameters: { doubleRound: false },
+        isActive: true,
       },
-    },
-    create: {
-      sportId: PADEL.id,
-      code: 'ROUND_ROBIN',
-      name: 'Todos contra todos',
-      schemaVersion: 1,
-      defaultParameters: { doubleRound: false },
-      isActive: true,
-    },
-    update: {},
-  });
+    });
+  }
 
   return {
     sportPadelId: PADEL.id,

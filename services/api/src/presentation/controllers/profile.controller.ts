@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 
-import { getProfileByUserIdSV, updateProfileByUserIdSV } from '../../application/profile.service.js';
 import { AppError } from '../../domain/errors/app_error.js';
+import { GET_PROFILE_UC, UPDATE_PROFILE_UC } from '../composition/profile.composition.js';
 import { PATCH_PROFILE_BODY_SCHEMA } from '../validation/profile.validation.js';
 
 export async function getProfileCON(_req: Request, _res: Response): Promise<void> {
@@ -10,7 +10,7 @@ export async function getProfileCON(_req: Request, _res: Response): Promise<void
     throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
   }
 
-  const PROFILE = await getProfileByUserIdSV(USER_ID);
+  const PROFILE = await GET_PROFILE_UC.executeSV(USER_ID);
 
   _res.status(200).json({
     success: true,
@@ -26,7 +26,7 @@ export async function patchProfileCON(_req: Request, _res: Response): Promise<vo
   }
 
   const BODY = PATCH_PROFILE_BODY_SCHEMA.parse(_req.body);
-  const PROFILE = await updateProfileByUserIdSV(USER_ID, BODY.name);
+  const PROFILE = await UPDATE_PROFILE_UC.executeSV(USER_ID, BODY.name);
 
   _res.status(200).json({
     success: true,

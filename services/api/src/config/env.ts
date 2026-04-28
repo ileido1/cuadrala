@@ -4,6 +4,9 @@ const ENV_SCHEMA = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL es obligatoria para la API.'),
+  PG_POOL_MAX: z.coerce.number().int().positive().default(10),
+  PG_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  PG_POOL_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
   JWT_ACCESS_SECRET: z
     .string()
     .min(32, 'JWT_ACCESS_SECRET debe tener al menos 32 caracteres.')

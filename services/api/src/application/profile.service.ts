@@ -1,55 +1,14 @@
-import { AppError } from '../domain/errors/app_error.js';
-import { PRISMA } from '../infrastructure/prisma_client.js';
+import type { UserRepository } from '../domain/ports/user_repository.js';
 
-export async function getProfileByUserIdSV(_userId: string): Promise<{
-  id: string;
-  email: string;
-  name: string;
-  subscriptionType: string;
-  createdAt: Date;
-  updatedAt: Date;
-}> {
-  const USER = await PRISMA.user.findUnique({ where: { id: _userId } });
-  if (USER === null) {
-    throw new AppError('USUARIO_NO_ENCONTRADO', 'Usuario no encontrado.', 404);
-  }
+import { GetProfileUseCase } from './use_cases/get_profile.use_case.js';
+import { UpdateProfileUseCase } from './use_cases/update_profile.use_case.js';
 
-  return {
-    id: USER.id,
-    email: USER.email,
-    name: USER.name,
-    subscriptionType: USER.subscriptionType,
-    createdAt: USER.createdAt,
-    updatedAt: USER.updatedAt,
-  };
+export function buildGetProfileByUserIdSV(_userRepository: UserRepository) {
+  const UC = new GetProfileUseCase(_userRepository);
+  return UC.executeSV.bind(UC);
 }
 
-export async function updateProfileByUserIdSV(
-  _userId: string,
-  _name: string | undefined,
-): Promise<{
-  id: string;
-  email: string;
-  name: string;
-  subscriptionType: string;
-  createdAt: Date;
-  updatedAt: Date;
-}> {
-  if (_name === undefined) {
-    return getProfileByUserIdSV(_userId);
-  }
-
-  const USER = await PRISMA.user.update({
-    where: { id: _userId },
-    data: { name: _name.trim() },
-  });
-
-  return {
-    id: USER.id,
-    email: USER.email,
-    name: USER.name,
-    subscriptionType: USER.subscriptionType,
-    createdAt: USER.createdAt,
-    updatedAt: USER.updatedAt,
-  };
+export function buildUpdateProfileByUserIdSV(_userRepository: UserRepository) {
+  const UC = new UpdateProfileUseCase(_userRepository);
+  return UC.executeSV.bind(UC);
 }

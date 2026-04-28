@@ -72,9 +72,10 @@ export async function createMatchObligationsSV(
   const RULE_FOR_FEE =
     RULE === null
       ? null
-      : { type: RULE.type as 'FIXED' | 'PERCENTAGE', value: RULE.value };
+      : { type: RULE.type as 'FIXED' | 'PERCENTAGE', value: Number(RULE.value.toString()) };
 
   const AMOUNT_BASE = new Prisma.Decimal(String(_input.amountBasePerPerson));
+  const AMOUNT_BASE_NUMBER = Number(AMOUNT_BASE.toString());
   const CREATED: ObligationCreated[] = [];
   const SKIPPED: ObligationSkipped[] = [];
 
@@ -85,7 +86,8 @@ export async function createMatchObligationsSV(
       continue;
     }
 
-    const FEE = computeFeeAmountSV(AMOUNT_BASE, RULE_FOR_FEE);
+    const FEE_NUMBER = computeFeeAmountSV(AMOUNT_BASE_NUMBER, RULE_FOR_FEE);
+    const FEE = new Prisma.Decimal(String(FEE_NUMBER));
     const TOTAL = AMOUNT_BASE.add(FEE);
 
     const ROW = await createTransactionRepo({

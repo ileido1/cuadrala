@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { JsonWebTokenError } from 'jsonwebtoken';
 
 import { AppError } from '../../domain/errors/app_error.js';
-import { verifyAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
+import { AUTH_TOKEN_SERVICE } from '../composition/auth.composition.js';
 
 export function requireAuth(_req: Request, _res: Response, _next: NextFunction): void {
   try {
@@ -11,7 +11,7 @@ export function requireAuth(_req: Request, _res: Response, _next: NextFunction):
       throw new AppError('NO_AUTORIZADO', 'Se requiere un token de acceso.', 401);
     }
     const TOKEN = HEADER.slice(7);
-    const PAYLOAD = verifyAccessTokenSV(TOKEN);
+    const PAYLOAD = AUTH_TOKEN_SERVICE.verifyAccessTokenSV(TOKEN);
     _req.authUser = { id: PAYLOAD.sub, email: PAYLOAD.email };
     _next();
   } catch (_error) {

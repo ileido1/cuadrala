@@ -14,10 +14,22 @@ Copia variables de entorno (ejemplo):
 ```bash
 export DATABASE_URL="postgresql://usuario:clave@localhost:5432/cuadrala"
 export PORT=4000
+# Opcional: tuning del pool (útil en HA / múltiples réplicas)
+# export PG_POOL_MAX=10
+# export PG_POOL_IDLE_TIMEOUT_MS=30000
+# export PG_POOL_CONNECTION_TIMEOUT_MS=10000
 # Opcional (E1): en producción define secretos distintos de al menos 32 caracteres.
 # export JWT_ACCESS_SECRET="..."
 # export JWT_REFRESH_SECRET="..."
 ```
+
+También puedes usar el archivo de ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+> Nota: este proyecto requiere **Node 20.19+** (por Prisma/Vitest/ESLint).
 
 ## Base de datos
 
@@ -91,9 +103,10 @@ Sin `TEST_DATABASE_URL`, las pruebas de integración se marcan como omitidas (`d
 
 - `GET /api/v1/sports` — lista deportes configurados (MVP: PADEL)
 - `GET /api/v1/sports/:sportId/tournament-format-presets` — formatos parametrizables por deporte (ej. AMERICANO, ROUND_ROBIN)
-- `POST /api/v1/tournaments` — crea torneo con `sportId`, `formatPresetId`, `formatParameters?`, `startsAt?`
+- `POST /api/v1/tournaments` — crea torneo con `sportId` y **preset** por `formatPresetId` (versión específica) o `formatPresetCode` (servidor resuelve versión vigente), además de `formatParameters?`, `startsAt?`
 
 - `GET /api/v1/health` — estado del servicio
+- `GET /api/v1/ready` — readiness (DB)
 - `POST /api/v1/americanos` — crea partido (preset AMERICANO por deporte; body opcional `sportId`; hereda formato si hay `tournamentId`)
 - `GET /api/v1/matchmaking/:matchId/suggestions` — sugerencias de jugadores por categoría
 - `POST /api/v1/ranking/recalculate/:categoryId` — recalcula ranking desde resultados
@@ -107,3 +120,8 @@ Sin `TEST_DATABASE_URL`, las pruebas de integración se marcan como omitidas (`d
 - `GET /api/v1/users/:userId/transactions` — query opcional: `limit` (1–100, default 50)
 
 La comisión de servicio usa la regla activa en `FeeRule` con `scope=MATCH` (si no hay regla activa, fee = 0).
+
+## OpenAPI / Swagger
+
+- `GET /openapi.json` — especificación OpenAPI (JSON)
+- `GET /docs` — Swagger UI (cargando assets vía CDN)

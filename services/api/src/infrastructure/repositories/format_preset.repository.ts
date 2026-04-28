@@ -2,8 +2,14 @@ import { PRISMA } from '../prisma_client.js';
 
 export async function listFormatPresetsBySportRepo(_sportId: string) {
   return PRISMA.tournamentFormatPreset.findMany({
-    where: { sportId: _sportId, isActive: true },
-    orderBy: { code: 'asc' },
+    where: {
+      sportId: _sportId,
+      isActive: true,
+      effectiveFrom: { lte: new Date() },
+    },
+    // Devuelve solo la versión vigente por code (la mayor version dentro de isActive + effectiveFrom<=now).
+    distinct: ['code'],
+    orderBy: [{ code: 'asc' }, { version: 'desc' }],
   });
 }
 
@@ -12,12 +18,13 @@ export async function findFormatPresetByIdRepo(_id: string) {
 }
 
 export async function findFormatPresetBySportAndCodeRepo(_sportId: string, _code: string) {
-  return PRISMA.tournamentFormatPreset.findUnique({
+  return PRISMA.tournamentFormatPreset.findFirst({
     where: {
-      sportId_code: {
-        sportId: _sportId,
-        code: _code,
-      },
+      sportId: _sportId,
+      code: _code,
+      isActive: true,
+      effectiveFrom: { lte: new Date() },
     },
+    orderBy: { version: 'desc' },
   });
 }
