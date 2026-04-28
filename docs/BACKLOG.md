@@ -20,16 +20,16 @@
 
 Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. Dentro de cada épica, seguir el orden de las historias (IDs).
 
-| Orden | Épica | Objetivo |
-|-------|-------|----------|
-| E0 | Cimientos multi-deporte y torneo parametrizable | Deportes, presets de formato, torneo genérico |
-| E1 | Identidad, auth y perfil competitivo | Cuenta, perfil, nivel/categoría, (futuro Elo) |
-| E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel |
-| E3 | Motor de torneos y formatos | Rotaciones, rondas, tablero (según formato) |
-| E4 | Sedes y geo | Directorio, mapa, horas vacantes |
-| E5 | Ranking y resultados | Resultados → recálculo (puntos / Elo) |
-| E6 | Cobro colaborativo | Obligaciones, comprobantes, sin custodia |
-| E7 | Coordinación | Chat, notificaciones |
+| Orden | Épica | Objetivo | Estado (según historias) |
+|-------|-------|----------|--------------------------|
+| E0 | Cimientos multi-deporte y torneo parametrizable | Deportes, presets de formato, torneo genérico | **In Progress** (US-E0-01/02 Parcial; US-E0-03 No iniciada) |
+| E1 | Identidad, auth y perfil competitivo | Cuenta, perfil, nivel/categoría, (futuro Elo) | **In Progress** (US-E1-01 Parcial; US-E1-02 No iniciada; US-E1-03 Parcial) |
+| E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel | **In Progress** (US-E2-01 Parcial; US-E2-02 Done; US-E2-03 Done; US-E2-04 Parcial) |
+| E3 | Motor de torneos y formatos | Rotaciones, rondas, tablero (según formato) | **In Progress** (US-E3-01 Parcial; US-E3-02 Done; US-E3-03 Done) |
+| E4 | Sedes y geo | Directorio, mapa, horas vacantes | **In Progress** (US-E4-01 Parcial; US-E4-02/03 No iniciada) |
+| E5 | Ranking y resultados | Resultados → recálculo (puntos / Elo) | **In Progress** (US-E5-01 Parcial; US-E5-02 Parcial; US-E5-03 No iniciada) |
+| E6 | Cobro colaborativo | Obligaciones, comprobantes, sin custodia | **Done (MVP)** (US-E6-01/02 Cumplida; US-E6-03 No iniciada) |
+| E7 | Coordinación | Chat, notificaciones | **Backlog** (US-E7-01/02 No iniciada) |
 
 ---
 
@@ -96,7 +96,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** tokens de acceso/refresh; cierre de sesión; mensajes en español.
 
-**Estado:** No iniciada (API sin módulo auth completo en alcance actual).
+**Estado:** **Parcial — backend:** endpoints de auth (register/login/refresh) + middleware JWT + perfil (ver US‑E1‑02). Pendiente: logout/blacklist, endurecer refresh rotation y tests de integración en Node 20.19+.
 
 ---
 
@@ -108,7 +108,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** campos opcionales/obligatorios según deporte; visibles en ficha de partido.
 
-**Estado:** No iniciada.
+**Estado:** **Parcial — backend:** `GET /users/me` y `PATCH /users/me` (perfil base). Pendiente: campos técnicos (drive/revés) y criterios por deporte.
 
 ---
 
@@ -134,7 +134,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** CRUD; estados; `sport` explícito; precio opcional por persona.
 
-**Estado:** Parcial (`POST /americanos` orientado a formato concreto; falta generalización y CRUD completo).
+**Estado:** **Parcial — backend:** CRUD base de partidos (`GET /matches`, `GET /matches/:id`, `POST /matches`, `PATCH /matches/:id`, `PATCH /matches/:id/cancel`) + `/americanos` legacy. Pendiente: precio/cobro por persona en creación (relacionado con E6), permisos (owner/admin) y tests de integración (Node 20.19+).
 
 ---
 
@@ -146,7 +146,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** paginación; índices; respuesta estable en OpenAPI.
 
-**Estado:** No iniciada.
+**Estado:** **Done (backend):** `GET /api/v1/matches/open` con filtros + paginación, OpenAPI y tests de contrato.
 
 ---
 
@@ -158,7 +158,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** rechazo con código de negocio; organizador puede override según política.
 
-**Estado:** No iniciada.
+**Estado:** **Done (backend):** `POST /api/v1/matches/:matchId/join` con validación de categoría + cupo; respuestas con códigos estables.
 
 ---
 
@@ -196,7 +196,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** determinismo testeado; idempotencia al regenerar con mismos inputs.
 
-**Estado:** No iniciada.
+**Estado:** **Done (backend):** Americano schedule determinista e idempotente (`POST/GET /api/v1/tournaments/:tournamentId/americano-schedule...`) + persistencia + OpenAPI + tests.
 
 ---
 
@@ -208,7 +208,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** polling o WebSocket según NFR; autorización por rol.
 
-**Estado:** No iniciada.
+**Estado:** **Done (backend):** `GET /api/v1/tournaments/:tournamentId/scoreboard` + OpenAPI + tests (contrato + integración condicional).
 
 ---
 
@@ -371,6 +371,100 @@ Para dar por **Done** cada historia en un sprint:
 5. **Task Planner:** DAG de migraciones + API + tests.
 6. **Tester:** tests en rojo.
 7. **Implementer / Verifier:** hasta verde.
+
+---
+
+## 12. Scrum/Kanban operativo (backend-first) + Sprints
+
+### Tablero Kanban recomendado
+
+| Columna | Entrada mínima | Salida / DoD de columna |
+|--------|-----------------|--------------------------|
+| **Backlog** | Idea/historia sin refinar | Se entiende el “qué” y el “para qué” |
+| **Ready** | Historia refinada | Tiene criterios de aceptación + contrato API tentativo (request/response) + dependencias claras |
+| **In Progress** | Historia lista para construir | Hay test(s) inicial(es) en rojo o plan TDD concreto |
+| **Review** | Implementación terminada | `lint` + `typecheck` + `test` en verde, OpenAPI actualizado si aplica |
+| **Done** | Mergeable/deployable | Cumple checklist de verificación por historia (sección 10) |
+
+**WIP sugerido**
+
+- **In Progress**: 2
+- **Review**: 2
+- **Ready**: 5–8
+
+### Sprints propuestos (prioridad: backend)
+
+#### Sprint 1 — “Base operable + contrato público”
+
+- **Objetivo**: correr API local sin fricción (env + scripts) y poder testear manualmente con Swagger.
+- **Scope**
+  - **E0**: endurecer contrato y docs de endpoints existentes (`/sports`, `/tournaments`, `/americanos`).
+  - **Docs**: OpenAPI/Swagger siempre actualizado para endpoints v1.
+- **Criterios de salida**
+  - `GET /docs` y `GET /openapi.json` operativos
+  - `.env.example` completo y guía de ejecución/pruebas
+  - Suite de **contrato HTTP** en verde; integración condicionada a `TEST_DATABASE_URL`
+
+#### Sprint 2 — “E0 sólido: presets versionados (US-E0-03)”
+
+- **Objetivo**: versionar presets sin romper torneos en curso.
+- **Scope**
+  - **US-E0-03** completa (modelo + migración + API si aplica + tests).
+- **Criterios de salida**
+  - Torneos guardan referencia a versión de preset; nuevas versiones no afectan torneos existentes
+  - Tests de dominio/integ cubren los casos 1 y 2 de la historia
+
+#### Sprint 3 — “E2 MVP: descubrimiento + unión validada”
+
+- **Objetivo**: dejar de depender de WhatsApp para llenar cupos.
+- **Scope**
+  - **US-E2-02** listar partidas abiertas con filtros + paginación
+  - **US-E2-03** unirse con validación de nivel/categoría (rechazo con código de negocio)
+- **Criterios de salida**
+  - Endpoint(s) con paginación/filtros documentados en OpenAPI
+  - Validaciones y códigos de error en español
+
+#### Sprint 4 — “E3 motor: rotaciones deterministas (inicio)”
+
+- **Objetivo**: calendario/rotaciones idempotentes para al menos 1 formato (Americano).
+- **Scope**
+  - **US-E3-02** (Americano primero): algoritmo determinista + idempotencia
+- **Criterios de salida**
+  - Tests de dominio demuestran determinismo e idempotencia con mismos inputs
+  - Contrato API para “generar/consultar rondas” documentado
+
+#### Sprint 5 — “E3‑03 Scoreboard (posiciones)”
+
+- **Objetivo**: exponer posiciones consultables por torneo con DTO estable.
+- **Scope**
+  - `GET /api/v1/tournaments/:tournamentId/scoreboard` + OpenAPI + tests (contrato + integración condicional)
+- **Criterios de salida**
+  - Endpoint documentado y validado por tests de contrato
+
+#### Sprint 6 — “E2 CRUD de partidos (base)”
+
+- **Objetivo**: completar CRUD base de partidos sin romper `open`/`join`.
+- **Scope**
+  - `GET /api/v1/matches` + `GET /api/v1/matches/:matchId`
+  - `POST /api/v1/matches` (auth; creator queda como participante)
+  - `PATCH /api/v1/matches/:matchId` (campos permitidos + invariantes)
+  - `PATCH /api/v1/matches/:matchId/cancel`
+  - OpenAPI + tests de contrato
+- **Criterios de salida**
+  - `lint` en verde
+  - Tests de contrato cubren rutas nuevas (sin DB)
+
+#### Sprint 7 — “E2 hardening + integración (cerrar ciclo)”
+
+- **Objetivo**: endurecer permisos/estados y cerrar verificación con integración DB y runtime estándar.
+- **Scope**
+  - **Permisos MVP** en matches: definir owner (p. ej. `organizerUserId` o regla equivalente) y aplicar en `PATCH`/`cancel`.
+  - **Integración DB** para CRUD de matches (seed + casos de cupo/estado) usando `TEST_DATABASE_URL`.
+  - **Transiciones de estado** mínimas: impedir updates/cancel sobre `IN_PROGRESS/FINISHED/CANCELLED`; alineación con `MatchStatus` (Prisma).
+  - **Infra**: estandarizar Node 20.19+ (docs/CI) para correr `npm test` y `npm run typecheck`.
+- **Criterios de salida**
+  - `npm run lint && npm run typecheck && npm test` en verde con Node 20.19+
+  - Integración DB valida: create→update→cancel y conflictos (cupo/estado)
 
 ---
 

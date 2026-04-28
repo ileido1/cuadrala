@@ -1,0 +1,66 @@
+---
+name: Senior Clean Architecture Enforcement
+description: Strict architectural boundaries, dependency inversion, and layer-specific responsibilities for Node.js/TypeScript.
+globs: ["src/**/*"]
+alwaysApply: true
+---
+
+# 🏗️ ARCHITECTURAL MANIFESTO: CLEAN ARCHITECTURE & DIP
+
+As a Senior Backend Architect, you are responsible for maintaining the sanctity of the layers. The goal is total decoupling of Business Logic from Technical Details (Frameworks, DBs, Drivers).
+
+## 🌍 1. THE DEPENDENCY RULE (Inviolable)
+- **Direction:** Dependencies must only point **inwards**. 
+  - `Domain` knows nothing.
+  - `Application` only knows `Domain`.
+  - `Infrastructure` and `Presentation` know `Application` and `Domain`.
+- **Strict Prohibition:** Any import from `src/infrastructure/` or `src/presentation/` inside `src/application/` or `src/domain/` will cause an immediate architectural failure.
+
+---
+
+## 📂 2. LAYER-SPECIFIC RESPONSIBILITIES
+
+### 🟢 src/domain (The Core)
+- **Content:** Entities, Value Objects, Domain Errors, and **Interfaces** (Repository/Service contracts).
+- **Entities:** Pure TypeScript classes. No decorators from ORMs (TypeORM/Sequelize). No Prisma types.
+- **Rules:** - Must contain the "Logic of the Business" (e.g., `user.canResetPassword()`).
+  - **Zero external dependencies.** Only use standard language features.
+  - All communication with the outside world happens through `interfaces`.
+
+### 🟡 src/application (The Use Cases)
+- **Content:** Use Cases (Interactors), DTOs (Input/Output), and Port/Interface definitions for tools.
+- **Use Cases:** Each file should represent a **single business action** (e.g., `RegisterUserUseCase.ts`).
+- **Dependency Inversion:** Use constructor injection to receive interfaces. 
+- **Strict Prohibition:** - Do NOT import `PRISMA`, `axios`, `bcrypt`, or `jwt`. 
+  - Do NOT leak `req/res` objects from Express here.
+  - Do NOT return database models; return Domain Entities or specialized DTOs.
+
+### 🔵 src/infrastructure (The Details)
+- **Content:** Persistence (Prisma), External APIs, Security (Bcrypt/JWT), Mailing.
+- **Mappers:** You **must** implement a Mapper pattern. Map Prisma models to Domain Entities before returning them to the Application layer.
+- **Adapters:** This is where you implement the interfaces defined in the Domain.
+
+### 🔴 src/presentation (The Gateway)
+- **Content:** Express Routers, Controllers, Middlewares, and Schemas (Zod/Joi).
+- **Controllers:** Keep them "Skinny". Their only job is:
+  1. Extract data from `req`.
+  2. Call the Use Case.
+  3. Send the HTTP response.
+- **Composition Root:** This layer is responsible for "Wiring up" the dependencies (Injecting `PrismaUserRepository` into `RegisterUserUseCase`).
+
+---
+
+## 🛠️ 3. IMPLEMENTATION STANDARDS
+
+### Dependency Injection (DI)
+All Use Cases must follow this pattern:
+```typescript
+// ✅ CORRECT
+export class LoginUseCase {
+  constructor(
+    private readonly userRepository: IUserRepository, // Domain Interface
+    private readonly hasher: IPasswordHasher         // Domain Interface
+  ) {}
+  
+  async execute(dto: LoginDTO) { ... }
+}
