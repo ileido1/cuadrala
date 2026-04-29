@@ -88,7 +88,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       expect(ENTRIES_1).toEqual(ENTRIES_2);
       expect(ENTRIES_2).toHaveLength(2);
-      expect(ENTRIES_2).toEqual([
+      const EXPECTED = [
         {
           categoryId: CATEGORY.id,
           userId: USER_A.id,
@@ -101,7 +101,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           points: 18,
           gamesPlayed: 1,
         },
-      ]);
+      ].sort((_a, _b) => _a.userId.localeCompare(_b.userId));
+
+      expect(ENTRIES_2).toEqual(EXPECTED);
     });
   },
 );

@@ -70,6 +70,17 @@ export class PrismaMatchmakingCandidateRepository implements MatchmakingCandidat
       select: { userId: true, user: { select: { name: true } } },
     });
 
+    // Compat/hardening: si no hay UserCategory (seed incompleto), sugerimos desde User para no devolver vacío.
+    if (ROWS.length === 0) {
+      const USERS = await PRISMA.user.findMany({
+        where: _dto.excludeUserIds.length > 0 ? { id: { notIn: _dto.excludeUserIds } } : {},
+        orderBy: { name: 'asc' },
+        take: TAKE,
+        select: { id: true, name: true },
+      });
+      return USERS.map((_u) => ({ userId: _u.id, name: _u.name }));
+    }
+
     return ROWS.map((_r) => ({ userId: _r.userId, name: _r.user.name }));
   }
 

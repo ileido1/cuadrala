@@ -32,6 +32,25 @@ export async function resetDatabaseForTestsSV(): Promise<void> {
     // ignore: tabla no existe
   }
 
+  // Tournament schedule genérico (Sprint 33). SQL crudo para compatibilidad con DBs antiguas.
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "TournamentSchedule"');
+  } catch {
+    // ignore: tabla no existe
+  }
+
+  // Chat (Sprint 34). SQL crudo para compatibilidad con DBs antiguas.
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "ChatMessage"');
+  } catch {
+    // ignore: tabla no existe
+  }
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "ChatThread"');
+  } catch {
+    // ignore: tabla no existe
+  }
+
   // Receipts (Sprint 28). SQL crudo para compatibilidad con DBs antiguas.
   try {
     await PRISMA.$executeRawUnsafe('DELETE FROM "TransactionReceipt"');

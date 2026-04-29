@@ -19,6 +19,15 @@ export const UPSERT_NOTIFICATION_SUBSCRIPTION_BODY_SCHEMA = z
       .optional(),
     radiusKm: z.number().positive('radiusKm debe ser mayor a 0.').max(200, 'radiusKm fuera de rango.').nullable().optional(),
     enabled: z.boolean(),
+    enabledTypes: z
+      .object({
+        MATCH_SLOT_OPENED: z.boolean().optional(),
+        MATCH_CANCELLED: z.boolean().optional(),
+        CHAT_MESSAGE: z.boolean().optional(),
+        PAYMENT_PENDING: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .superRefine((_val, _ctx) => {

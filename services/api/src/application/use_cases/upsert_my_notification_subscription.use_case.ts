@@ -12,6 +12,7 @@ export type UpsertMyNotificationSubscriptionInputDTO = {
   nearLng: number | null;
   radiusKm: number | null;
   enabled: boolean;
+  enabledTypes?: unknown | null;
 };
 
 export class UpsertMyNotificationSubscriptionUseCase {
@@ -40,6 +41,7 @@ export class UpsertMyNotificationSubscriptionUseCase {
         nearLng: _input.nearLng,
         radiusKm: _input.radiusKm,
         enabled: _input.enabled,
+        enabledTypes: _input.enabledTypes,
       });
     } catch (_error) {
       if (_error instanceof Error && _error.message === 'SUBSCRIPCION_NO_ENCONTRADA') {

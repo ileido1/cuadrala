@@ -88,6 +88,7 @@ export class DispatchNotificationsUseCase {
       );
 
       const RECIPIENTS = await this._notificationSubscriptionRepository.findRecipientsForEventSV({
+        eventType: _event.type,
         categoryId: _event.categoryId,
         matchLat: MATCH_CONTEXT.venueLat,
         matchLng: MATCH_CONTEXT.venueLng,
@@ -166,7 +167,8 @@ export class DispatchNotificationsUseCase {
 
         const NEW_TOKENS = USER_TOKENS.filter((_t) => !seenTokens.has(_t));
         const WOULD_ADD = NEW_TOKENS.length;
-        if (remainingTokenBudget - WOULD_ADD < 0) {
+        // Respetar budget considerando tokens ya agregados en este batch.
+        if (remainingTokenBudget - (tokensToSend.length + WOULD_ADD) < 0) {
           continue;
         }
 
@@ -180,9 +182,18 @@ export class DispatchNotificationsUseCase {
       remainingTokenBudget -= tokensToSend.length;
 
       const BATCH_STARTED_AT = Date.now();
+      const CONTENT =
+        EVENT.type === 'MATCH_SLOT_OPENED'
+          ? { title: 'Se abrió una vacante', body: 'Hay una vacante disponible en una partida que coincide con tus preferencias.' }
+          : EVENT.type === 'MATCH_CANCELLED'
+            ? { title: 'Partida cancelada', body: 'Una partida fue cancelada.' }
+            : EVENT.type === 'PAYMENT_PENDING'
+              ? { title: 'Pago pendiente', body: 'Tienes un pago pendiente asociado a una partida.' }
+              : { title: 'Nuevo mensaje', body: 'Tienes un nuevo mensaje en el chat.' };
+
       const PUSH_RESULT = await this._pushNotificationProvider.sendToDeviceTokensSV(tokensToSend, {
-        title: 'Se abrió una vacante',
-        body: 'Hay una vacante disponible en una partida que coincide con tus preferencias.',
+        title: CONTENT.title,
+        body: CONTENT.body,
         data: {
           eventType: EVENT.type,
           matchId: EVENT.matchId,

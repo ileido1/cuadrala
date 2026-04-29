@@ -6,6 +6,7 @@ export type NotificationSubscriptionDTO = {
   nearLng: number | null;
   radiusKm: number | null;
   enabled: boolean;
+  enabledTypes: unknown | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -18,9 +19,11 @@ export type UpsertNotificationSubscriptionDTO = {
   nearLng: number | null;
   radiusKm: number | null;
   enabled: boolean;
+  enabledTypes?: unknown | null;
 };
 
 export type NotificationSubscriptionRecipientFilterDTO = {
+  eventType: string;
   categoryId: string;
   matchLat: number;
   matchLng: number;

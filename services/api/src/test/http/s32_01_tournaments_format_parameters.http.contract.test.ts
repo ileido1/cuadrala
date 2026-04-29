@@ -5,7 +5,9 @@ import { createApp } from '../../app.js';
 
 const APP = createApp();
 
-describe('Sprint 32 — E0-02: Contrato HTTP POST /api/v1/tournaments (validación formatParameters sin DB)', () => {
+describe(
+  'Sprint 32 — E0-02: Contrato HTTP POST /api/v1/tournaments (validación formatParameters sin DB)',
+  () => {
   it("ROUND_ROBIN: doubleRound='yes' responde 400 VALIDACION_FALLIDA", async () => {
     const RES = await request(APP)
       .post('/api/v1/tournaments')
@@ -53,5 +55,6 @@ describe('Sprint 32 — E0-02: Contrato HTTP POST /api/v1/tournaments (validaci�
     expect(RES.status).toBe(400);
     expect(RES.body.code).toBe('VALIDACION_FALLIDA');
   });
-});
+  },
+);
 

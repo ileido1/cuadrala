@@ -175,6 +175,54 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/tournaments/{tournamentId}/schedule:generate': {
+      post: {
+        tags: ['Tournaments'],
+        summary: 'Generar calendario de torneo (según formato)',
+        parameters: [
+          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['participantUserIds'],
+                properties: {
+                  participantUserIds: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                    minItems: 2,
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '404': { description: 'Torneo no encontrado' },
+          '409': { description: 'Calendario ya generado con inputs distintos' },
+          '501': { description: 'Formato no soportado aún' },
+        },
+      },
+    },
+    '/api/v1/tournaments/{tournamentId}/schedule': {
+      get: {
+        tags: ['Tournaments'],
+        summary: 'Consultar calendario generado (genérico)',
+        parameters: [
+          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '404': { description: 'Calendario no encontrado' },
+        },
+      },
+    },
     '/api/v1/tournaments/{tournamentId}/americano-schedule:generate': {
       post: {
         tags: ['Tournaments'],
@@ -1186,6 +1234,18 @@ const OPENAPI_CONST = {
                   nearLng: { type: 'number', nullable: true },
                   radiusKm: { type: 'number', nullable: true },
                   enabled: { type: 'boolean' },
+                  enabledTypes: {
+                    type: 'object',
+                    description:
+                      'Preferencias por tipo. Si falta una key, se asume habilitado.',
+                    properties: {
+                      MATCH_SLOT_OPENED: { type: 'boolean' },
+                      MATCH_CANCELLED: { type: 'boolean' },
+                      CHAT_MESSAGE: { type: 'boolean' },
+                      PAYMENT_PENDING: { type: 'boolean' },
+                    },
+                    additionalProperties: false,
+                  },
                 },
               },
             },
@@ -1376,6 +1436,70 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/notifications/events/payment-pending': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Crear evento PAYMENT_PENDING y deliveries (endpoint interno)',
+        parameters: [
+          { name: 'x-dispatch-secret', in: 'header', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['matchId', 'categoryId', 'userIds'],
+                properties: {
+                  matchId: { type: 'string', format: 'uuid' },
+                  categoryId: { type: 'string', format: 'uuid' },
+                  userIds: { type: 'array', minItems: 1, items: { type: 'string', format: 'uuid' } },
+                  payload: { type: 'object', additionalProperties: true },
+                },
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/notifications/events/chat-message': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Crear evento CHAT_MESSAGE y deliveries (endpoint interno)',
+        parameters: [
+          { name: 'x-dispatch-secret', in: 'header', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['matchId', 'categoryId', 'userIds'],
+                properties: {
+                  matchId: { type: 'string', format: 'uuid' },
+                  categoryId: { type: 'string', format: 'uuid' },
+                  userIds: { type: 'array', minItems: 1, items: { type: 'string', format: 'uuid' } },
+                  payload: { type: 'object', additionalProperties: true },
+                },
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
     '/api/v1/notifications/metrics': {
       get: {
         tags: ['Notifications'],
@@ -1537,6 +1661,96 @@ const OPENAPI_CONST = {
         ],
         responses: {
           '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+        },
+      },
+    },
+    '/api/v1/matches/{matchId}/chat/messages': {
+      get: {
+        tags: ['Chat'],
+        summary: 'Listar mensajes del chat de un match (MVP)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 } },
+          { name: 'cursorCreatedAt', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+        },
+      },
+      post: {
+        tags: ['Chat'],
+        summary: 'Enviar un mensaje al chat de un match (MVP)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['text'],
+                properties: { text: { type: 'string', minLength: 1, maxLength: 2000 } },
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+        },
+      },
+    },
+    '/api/v1/tournaments/{tournamentId}/chat/messages': {
+      get: {
+        tags: ['Chat'],
+        summary: 'Listar mensajes del chat de un torneo (MVP)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 } },
+          { name: 'cursorCreatedAt', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+        },
+      },
+      post: {
+        tags: ['Chat'],
+        summary: 'Enviar un mensaje al chat de un torneo (MVP)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['text'],
+                properties: { text: { type: 'string', minLength: 1, maxLength: 2000 } },
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
           '400': { description: 'Validación fallida' },
           '401': { description: 'No autorizado' },
           '404': { description: 'No encontrado' },

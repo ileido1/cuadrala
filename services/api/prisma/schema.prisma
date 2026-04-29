@@ -88,6 +88,8 @@ enum SidePreference {
 enum NotificationEventType {
   MATCH_SLOT_OPENED
   MATCH_CANCELLED
+  CHAT_MESSAGE
+  PAYMENT_PENDING
 }
 
 enum NotificationDeliveryStatus {
@@ -176,6 +178,7 @@ model User {
   devicePushTokens          DevicePushToken[]
   refreshTokens             RefreshToken[]
   uploadedTransactionReceipts TransactionReceipt[] @relation("UserUploadedTransactionReceipts")
+  chatMessages                ChatMessage[]
 
   categories       UserCategory[]
   playerProfile    PlayerProfile?
@@ -338,9 +341,30 @@ model Tournament {
   registrations     TournamentRegistration[]
   matches           Match[]
   americanoSchedule TournamentAmericanoSchedule?
+  schedule          TournamentSchedule?
+  chatThread        ChatThread?
 
   @@index([sportId])
   @@index([formatPresetId])
+}
+
+/// Schedule genérico por torneo (MVP: reutiliza payload JSON).
+model TournamentSchedule {
+  id           String     @id @default(uuid())
+  tournamentId String     @unique
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  /// Código del formato (ej. AMERICANO, ROUND_ROBIN).
+  formatCode  String
+  /// Key determinista (idempotencia).
+  scheduleKey String
+  /// Payload JSON del schedule (estructura depende del formato).
+  payload     Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formatCode])
 }
 
 /// Schedule generado para formato AMERICANO a nivel torneo (idempotente por tournamentId).
@@ -400,6 +424,7 @@ model Match {
   transactions       Transaction[]
   notificationEvents NotificationEvent[]
   vacantHour         VacantHour?
+  chatThread         ChatThread?
 
   @@index([categoryId])
   @@index([status])
@@ -585,6 +610,8 @@ model NotificationSubscription {
   nearLng    Float?
   radiusKm   Float?
   enabled    Boolean   @default(true)
+  /// Preferencias por tipo de evento. Si falta una key, se asume habilitado.
+  enabledTypes Json?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -592,6 +619,34 @@ model NotificationSubscription {
   @@index([enabled])
   @@index([categoryId])
   @@index([nearLat, nearLng])
+}
+
+// --- Chat (E7-01) ---
+
+model ChatThread {
+  id          String     @id @default(uuid())
+  matchId     String?    @unique
+  match       Match?     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  tournamentId String?   @unique
+  tournament  Tournament? @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+
+  messages ChatMessage[]
+
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id        String     @id @default(uuid())
+  threadId  String
+  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderUserId String
+  sender    User       @relation(fields: [senderUserId], references: [id], onDelete: Restrict)
+  text      String
+  createdAt DateTime   @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([senderUserId, createdAt])
 }
 
 model NotificationEvent {

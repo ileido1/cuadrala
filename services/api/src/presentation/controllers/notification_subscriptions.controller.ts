@@ -30,6 +30,7 @@ export async function postUpsertMyNotificationSubscriptionCON(
     nearLng: BODY.nearLng ?? null,
     radiusKm: BODY.radiusKm ?? null,
     enabled: BODY.enabled,
+    enabledTypes: BODY.enabledTypes ?? undefined,
   });
 
   _res.status(200).json({

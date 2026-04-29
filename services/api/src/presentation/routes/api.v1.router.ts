@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { AMERICANO_ROUTER } from './americano.router.js';
 import { AUTH_ROUTER } from './auth.router.js';
 import { CATALOG_ROUTER } from './catalog.router.js';
+import { CHAT_ROUTER } from './chat.router.js';
 import { HEALTH_ROUTER } from './health.router.js';
 import { MATCHMAKING_ROUTER } from './matchmaking.router.js';
 import { MATCHES_ROUTER } from './matches.router.js';
@@ -12,6 +13,7 @@ import { PARAMETRIZED_TOURNAMENT_ROUTER } from './parametrized_tournament.router
 import { PROFILE_ROUTER } from './profile.router.js';
 import { RANKING_ROUTER } from './ranking.router.js';
 import { TOURNAMENT_AMERICANO_SCHEDULE_ROUTER } from './tournament_americano_schedule.router.js';
+import { TOURNAMENT_SCHEDULE_ROUTER } from './tournament_schedule.router.js';
 import { TOURNAMENT_SCOREBOARD_ROUTER } from './tournament_scoreboard.router.js';
 import { VENUES_ROUTER } from './venues.router.js';
 import { GEO_ROUTER } from './geo.router.js';
@@ -22,8 +24,10 @@ export const API_V1_ROUTER = Router();
 
 API_V1_ROUTER.use(HEALTH_ROUTER);
 API_V1_ROUTER.use(CATALOG_ROUTER);
+API_V1_ROUTER.use(CHAT_ROUTER);
 API_V1_ROUTER.use(PARAMETRIZED_TOURNAMENT_ROUTER);
 API_V1_ROUTER.use(TOURNAMENT_AMERICANO_SCHEDULE_ROUTER);
+API_V1_ROUTER.use(TOURNAMENT_SCHEDULE_ROUTER);
 API_V1_ROUTER.use(TOURNAMENT_SCOREBOARD_ROUTER);
 API_V1_ROUTER.use(AMERICANO_ROUTER);
 API_V1_ROUTER.use(MATCHES_ROUTER);

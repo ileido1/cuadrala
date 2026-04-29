@@ -1,6 +1,8 @@
 import type {
   CreateMatchCancelledEventDTO,
+  CreateChatMessageEventDTO,
   CreateMatchSlotOpenedEventDTO,
+  CreatePaymentPendingEventDTO,
   NotificationEventDTO,
   NotificationEventRepository,
 } from '../../domain/ports/notification_event_repository.js';
@@ -23,6 +25,28 @@ export class PrismaNotificationEventRepository implements NotificationEventRepos
     return PRISMA.notificationEvent.create({
       data: {
         type: 'MATCH_CANCELLED',
+        matchId: _dto.matchId,
+        categoryId: _dto.categoryId,
+        payload: _dto.payload as never,
+      },
+    });
+  }
+
+  async createChatMessageSV(_dto: CreateChatMessageEventDTO): Promise<NotificationEventDTO> {
+    return PRISMA.notificationEvent.create({
+      data: {
+        type: 'CHAT_MESSAGE',
+        matchId: _dto.matchId,
+        categoryId: _dto.categoryId,
+        payload: _dto.payload as never,
+      },
+    });
+  }
+
+  async createPaymentPendingSV(_dto: CreatePaymentPendingEventDTO): Promise<NotificationEventDTO> {
+    return PRISMA.notificationEvent.create({
+      data: {
+        type: 'PAYMENT_PENDING',
         matchId: _dto.matchId,
         categoryId: _dto.categoryId,
         payload: _dto.payload as never,

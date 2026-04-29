@@ -34,6 +34,7 @@ export class PrismaNotificationSubscriptionRepository
           nearLng: _dto.nearLng,
           radiusKm: _dto.radiusKm,
           enabled: _dto.enabled,
+          enabledTypes: _dto.enabledTypes as never,
         },
       });
       if (UPDATED.count === 0) {
@@ -54,6 +55,7 @@ export class PrismaNotificationSubscriptionRepository
         nearLng: _dto.nearLng,
         radiusKm: _dto.radiusKm,
         enabled: _dto.enabled,
+        enabledTypes: (_dto.enabledTypes ?? null) as never,
       },
     });
     return CREATED;
@@ -83,10 +85,18 @@ export class PrismaNotificationSubscriptionRepository
         userId: { notIn: _filter.excludeUserIds },
         OR: [{ categoryId: null }, { categoryId: _filter.categoryId }],
       },
-      select: { id: true, userId: true, nearLat: true, nearLng: true, radiusKm: true },
+      select: { id: true, userId: true, nearLat: true, nearLng: true, radiusKm: true, enabledTypes: true },
     });
 
     return ROWS.filter((_s) => {
+      if (_s.enabledTypes !== null && typeof _s.enabledTypes === 'object') {
+        const FLAGS = _s.enabledTypes as Record<string, unknown>;
+        const FLAG = FLAGS[_filter.eventType];
+        if (FLAG === false) {
+          return false;
+        }
+      }
+
       if (_s.nearLat === null || _s.nearLng === null || _s.radiusKm === null) {
         return true;
       }
