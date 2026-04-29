@@ -83,6 +83,26 @@ Exponer un **scoreboard** consultable por torneo (posiciones y métricas) y sent
 
 ---
 
+## Sprint 20 — Geo/Geocoding (admin/interno)
+
+### Objetivo
+
+Integración de **Maps/Geocoding** para administración: buscar lugares, consultar detalles por `placeId` y persistir `placeId` + dirección normalizada en `Venue`.
+
+### Variables de entorno (API)
+
+- **GEO_DISPATCH_SECRET**: secret (>= 32 chars) para endpoints internos de geo. Header: `x-geo-secret`.
+- **MAPS_PROVIDER**: `noop` | `stub` | `mapbox` | `google` (por defecto `noop`).
+- **MAPBOX_ACCESS_TOKEN**: requerido si `MAPS_PROVIDER=mapbox`.
+- **GOOGLE_MAPS_API_KEY**: reservado si `MAPS_PROVIDER=google` (no usado si no se implementa el adapter).
+
+### Endpoints (internos)
+
+- `GET /api/v1/geo/places/search?q=...&near=lat,lng&limit=...`
+- `GET /api/v1/geo/places/{placeId}`
+- `POST /api/v1/venues/{venueId}/geocode` body `{ placeId }`
+
+
 ## Sprint 6 — E2 CRUD de partidos
 
 ### Objetivo
@@ -115,6 +135,361 @@ Completar CRUD de partidos (crear/listar/detalle/actualizar/cancelar) con estado
 - **Velocity**: alta — ampliación incremental del módulo `matches` sin romper `/matches/open` ni `/matches/:id/join`.
 - **Friction**: entorno — `npm test` sigue bloqueado en Node 18 por `util.styleText`.
 - **Action**: actualizar Node a 20.19+ y correr `npm install && npm test && npm run typecheck` para cerrar sprint con “verde” real.
+
+---
+
+## Sprint 7 — E2 hardening + integración (cerrar ciclo)
+
+### Objetivo
+
+Endurecer el CRUD de partidos con **permisos/owner**, **transiciones de estado** coherentes con `MatchStatus` y **tests de integración DB** para cerrar el ciclo end‑to‑end.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Definir owner/permisos MVP para editar/cancelar |  |  |  |
+| Tests integración DB: create→update→cancel + conflictos |  |  |  |
+| Endurecer use cases (403/409) y reglas de estado |  |  |  |
+| OpenAPI (seguridad + errores) |  |  |  |
+|  |  |  | **Tests**: requieren Node 20.19+ (Vitest/Rolldown usa `util.styleText`) |
+
+### Definición de Done (backend)
+
+- [ ] Permisos/owner definidos e implementados (403/401 consistentes)
+- [ ] Integración DB (si `TEST_DATABASE_URL`) cubre: create, update, cancel, conflictos (cupo/estado)
+- [ ] OpenAPI actualizado
+- [ ] `lint` + `typecheck` + `test` en verde (Node 20.19+)
+
+### Estado actual
+
+- **Implementado**: tests de integración DB para CRUD de matches (condicionales a `TEST_DATABASE_URL`) + hardening por estado/cupo + permisos (participante).
+- **Lint**: OK.
+- **Bloqueo**: `npm test` requiere Node 20.19+ (Vitest/Rolldown usa `util.styleText`).
+
+---
+
+## Sprint 8 — E0‑03 Presets de formato versionados (cerrar épica E0)
+
+### Objetivo
+
+Completar **presets versionados** para formatos de torneo y dejar reglas claras de “vigente” vs “en uso”, sin romper torneos existentes.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Definir contrato: qué significa “preset vigente” (por `effectiveFrom` + `isActive`) |  |  |  |
+| Endpoint(s) para crear nueva versión de preset (admin) |  |  |  |
+| Resolver preset vigente por `sportId+code` al crear torneo |  |  |  |
+| Garantizar inmutabilidad: torneo guarda `formatPresetId` + `presetSchemaVersion` |  |  |  |
+| Tests integración DB: torneo en curso no cambia al publicar nueva versión |  |  |  |
+| OpenAPI actualizado (presets versionados) |  |  |  |
+
+### Definición de Done (backend)
+
+- [ ] Crear nueva versión no afecta torneos existentes (tests)
+- [ ] Torneo nuevo usa versión vigente al momento de creación (tests)
+- [ ] Validaciones/errores estables (mensajes en español)
+- [ ] OpenAPI actualizado
+- [ ] `lint` + `typecheck` + `test` en verde
+
+### Mini-Retro (ciclo actual)
+
+- **Velocity**: buena — se agregó publish version + resolución por código sin romper la creación por `formatPresetId`.
+- **Friction**: migraciones — se corrigió una migración duplicada para que sea idempotente en DBs ya inicializadas.
+- **Action**: agregar seguridad/rol para el endpoint de publish (hoy es MVP sin auth) y formalizar política de “vigente” por entorno.
+
+---
+
+## Sprint 9 — E4 geo base (venues + near)
+
+### Objetivo
+
+Poder consultar sedes y canchas con filtros por **cercanía** para alimentar discovery.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | `POST /api/v1/venues` + `POST /api/v1/venues/:venueId/courts` |  |
+|  |  | `GET /api/v1/venues?near=lat,lng&radiusKm=...` |  |
+|  |  | OpenAPI + validaciones |  |
+|  |  |  | Integración DB depende de `TEST_DATABASE_URL` |
+
+---
+
+## Sprint 10 — E5 resultados 4/4 + Elo (rating + history)
+
+### Objetivo
+
+Cerrar el ciclo competitivo: **borrador + confirmación cruzada 4/4** y actualizar Elo automáticamente al finalizar.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Draft + confirmaciones 4/4 → `MatchResult`/`MatchResultScore` |  |
+|  |  | Elo: `UserRating` + `UserRatingHistory` + `ELO_K_FACTOR` |  |
+|  |  | Tests integración condicional (DB) |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 11 — E2 lifecycle (slots-state-machine MVP)
+
+### Objetivo
+
+Definir transiciones mínimas de estado para evitar hacks y permitir un flujo correcto: `SCHEDULED → IN_PROGRESS → FINISHED`.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | `POST /api/v1/matches/:matchId/leave` (204 idempotente) |  |
+|  |  | `POST /api/v1/matches/:matchId/start` (204) |  |
+|  |  | `POST /api/v1/matches/:matchId/finish` (204, requiere 4 participantes) |  |
+|  |  | Tests integración condicional (DB) + contrato 401 |  |
+
+---
+
+## Sprint 12 — E2 discovery hardening: filtros dinámicos (geo + precio)
+
+### Objetivo
+
+Mejorar discovery: filtros por **precio** y **geocerca** en partidas abiertas.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | `Match.pricePerPlayerCents` + migración |  |
+|  |  | `GET /api/v1/matches/open` con `near/radiusKm` + `min/max pricePerPlayerCents` |  |
+|  |  | Test integración condicional (DB) `e12_*` |  |
+
+---
+
+## Sprint 13 — E5 exposición de Elo: endpoints públicos
+
+### Objetivo
+
+Permitir que frontend/clients consulten Elo actual e historial.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | `GET /api/v1/users/:userId/ratings` |  |
+|  |  | `GET /api/v1/users/:userId/ratings/history` (paginado) |  |
+|  |  | OpenAPI + validaciones + tests (contrato + integración condicional) |  |
+
+---
+
+## Sprint 14 (propuesto) — E2 permisos + hardening de concurrencia
+
+### Objetivo
+
+Hacer el módulo `matches` realmente “producción”: ownership/permisos y consistencia de cupos.
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Definir `organizerUserId` (owner) y políticas de edición/cancelación |  |  |  |
+| Join atómico (evitar sobrepasar cupo en carreras) + idempotencia configurable |  |  |  |
+| Política de cancelación en `IN_PROGRESS` + efectos en resultados |  |  |  |
+| Integración DB completa (activar `TEST_DATABASE_URL` en CI/local) |  |  |  |
+
+---
+
+## Sprint 14 — E2 permisos (owner) + notificaciones MVP
+
+### Objetivo
+
+Cerrar ownership/permisos de matches y dejar un MVP de notificaciones segmentadas (sin proveedor externo obligatorio).
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | `Match.organizerUserId` + permisos organizer (update/cancel/start/finish) |  |
+|  |  | Resultados 4/4 + Elo (aplica al finalizar) |  |
+|  |  | Notificaciones MVP: subscriptions + event `MATCH_SLOT_OPENED` + dispatch stub |  |
+|  |  | OpenAPI + tests (contrato + integración condicional) |  |
+|  |  | `npm test` + `npm run lint` (Node 20.19+) |  |
+
+---
+
+## Sprint 15 — E2 hardening: join atómico + cupos
+
+### Objetivo
+
+Garantizar que `POST /api/v1/matches/:matchId/join` sea **atómico** y **nunca** exceda `maxParticipants` bajo concurrencia.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Join atómico (transacción + `SELECT ... FOR UPDATE` en `Match`) |  |
+|  |  | Test integración `e15_*` (concurrencia) |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 16 — E2 hardening: cancelación en `IN_PROGRESS`
+
+### Objetivo
+
+Definir política clara de cancelación en `IN_PROGRESS` y efectos sobre resultados/drafts.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Cancel en `SCHEDULED` y `IN_PROGRESS` (solo organizer) |  |
+|  |  | Cancel en `FINISHED/CANCELLED` => 409 (`PARTIDO_NO_CANCELABLE`) |  |
+|  |  | Cleanup transaccional de drafts/confirmations al cancelar |  |
+|  |  | Test integración `e16_*` |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 17 — E7-02 (backend-first): notificaciones como worker real
+
+### Objetivo
+
+Convertir el dispatch de notificaciones en un flujo robusto tipo worker: deliveries PENDING, retries/backoff e invalidación de tokens inválidos.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | `NotificationDelivery` worker fields (`attemptCount`, `nextAttemptAt`, etc.) + migración |  |
+|  |  | Dispatch worker: PENDING → SENT/FAILED, retries/backoff |  |
+|  |  | Deshabilitar `DevicePushToken` si token inválido |  |
+|  |  | Test integración `e17_*` |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 18 — E7-02: worker automático (cron in-process)
+
+### Objetivo
+
+Ejecutar `DispatchNotificationsUseCase` periódicamente sin depender de HTTP, controlado por env y con shutdown limpio.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Worker `notifications.worker.ts` (env gated, no corre en test) |  |
+|  |  | Wiring en `main.ts` + shutdown limpio |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 19 — E7-02: observability + hardening del worker
+
+### Objetivo
+
+Mejorar operabilidad del dispatch: **logs estructurados**, **métricas internas**, **rate limiting por tick** y **warnings/alertas mínimas**.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | `GET /api/v1/notifications/metrics` (interno, secret) |  |
+|  |  | Logs JSON por tick/batch/delivery + warnings |  |
+|  |  | Rate limit por `limitTokens` |  |
+|  |  | Test integración `e19_*` (DB condicional) |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 20 — E4: Geo/Geocoding (admin/interno)
+
+### Objetivo
+
+Integración de **Maps/Geocoding** para administración: buscar lugares, consultar detalles por `placeId` y persistir `placeId` + dirección normalizada en `Venue`.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Campos en `Venue`: `placeId`, `formattedAddress`, address normalizada, `geocodedAt` |  |
+|  |  | Provider `MAPS_PROVIDER` (`noop/stub/mapbox`) + endpoints internos geo |  |
+|  |  | `POST /api/v1/venues/{venueId}/geocode` |  |
+|  |  | Test integración `e20_*` (DB condicional) |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 21 — E4/E2: Horas Vacantes (publicación rápida)
+
+### Objetivo
+
+Permitir que un admin/club publique una **hora vacante** en pocos pasos y que se convierta en **oferta visible** en discovery.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Modelo `VacantHour` + migración |  |
+|  |  | `POST /api/v1/vacant-hours/publish` (interno) crea `Match` asociado |  |
+|  |  | `GET /api/v1/vacant-hours` + `PATCH /api/v1/vacant-hours/:id/cancel` |  |
+|  |  | Test integración `e21_*` (DB condicional) |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 22 — E7-02: worker separado (servicio)
+
+### Objetivo
+
+Separar la ejecución del dispatch a un **proceso independiente** para escalar sin acoplarlo a la API.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Entrypoint standalone `src/notifications_worker_main.ts` |  |
+|  |  | Lock distribuido (advisory lock) para evitar doble ejecución |  |
+|  |  | Scripts `worker:notifications` / `start:worker:notifications` |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 23 — E5: Elo “producto” + leaderboard
+
+### Objetivo
+
+Estabilizar el ranking Elo con políticas de configuración y exponer un leaderboard consumible.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Elo configurable: `ELO_INITIAL_RATING`, clamps, K provisional |  |
+|  |  | `GET /api/v1/ratings/leaderboard?categoryId=...` |  |
+|  |  | OpenAPI + test contrato |  |
+|  |  | `npm test` + `npm run lint` |  |
+
+---
+
+## Sprint 24 — E0-03: Presets versionados (cerrar historia)
+
+### Objetivo
+
+Garantizar que **torneos existentes** no cambian ante nuevas versiones y que **torneos nuevos** usan la versión vigente por `sportId+code`.
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | `TournamentFormatPreset`: `version`, `effectiveFrom`, `isActive`, `supersedes` |  |
+|  |  | Resolución de vigente por `findActiveBySportAndCodeSV(..., now)` |  |
+|  |  | Tests integración `e0_03_*` / `e8_*` (DB condicional) |  |
+|  |  | `npm test` + `npm run lint` |  |
 
 
 

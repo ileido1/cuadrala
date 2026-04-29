@@ -18,6 +18,7 @@ export type MatchListItemDTO = {
   type: 'AMERICANO' | 'REGULAR';
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
   scheduledAt: Date | null;
+  pricePerPlayerCents: number;
   maxParticipants: number;
   participantCount: number;
   openSpots: number;

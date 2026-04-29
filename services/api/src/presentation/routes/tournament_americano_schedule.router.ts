@@ -9,7 +9,7 @@ import { asyncHandler } from '../middleware/async_handler.js';
 export const TOURNAMENT_AMERICANO_SCHEDULE_ROUTER = Router();
 
 TOURNAMENT_AMERICANO_SCHEDULE_ROUTER.post(
-  '/tournaments/:tournamentId/americano-schedule:generate',
+  '/tournaments/:tournamentId/americano-schedule\\:generate',
   asyncHandler(postGenerateTournamentAmericanoScheduleCON),
 );
 

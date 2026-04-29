@@ -4,6 +4,11 @@ export type MatchListFiltersDTO = {
   status?: 'SCHEDULED';
   scheduledFrom?: Date;
   scheduledTo?: Date;
+  minPricePerPlayerCents?: number;
+  maxPricePerPlayerCents?: number;
+  nearLat?: number;
+  nearLng?: number;
+  radiusKm?: number;
 };
 
 export type PageDTO = {
@@ -17,6 +22,7 @@ export type OpenMatchDTO = {
   categoryId: string;
   status: string;
   scheduledAt: Date | null;
+  pricePerPlayerCents: number;
   maxParticipants: number;
   participantCount: number;
   openSpots: number;

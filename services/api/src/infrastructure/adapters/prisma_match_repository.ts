@@ -13,6 +13,7 @@ function computeOpenMatchDTO(_row: {
   categoryId: string;
   status: string;
   scheduledAt: Date | null;
+  pricePerPlayerCents: number;
   maxParticipants: number;
   _count: { participants: number };
 }): OpenMatchDTO {
@@ -24,10 +25,21 @@ function computeOpenMatchDTO(_row: {
     categoryId: _row.categoryId,
     status: _row.status,
     scheduledAt: _row.scheduledAt,
+    pricePerPlayerCents: _row.pricePerPlayerCents,
     maxParticipants: _row.maxParticipants,
     participantCount: PARTICIPANT_COUNT,
     openSpots: OPEN_SPOTS,
   };
+}
+
+function kmToLatitudeDeltaSV(_km: number): number {
+  return _km / 111;
+}
+
+function kmToLongitudeDeltaSV(_km: number, _atLatDegrees: number): number {
+  const COS = Math.cos((_atLatDegrees * Math.PI) / 180);
+  if (COS === 0) return 180;
+  return _km / (111 * COS);
 }
 
 export class PrismaMatchRepository implements MatchRepository {
@@ -39,6 +51,14 @@ export class PrismaMatchRepository implements MatchRepository {
       sportId: _filters.sportId,
       status: _filters.status ?? 'SCHEDULED',
       ...(_filters.categoryId !== undefined ? { categoryId: _filters.categoryId } : {}),
+      ...(_filters.minPricePerPlayerCents !== undefined || _filters.maxPricePerPlayerCents !== undefined
+        ? {
+            pricePerPlayerCents: {
+              ...(_filters.minPricePerPlayerCents !== undefined ? { gte: _filters.minPricePerPlayerCents } : {}),
+              ...(_filters.maxPricePerPlayerCents !== undefined ? { lte: _filters.maxPricePerPlayerCents } : {}),
+            },
+          }
+        : {}),
       ...(_filters.scheduledFrom !== undefined || _filters.scheduledTo !== undefined
         ? {
             scheduledAt: {
@@ -46,6 +66,23 @@ export class PrismaMatchRepository implements MatchRepository {
               ...(_filters.scheduledTo !== undefined ? { lte: _filters.scheduledTo } : {}),
             },
           }
+        : {}),
+      ...(_filters.nearLat !== undefined &&
+      _filters.nearLng !== undefined &&
+      _filters.radiusKm !== undefined &&
+      _filters.radiusKm > 0
+        ? (() => {
+            const LAT_DELTA = kmToLatitudeDeltaSV(_filters.radiusKm as number);
+            const LNG_DELTA = kmToLongitudeDeltaSV(_filters.radiusKm as number, _filters.nearLat as number);
+            return {
+              court: {
+                venue: {
+                  latitude: { gte: (_filters.nearLat as number) - LAT_DELTA, lte: (_filters.nearLat as number) + LAT_DELTA },
+                  longitude: { gte: (_filters.nearLng as number) - LNG_DELTA, lte: (_filters.nearLng as number) + LNG_DELTA },
+                },
+              },
+            };
+          })()
         : {}),
     };
 
@@ -65,6 +102,7 @@ export class PrismaMatchRepository implements MatchRepository {
           categoryId: true,
           status: true,
           scheduledAt: true,
+          pricePerPlayerCents: true,
           maxParticipants: true,
           _count: { select: { participants: true } },
         },

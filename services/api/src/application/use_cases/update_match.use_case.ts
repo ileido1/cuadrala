@@ -1,6 +1,6 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { MatchCrudRepository } from '../../domain/ports/match_crud_repository.js';
-import type { MatchParticipationRepository } from '../../domain/ports/match_participation_repository.js';
+import type { MatchOrganizerRepository } from '../../domain/ports/match_organizer_repository.js';
 import type { MatchQueryRepository } from '../../domain/ports/match_query_repository.js';
 import type { MatchDetailDTO, UpdateMatchPatchDTO } from '../../domain/ports/match_crud_repository.js';
 
@@ -9,13 +9,14 @@ export type UpdateMatchUseCaseInput = {
   actorUserId: string;
   scheduledAt?: Date | null;
   courtId?: string | null;
+  pricePerPlayerCents?: number;
   maxParticipants?: number;
 };
 
 export class UpdateMatchUseCase {
   constructor(
     private readonly _matchQueryRepository: MatchQueryRepository,
-    private readonly _matchParticipationRepository: MatchParticipationRepository,
+    private readonly _matchOrganizerRepository: MatchOrganizerRepository,
     private readonly _matchCrudRepository: MatchCrudRepository,
   ) {}
 
@@ -25,11 +26,11 @@ export class UpdateMatchUseCase {
       throw new AppError('PARTIDO_NO_ENCONTRADO', 'El partido indicado no existe.', 404);
     }
 
-    const IS_PARTICIPANT = await this._matchParticipationRepository.userIsParticipantSV(
-      _input.matchId,
-      _input.actorUserId,
-    );
-    if (!IS_PARTICIPANT) {
+    const ORGANIZER_USER_ID = await this._matchOrganizerRepository.getOrganizerUserIdByMatchIdSV(_input.matchId);
+    if (ORGANIZER_USER_ID === null) {
+      throw new AppError('PARTIDO_NO_ENCONTRADO', 'El partido indicado no existe.', 404);
+    }
+    if (ORGANIZER_USER_ID !== _input.actorUserId) {
       throw new AppError('NO_AUTORIZADO', 'No tienes permisos para editar este partido.', 403);
     }
 
@@ -44,6 +45,7 @@ export class UpdateMatchUseCase {
     const PATCH: UpdateMatchPatchDTO = {
       ...(_input.scheduledAt !== undefined ? { scheduledAt: _input.scheduledAt } : {}),
       ...(_input.courtId !== undefined ? { courtId: _input.courtId } : {}),
+      ...(_input.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: _input.pricePerPlayerCents } : {}),
       ...(_input.maxParticipants !== undefined ? { maxParticipants: _input.maxParticipants } : {}),
     };
 
@@ -60,6 +62,16 @@ export class UpdateMatchUseCase {
           'CUPO_INVALIDO',
           'No se puede reducir el cupo por debajo de los participantes actuales.',
           409,
+        );
+      }
+    }
+
+    if (_input.pricePerPlayerCents !== undefined) {
+      if (_input.pricePerPlayerCents < 0 || _input.pricePerPlayerCents > 1_000_000_00) {
+        throw new AppError(
+          'VALIDACION_FALLIDA',
+          'pricePerPlayerCents debe estar entre 0 y 100000000.',
+          400,
         );
       }
     }

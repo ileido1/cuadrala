@@ -21,7 +21,7 @@ export async function postGenerateTournamentAmericanoScheduleCON(
     participantUserIds: BODY.participantUserIds,
   });
 
-  _res.status(200).json({
+  _res.status(201).json({
     success: true,
     message: 'Calendario Americano generado correctamente.',
     data: RESULT,

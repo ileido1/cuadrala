@@ -67,3 +67,25 @@ export async function listRankingSuggestionsRepo(
     name: _r.user.name,
   }));
 }
+
+export async function listEloSuggestionsRepo(
+  _categoryId: string,
+  _excludeUserIds: string[],
+  _limit: number,
+): Promise<{ userId: string; rating: number; name: string }[]> {
+  const ROWS = await PRISMA.userRating.findMany({
+    where: {
+      categoryId: _categoryId,
+      ...(_excludeUserIds.length > 0 ? { userId: { notIn: _excludeUserIds } } : {}),
+    },
+    orderBy: { rating: 'desc' },
+    take: _limit,
+    include: { user: { select: { name: true } } },
+  });
+
+  return ROWS.map((_r) => ({
+    userId: _r.userId,
+    rating: _r.rating,
+    name: _r.user.name,
+  }));
+}

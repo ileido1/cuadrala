@@ -7,6 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // --- Enums ---
@@ -61,6 +62,48 @@ enum PaymentMethod {
   MANUAL
 }
 
+enum MatchResultDraftStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum MatchResultConfirmationStatus {
+  CONFIRMED
+  REJECTED
+}
+
+enum DominantHand {
+  RIGHT
+  LEFT
+  AMBIDEXTROUS
+}
+
+enum SidePreference {
+  RIGHT
+  LEFT
+  ANY
+}
+
+enum NotificationEventType {
+  MATCH_SLOT_OPENED
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum DevicePushTokenProvider {
+  FCM
+}
+
+enum VacantHourStatus {
+  PUBLISHED
+  CANCELLED
+}
+
 // --- Catálogo multi-deporte (E0) ---
 
 /// Deporte configurable (PADEL, etc.); el producto puede mostrar solo pádel en MVP.
@@ -73,6 +116,7 @@ model Sport {
   formatPresets TournamentFormatPreset[]
   matches       Match[]
   tournaments   Tournament[]
+  vacantHours   VacantHour[]
 }
 
 /// Preset de formato de torneo por deporte (Americano, Round Robin, etc.).
@@ -120,9 +164,31 @@ model User {
   matchParticipants       MatchParticipant[]
   rankingEntries          RankingEntry[]
   matchResultScores       MatchResultScore[]
+  matchResultDraftsCreated MatchResultDraft[] @relation("UserMatchResultDraftsCreated")
+  matchResultConfirmations MatchResultConfirmation[]
+  ratings                UserRating[]
+  ratingHistory          UserRatingHistory[]
   transactions            Transaction[]
+  notificationSubscriptions NotificationSubscription[]
+  notificationDeliveries   NotificationDelivery[]
+  devicePushTokens         DevicePushToken[]
 
   categories UserCategory[]
+  playerProfile PlayerProfile?
+  organizedMatches Match[] @relation("MatchOrganizer")
+}
+
+model PlayerProfile {
+  id             String         @id @default(uuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dominantHand   DominantHand   @default(RIGHT)
+  sidePreference SidePreference @default(ANY)
+  birthYear      Int?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([userId])
 }
 
 /// Categoría actual del usuario (MVP). Permite validar unión a partidas por categoría.
@@ -147,15 +213,68 @@ model Category {
   matches        Match[]
   rankingEntries RankingEntry[]
   tournaments    Tournament[]
+  userCategories UserCategory[]
+  ratings        UserRating[]
+  ratingHistory  UserRatingHistory[]
+  notificationSubscriptions NotificationSubscription[]
+  notificationEvents        NotificationEvent[]
+  vacantHours              VacantHour[]
+}
+
+model UserRating {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  rating     Float    @default(1500)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, userId])
+  @@index([categoryId, rating])
+  @@index([userId])
+}
+
+model UserRatingHistory {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  matchId        String
+  resultId       String
+  previousRating Float
+  newRating      Float
+  kFactor        Float
+  createdAt      DateTime @default(now())
+
+  @@unique([resultId, userId])
+  @@index([categoryId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Venue {
   id        String   @id @default(uuid())
   name      String
   address   String?
+  latitude  Float?
+  longitude Float?
+  /// placeId del proveedor (Mapbox/Google). Único cuando existe.
+  placeId   String?  @unique
+  /// Dirección normalizada (texto completo) del proveedor.
+  formattedAddress String?
+  addressCountry    String?
+  addressState      String?
+  addressCity       String?
+  addressLine1      String?
+  addressPostalCode String?
+  geocodedAt DateTime?
   createdAt DateTime @default(now())
 
   courts Court[]
+  vacantHours VacantHour[]
+
+  @@index([latitude, longitude])
 }
 
 model Court {
@@ -166,6 +285,7 @@ model Court {
   createdAt DateTime @default(now())
 
   matches Match[]
+  vacantHours VacantHour[]
 }
 
 model Tournament {
@@ -225,6 +345,8 @@ model Match {
   category     Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   sportId      String
   sport        Sport       @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  organizerUserId String
+  organizer     User       @relation("MatchOrganizer", fields: [organizerUserId], references: [id], onDelete: Restrict)
   formatPresetId String?
   formatPreset   TournamentFormatPreset? @relation(fields: [formatPresetId], references: [id], onDelete: SetNull)
   formatParameters Json?
@@ -236,6 +358,8 @@ model Match {
   type         MatchType
   status       MatchStatus @default(SCHEDULED)
   scheduledAt  DateTime?
+  /// Precio por jugador (cents). 0 = gratis/no definido en MVP.
+  pricePerPlayerCents Int @default(0)
   /// Cupo máximo de participantes (MVP). Para Americano suele ser 4, pero se deja configurable.
   maxParticipants Int      @default(4)
   createdAt    DateTime    @default(now())
@@ -243,12 +367,77 @@ model Match {
 
   participants MatchParticipant[]
   results      MatchResult[]
+  resultDraft  MatchResultDraft?
   transactions Transaction[]
+  notificationEvents NotificationEvent[]
+  vacantHour VacantHour?
 
   @@index([categoryId])
   @@index([status])
   @@index([sportId])
   @@index([scheduledAt])
+  @@index([pricePerPlayerCents])
+  @@index([organizerUserId])
+}
+
+model VacantHour {
+  id        String @id @default(uuid())
+  venueId   String
+  venue     Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  courtId   String
+  court     Court  @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  sportId   String
+  sport     Sport  @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  scheduledAt      DateTime
+  durationMinutes  Int?
+
+  pricePerPlayerCents Int @default(0)
+  maxParticipants     Int @default(4)
+
+  status  VacantHourStatus @default(PUBLISHED)
+
+  matchId String? @unique
+  match   Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courtId, scheduledAt])
+  @@index([courtId, scheduledAt])
+  @@index([venueId])
+  @@index([status])
+}
+
+model MatchResultDraft {
+  id        String                 @id @default(uuid())
+  matchId   String                 @unique
+  match     Match                   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  status    MatchResultDraftStatus @default(DRAFT)
+  payload   Json
+  createdByUserId String
+  createdByUser   User                    @relation("UserMatchResultDraftsCreated", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  confirmations MatchResultConfirmation[]
+
+  @@index([matchId])
+}
+
+model MatchResultConfirmation {
+  id        String                        @id @default(uuid())
+  draftId   String
+  draft     MatchResultDraft              @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    MatchResultConfirmationStatus
+  createdAt DateTime                      @default(now())
+
+  @@unique([draftId, userId])
+  @@index([userId])
 }
 
 model MatchParticipant {
@@ -336,17 +525,77 @@ model Transaction {
   @@index([matchId, status])
 }
 
-/// Schedule persistido del formato Americano por torneo.
-/// Se genera una vez (idempotente) y se consulta por tournamentId.
-model TournamentAmericanoSchedule {
-  id           String     @id @default(uuid())
-  tournamentId String     @unique
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  /// Hash determinista del input normalizado (participantUserIds).
-  scheduleKey  String
-  schedule     Json
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+model NotificationSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  nearLat   Float?
+  nearLng   Float?
+  radiusKm  Float?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([tournamentId])
+  @@index([userId])
+  @@index([enabled])
+  @@index([categoryId])
+  @@index([nearLat, nearLng])
+}
+
+model NotificationEvent {
+  id        String                @id @default(uuid())
+  type      NotificationEventType
+  matchId   String
+  match     Match                  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  payload   Json
+  createdAt DateTime              @default(now())
+  processedAt DateTime?
+
+  deliveries NotificationDelivery[]
+
+  @@index([matchId])
+  @@index([categoryId])
+  @@index([processedAt, createdAt])
+}
+
+model NotificationDelivery {
+  id        String                    @id @default(uuid())
+  eventId   String
+  event     NotificationEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    NotificationDeliveryStatus @default(PENDING)
+  error     String?
+  lastErrorCode String?
+  attemptCount Int @default(0)
+  nextAttemptAt DateTime?
+  lastAttemptAt DateTime?
+  createdAt DateTime                  @default(now())
+  sentAt    DateTime?
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@index([status])
+  @@index([nextAttemptAt])
+  @@index([status, nextAttemptAt])
+}
+
+model DevicePushToken {
+  id        String                 @id @default(uuid())
+  userId    String
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  DevicePushTokenProvider @default(FCM)
+  token     String
+  enabled   Boolean                @default(true)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  @@unique([provider, token])
+  @@index([userId, enabled])
+  @@index([provider, enabled])
 }

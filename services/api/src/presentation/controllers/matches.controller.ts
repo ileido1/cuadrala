@@ -4,10 +4,13 @@ import { AppError } from '../../domain/errors/app_error.js';
 import {
   CANCEL_MATCH_UC,
   CREATE_MATCH_UC,
+  FINISH_MATCH_UC,
   GET_MATCH_UC,
   JOIN_MATCH_UC,
+  LEAVE_MATCH_UC,
   LIST_MATCHES_UC,
   LIST_OPEN_MATCHES_UC,
+  START_MATCH_UC,
   UPDATE_MATCH_UC,
 } from '../composition/matches.composition.js';
 import {
@@ -21,11 +24,28 @@ import {
 export async function getOpenMatchesCON(_req: Request, _res: Response): Promise<void> {
   const QUERY = LIST_OPEN_MATCHES_QUERY_SCHEMA.parse(_req.query);
 
+  const NEAR =
+    QUERY.near !== undefined
+      ? (() => {
+          const [LAT_RAW, LNG_RAW] = QUERY.near.split(',');
+          const LAT = Number(LAT_RAW);
+          const LNG = Number(LNG_RAW);
+          if (!Number.isFinite(LAT) || !Number.isFinite(LNG)) {
+            throw new AppError('VALIDACION_FALLIDA', 'near debe ser "lat,lng".', 400);
+          }
+          return { nearLat: LAT, nearLng: LNG };
+        })()
+      : undefined;
+
   const RESULT = await LIST_OPEN_MATCHES_UC.executeSV({
     sportId: QUERY.sportId,
     page: QUERY.page,
     limit: QUERY.limit,
     ...(QUERY.categoryId !== undefined ? { categoryId: QUERY.categoryId } : {}),
+    ...(QUERY.minPricePerPlayerCents !== undefined ? { minPricePerPlayerCents: QUERY.minPricePerPlayerCents } : {}),
+    ...(QUERY.maxPricePerPlayerCents !== undefined ? { maxPricePerPlayerCents: QUERY.maxPricePerPlayerCents } : {}),
+    ...(NEAR !== undefined ? NEAR : {}),
+    ...(QUERY.radiusKm !== undefined ? { radiusKm: QUERY.radiusKm } : {}),
     ...(QUERY.scheduledFrom !== undefined ? { scheduledFrom: new Date(QUERY.scheduledFrom) } : {}),
     ...(QUERY.scheduledTo !== undefined ? { scheduledTo: new Date(QUERY.scheduledTo) } : {}),
   });
@@ -84,6 +104,7 @@ export async function postCreateMatchCON(_req: Request, _res: Response): Promise
     ...(BODY.scheduledAt !== undefined ? { scheduledAt: new Date(BODY.scheduledAt) } : {}),
     ...(BODY.courtId !== undefined ? { courtId: BODY.courtId } : {}),
     ...(BODY.tournamentId !== undefined ? { tournamentId: BODY.tournamentId } : {}),
+    ...(BODY.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: BODY.pricePerPlayerCents } : {}),
     ...(BODY.maxParticipants !== undefined ? { maxParticipants: BODY.maxParticipants } : {}),
   });
 
@@ -108,6 +129,7 @@ export async function patchUpdateMatchCON(_req: Request, _res: Response): Promis
     actorUserId: USER_ID,
     ...(BODY.scheduledAt !== undefined ? { scheduledAt: BODY.scheduledAt === null ? null : new Date(BODY.scheduledAt) } : {}),
     ...(BODY.courtId !== undefined ? { courtId: BODY.courtId } : {}),
+    ...(BODY.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: BODY.pricePerPlayerCents } : {}),
     ...(BODY.maxParticipants !== undefined ? { maxParticipants: BODY.maxParticipants } : {}),
   });
 
@@ -148,5 +170,38 @@ export async function postJoinMatchCON(_req: Request, _res: Response): Promise<v
     message: 'Te uniste al partido correctamente.',
     data: RESULT,
   });
+}
+
+export async function postLeaveMatchCON(_req: Request, _res: Response): Promise<void> {
+  const USER_ID = _req.authUser?.id;
+  if (USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
+  await LEAVE_MATCH_UC.executeSV(PARAMS.matchId, USER_ID);
+  _res.status(204).send();
+}
+
+export async function postStartMatchCON(_req: Request, _res: Response): Promise<void> {
+  const USER_ID = _req.authUser?.id;
+  if (USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
+  await START_MATCH_UC.executeSV(PARAMS.matchId, USER_ID);
+  _res.status(204).send();
+}
+
+export async function postFinishMatchCON(_req: Request, _res: Response): Promise<void> {
+  const USER_ID = _req.authUser?.id;
+  if (USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
+  await FINISH_MATCH_UC.executeSV(PARAMS.matchId, USER_ID);
+  _res.status(204).send();
 }
 

@@ -29,17 +29,17 @@ export class JoinMatchUseCase {
       );
     }
 
-    const ALREADY = await this._matchParticipationRepository.userIsParticipantSV(_matchId, _userId);
-    if (ALREADY) {
+    const RESULT = await this._matchParticipationRepository.addParticipantAtomicallySV(
+      _matchId,
+      _userId,
+      MATCH.maxParticipants,
+    );
+    if (RESULT === 'ALREADY_JOINED') {
       throw new AppError('YA_UNIDO', 'Ya estás unido a este partido.', 409);
     }
-
-    const COUNT = await this._matchParticipationRepository.countParticipantsSV(_matchId);
-    if (COUNT >= MATCH.maxParticipants) {
+    if (RESULT === 'MATCH_FULL') {
       throw new AppError('PARTIDO_LLENO', 'El partido ya está completo.', 409);
     }
-
-    await this._matchParticipationRepository.addParticipantSV(_matchId, _userId);
     return { matchId: _matchId, userId: _userId };
   }
 }

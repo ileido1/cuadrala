@@ -12,15 +12,18 @@ export async function ensureTestCatalogSV(): Promise<{
     update: {},
   });
 
+  // Nota: en DBs sin migración de versioning, la columna `version` no existe.
+  // Para evitar que toda la suite falle por una DB desactualizada, buscamos por code+sportId
+  // y solo aplicamos version=1 cuando la migración fue aplicada.
   let AMERICANO = await PRISMA.tournamentFormatPreset.findFirst({
-    where: { sportId: PADEL.id, code: 'AMERICANO', version: 1 },
+    where: { sportId: PADEL.id, code: 'AMERICANO' },
+    orderBy: [{ schemaVersion: 'desc' }],
   });
   if (AMERICANO === null) {
     AMERICANO = await PRISMA.tournamentFormatPreset.create({
       data: {
         sportId: PADEL.id,
         code: 'AMERICANO',
-        version: 1,
         name: 'Americano',
         schemaVersion: 1,
         defaultParameters: {},
@@ -30,14 +33,14 @@ export async function ensureTestCatalogSV(): Promise<{
   }
 
   let ROUND_ROBIN = await PRISMA.tournamentFormatPreset.findFirst({
-    where: { sportId: PADEL.id, code: 'ROUND_ROBIN', version: 1 },
+    where: { sportId: PADEL.id, code: 'ROUND_ROBIN' },
+    orderBy: [{ schemaVersion: 'desc' }],
   });
   if (ROUND_ROBIN === null) {
     ROUND_ROBIN = await PRISMA.tournamentFormatPreset.create({
       data: {
         sportId: PADEL.id,
         code: 'ROUND_ROBIN',
-        version: 1,
         name: 'Todos contra todos',
         schemaVersion: 1,
         defaultParameters: { doubleRound: false },

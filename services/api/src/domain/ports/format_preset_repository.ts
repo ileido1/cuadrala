@@ -6,6 +6,9 @@ export type TournamentFormatPresetDTO = {
   name: string;
   schemaVersion: number;
   defaultParameters: unknown;
+  isActive?: boolean;
+  effectiveFrom?: Date;
+  supersedesId?: string | null;
 };
 
 export interface FormatPresetRepository {
@@ -16,5 +19,14 @@ export interface FormatPresetRepository {
     _code: string,
     _now: Date,
   ): Promise<TournamentFormatPresetDTO | null>;
+
+  publishNewVersionSV(_input: {
+    sportId: string;
+    code: string;
+    name: string;
+    schemaVersion: number;
+    defaultParameters: unknown;
+    effectiveFrom?: Date;
+  }): Promise<TournamentFormatPresetDTO>;
 }
 

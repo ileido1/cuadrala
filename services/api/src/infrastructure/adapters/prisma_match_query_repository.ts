@@ -15,6 +15,7 @@ function toListItemDTO(_row: {
   type: 'AMERICANO' | 'REGULAR';
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
   scheduledAt: Date | null;
+  pricePerPlayerCents: number;
   maxParticipants: number;
   _count: { participants: number };
 }): MatchListItemDTO {
@@ -27,6 +28,7 @@ function toListItemDTO(_row: {
     type: _row.type,
     status: _row.status,
     scheduledAt: _row.scheduledAt,
+    pricePerPlayerCents: _row.pricePerPlayerCents,
     maxParticipants: _row.maxParticipants,
     participantCount: PARTICIPANT_COUNT,
     openSpots: OPEN_SPOTS,
@@ -69,6 +71,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
           type: true,
           status: true,
           scheduledAt: true,
+          pricePerPlayerCents: true,
           maxParticipants: true,
           _count: { select: { participants: true } },
         },
@@ -88,6 +91,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
         type: true,
         status: true,
         scheduledAt: true,
+        pricePerPlayerCents: true,
         maxParticipants: true,
         courtId: true,
         tournamentId: true,

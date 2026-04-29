@@ -11,6 +11,7 @@ export type CreateMatchUseCaseInput = {
   courtId?: string;
   tournamentId?: string;
   maxParticipants?: number;
+  pricePerPlayerCents?: number;
 };
 
 export class CreateMatchUseCase {
@@ -27,6 +28,7 @@ export class CreateMatchUseCase {
       categoryId: _input.categoryId,
       type: _input.type ?? 'REGULAR',
       maxParticipants: MAX_PARTICIPANTS,
+      ...(_input.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: _input.pricePerPlayerCents } : {}),
       ...(_input.scheduledAt !== undefined ? { scheduledAt: _input.scheduledAt } : {}),
       ...(_input.courtId !== undefined ? { courtId: _input.courtId } : {}),
       ...(_input.tournamentId !== undefined ? { tournamentId: _input.tournamentId } : {}),

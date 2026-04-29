@@ -5,12 +5,14 @@ export type CreateMatchInputDTO = {
   scheduledAt?: Date;
   courtId?: string;
   tournamentId?: string;
+  pricePerPlayerCents?: number;
   maxParticipants: number;
 };
 
 export type UpdateMatchPatchDTO = {
   scheduledAt?: Date | null;
   courtId?: string | null;
+  pricePerPlayerCents?: number;
   maxParticipants?: number;
 };
 
@@ -23,6 +25,7 @@ export type MatchDetailDTO = {
   scheduledAt: Date | null;
   courtId: string | null;
   tournamentId: string | null;
+  pricePerPlayerCents: number;
   maxParticipants: number;
   participantCount: number;
   createdAt: Date;

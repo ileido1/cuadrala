@@ -32,6 +32,11 @@ export class ListOpenMatchesUseCase {
         ...(_input.categoryId !== undefined ? { categoryId: _input.categoryId } : {}),
         ...(_input.scheduledFrom !== undefined ? { scheduledFrom: _input.scheduledFrom } : {}),
         ...(_input.scheduledTo !== undefined ? { scheduledTo: _input.scheduledTo } : {}),
+        ...(_input.minPricePerPlayerCents !== undefined ? { minPricePerPlayerCents: _input.minPricePerPlayerCents } : {}),
+        ...(_input.maxPricePerPlayerCents !== undefined ? { maxPricePerPlayerCents: _input.maxPricePerPlayerCents } : {}),
+        ...(_input.nearLat !== undefined ? { nearLat: _input.nearLat } : {}),
+        ...(_input.nearLng !== undefined ? { nearLng: _input.nearLng } : {}),
+        ...(_input.radiusKm !== undefined ? { radiusKm: _input.radiusKm } : {}),
       },
       { page: _input.page, limit: _input.limit },
     );

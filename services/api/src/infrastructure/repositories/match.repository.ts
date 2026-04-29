@@ -29,10 +29,15 @@ export async function createMatchWithParticipantsRepo(_data: {
   participantUserIds: string[];
 }): Promise<Match & { participants: MatchParticipant[] }> {
   return PRISMA.$transaction(async (_tx) => {
+    const ORGANIZER_USER_ID = _data.participantUserIds[0];
+    if (ORGANIZER_USER_ID === undefined) {
+      throw new Error('participantUserIds requerido');
+    }
     const CREATED_MATCH = await _tx.match.create({
       data: {
         categoryId: _data.categoryId,
         sportId: _data.sportId,
+        organizerUserId: ORGANIZER_USER_ID,
         ...(_data.formatPresetId !== undefined ? { formatPresetId: _data.formatPresetId } : {}),
         ...(_data.formatParameters !== undefined
           ? { formatParameters: _data.formatParameters }

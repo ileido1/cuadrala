@@ -22,14 +22,14 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 | Orden | Épica | Objetivo | Estado (según historias) |
 |-------|-------|----------|--------------------------|
-| E0 | Cimientos multi-deporte y torneo parametrizable | Deportes, presets de formato, torneo genérico | **In Progress** (US-E0-01/02 Parcial; US-E0-03 No iniciada) |
-| E1 | Identidad, auth y perfil competitivo | Cuenta, perfil, nivel/categoría, (futuro Elo) | **In Progress** (US-E1-01 Parcial; US-E1-02 No iniciada; US-E1-03 Parcial) |
-| E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel | **In Progress** (US-E2-01 Parcial; US-E2-02 Done; US-E2-03 Done; US-E2-04 Parcial) |
+| E0 | Cimientos multi-deporte y torneo parametrizable | Deportes, presets de formato, torneo genérico | **In Progress** (US-E0-01/02 Parcial; **US-E0-03 Done backend**) |
+| E1 | Identidad, auth y perfil competitivo | Cuenta, perfil, nivel/categoría, (futuro Elo) | **In Progress** (US-E1-01 Parcial; US-E1-02 Done backend; US-E1-03 Parcial) |
+| E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel | **In Progress (muy avanzado backend)** (US-E2-01 Parcial; US-E2-02 Done; US-E2-03 Done + join atómico; US-E2-04 Parcial) |
 | E3 | Motor de torneos y formatos | Rotaciones, rondas, tablero (según formato) | **In Progress** (US-E3-01 Parcial; US-E3-02 Done; US-E3-03 Done) |
-| E4 | Sedes y geo | Directorio, mapa, horas vacantes | **In Progress** (US-E4-01 Parcial; US-E4-02/03 No iniciada) |
-| E5 | Ranking y resultados | Resultados → recálculo (puntos / Elo) | **In Progress** (US-E5-01 Parcial; US-E5-02 Parcial; US-E5-03 No iniciada) |
+| E4 | Sedes y geo | Directorio, mapa, horas vacantes | **In Progress** (US-E4-01 Parcial backend; US-E4-02 Parcial backend; US-E4-03 No iniciada) |
+| E5 | Ranking y resultados | Resultados → recálculo (puntos / Elo) | **In Progress (avanzado backend)** (US-E5-01 Parcial backend; US-E5-02 Parcial; US-E5-03 Parcial backend) |
 | E6 | Cobro colaborativo | Obligaciones, comprobantes, sin custodia | **Done (MVP)** (US-E6-01/02 Cumplida; US-E6-03 No iniciada) |
-| E7 | Coordinación | Chat, notificaciones | **Backlog** (US-E7-01/02 No iniciada) |
+| E7 | Coordinación | Chat, notificaciones | **In Progress (backend)** (US-E7-01 No iniciada; US-E7-02 Parcial backend) |
 
 ---
 
@@ -82,7 +82,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 1. Dado un torneo en curso, cuando se publica nueva versión de un preset, entonces el torneo sigue usando la versión con la que fue creado.
 2. Dado un torneo nuevo, cuando uso el preset, entonces referencia la versión vigente al momento de creación.
 
-**Estado:** No iniciada.
+**Estado:** **Done (backend):** presets por `sportId+code` con **versionado**, `isActive` + `effectiveFrom` y relación `supersedes`; publish de nuevas versiones y resolución de “vigente” al crear torneo por `formatPresetCode`. Tests de integración DB (`e0_03_*`, `e8_*`) validan que torneos existentes quedan pegados a su `formatPresetId`.
 
 ---
 
@@ -108,7 +108,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** campos opcionales/obligatorios según deporte; visibles en ficha de partido.
 
-**Estado:** **Parcial — backend:** `GET /users/me` y `PATCH /users/me` (perfil base). Pendiente: campos técnicos (drive/revés) y criterios por deporte.
+**Estado:** **Done (backend):** `PlayerProfile` (lateralidad y preferencia de lado + año de nacimiento) con `GET/PATCH /api/v1/users/me/profile` + `GET /api/v1/users/:userId/stats`, OpenAPI y tests (contrato + integración condicional).
 
 ---
 
@@ -134,7 +134,9 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** CRUD; estados; `sport` explícito; precio opcional por persona.
 
-**Estado:** **Parcial — backend:** CRUD base de partidos (`GET /matches`, `GET /matches/:id`, `POST /matches`, `PATCH /matches/:id`, `PATCH /matches/:id/cancel`) + `/americanos` legacy. Pendiente: precio/cobro por persona en creación (relacionado con E6), permisos (owner/admin) y tests de integración (Node 20.19+).
+**Estado:** **Parcial — backend (muy avanzado):** CRUD base + lifecycle (`/leave`, `/start`, `/finish`) + **precio por jugador** (`pricePerPlayerCents`) y filtros por precio/geo en `/matches/open` + **owner `organizerUserId`** (permisos para update/cancel/start/finish) + **join atómico** (no excede `maxParticipants` bajo concurrencia) + **cancelación permitida en `IN_PROGRESS`** (solo organizer, con cleanup de drafts).
+
+Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas vacantes” (E4-03) y hardening adicional (observabilidad/worker separado).
 
 ---
 
@@ -146,7 +148,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** paginación; índices; respuesta estable en OpenAPI.
 
-**Estado:** **Done (backend):** `GET /api/v1/matches/open` con filtros + paginación, OpenAPI y tests de contrato.
+**Estado:** **Done (backend):** `GET /api/v1/matches/open` con filtros + paginación + **near/radiusKm** + **min/max pricePerPlayerCents**, OpenAPI y tests (contrato + integración condicional).
 
 ---
 
@@ -170,7 +172,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** excluye participantes actuales; respeta categoría del partido.
 
-**Estado:** Parcial (`GET .../matchmaking/.../suggestions`).
+**Estado:** **Parcial (backend):** endpoint `GET /api/v1/matchmaking/:matchId/suggestions` implementado; ahora prioriza **Elo (UserRating)** y hace fallback a `RankingEntry.points`. Pendiente: estrategia de “similaridad” (no solo top-N), límites por radio/venue y segmentación por disponibilidad.
 
 ---
 
@@ -222,7 +224,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** CRUD sede/cancha; multi-deporte si aplica.
 
-**Estado:** Parcial (modelos; sin API pública completa).
+**Estado:** **Parcial (backend):** modelos + endpoints `POST /api/v1/venues`, `POST /api/v1/venues/:venueId/courts`, `GET /api/v1/venues` con filtro `near/radiusKm`, OpenAPI y tests de contrato (y/o integración condicional).
 
 ---
 
@@ -234,7 +236,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** lat/lng o bounding box; performance NFR.
 
-**Estado:** No iniciada.
+**Estado:** **Parcial (backend):** filtros geo para oferta vía `GET /api/v1/matches/open?near=lat,lng&radiusKm=...` (bounding box). Pendiente: geocoding real (Google/Mapbox), distancia exacta y UX de mapa.
 
 ---
 
@@ -260,7 +262,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** validación de permisos; deporte puede influir en estructura del resultado (JSON tipado o tablas).
 
-**Estado:** Parcial (modelos de resultado; flujo API incompleto según SDD).
+**Estado:** **Parcial (backend):** flujo 4/4 confirmado con `MatchResultDraft` + `MatchResultConfirmation` → finaliza `MatchResult` + `MatchResultScore`, OpenAPI y tests de integración condicional. Pendiente: manejo de rechazos y re-propuesta, y permisos avanzados.
 
 ---
 
@@ -284,7 +286,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** fórmula versionada; migración desde puntos si aplica.
 
-**Estado:** No iniciada.
+**Estado:** **Parcial (backend):** `UserRating` + `UserRatingHistory`, cálculo Elo al finalizar resultado (K-factor configurable), endpoints `GET /api/v1/users/:userId/ratings` y `/ratings/history`, y matchmaking priorizando Elo. Pendiente: exponer leaderboard Elo por categoría y tunear fórmula/política por deporte.
 
 ---
 
@@ -344,7 +346,14 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 **Quiero** avisos de cupo, pago y mensajes  
 **Para** no perder oportunidades.
 
-**Estado:** No iniciada.
+**Estado:** **Parcial (backend):** notificaciones segmentadas por categoría+geo con:
+- Suscripciones (`NotificationSubscription`)
+- Evento `MATCH_SLOT_OPENED` emitido cuando `leave` abre cupo
+- `DevicePushToken` + provider Noop/FCM
+- Dispatch como **worker real** con deliveries PENDING + retries/backoff + deshabilitado de tokens inválidos
+- Worker automático in-process (env gated)
+
+Pendiente: proceso worker separado (escalado), observabilidad/alertas, notificaciones in-app y expandir tipos (pagos/chat).
 
 ---
 

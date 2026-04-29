@@ -1,13 +1,13 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { MatchCrudRepository } from '../../domain/ports/match_crud_repository.js';
-import type { MatchParticipationRepository } from '../../domain/ports/match_participation_repository.js';
+import type { MatchOrganizerRepository } from '../../domain/ports/match_organizer_repository.js';
 import type { MatchQueryRepository } from '../../domain/ports/match_query_repository.js';
 import type { MatchDetailDTO } from '../../domain/ports/match_crud_repository.js';
 
 export class CancelMatchUseCase {
   constructor(
     private readonly _matchQueryRepository: MatchQueryRepository,
-    private readonly _matchParticipationRepository: MatchParticipationRepository,
+    private readonly _matchOrganizerRepository: MatchOrganizerRepository,
     private readonly _matchCrudRepository: MatchCrudRepository,
   ) {}
 
@@ -17,15 +17,15 @@ export class CancelMatchUseCase {
       throw new AppError('PARTIDO_NO_ENCONTRADO', 'El partido indicado no existe.', 404);
     }
 
-    const IS_PARTICIPANT = await this._matchParticipationRepository.userIsParticipantSV(
-      _matchId,
-      _actorUserId,
-    );
-    if (!IS_PARTICIPANT) {
+    const ORGANIZER_USER_ID = await this._matchOrganizerRepository.getOrganizerUserIdByMatchIdSV(_matchId);
+    if (ORGANIZER_USER_ID === null) {
+      throw new AppError('PARTIDO_NO_ENCONTRADO', 'El partido indicado no existe.', 404);
+    }
+    if (ORGANIZER_USER_ID !== _actorUserId) {
       throw new AppError('NO_AUTORIZADO', 'No tienes permisos para cancelar este partido.', 403);
     }
 
-    if (MATCH.status !== 'SCHEDULED') {
+    if (MATCH.status !== 'SCHEDULED' && MATCH.status !== 'IN_PROGRESS') {
       throw new AppError(
         'PARTIDO_NO_CANCELABLE',
         'No se puede cancelar el partido en su estado actual.',

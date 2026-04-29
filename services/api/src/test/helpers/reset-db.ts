@@ -2,6 +2,40 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 /** Borra datos en orden seguro de FKs (solo para tests de integración). */
 export async function resetDatabaseForTestsSV(): Promise<void> {
+  // Notificaciones (MVP push-notifications). Usamos SQL crudo para no acoplar el helper
+  // a modelos Prisma que pueden no existir en DBs antiguas.
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "NotificationDelivery"');
+  } catch {
+    // ignore: tabla no existe
+  }
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "NotificationEvent"');
+  } catch {
+    // ignore: tabla no existe
+  }
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "NotificationSubscription"');
+  } catch {
+    // ignore: tabla no existe
+  }
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "DevicePushToken"');
+  } catch {
+    // ignore: tabla no existe
+  }
+
+  // Vacant hours (Sprint 21). SQL crudo para compatibilidad con DBs antiguas.
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "VacantHour"');
+  } catch {
+    // ignore: tabla no existe
+  }
+
+  await PRISMA.userRatingHistory.deleteMany();
+  await PRISMA.userRating.deleteMany();
+  await PRISMA.matchResultConfirmation.deleteMany();
+  await PRISMA.matchResultDraft.deleteMany();
   await PRISMA.matchResultScore.deleteMany();
   await PRISMA.matchResult.deleteMany();
   await PRISMA.transaction.deleteMany();

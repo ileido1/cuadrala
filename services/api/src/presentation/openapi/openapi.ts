@@ -23,6 +23,10 @@ const OPENAPI_CONST = {
     { name: 'Matchmaking' },
     { name: 'Ranking' },
     { name: 'Monetization' },
+    { name: 'Notifications' },
+    { name: 'Venues' },
+    { name: 'Geo' },
+    { name: 'Admin' },
   ],
   components: {
     securitySchemes: {
@@ -83,6 +87,38 @@ const OPENAPI_CONST = {
         responses: {
           '200': { description: 'OK' },
           '400': { description: 'Validación fallida' },
+        },
+      },
+    },
+    '/api/v1/sports/{sportId}/tournament-format-presets/{code}/versions': {
+      post: {
+        tags: ['Catalog'],
+        summary: 'Publicar nueva versión de preset (MVP)',
+        parameters: [
+          { name: 'sportId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'code', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'schemaVersion', 'defaultParameters'],
+                properties: {
+                  name: { type: 'string' },
+                  schemaVersion: { type: 'integer', minimum: 1 },
+                  defaultParameters: { type: 'object', additionalProperties: true },
+                  effectiveFrom: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '404': { description: 'Deporte no encontrado' },
         },
       },
     },
@@ -215,6 +251,10 @@ const OPENAPI_CONST = {
         parameters: [
           { name: 'sportId', in: 'query', required: true, schema: { type: 'string', format: 'uuid' } },
           { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'near', in: 'query', required: false, schema: { type: 'string', example: '-34.6,-58.4' } },
+          { name: 'radiusKm', in: 'query', required: false, schema: { type: 'number', minimum: 0.1, maximum: 200 } },
+          { name: 'minPricePerPlayerCents', in: 'query', required: false, schema: { type: 'integer', minimum: 0 } },
+          { name: 'maxPricePerPlayerCents', in: 'query', required: false, schema: { type: 'integer', minimum: 0 } },
           { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
           { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
           {
@@ -287,6 +327,7 @@ const OPENAPI_CONST = {
                   scheduledAt: { type: 'string', format: 'date-time' },
                   courtId: { type: 'string', format: 'uuid' },
                   tournamentId: { type: 'string', format: 'uuid' },
+                  pricePerPlayerCents: { type: 'integer', minimum: 0, maximum: 100000000 },
                   maxParticipants: { type: 'integer', minimum: 2, maximum: 100 },
                 },
               },
@@ -329,6 +370,7 @@ const OPENAPI_CONST = {
                 properties: {
                   scheduledAt: { type: ['string', 'null'], format: 'date-time' },
                   courtId: { type: ['string', 'null'], format: 'uuid' },
+                  pricePerPlayerCents: { type: 'integer', minimum: 0, maximum: 100000000 },
                   maxParticipants: { type: 'integer', minimum: 2, maximum: 100 },
                 },
               },
@@ -377,6 +419,134 @@ const OPENAPI_CONST = {
           '403': { description: 'Categoría no compatible' },
           '404': { description: 'Partido no encontrado' },
           '409': { description: 'Conflicto (lleno / ya unido / no abierto)' },
+        },
+      },
+    },
+    '/api/v1/matches/{matchId}/leave': {
+      post: {
+        tags: ['Matches'],
+        summary: 'Salir de un partido (idempotente mientras esté SCHEDULED)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'Sin contenido' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'Partido no encontrado' },
+          '409': { description: 'Conflicto (no está SCHEDULED)' },
+        },
+      },
+    },
+    '/api/v1/matches/{matchId}/start': {
+      post: {
+        tags: ['Matches'],
+        summary: 'Iniciar un partido (SCHEDULED -> IN_PROGRESS)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'Sin contenido' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido (no organizer)' },
+          '404': { description: 'Partido no encontrado' },
+          '409': { description: 'Conflicto (no está SCHEDULED)' },
+        },
+      },
+    },
+    '/api/v1/matches/{matchId}/finish': {
+      post: {
+        tags: ['Matches'],
+        summary: 'Finalizar un partido (IN_PROGRESS -> FINISHED, requiere 4 participantes)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'Sin contenido' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido (no organizer)' },
+          '404': { description: 'Partido no encontrado' },
+          '409': { description: 'Conflicto (no está IN_PROGRESS o participantes != 4)' },
+        },
+      },
+    },
+    '/api/v1/matches/{matchId}/result-draft': {
+      put: {
+        tags: ['Matches'],
+        summary: 'Guardar borrador de resultado (requiere partido FINISHED y 4 participantes)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['scores'],
+                properties: {
+                  scores: {
+                    type: 'array',
+                    minItems: 4,
+                    maxItems: 4,
+                    items: {
+                      type: 'object',
+                      required: ['userId', 'points'],
+                      properties: {
+                        userId: { type: 'string', format: 'uuid' },
+                        points: { type: 'integer', minimum: 0, maximum: 10000 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Actualizado' },
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido' },
+          '404': { description: 'Partido no encontrado' },
+          '409': { description: 'Conflicto' },
+        },
+      },
+    },
+    '/api/v1/matches/{matchId}/result-draft/confirm': {
+      post: {
+        tags: ['Matches'],
+        summary: 'Confirmar/rechazar borrador de resultado (al 4/4 CONFIRMED finaliza)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                  status: { type: 'string', enum: ['CONFIRMED', 'REJECTED'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '201': { description: 'Finalizado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido' },
+          '404': { description: 'Borrador no encontrado' },
+          '409': { description: 'Conflicto' },
         },
       },
     },
@@ -526,6 +696,176 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/users/me/profile': {
+      get: {
+        tags: ['Profile'],
+        summary: 'Consultar perfil técnico propio',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+      patch: {
+        tags: ['Profile'],
+        summary: 'Actualizar perfil técnico propio',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  dominantHand: { type: 'string', enum: ['RIGHT', 'LEFT', 'AMBIDEXTROUS'] },
+                  sidePreference: { type: 'string', enum: ['RIGHT', 'LEFT', 'ANY'] },
+                  birthYear: { type: ['integer', 'null'], minimum: 1900 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/{userId}/stats': {
+      get: {
+        tags: ['Profile'],
+        summary: 'Consultar estadísticas públicas de un usuario',
+        parameters: [
+          { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '404': { description: 'Usuario no encontrado' },
+        },
+      },
+    },
+    '/api/v1/users/{userId}/ratings': {
+      get: {
+        tags: ['Profile'],
+        summary: 'Consultar ratings Elo de un usuario',
+        parameters: [
+          { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        items: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              categoryId: { type: 'string', format: 'uuid' },
+                              rating: { type: 'number' },
+                              updatedAt: { type: 'string', format: 'date-time' },
+                            },
+                            required: ['categoryId', 'rating', 'updatedAt'],
+                          },
+                        },
+                      },
+                      required: ['items'],
+                    },
+                  },
+                  required: ['success', 'message', 'data'],
+                },
+              },
+            },
+          },
+          '400': { description: 'Validación fallida' },
+          '404': { description: 'Usuario no encontrado' },
+        },
+      },
+    },
+    '/api/v1/users/{userId}/ratings/history': {
+      get: {
+        tags: ['Profile'],
+        summary: 'Consultar historial de rating Elo de un usuario',
+        parameters: [
+          { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        items: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              matchId: { type: 'string', format: 'uuid' },
+                              resultId: { type: 'string', format: 'uuid' },
+                              previousRating: { type: 'number' },
+                              newRating: { type: 'number' },
+                              kFactor: { type: 'number' },
+                              createdAt: { type: 'string', format: 'date-time' },
+                            },
+                            required: [
+                              'matchId',
+                              'resultId',
+                              'previousRating',
+                              'newRating',
+                              'kFactor',
+                              'createdAt',
+                            ],
+                          },
+                        },
+                        pageInfo: {
+                          type: 'object',
+                          properties: {
+                            page: { type: 'integer' },
+                            limit: { type: 'integer' },
+                            total: { type: 'integer' },
+                          },
+                          required: ['page', 'limit', 'total'],
+                        },
+                      },
+                      required: ['items', 'pageInfo'],
+                    },
+                  },
+                  required: ['success', 'message', 'data'],
+                },
+              },
+            },
+          },
+          '400': { description: 'Validación fallida' },
+          '404': { description: 'Usuario no encontrado' },
+        },
+      },
+    },
     '/api/v1/matches/{matchId}/transactions/create-obligations': {
       post: {
         tags: ['Monetization'],
@@ -651,6 +991,315 @@ const OPENAPI_CONST = {
         responses: {
           '200': { description: 'OK' },
           '400': { description: 'Validación fallida' },
+        },
+      },
+    },
+    '/api/v1/users/me/notification-subscriptions': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'Listar suscripciones de notificación del usuario actual',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+      post: {
+        tags: ['Notifications'],
+        summary: 'Crear/actualizar una suscripción de notificación del usuario actual',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['enabled'],
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  categoryId: { type: 'string', format: 'uuid', nullable: true },
+                  nearLat: { type: 'number', nullable: true },
+                  nearLng: { type: 'number', nullable: true },
+                  radiusKm: { type: 'number', nullable: true },
+                  enabled: { type: 'boolean' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/notification-subscriptions/{id}': {
+      delete: {
+        tags: ['Notifications'],
+        summary: 'Deshabilitar una suscripción de notificación del usuario actual',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'No Content' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+        },
+      },
+    },
+    '/api/v1/users/me/device-push-tokens': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'Listar tokens de dispositivo del usuario actual',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+      post: {
+        tags: ['Notifications'],
+        summary: 'Registrar/actualizar token de dispositivo del usuario actual (FCM)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['token'],
+                properties: {
+                  token: { type: 'string' },
+                  enabled: { type: 'boolean', default: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/device-push-tokens/{id}': {
+      delete: {
+        tags: ['Notifications'],
+        summary: 'Deshabilitar token de dispositivo del usuario actual',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'No Content' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+        },
+      },
+    },
+    '/api/v1/notifications/dispatch': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Procesar eventos de notificación pendientes (endpoint interno)',
+        parameters: [
+          {
+            name: 'x-dispatch-secret',
+            in: 'header',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  limitEvents: { type: 'integer', minimum: 1, maximum: 500, default: 100 },
+                  limitDeliveries: { type: 'integer', minimum: 1, maximum: 10000, default: 1000 },
+                  limitTokens: { type: 'integer', minimum: 1, maximum: 100000 },
+                },
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/notifications/metrics': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'Métricas internas de notificaciones (endpoint interno)',
+        parameters: [
+          {
+            name: 'x-dispatch-secret',
+            in: 'header',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/ratings/leaderboard': {
+      get: {
+        tags: ['Ranking'],
+        summary: 'Leaderboard Elo por categoría',
+        parameters: [
+          { name: 'categoryId', in: 'query', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+        },
+      },
+    },
+    '/api/v1/geo/places/search': {
+      get: {
+        tags: ['Geo'],
+        summary: 'Buscar lugares por texto (endpoint interno)',
+        parameters: [
+          { name: 'x-geo-secret', in: 'header', required: true, schema: { type: 'string' } },
+          { name: 'q', in: 'query', required: true, schema: { type: 'string' } },
+          { name: 'near', in: 'query', required: false, schema: { type: 'string', example: '10.1,-70.2' } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 10 } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '501': { description: 'Proveedor no configurado' },
+        },
+      },
+    },
+    '/api/v1/geo/places/{placeId}': {
+      get: {
+        tags: ['Geo'],
+        summary: 'Obtener detalle de un lugar por placeId (endpoint interno)',
+        parameters: [
+          { name: 'x-geo-secret', in: 'header', required: true, schema: { type: 'string' } },
+          { name: 'placeId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+          '501': { description: 'Proveedor no configurado' },
+        },
+      },
+    },
+    '/api/v1/venues/{venueId}/geocode': {
+      post: {
+        tags: ['Venues', 'Geo'],
+        summary: 'Geocodificar una sede (endpoint interno)',
+        parameters: [
+          { name: 'x-geo-secret', in: 'header', required: true, schema: { type: 'string' } },
+          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['placeId'],
+                properties: { placeId: { type: 'string' } },
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+          '501': { description: 'Proveedor no configurado' },
+        },
+      },
+    },
+    '/api/v1/vacant-hours/publish': {
+      post: {
+        tags: ['Admin'],
+        summary: 'Publicar una vacante (endpoint interno)',
+        parameters: [{ name: 'x-admin-secret', in: 'header', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['venueId', 'courtId', 'sportId', 'categoryId', 'scheduledAt'],
+                properties: {
+                  venueId: { type: 'string', format: 'uuid' },
+                  courtId: { type: 'string', format: 'uuid' },
+                  sportId: { type: 'string', format: 'uuid' },
+                  categoryId: { type: 'string', format: 'uuid' },
+                  scheduledAt: { type: 'string', format: 'date-time' },
+                  durationMinutes: { type: 'integer', minimum: 1 },
+                  pricePerPlayerCents: { type: 'integer', minimum: 0, maximum: 100000000 },
+                  maxParticipants: { type: 'integer', minimum: 2, maximum: 100, default: 4 },
+                },
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '409': { description: 'Conflicto' },
+        },
+      },
+    },
+    '/api/v1/vacant-hours': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Listar vacantes (endpoint interno)',
+        parameters: [
+          { name: 'x-admin-secret', in: 'header', required: true, schema: { type: 'string' } },
+          { name: 'venueId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'courtId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['PUBLISHED', 'CANCELLED'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/vacant-hours/{id}/cancel': {
+      patch: {
+        tags: ['Admin'],
+        summary: 'Cancelar una vacante (endpoint interno)',
+        parameters: [
+          { name: 'x-admin-secret', in: 'header', required: true, schema: { type: 'string' } },
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
         },
       },
     },
