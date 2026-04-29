@@ -19,58 +19,62 @@ const ADAPTER = new PrismaPg(POOL);
 const PRISMA = new PrismaClient({ adapter: ADAPTER });
 
 async function seedCatalog(): Promise<void> {
-  const PADEL = await PRISMA.sport.upsert({
-    where: { code: 'PADEL' },
-    create: { code: 'PADEL', name: 'Pádel' },
-    update: { name: 'Pádel' },
-  });
+  const SPORTS_TO_SEED: Array<{ code: string; name: string }> = [
+    { code: 'PADEL', name: 'Pádel' },
+    { code: 'TENNIS', name: 'Tenis' },
+    { code: 'PICKLEBALL', name: 'Pickleball' },
+  ];
 
-  const AMERICANO_EXISTING = await PRISMA.tournamentFormatPreset.findFirst({
-    where: { sportId: PADEL.id, code: 'AMERICANO', version: 1 },
-  });
-  if (AMERICANO_EXISTING === null) {
-    await PRISMA.tournamentFormatPreset.create({
-      data: {
-        sportId: PADEL.id,
-        code: 'AMERICANO',
-        version: 1,
-        name: 'Americano',
-        schemaVersion: 1,
-        defaultParameters: {},
-        isActive: true,
-      },
-    });
-  } else {
-    await PRISMA.tournamentFormatPreset.update({
-      where: { id: AMERICANO_EXISTING.id },
-      data: { name: 'Americano', isActive: true },
-    });
+  const PRESETS_V1: Array<{ code: string; name: string; defaultParameters: Prisma.InputJsonValue }> = [
+    { code: 'AMERICANO', name: 'Americano', defaultParameters: {} },
+    { code: 'ROUND_ROBIN', name: 'Todos contra todos', defaultParameters: { doubleRound: false } },
+  ];
+
+  const SEEDED_SPORTS = await Promise.all(
+    SPORTS_TO_SEED.map(async (_sport) =>
+      PRISMA.sport.upsert({
+        where: { code: _sport.code },
+        create: { code: _sport.code, name: _sport.name },
+        update: { name: _sport.name },
+      }),
+    ),
+  );
+
+  for (const SPORT of SEEDED_SPORTS) {
+    for (const PRESET of PRESETS_V1) {
+      const EXISTING = await PRISMA.tournamentFormatPreset.findUnique({
+        where: {
+          sportId_code_version: {
+            sportId: SPORT.id,
+            code: PRESET.code,
+            version: 1,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (EXISTING !== null) {
+        // Hardening: si ya existe versionado, NO tocar isActive/effectiveFrom (ni crear v2).
+        continue;
+      }
+
+      await PRISMA.tournamentFormatPreset.create({
+        data: {
+          sportId: SPORT.id,
+          code: PRESET.code,
+          version: 1,
+          name: PRESET.name,
+          schemaVersion: 1,
+          defaultParameters: PRESET.defaultParameters,
+          // isActive/effectiveFrom quedan por defaults del schema.
+        },
+      });
+    }
   }
 
-  // Ejemplo de segundo preset (round robin) — mismo deporte, parametrizable.
-  const RR_EXISTING = await PRISMA.tournamentFormatPreset.findFirst({
-    where: { sportId: PADEL.id, code: 'ROUND_ROBIN', version: 1 },
-  });
-  if (RR_EXISTING === null) {
-    await PRISMA.tournamentFormatPreset.create({
-      data: {
-        sportId: PADEL.id,
-        code: 'ROUND_ROBIN',
-        version: 1,
-        name: 'Todos contra todos',
-        schemaVersion: 1,
-        defaultParameters: { doubleRound: false },
-        isActive: true,
-      },
-    });
-  } else {
-    await PRISMA.tournamentFormatPreset.update({
-      where: { id: RR_EXISTING.id },
-      data: { name: 'Todos contra todos', isActive: true },
-    });
-  }
-
-  console.log('[seed] Catálogo: deporte PADEL y presets AMERICANO, ROUND_ROBIN.');
+  console.log(
+    `[seed] Catálogo: deportes ${SPORTS_TO_SEED.map((_s) => _s.code).join(', ')} y presets v1 AMERICANO, ROUND_ROBIN por deporte.`,
+  );
 }
 
 async function seedFeeRule(): Promise<void> {

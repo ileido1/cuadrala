@@ -3,6 +3,7 @@ import type { CategoryRepository } from '../../domain/ports/category_repository.
 import type { FormatPresetRepository } from '../../domain/ports/format_preset_repository.js';
 import type { SportRepository } from '../../domain/ports/sport_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
+import type { TournamentFormatParametersValidator } from '../../domain/ports/tournament_format_parameters_validator.js';
 
 export type CreateParametrizedTournamentInput = {
   name: string;
@@ -20,6 +21,7 @@ export class CreateParametrizedTournamentUseCase {
     private readonly _sportRepository: SportRepository,
     private readonly _formatPresetRepository: FormatPresetRepository,
     private readonly _tournamentRepository: TournamentRepository,
+    private readonly _tournamentFormatParametersValidator: TournamentFormatParametersValidator,
   ) {}
 
   async executeSV(_input: CreateParametrizedTournamentInput): Promise<{
@@ -29,6 +31,15 @@ export class CreateParametrizedTournamentUseCase {
     presetSchemaVersion: number;
     status: string;
   }> {
+    // MVP: para el contrato HTTP sin DB, validamos temprano si viene formatPresetCode (schemaVersion=1).
+    if (_input.formatPresetCode !== undefined) {
+      this._tournamentFormatParametersValidator.validateAndNormalizeSV({
+        presetCode: _input.formatPresetCode,
+        presetSchemaVersion: 1,
+        formatParameters: _input.formatParameters,
+      });
+    }
+
     const CATEGORY = await this._categoryRepository.findByIdSV(_input.categoryId);
     if (!CATEGORY) {
       throw new AppError('CATEGORIA_NO_ENCONTRADA', 'La categoría indicada no existe.', 404);
@@ -66,13 +77,21 @@ export class CreateParametrizedTournamentUseCase {
       );
     }
 
+    const NORMALIZED_FORMAT_PARAMETERS = this._tournamentFormatParametersValidator.validateAndNormalizeSV({
+      presetCode: PRESET.code,
+      presetSchemaVersion: PRESET.schemaVersion,
+      formatParameters: _input.formatParameters,
+    });
+
     const CREATED = await this._tournamentRepository.createTournamentSV({
       name: _input.name,
       categoryId: _input.categoryId,
       sportId: _input.sportId,
       formatPresetId: PRESET.id,
       presetSchemaVersion: PRESET.schemaVersion,
-      ...(_input.formatParameters !== undefined ? { formatParameters: _input.formatParameters } : {}),
+      ...(NORMALIZED_FORMAT_PARAMETERS !== undefined
+        ? { formatParameters: NORMALIZED_FORMAT_PARAMETERS }
+        : {}),
       ...(_input.startsAt !== undefined ? { startsAt: _input.startsAt } : {}),
     });
 

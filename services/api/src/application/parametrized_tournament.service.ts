@@ -1,6 +1,7 @@
 import type { CategoryRepository } from '../domain/ports/category_repository.js';
 import type { FormatPresetRepository } from '../domain/ports/format_preset_repository.js';
 import type { SportRepository } from '../domain/ports/sport_repository.js';
+import type { TournamentFormatParametersValidator } from '../domain/ports/tournament_format_parameters_validator.js';
 import type { TournamentRepository } from '../domain/ports/tournament_repository.js';
 
 import {
@@ -15,12 +16,14 @@ export function buildCreateParametrizedTournamentSV(
   _sportRepository: SportRepository,
   _formatPresetRepository: FormatPresetRepository,
   _tournamentRepository: TournamentRepository,
+  _tournamentFormatParametersValidator: TournamentFormatParametersValidator,
 ) {
   const UC = new CreateParametrizedTournamentUseCase(
     _categoryRepository,
     _sportRepository,
     _formatPresetRepository,
     _tournamentRepository,
+    _tournamentFormatParametersValidator,
   );
   return UC.executeSV.bind(UC);
 }

@@ -139,7 +139,29 @@ const OPENAPI_CONST = {
                   sportId: { type: 'string', format: 'uuid' },
                   formatPresetId: { type: 'string', format: 'uuid' },
                   formatPresetCode: { type: 'string', description: 'Código del preset (ej. AMERICANO).' },
-                  formatParameters: { type: 'object', additionalProperties: true },
+                  formatParameters: {
+                    description:
+                      'Parámetros específicos del formato (schemaVersion=1). El backend rechaza keys extra (additionalProperties=false).',
+                    oneOf: [
+                      {
+                        title: 'AMERICANO v1',
+                        type: 'object',
+                        additionalProperties: false,
+                        properties: {
+                          rounds: { type: 'integer', minimum: 1 },
+                          courts: { type: 'integer', minimum: 1 },
+                        },
+                      },
+                      {
+                        title: 'ROUND_ROBIN v1',
+                        type: 'object',
+                        additionalProperties: false,
+                        properties: {
+                          doubleRound: { type: 'boolean' },
+                        },
+                      },
+                    ],
+                  },
                   startsAt: { type: 'string', format: 'date-time' },
                 },
                 anyOf: [{ required: ['formatPresetId'] }, { required: ['formatPresetCode'] }],
