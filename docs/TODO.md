@@ -499,15 +499,15 @@ Garantizar que **torneos existentes** no cambian ante nuevas versiones y que **t
 
 Endurecer autenticación para producción: **logout**, estrategia consistente para **refresh** (rotación e invalidación), y **tests de integración DB**.
 
-### Tablero (Scrum/Kanban)
+### Done
 
 | Backlog | In Progress | Done | Blocked |
 |---|---|---|---|
-| Definir estrategia de logout/invalidación (denylist/rotation) | **Implementación auth hardening** |  |  |
-| Endpoint `POST /api/v1/auth/logout` + OpenAPI | **Tests DB: register → refresh → logout → refresh inválido** |  |  |
-| Persistencia de refresh tokens (hash) + rotación |  |  |  |
-| 401/403/409 consistentes y mensajes en español |  |  |  |
-| `npm run lint && npm test` en verde |  |  |  |
+|  |  | Definir estrategia de logout/invalidación (rotation) |  |
+|  |  | Endpoint `POST /api/v1/auth/logout` + OpenAPI |  |
+|  |  | Persistencia de refresh tokens (`RefreshToken`) + rotación |  |
+|  |  | Tests DB: register → refresh → logout → refresh inválido (`s25_*`) |  |
+|  |  | `npm run lint && npm test` en verde |  |
 
 ---
 
@@ -517,14 +517,15 @@ Endurecer autenticación para producción: **logout**, estrategia consistente pa
 
 Completar el flujo competitivo: permitir **REJECTED** y **re-propuesta** de resultados con auditoría mínima.
 
-### Backlog sugerido
+### Done
 
 | Backlog | In Progress | Done | Blocked |
 |---|---|---|---|
-| Modelo/estado para re-propuesta (draft versioning) |  |  |  |
-| Endpoint re-proponer borrador y reset confirmaciones |  |  |  |
-| Tests DB: reject → re-propose → 4/4 confirm → Elo |  |  |  |
-| OpenAPI actualizado |  |  |  |
+|  |  | Modelo/estado para re-propuesta (draft versioning) |  |
+|  |  | Endpoint re-proponer borrador y reset confirmaciones |  |
+|  |  | Tests DB: reject → re-propose → 4/4 confirm → Elo (`s26_*`) |  |
+|  |  | OpenAPI actualizado |  |
+|  |  | `npm run lint && npm test` en verde |  |
 
 ---
 
@@ -534,14 +535,15 @@ Completar el flujo competitivo: permitir **REJECTED** y **re-propuesta** de resu
 
 Hacer el recálculo de ranking **seguro e idempotente**, con transacciones y pruebas.
 
-### Backlog sugerido
+### Done
 
 | Backlog | In Progress | Done | Blocked |
 |---|---|---|---|
-| Definir fuente de verdad (MatchResult) y fórmula |  |  |  |
-| Job/endpoint interno idempotente (por categoryId) |  |  |  |
-| Tests DB: recalcular 2 veces => mismo resultado |  |  |  |
-| Observability mínima (logs/métricas) |  |  |  |
+|  |  | Fuente de verdad: `MatchResult/MatchResultScore` |  |
+|  |  | Endpoint idempotente/transaccional `POST /api/v1/ranking/recalculate/:categoryId` |  |
+|  |  | Tests DB: recalc 2 veces => mismo resultado (`s27_*`) |  |
+|  |  | Observability mínima |  |
+|  |  | `npm run lint && npm test` en verde |  |
 
 ---
 
@@ -551,14 +553,15 @@ Hacer el recálculo de ranking **seguro e idempotente**, con transacciones y pru
 
 Permitir adjuntar comprobantes a obligaciones (sin custodia), con storage seguro.
 
-### Backlog sugerido
+### Done
 
 | Backlog | In Progress | Done | Blocked |
 |---|---|---|---|
-| Definir storage (local/S3/GCS) + límites MIME/tamaño |  |  |  |
-| Endpoint upload + lectura segura |  |  |  |
-| Tests (contrato + integración si aplica) |  |  |  |
-| OpenAPI actualizado |  |  |  |
+|  |  | Storage local seguro + límites MIME/tamaño |  |
+|  |  | Endpoints upload + lectura segura |  |
+|  |  | Tests DB+FS (`s28_*`) |  |
+|  |  | OpenAPI actualizado |  |
+|  |  | `npm run lint && npm test` en verde |  |
 
 ---
 
@@ -568,14 +571,15 @@ Permitir adjuntar comprobantes a obligaciones (sin custodia), con storage seguro
 
 Mejorar sugerencias: **similaridad real** (Elo/categoría/geo) y restricciones por disponibilidad.
 
-### Backlog sugerido
+### Done
 
 | Backlog | In Progress | Done | Blocked |
 |---|---|---|---|
-| Heurística de similaridad (no solo top-N) |  |  |  |
-| Restricciones geo (venue/radio) y exclusiones |  |  |  |
-| Tests DB: suggestions deterministas para seed |  |  |  |
-| OpenAPI actualizado |  |  |  |
+|  |  | Heurística de similaridad (no solo top-N) |  |
+|  |  | Restricciones geo (venue/radio) y exclusiones |  |
+|  |  | Tests DB: suggestions deterministas (`s29_*`) |  |
+|  |  | OpenAPI actualizado |  |
+|  |  | `npm run lint && npm test` en verde |  |
 
 ---
 
@@ -585,14 +589,160 @@ Mejorar sugerencias: **similaridad real** (Elo/categoría/geo) y restricciones p
 
 Agregar bandeja de notificaciones in-app (read/unread) y expandir tipos (pagos/chat).
 
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Bandeja in-app con `NotificationDelivery.readAt` |  |
+|  |  | Endpoints: list + mark read + read-all |  |
+|  |  | Tests DB (`s30_*`) |  |
+|  |  | OpenAPI actualizado |  |
+|  |  | `npm run lint && npm test` en verde |  |
+
+---
+
+## Sprint 31 — E0-01: multi-deporte hardening (seed multi-sport)
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Seed multi-sport (PADEL/TENNIS/PICKLEBALL) |  |
+|  |  | Presets v1 por deporte (AMERICANO/ROUND_ROBIN) |  |
+|  |  | Endpoints catálogo: `GET /sports` + presets por sport |  |
+|  |  | Test integración DB `s31_*` |  |
+|  |  | `npm run lint && npm test` en verde |  |
+
+---
+
+## Sprint 32 — E0-02: validación fuerte de `formatParameters` por preset
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Validador por `formatPresetCode`/`schemaVersion` |  |
+|  |  | Rechazo de keys extra / tipos inválidos |  |
+|  |  | Tests contrato + integración DB `s32_*` |  |
+|  |  | OpenAPI documenta `formatParameters` |  |
+|  |  | `npm run lint && npm test` en verde |  |
+
+---
+
+## Sprint 33 — E3-01: schedule genérico de torneos (persistencia + endpoints)
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Modelo `TournamentSchedule` + migración |  |
+|  |  | Endpoints genéricos `schedule:generate` y `schedule` |  |
+|  |  | AMERICANO soportado; otros => 501 |  |
+|  |  | Test integración DB `s33_*` |  |
+|  |  | `npm run lint && npm test` en verde |  |
+
+---
+
+## Sprint 34 — E7-01: Chat MVP por match/torneo
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Modelos `ChatThread`/`ChatMessage` + migración |  |
+|  |  | Endpoints: match chat + tournament chat (auth) |  |
+|  |  | OpenAPI actualizado |  |
+|  |  | Test integración DB `s34_*` |  |
+|  |  | `npm run lint && npm test` en verde |  |
+
+---
+
+## Sprint 35 — E7: notificaciones (tipos pagos/chat + preferencias por tipo)
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Nuevos `NotificationEventType`: `PAYMENT_PENDING`, `CHAT_MESSAGE` |  |
+|  |  | Preferencias por tipo: `NotificationSubscription.enabledTypes` |  |
+|  |  | Dispatch respeta preferencias |  |
+|  |  | Endpoint interno crear eventos pagos/chat |  |
+|  |  | Test integración DB `s35_*` |  |
+|  |  | `npm run lint && npm test` en verde |  |
+
+---
+
+## Sprint 36 — E4: performance geo (índices base)
+
+### Done
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+|  |  | Índices para queries críticas (match status/schedule/court) |  |
+|  |  | Migración `s36` no destructiva |  |
+|  |  | `npm run lint && npm test` en verde |  |
+
+---
+
+## Sprint 37 — E3: ROUND_ROBIN real (motor + schedule)
+
 ### Backlog sugerido
 
 | Backlog | In Progress | Done | Blocked |
 |---|---|---|---|
-| Modelo `InAppNotification` (o reutilizar `NotificationEvent`) |  |  |  |
-| Endpoints: list + mark read |  |  |  |
-| Tests (contrato + DB) |  |  |  |
-| OpenAPI actualizado |  |  |  |
+| Implementar generación ROUND_ROBIN (rondas/emparejamientos) |  |  |  |
+| Persistencia en `TournamentSchedule` + `scheduleKey` determinista |  |  |  |
+| Tests dominio (determinismo/idempotencia) + integración DB |  |  |  |
+| OpenAPI (payload/ejemplos) |  |  |  |
+
+---
+
+## Sprint 38 — E3: Eliminación simple (SINGLE_ELIMINATION) MVP
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Preset por deporte + validación `formatParameters` |  |  |  |
+| Generación bracket (byes o política definida) |  |  |  |
+| Tests DB + OpenAPI |  |  |  |
+
+---
+
+## Sprint 39 — E3: Inscripciones de torneo (registrations) MVP
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Endpoints inscribir/listar (idempotente, sin duplicados) |  |  |  |
+| Reglas por estado del torneo (DRAFT/ACTIVE/etc.) |  |  |  |
+| `schedule:generate` toma participantes desde registrations |  |  |  |
+| Tests DB + OpenAPI |  |  |  |
+
+---
+
+## Sprint 40 — E4: geo “exacta” + medición formal (EXPLAIN/bench)
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Definir si se devuelve `distanceKm` |  |  |  |
+| Medición (EXPLAIN) y límites (radius/limit) |  |  |  |
+| Ajustes de queries/índices según findings |  |  |  |
+
+---
+
+## Sprint 41 — E7: notificaciones “full” (payloads/plantillas + observability)
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Contratos de payload por tipo + plantillas title/body |  |  |  |
+| Tests de contrato (no romper shape) |  |  |  |
+| Integración con dashboards/alertas externas (runbook) |  |  |  |
 
 
 

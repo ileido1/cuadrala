@@ -2,7 +2,7 @@
 
 **Versión:** 1.1  
 **Alcance de este documento:** Fase 1 del flujo spec-driven (sin implementación de código).  
-**Stack objetivo:** React Native + Expo, Zustand, TanStack Query; backend Node.js + TypeScript + PostgreSQL + Prisma; Clean Architecture + Repository + SOLID.  
+**Stack objetivo:** Flutter (Android/iOS/Web), Riverpod, Dio, GoRouter; backend Node.js + TypeScript + PostgreSQL + Prisma; Clean Architecture + Repository + SOLID.  
 **Entorno de desarrollo:** Ubuntu.
 
 ---
@@ -140,7 +140,7 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 
 ### 5.1 Vista lógica (capas)
 
-- **Presentación (móvil):** pantallas Expo/React Native; estado UI y caché cliente con Zustand; datos remotos con TanStack Query.
+- **Presentación (cliente):** UI Flutter (Material) con navegación declarativa; estado UI/sesión con Riverpod; datos remotos con cliente HTTP (Dio) + caché/reintentos en capa de infraestructura.
 - **API (backend):** HTTP/JSON (REST o RPC documentado); autenticación JWT (u OAuth2 si se amplía); validación de entrada; casos de uso orquestando reglas de negocio.
 - **Dominio:** entidades y reglas (torneo, partido, ranking, matchmaking); sin dependencias de framework.
 - **Infraestructura:** Prisma + PostgreSQL; adaptadores de repositorio; clientes de notificaciones push y almacenamiento de archivos si aplica.
@@ -149,13 +149,13 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         CLIENTE (React Native + Expo)                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────────┐ │
-│  │   Screens    │  │   Zustand    │  │   TanStack Query (+ HTTP API)   │ │
-│  │  / navigation│  │  UI / session│  │   cache, retries, invalidation  │ │
-│  └──────┬───────┘  └──────┬───────┘  └───────────────┬────────────────┘ │
-│         │                  │                          │                   │
-│         └──────────────────┴──────────────────────────┘                   │
+│                         CLIENTE (Flutter)                                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────────┐  │
+│  │  Widgets/UI  │  │  Riverpod    │  │   Dio (+ OpenAPI client)        │  │
+│  │  + GoRouter  │  │  state/auth  │  │   retry, interceptors, cache    │  │
+│  └──────┬───────┘  └──────┬───────┘  └───────────────┬────────────────┘  │
+│         │                  │                           │                  │
+│         └──────────────────┴───────────────────────────┘                  │
 └─────────────────────────────────┬─────────────────────────────────────────┘
                                   │ HTTPS (JSON)
                                   ▼
@@ -185,16 +185,16 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 
 **A) Listar partidos incompletos con filtros**
 
-1. Pantalla invoca hook de TanStack Query → `GET /matches?status=incomplete&venueId=&courtId=&priceMin=&priceMax=`.
+1. Pantalla Flutter dispara un provider (Riverpod) → request HTTP (Dio) a `GET /matches?status=incomplete&venueId=&courtId=&priceMin=&priceMax=`.
 2. Controller valida query params → caso de uso `ListIncompleteMatches`.
 3. Repositorio ejecuta consulta Prisma con índices en `status`, `venue_id`, `price_per_person`.
-4. Respuesta DTO → caché en Query; Zustand solo para filtros UI y selección local.
+4. Respuesta DTO → caché en capa de infraestructura (política de stale/refresh) y estado UI en Riverpod.
 
 **B) Registrar resultado y actualizar ranking**
 
 1. Organizador confirma resultado → `POST /tournaments/:id/matches/:matchId/results`.
 2. Caso de uso valida permisos y estado del torneo → persiste `match_result` y dispara `UpdateRankingForCategory`.
-3. Transacción en BD; invalidación de caché de ranking en cliente vía Query.
+3. Transacción en BD; invalidación/refetch de cache en cliente vía providers (Riverpod) según política de datos.
 
 **C) Coordinación y faltantes**
 
@@ -206,10 +206,59 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 | Decisión | Opción recomendada |
 |----------|-------------------|
 | API | REST versionada (`/v1/...`) con OpenAPI. |
-| Autenticación | JWT de corta duración + refresh; almacenamiento seguro en móvil (SecureStore). |
-| Tiempo real | MVP: polling o refetch con Query; fase posterior: WebSocket para chat en vivo. |
+| Autenticación | JWT de corta duración + refresh. **Mobile**: storage seguro (Keychain/Keystore vía `flutter_secure_storage`). **Web**: preferir tokens en memoria + refresh frecuente; evitar persistir access token en `localStorage` sin threat model. |
+| Tiempo real | MVP: polling/refetch controlado; fase posterior: WebSocket para chat en vivo. |
 
 ---
+
+### 5.4.1 Estrategia recomendada de Auth en Flutter Web (MVP)
+
+**Problema:** en web, cualquier token persistido en `localStorage`/`sessionStorage` es vulnerable a XSS. Flutter Web no tiene un “secure storage” equivalente a Keychain/Keystore.
+
+**Estrategia MVP (recomendada sin cambios en backend)**
+
+- **Access token**: mantenerlo **en memoria** (no persistir).
+- **Refresh token**: evitar persistirlo; si el usuario recarga la pestaña, debe re-login (trade-off aceptable en MVP) o implementar una estrategia controlada.
+- **Renovación**: al iniciar la app, si no hay sesión en memoria → mostrar login; si hay sesión → refresh proactivo cercano a expiración.
+- **Errores**: si `refresh` falla con `NO_AUTORIZADO/TOKEN_INVALIDO` → limpiar sesión y forzar login.
+
+**Alternativa (mejor UX, cambio mayor)**\n
+- Migrar auth web a **cookies httpOnly** (requiere cambios en backend: emitir cookies, CSRF, CORS, estrategia de refresh). Esto mejora UX y reduce exposición a XSS, pero aumenta complejidad.
+
+**Decisión para el proyecto**
+
+- Mantener estrategia MVP en memoria para Flutter Web mientras el producto valida uso.
+- Si el web app se vuelve canal principal, planificar migración a cookies httpOnly.
+
+### 5.5 Contratos API (OpenAPI) y generación de cliente Flutter
+
+**Fuente de verdad del contrato**: el backend publica el OpenAPI y el cliente Flutter debe consumirlo como contrato estable.
+
+- Backend (fuente): `services/api/src/presentation/openapi/openapi.ts` → `GET /openapi.json`
+- Objetivo en Flutter: evitar “clients a mano” y preferir **cliente generado**.
+
+**Estrategia recomendada**
+
+1. Generar cliente Dart desde OpenAPI con salida compatible con Dio (p. ej. OpenAPI Generator `dart-dio`).
+2. Encapsular el SDK generado detrás de una capa fina en `apps/mobile/lib/core/api/` para:
+   - interceptors (auth, logging)
+   - manejo de errores y mapeo a estados UI
+   - configuración por entorno (baseUrl)
+
+**Convención de errores (backend → Flutter)**
+
+- Respuestas de error típicas incluyen:
+  - `code` (código estable, p. ej. `VALIDACION_FALLIDA`, `NO_AUTORIZADO`)
+  - `message` (mensaje en español apto para usuario o log)
+  - `details` opcional
+- En Flutter:
+  - Mapear `code` a UI (mensajes, CTA, retry/login)
+  - Mantener `message` para fallback (no depender de strings para lógica)
+
+**Reglas de compatibilidad**
+
+- Si el contrato cambia, se debe **regenerar** el cliente y ajustar mappers, no “parchear” requests manuales.
+- Versionar endpoints (`/api/v1/...`) para evitar breaking changes en mobile/web.
 
 ## 6. Esquema de base de datos relacional (PostgreSQL)
 
@@ -440,21 +489,41 @@ CREATE INDEX idx_messages_conv ON messages(conversation_id, created_at);
 
 ## 7. Estructura de carpetas propuesta
 
-### 7.1 Frontend (`mobile/` o `apps/mobile/`)
+### 7.1 Frontend Flutter (`apps/mobile/`)
 
 ```
 apps/mobile/
-├── app/                    # Expo Router (o src/navigation si no Router)
-├── src/
-│   ├── presentation/       # screens, components, hooks de UI
-│   ├── application/        # casos de uso del cliente, mappers
-│   ├── domain/             # tipos de dominio, reglas puras si aplica
-│   ├── infrastructure/     # apiClient, storage, analytics
-│   ├── state/              # stores Zustand
-│   └── config/             # env, feature flags
-├── assets/
-└── app.json
+├── lib/
+│   ├── app/                # bootstrap, router (GoRouter), theme
+│   ├── core/               # http (Dio), auth, config, errors, logging
+│   ├── features/           # vertical slices por feature
+│   │   └── <feature>/
+│   │       ├── data/       # datasources, repositories, mappers, models DTO
+│   │       ├── domain/     # entidades/VOs del cliente si aplica
+│   │       └── presentation/ # screens/widgets/providers
+│   └── main.dart
+├── test/                   # unit + widget tests
+├── integration_test/       # flujos smoke (login, discovery, etc.)
+├── web/                    # Flutter Web (index.html, manifest)
+├── android/
+├── ios/
+└── pubspec.yaml
 ```
+
+**Comandos estándar (Flutter)**
+
+- Dev:
+  - `flutter pub get`
+  - `flutter run -d android` / `flutter run -d ios`
+  - `flutter run -d chrome` (web)
+- Calidad:
+  - `flutter analyze`
+  - `flutter test`
+  - `flutter test --coverage`
+- Builds:
+  - `flutter build web --release`
+  - `flutter build apk --release`
+  - `flutter build ipa --release` (requiere entorno macOS para firmar)
 
 ### 7.2 Backend (`api/` o `services/api/`)
 
@@ -491,7 +560,7 @@ services/api/
 | NFR-OBS-02 | Observabilidad | Errores comprensibles en cliente. | Códigos de error estables documentados en OpenAPI; mensajes de usuario en español. |
 | NFR-SCALE-01 | Escalabilidad | API stateless. | Sesión en JWT; posibilidad de escalar horizontalmente el servicio Node. |
 | NFR-SCALE-02 | Escalabilidad | BD normalizada y migraciones versionadas. | Prisma migrate; backups automatizados (operación). |
-| NFR-UX-01 | UX | Offline parcial opcional en MVP+. | TanStack Query con stale time y reintentos; mensajes de conectividad claros. |
+| NFR-UX-01 | UX | Offline parcial opcional en MVP+. | Caché de lectura (stale/refresh), reintentos y mensajes de conectividad claros (Flutter). |
 
 **Trazabilidad NFR ↔ historias (ejemplos):** US-M01 → NFR-SEC-01; US-A02 → NFR-PERF-01; US-A04 → NFR-OBS-01, NFR-OBS-02.
 
@@ -505,7 +574,44 @@ services/api/
 |-----------|------|----------------|
 | P0 | Repos monorepo o multirepo, CI básico, lint, format | — |
 | P0 | Esquema Prisma inicial + migraciones | FR-001–004 base |
-| P0 | Autenticación API + cliente móvil (SecureStore) | US-M01, FR-001, FR-002 |
+| P0 | Autenticación API + cliente Flutter (`flutter_secure_storage` en mobile; estrategia web definida) | US-M01, FR-001, FR-002 |
+
+---
+
+## 9.1 Tooling, CI/CD y entornos (Flutter)
+
+### Objetivo
+
+Tener un pipeline repetible para **Android/iOS/Web** que garantice calidad mínima antes de publicar builds.
+
+### Comandos mínimos (frontend Flutter)
+
+- `flutter pub get`
+- `flutter analyze`
+- `flutter test`
+- `flutter build web --release`
+- `flutter build apk --release`
+- `flutter build ipa --release` (requiere runner macOS para firma)
+
+### Sugerencia de pipeline (alto nivel)
+
+1. **Lint/Analyze**: `flutter analyze`
+2. **Tests**: `flutter test`
+3. **Build web**: `flutter build web --release`
+4. **Build Android** (CI Linux): `flutter build apk --release`
+5. **Build iOS** (CI macOS): `flutter build ipa --release`
+
+### Entornos (dev/staging/prod)
+
+El cliente Flutter debe soportar baseUrl por entorno para la API, por ejemplo:
+
+- `dev`: `http://localhost:4000` o túnel (ngrok) para móviles
+- `staging`: URL de staging
+- `prod`: URL de producción
+
+**Recomendación de implementación** (documental, no code):
+
+- Centralizar en `apps/mobile/lib/core/config/` una lectura de configuración por entorno.\n+- Para web, permitir configurar baseUrl por build (ej. `--dart-define=API_BASE_URL=...`).\n+- Para mobile, usar flavors o `--dart-define` según el pipeline.
 
 ### Fase 1 — MVP core
 

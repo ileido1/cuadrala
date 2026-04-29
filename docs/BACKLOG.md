@@ -22,14 +22,14 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 | Orden | Épica | Objetivo | Estado (según historias) |
 |-------|-------|----------|--------------------------|
-| E0 | Cimientos multi-deporte y torneo parametrizable | Deportes, presets de formato, torneo genérico | **In Progress** (US-E0-01/02 Parcial; **US-E0-03 Done backend**) |
-| E1 | Identidad, auth y perfil competitivo | Cuenta, perfil, nivel/categoría, (futuro Elo) | **In Progress** (US-E1-01 Parcial; US-E1-02 Done backend; US-E1-03 Parcial) |
-| E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel | **In Progress (muy avanzado backend)** (US-E2-01 Parcial; US-E2-02 Done; US-E2-03 Done + join atómico; US-E2-04 Parcial) |
-| E3 | Motor de torneos y formatos | Rotaciones, rondas, tablero (según formato) | **In Progress** (US-E3-01 Parcial; US-E3-02 Done; US-E3-03 Done) |
-| E4 | Sedes y geo | Directorio, mapa, horas vacantes | **In Progress (muy avanzado backend)** (US-E4-01 Parcial backend; US-E4-02 Parcial backend; **US-E4-03 Done backend**) |
-| E5 | Ranking y resultados | Resultados → recálculo (puntos / Elo) | **In Progress (avanzado backend)** (US-E5-01 Parcial backend; US-E5-02 Parcial; US-E5-03 Parcial backend) |
-| E6 | Cobro colaborativo | Obligaciones, comprobantes, sin custodia | **Done (MVP)** (US-E6-01/02 Cumplida; US-E6-03 No iniciada) |
-| E7 | Coordinación | Chat, notificaciones | **In Progress (backend)** (US-E7-01 No iniciada; US-E7-02 Parcial backend) |
+| E0 | Cimientos multi-deporte y torneo parametrizable | Deportes, presets de formato, torneo genérico | **In Progress (avanzado backend)** (**US-E0-01 Done backend**; **US-E0-02 Parcial**; **US-E0-03 Done backend**) |
+| E1 | Identidad, auth y perfil competitivo | Cuenta, perfil, nivel/categoría, (futuro Elo) | **In Progress (avanzado backend)** (**US-E1-01 Done backend**; US-E1-02 Done backend; US-E1-03 Parcial) |
+| E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel | **In Progress (avanzado backend)** (US-E2-01 Parcial; US-E2-02 Done; US-E2-03 Done + join atómico; **US-E2-04 Done backend**) |
+| E3 | Motor de torneos y formatos | Rotaciones, rondas, tablero (según formato) | **In Progress (avanzado backend)** (US-E3-01 Parcial; US-E3-02 Done; US-E3-03 Done; **US-E3-04 Parcial**) |
+| E4 | Sedes y geo | Directorio, mapa, horas vacantes | **In Progress (avanzado backend)** (US-E4-01 Parcial backend; US-E4-02 Parcial backend; **US-E4-03 Done backend**; **US-E4-04 Done backend (índices)**) |
+| E5 | Ranking y resultados | Resultados → recálculo (puntos / Elo) | **In Progress (avanzado backend)** (**US-E5-01 Done backend**; **US-E5-02 Done backend**; US-E5-03 Parcial backend) |
+| E6 | Cobro colaborativo | Obligaciones, comprobantes, sin custodia | **Done (MVP backend)** (US-E6-01/02 Cumplida; **US-E6-03 Done backend**) |
+| E7 | Coordinación | Chat, notificaciones | **In Progress (avanzado backend)** (**US-E7-01 Done backend MVP**; **US-E7-02 Parcial backend (avanzado)**; **US-E7-03 Done backend (preferencias por tipo)**) |
 
 ---
 
@@ -47,7 +47,9 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 2. Dado un partido o torneo, cuando persiste en BD, entonces tiene `sportId` o equivalente (no asumir siempre pádel en código de dominio).
 3. Dado el cliente móvil, cuando muestra textos específicos de pádel, entonces provienen de configuración/copy por deporte, no de strings fijos en núcleo de negocio (salvo MVP donde se documente deuda técnica).
 
-**Estado:** **Parcial — backend:** modelos `Sport`, `TournamentFormatPreset`, `sportId` en `Match`/`Tournament`; `GET /sports`, `GET /sports/:id/tournament-format-presets`, `POST /tournaments`; seed PADEL + presets. Pendiente: más deportes en seed, UI y reglas por deporte.
+**Estado:** **Done (backend):** modelos `Sport`, `TournamentFormatPreset`, `sportId` en `Match`/`Tournament`; `GET /sports`, `GET /sports/:id/tournament-format-presets`, `POST /tournaments`; seed multi‑sport (ej. PADEL/TENNIS/PICKLEBALL) + presets por deporte. Tests de integración DB (`s31_*`) validan catálogo multi‑sport y que no se mezclan presets por `sportId`.
+
+Pendiente: UI/copy por deporte (frontend) y reglas específicas por deporte si se requieren.
 
 **Verificación TDD:** tests de contrato + integración sobre creación de entidad con `sport`.
 
@@ -65,7 +67,9 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 2. Dado el preset “Americano”, cuando creo el torneo, entonces es equivalente funcional al caso de uso histórico “americano” pero modelado como **instancia** de formato, no como único enum global.
 3. Dado un formato no soportado aún, cuando intento activarlo, entonces recibo error claro o el formato queda en estado “próximamente” según política de producto.
 
-**Estado:** **Parcial:** torneos parametrizables vía API (`POST /tournaments` + `formatParameters`); partidos sueltos siguen usando preset AMERICANO por defecto. Falta motor de rotaciones por formato (épica E3).
+**Estado:** **Parcial (backend, avanzado):** torneos parametrizables vía API (`POST /tournaments`) con `formatPresetId|formatPresetCode` + `formatParameters` y **validación fuerte por preset** (schema por formato/version; rechaza keys extra y tipos inválidos). Tests de contrato + integración DB (`s32_*`).
+
+Pendiente: ampliar formatos (eliminación, suizo, etc.), y que el motor soporte más formatos (épica E3).
 
 **Verificación TDD:** tests de dominio para validación de parámetros por formato; migraciones compatibles hacia atrás.
 
@@ -96,7 +100,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 
 **Criterios:** tokens de acceso/refresh; cierre de sesión; mensajes en español.
 
-**Estado:** **Parcial — backend:** endpoints de auth (register/login/refresh) + middleware JWT + perfil (ver US‑E1‑02). Pendiente: logout/blacklist, endurecer refresh rotation y tests de integración en Node 20.19+.
+**Estado:** **Done (backend):** endpoints `register/login/refresh/logout` con **refresh rotation** persistida (`RefreshToken`) + invalidación al logout. Tests de integración DB (`s25_*`) cubren: refresh rota y el token viejo ya no sirve; logout revoca; errores consistentes.
 
 ---
 
@@ -172,7 +176,7 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 
 **Criterios:** excluye participantes actuales; respeta categoría del partido.
 
-**Estado:** **Parcial (backend):** endpoint `GET /api/v1/matchmaking/:matchId/suggestions` implementado; ahora prioriza **Elo (UserRating)** y hace fallback a `RankingEntry.points`. Pendiente: estrategia de “similaridad” (no solo top-N), límites por radio/venue y segmentación por disponibilidad.
+**Estado:** **Done (backend):** endpoint `GET /api/v1/matchmaking/:matchId/suggestions` con estrategia de **similaridad** (cercanía a target Elo/fallback points), exclusión de participantes actuales, `limit` y filtro geo opcional. Tests de integración DB (`s29_*`) listos (condicionales a `TEST_DATABASE_URL`).
 
 ---
 
@@ -186,7 +190,9 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 
 **Criterios:** ver US-E0-02; torneo asociado a `sport`.
 
-**Estado:** Parcial (modelo `Tournament` existe; falta parametrización completa y presets).
+**Estado:** **Parcial (backend, avanzado):** `POST /api/v1/tournaments` soporta `formatPresetId` o `formatPresetCode` + `formatParameters`, y persiste `presetSchemaVersion`. Validación fuerte de `formatParameters` por preset (ver US‑E0‑02, Sprint 32) y seed multi‑sport (Sprint 31).
+
+Pendiente: UX/flows completos (frontend) y reglas de negocio avanzadas (inscripciones, cupos, lifecycle).
 
 ---
 
@@ -214,6 +220,71 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 
 ---
 
+### US-E3-04 — Schedule genérico de torneos (API unificada)
+
+**Como** organizador o sistema  
+**Quiero** generar y consultar un calendario genérico de torneo sin depender de endpoints específicos por formato  
+**Para** soportar múltiples formatos con un contrato estable.
+
+**Criterios de aceptación**
+
+1. `POST /api/v1/tournaments/:tournamentId/schedule:generate` crea el calendario si no existe y es idempotente por `scheduleKey`.
+2. `GET /api/v1/tournaments/:tournamentId/schedule` devuelve el calendario generado.
+3. Si el formato no está soportado aún, responde `501` con error claro.
+
+**Estado:** **Parcial (backend):** persistencia `TournamentSchedule` (JSON) + endpoints genéricos `schedule:generate` y `schedule` implementados; AMERICANO soportado; otros formatos responden `501`. Tests DB (`s33_*`) listos (condicionales a `TEST_DATABASE_URL`).
+
+Pendiente: implementar formatos adicionales (Round Robin real, eliminatorias, etc.) y normalizar payloads por versión.
+
+---
+
+### US-E3-05 — Motor Round Robin real (schedule + rounds + persistencia)
+
+**Como** organizador  
+**Quiero** generar el calendario completo de un torneo **ROUND_ROBIN**  
+**Para** poder correr “todos contra todos” sin Excel.
+
+**Criterios de aceptación**
+
+1. Dado un torneo con `formatPresetCode=ROUND_ROBIN`, cuando ejecuto `schedule:generate`, entonces devuelve payload válido (rondas/partidos) y lo persiste en `TournamentSchedule`.
+2. Dado el mismo input, la generación es **determinista** e **idempotente** (mismo `scheduleKey`).
+3. Dado un input inválido (participantes duplicados o <4), responde `400` con `VALIDACION_FALLIDA`.
+4. El payload incluye información suficiente para “materializar” matches (al menos `roundNumber` + `pairings` por ronda).
+
+**Estado:** No iniciada (backend). Depende de US‑E3‑04 (API genérica) y US‑E0‑02 (validación de parámetros).
+
+---
+
+### US-E3-06 — Formato Eliminación simple (single elimination) (MVP)
+
+**Como** organizador  
+**Quiero** crear un torneo de **eliminación simple**  
+**Para** organizar brackets de manera rápida.
+
+**Criterios de aceptación**
+
+1. Existe un preset `SINGLE_ELIMINATION` (por deporte) con `defaultParameters` y validación de `formatParameters`.
+2. `schedule:generate` genera un bracket inicial (primera ronda) y persiste el `TournamentSchedule`.
+3. Si el número de participantes no es potencia de 2, el sistema define política (byes) o responde error claro.
+
+**Estado:** No iniciada (backend).
+
+---
+
+### US-E3-07 — Inscripciones y cupos de torneo (registrations) (MVP)
+
+**Como** organizador  
+**Quiero** registrar participantes en un torneo y validar cupos  
+**Para** que el motor genere schedules con fuente de verdad consistente.
+
+**Criterios de aceptación**
+
+1. Existe endpoint para **inscribir** usuario en un torneo (`POST /api/v1/tournaments/:tournamentId/registrations`) y para **listar** inscripciones.
+2. No permite duplicados (idempotente) ni inscripciones si el torneo está en estado no permitido.
+3. `schedule:generate` puede tomar participantes desde `TournamentRegistration` (sin tener que pasar `participantUserIds` manualmente), o se define un endpoint alterno claro.
+
+**Estado:** No iniciada (backend).
+
 ## 6. Épica E4 — Sedes, geo, horas vacantes
 
 ### US-E4-01 — Directorio de sedes y canchas
@@ -238,7 +309,7 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 
 **Estado:** **Parcial (backend, avanzado):** filtros geo para oferta vía `GET /api/v1/matches/open?near=lat,lng&radiusKm=...` (bounding box) + endpoints internos de geocoding (`/api/v1/geo/places/*`) y persistencia de `placeId` + dirección normalizada en `Venue`.
 
-Pendiente: implementar “distancia exacta” en resultados (si se requiere), optimización de performance (índices/queries) y UX de mapa (frontend).
+Pendiente: implementar “distancia exacta” en resultados (si se requiere) y UX de mapa (frontend). La parte de performance base (índices) está cubierta por US‑E4‑04.
 
 ---
 
@@ -254,6 +325,36 @@ Pendiente: implementar “distancia exacta” en resultados (si se requiere), op
 
 ---
 
+### US-E4-04 — Performance geo (índices y medición)
+
+**Como** producto  
+**Quiero** que los listados geo y filtros de oferta sean rápidos y estables  
+**Para** soportar crecimiento sin degradación.
+
+**Criterios de aceptación**
+
+1. Existen índices para los patrones de consulta principales (status/scheduledAt/courtId/sportId/categoryId).
+2. Se limita/pagina la respuesta para evitar cargas excesivas.
+3. Se documenta (o se mide) el impacto mínimo en queries críticas.
+
+**Estado:** **Done (backend - base):** migración con índices para matches/joins (`s36`). Pendiente: medición formal (EXPLAIN/benchmarks) y ajustes finos de queries según datos reales.
+
+---
+
+### US-E4-05 — Geo “exacta” y medición formal (p95/p99)
+
+**Como** producto  
+**Quiero** que los endpoints geo devuelvan distancia exacta (si se requiere) y tengan medición formal  
+**Para** garantizar performance bajo carga real.
+
+**Criterios de aceptación**
+
+1. Se define si la API debe devolver `distanceKm` (y en qué endpoints); si aplica, se calcula de forma exacta.
+2. Se agrega medición formal (EXPLAIN/bench) para queries críticas: `/matches/open` con `near/radiusKm` y `/venues?near`.
+3. Se documenta una política de límites (max radius, max limit, paginación).
+
+**Estado:** No iniciada (backend).
+
 ## 7. Épica E5 — Ranking y resultados
 
 ### US-E5-01 — Registrar resultados por partido o ronda
@@ -264,7 +365,9 @@ Pendiente: implementar “distancia exacta” en resultados (si se requiere), op
 
 **Criterios:** validación de permisos; deporte puede influir en estructura del resultado (JSON tipado o tablas).
 
-**Estado:** **Parcial (backend):** flujo 4/4 confirmado con `MatchResultDraft` + `MatchResultConfirmation` → finaliza `MatchResult` + `MatchResultScore`, OpenAPI y tests de integración condicional. Pendiente: manejo de rechazos y re-propuesta, y permisos avanzados.
+**Estado:** **Done (backend MVP):** flujo 4/4 con `MatchResultDraft` versionado + `MatchResultConfirmation`; soporta **REJECTED** y **re‑propuesta**; al completar confirmación válida finaliza `MatchResult` + `MatchResultScore` y aplica Elo. Tests DB (`s26_*`) listos (condicionales a `TEST_DATABASE_URL`).
+
+Pendiente: permisos/auditoría avanzados según producto.
 
 ---
 
@@ -276,7 +379,7 @@ Pendiente: implementar “distancia exacta” en resultados (si se requiere), op
 
 **Criterios:** idempotencia; transacciones DB.
 
-**Estado:** Parcial (`POST /ranking/recalculate/:categoryId`).
+**Estado:** **Done (backend MVP):** `POST /api/v1/ranking/recalculate/:categoryId` transaccional e idempotente desde `MatchResult/MatchResultScore`. Tests DB (`s27_*`) verifican recálculo doble sin duplicados (condicionales a `TEST_DATABASE_URL`).
 
 ---
 
@@ -293,6 +396,20 @@ Pendiente: implementar “distancia exacta” en resultados (si se requiere), op
 Pendiente: leaderboard por deporte (si el rating se separa por sport), y política Elo por deporte/categoría si cambia el sistema de puntuación.
 
 ---
+
+### US-E5-04 — Elo por deporte (si aplica) + leaderboard por deporte
+
+**Como** producto  
+**Quiero** separar rating/leaderboard por **deporte** cuando el scoring difiere  
+**Para** evitar mezclar habilidades entre deportes.
+
+**Criterios de aceptación**
+
+1. El rating se consulta por `sportId` (o se define explícitamente que es global).
+2. Existe leaderboard filtrable por `sportId` + `categoryId`.
+3. Migración/backfill definido (si se separa).
+
+**Estado:** No iniciada (producto/backend).
 
 ## 8. Épica E6 — Cobro colaborativo (sin custodia)
 
@@ -328,7 +445,7 @@ Pendiente: leaderboard por deporte (si el rating se separa por sport), y políti
 
 **Criterios:** storage seguro; tipos MIME; tamaño máximo.
 
-**Estado:** No iniciada.
+**Estado:** **Done (backend MVP):** `TransactionReceipt` + endpoints para subir/leer comprobante (storage local seguro, validación MIME/tamaño) + OpenAPI. Tests DB+FS (`s28_*`) listos (condicionales a `TEST_DATABASE_URL`).
 
 ---
 
@@ -340,7 +457,11 @@ Pendiente: leaderboard por deporte (si el rating se separa por sport), y políti
 **Quiero** mensajería en contexto  
 **Para** coordinar sin WhatsApp.
 
-**Estado:** No iniciada.
+**Estado:** **Done (backend MVP):** chat por `matchId` o `tournamentId` con persistencia (`ChatThread`, `ChatMessage`) y endpoints autenticados:
+- `GET/POST /api/v1/matches/:matchId/chat/messages`
+- `GET/POST /api/v1/tournaments/:tournamentId/chat/messages`
+
+Tests de integración DB (`s34_*`) listos (condicionales a `TEST_DATABASE_URL`).
 
 ---
 
@@ -350,17 +471,66 @@ Pendiente: leaderboard por deporte (si el rating se separa por sport), y políti
 **Quiero** avisos de cupo, pago y mensajes  
 **Para** no perder oportunidades.
 
-**Estado:** **Parcial (backend):** notificaciones segmentadas por categoría+geo con:
+**Estado:** **Parcial (backend, avanzado):** notificaciones segmentadas por categoría+geo con:
 - Suscripciones (`NotificationSubscription`)
 - Evento `MATCH_SLOT_OPENED` emitido cuando `leave` abre cupo
+- Evento `MATCH_CANCELLED` (endpoint interno para crear evento + deliveries)
 - `DevicePushToken` + provider Noop/FCM
 - Dispatch como **worker real** con deliveries PENDING + retries/backoff + deshabilitado de tokens inválidos
 - Worker automático in-process (env gated) + endpoint de métricas internas
 - **Worker separado (servicio)** con lock distribuido (advisory lock) para escalado
+- **In‑app**: bandeja con `NotificationDelivery.readAt` + endpoints `GET /api/v1/users/me/notifications` + marcar leído/read-all (Sprint 30; tests `s30_*`)
 
-Pendiente: notificaciones **in-app** (bandeja), expandir tipos (pagos/chat) y observabilidad “full” (dashboards/alertas externas).
+Pendiente: observabilidad “full” (dashboards/alertas externas) y política/plantillas por tipo (si se requiere).
 
 ---
+
+### US-E7-03 — Preferencias de notificación por tipo (pagos/chat/cupos)
+
+**Como** usuario  
+**Quiero** habilitar o deshabilitar tipos específicos de notificación (p. ej. cupos, pagos, mensajes)  
+**Para** no recibir alertas irrelevantes.
+
+**Criterios de aceptación**
+
+1. Dada una suscripción activa, cuando guardo preferencias por tipo, entonces el backend persiste la configuración por tipo.
+2. Dado un evento de notificación, cuando el usuario tiene ese tipo deshabilitado, entonces no se crean/dispatchan deliveries para ese usuario.
+3. Si el tipo no está especificado en preferencias, se asume **habilitado** (backward compatible).
+
+**Estado:** **Done (backend MVP):** `NotificationSubscription.enabledTypes` + validación en API `/users/me/notification-subscriptions` y el dispatch respeta preferencias por tipo. Se agregaron tipos `PAYMENT_PENDING` y `CHAT_MESSAGE` (endpoints internos para crear eventos). Tests DB (`s35_*`) listos (condicionales a `TEST_DATABASE_URL`).
+
+---
+
+### US-E7-04 — Plantillas y payloads estables por tipo de notificación (contract)
+
+**Como** producto  
+**Quiero** que cada tipo de notificación tenga **payload estable** y plantilla (title/body) consistente  
+**Para** que mobile pueda navegar/mostrar correctamente.
+
+**Criterios de aceptación**
+
+1. Para cada `NotificationEventType` soportado, existe contrato de payload (campos mínimos) y `dispatch` construye `title/body` coherentes.
+2. El payload incluye datos suficientes para deep-link (matchId/tournamentId/threadId, etc.).
+3. Tests de contrato validan que `dispatch` no rompe el shape.
+
+**Estado:** No iniciada (backend/producto).
+
+---
+
+### US-E7-05 — Observability “full” notificaciones (dashboards + alertas)
+
+**Como** operador  
+**Quiero** dashboards/alertas externas para backlog/failure rate  
+**Para** detectar degradación del worker de notificaciones.
+
+**Criterios de aceptación**
+
+1. Métricas expuestas se integran en herramienta externa (Datadog/Grafana/etc.) o se define estrategia.
+2. Alertas para: backlog events, backlog deliveries, failure rate, tick timeout.
+3. Documentación operativa (runbook) mínima.
+
+**Estado:** No iniciada (infra/ops).
+
 
 ## 10. Checklist de verificación por historia (Scrum)
 
