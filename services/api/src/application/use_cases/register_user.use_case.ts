@@ -1,5 +1,8 @@
+import { randomUUID } from 'crypto';
+
 import { AppError } from '../../domain/errors/app_error.js';
 import type { PasswordHasher } from '../../domain/ports/password_hasher.js';
+import type { RefreshTokenRepository } from '../../domain/ports/refresh_token_repository.js';
 import type { TokenService } from '../../domain/ports/token_service.js';
 import type { UserRepository } from '../../domain/ports/user_repository.js';
 
@@ -8,6 +11,7 @@ export class RegisterUserUseCase {
     private readonly _userRepository: UserRepository,
     private readonly _passwordHasher: PasswordHasher,
     private readonly _tokenService: TokenService,
+    private readonly _refreshTokenRepository: RefreshTokenRepository,
   ) {}
 
   async executeSV(_email: string, _password: string, _name: string): Promise<{
@@ -33,7 +37,17 @@ export class RegisterUserUseCase {
     });
 
     const ACCESS = this._tokenService.signAccessTokenSV(USER.id, USER.email);
-    const REFRESH = this._tokenService.signRefreshTokenSV(USER.id);
+    const JTI = randomUUID();
+    const SESSION_ID = randomUUID();
+    const REFRESH = this._tokenService.signRefreshTokenSV(USER.id, JTI);
+    const EXPIRES_AT = new Date(Date.now() + this._tokenService.getRefreshTokenExpiresInSecondsSV() * 1000);
+
+    await this._refreshTokenRepository.createSV({
+      userId: USER.id,
+      jti: JTI,
+      sessionId: SESSION_ID,
+      expiresAt: EXPIRES_AT,
+    });
 
     return {
       userId: USER.id,

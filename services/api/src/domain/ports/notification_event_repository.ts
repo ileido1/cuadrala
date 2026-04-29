@@ -1,6 +1,6 @@
 export type NotificationEventDTO = {
   id: string;
-  type: 'MATCH_SLOT_OPENED';
+  type: 'MATCH_SLOT_OPENED' | 'MATCH_CANCELLED';
   matchId: string;
   categoryId: string;
   payload: unknown;
@@ -14,8 +14,15 @@ export type CreateMatchSlotOpenedEventDTO = {
   payload: unknown;
 };
 
+export type CreateMatchCancelledEventDTO = {
+  matchId: string;
+  categoryId: string;
+  payload: unknown;
+};
+
 export interface NotificationEventRepository {
   createMatchSlotOpenedSV(_dto: CreateMatchSlotOpenedEventDTO): Promise<NotificationEventDTO>;
+  createMatchCancelledSV(_dto: CreateMatchCancelledEventDTO): Promise<NotificationEventDTO>;
   listPendingSV(_limit: number): Promise<NotificationEventDTO[]>;
   countPendingSV(): Promise<number>;
   markProcessedSV(_eventId: string, _processedAt: Date): Promise<void>;

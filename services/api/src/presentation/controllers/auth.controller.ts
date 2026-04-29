@@ -1,8 +1,14 @@
 import type { Request, Response } from 'express';
 
-import { LOGIN_USER_UC, REFRESH_SESSION_UC, REGISTER_USER_UC } from '../composition/auth.composition.js';
+import {
+  LOGIN_USER_UC,
+  LOGOUT_UC,
+  REFRESH_SESSION_UC,
+  REGISTER_USER_UC,
+} from '../composition/auth.composition.js';
 import {
   LOGIN_BODY_SCHEMA,
+  LOGOUT_BODY_SCHEMA,
   REFRESH_BODY_SCHEMA,
   REGISTER_BODY_SCHEMA,
 } from '../validation/auth.validation.js';
@@ -67,5 +73,15 @@ export async function postRefreshCON(_req: Request, _res: Response): Promise<voi
       refreshToken: RESULT.refreshToken,
       expiresIn: RESULT.expiresIn,
     },
+  });
+}
+
+export async function postLogoutCON(_req: Request, _res: Response): Promise<void> {
+  const BODY = LOGOUT_BODY_SCHEMA.parse(_req.body);
+  await LOGOUT_UC.executeSV(BODY.refreshToken);
+
+  _res.status(200).json({
+    success: true,
+    message: 'Sesión cerrada correctamente.',
   });
 }

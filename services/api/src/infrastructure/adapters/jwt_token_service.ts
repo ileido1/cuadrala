@@ -8,6 +8,7 @@ import type {
 
 import {
   ACCESS_TOKEN_EXPIRES_IN_SECONDS,
+  REFRESH_TOKEN_EXPIRES_IN_SECONDS,
   signAccessTokenSV,
   signRefreshTokenSV,
   verifyAccessTokenSV,
@@ -19,12 +20,16 @@ export class JwtTokenService implements TokenService {
     return ACCESS_TOKEN_EXPIRES_IN_SECONDS;
   }
 
+  getRefreshTokenExpiresInSecondsSV(): number {
+    return REFRESH_TOKEN_EXPIRES_IN_SECONDS;
+  }
+
   signAccessTokenSV(_userId: string, _email: string): string {
     return signAccessTokenSV(_userId, _email);
   }
 
-  signRefreshTokenSV(_userId: string): string {
-    return signRefreshTokenSV(_userId);
+  signRefreshTokenSV(_userId: string, _jti: string): string {
+    return signRefreshTokenSV(_userId, _jti);
   }
 
   verifyAccessTokenSV(_token: string): AccessTokenPayloadDTO {
@@ -42,7 +47,7 @@ export class JwtTokenService implements TokenService {
   verifyRefreshTokenSV(_token: string): RefreshTokenPayloadDTO {
     try {
       const PAYLOAD = verifyRefreshTokenSV(_token);
-      return { sub: PAYLOAD.sub };
+      return { sub: PAYLOAD.sub, jti: PAYLOAD.jti };
     } catch (_error) {
       if (_error instanceof JsonWebTokenError) {
         throw new Error('TOKEN_INVALIDO', { cause: _error });

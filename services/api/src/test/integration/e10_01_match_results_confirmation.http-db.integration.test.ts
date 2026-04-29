@@ -113,7 +113,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(RESULT).not.toBeNull();
       expect(RESULT?.scores.length).toBe(4);
 
-      const D = await PRISMA.matchResultDraft.findUnique({ where: { matchId } });
+      const D = await PRISMA.matchResultDraft.findFirst({
+        where: { matchId },
+        orderBy: { version: 'desc' },
+      });
       expect(D?.status).toBe('FINALIZED');
 
       const RATINGS = await PRISMA.userRating.findMany({

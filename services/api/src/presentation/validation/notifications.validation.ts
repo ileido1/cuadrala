@@ -8,3 +8,12 @@ export const DISPATCH_NOTIFICATIONS_BODY_SCHEMA = z
   })
   .strict();
 
+export const CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_BODY_SCHEMA = z
+  .object({
+    matchId: z.string().uuid(),
+    categoryId: z.string().uuid(),
+    userIds: z.array(z.string().uuid()).min(1),
+    payload: z.unknown().optional(),
+  })
+  .strict();
+

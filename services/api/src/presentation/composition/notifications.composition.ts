@@ -1,6 +1,10 @@
+import { CreateMatchCancelledNotificationEventUseCase } from '../../application/use_cases/create_match_cancelled_notification_event.use_case.js';
 import { DispatchNotificationsUseCase } from '../../application/use_cases/dispatch_notifications.use_case.js';
 import { DisableMyNotificationSubscriptionUseCase } from '../../application/use_cases/disable_my_notification_subscription.use_case.js';
 import { ListMyNotificationSubscriptionsUseCase } from '../../application/use_cases/list_my_notification_subscriptions.use_case.js';
+import { ListMyInAppNotificationsUseCase } from '../../application/use_cases/list_my_in_app_notifications.use_case.js';
+import { MarkAllMyInAppNotificationsReadUseCase } from '../../application/use_cases/mark_all_my_in_app_notifications_read.use_case.js';
+import { MarkMyInAppNotificationReadUseCase } from '../../application/use_cases/mark_my_in_app_notification_read.use_case.js';
 import { UpsertMyNotificationSubscriptionUseCase } from '../../application/use_cases/upsert_my_notification_subscription.use_case.js';
 import { PrismaMatchNotificationContextReadRepository } from '../../infrastructure/adapters/prisma_match_notification_context_read_repository.js';
 import { PrismaMatchParticipationRepository } from '../../infrastructure/adapters/prisma_match_participation_repository.js';
@@ -48,5 +52,20 @@ export const DISPATCH_NOTIFICATIONS_UC = new DispatchNotificationsUseCase(
   DEVICE_PUSH_TOKEN_REPOSITORY,
   PUSH_PROVIDER,
   NOTIFICATIONS_OBSERVABILITY,
+);
+
+export const LIST_MY_IN_APP_NOTIFICATIONS_UC = new ListMyInAppNotificationsUseCase(
+  NOTIFICATION_DELIVERY_REPOSITORY,
+);
+export const MARK_MY_IN_APP_NOTIFICATION_READ_UC = new MarkMyInAppNotificationReadUseCase(
+  NOTIFICATION_DELIVERY_REPOSITORY,
+);
+export const MARK_ALL_MY_IN_APP_NOTIFICATIONS_READ_UC = new MarkAllMyInAppNotificationsReadUseCase(
+  NOTIFICATION_DELIVERY_REPOSITORY,
+);
+
+export const CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_UC = new CreateMatchCancelledNotificationEventUseCase(
+  NOTIFICATION_EVENT_REPOSITORY,
+  NOTIFICATION_DELIVERY_REPOSITORY,
 );
 

@@ -20,3 +20,9 @@ export const REFRESH_BODY_SCHEMA = z
     refreshToken: z.string().min(1, 'refreshToken es obligatorio.'),
   })
   .strict();
+
+export const LOGOUT_BODY_SCHEMA = z
+  .object({
+    refreshToken: z.string().min(1, 'refreshToken es obligatorio.'),
+  })
+  .strict();

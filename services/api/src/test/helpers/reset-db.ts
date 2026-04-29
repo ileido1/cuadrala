@@ -25,6 +25,20 @@ export async function resetDatabaseForTestsSV(): Promise<void> {
     // ignore: tabla no existe
   }
 
+  // Auth hardening (Sprint 25). SQL crudo para compatibilidad con DBs antiguas.
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "RefreshToken"');
+  } catch {
+    // ignore: tabla no existe
+  }
+
+  // Receipts (Sprint 28). SQL crudo para compatibilidad con DBs antiguas.
+  try {
+    await PRISMA.$executeRawUnsafe('DELETE FROM "TransactionReceipt"');
+  } catch {
+    // ignore: tabla no existe
+  }
+
   // Vacant hours (Sprint 21). SQL crudo para compatibilidad con DBs antiguas.
   try {
     await PRISMA.$executeRawUnsafe('DELETE FROM "VacantHour"');

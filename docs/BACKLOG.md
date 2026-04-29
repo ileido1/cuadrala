@@ -26,7 +26,7 @@ Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. 
 | E1 | Identidad, auth y perfil competitivo | Cuenta, perfil, nivel/categoría, (futuro Elo) | **In Progress** (US-E1-01 Parcial; US-E1-02 Done backend; US-E1-03 Parcial) |
 | E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel | **In Progress (muy avanzado backend)** (US-E2-01 Parcial; US-E2-02 Done; US-E2-03 Done + join atómico; US-E2-04 Parcial) |
 | E3 | Motor de torneos y formatos | Rotaciones, rondas, tablero (según formato) | **In Progress** (US-E3-01 Parcial; US-E3-02 Done; US-E3-03 Done) |
-| E4 | Sedes y geo | Directorio, mapa, horas vacantes | **In Progress** (US-E4-01 Parcial backend; US-E4-02 Parcial backend; US-E4-03 No iniciada) |
+| E4 | Sedes y geo | Directorio, mapa, horas vacantes | **In Progress (muy avanzado backend)** (US-E4-01 Parcial backend; US-E4-02 Parcial backend; **US-E4-03 Done backend**) |
 | E5 | Ranking y resultados | Resultados → recálculo (puntos / Elo) | **In Progress (avanzado backend)** (US-E5-01 Parcial backend; US-E5-02 Parcial; US-E5-03 Parcial backend) |
 | E6 | Cobro colaborativo | Obligaciones, comprobantes, sin custodia | **Done (MVP)** (US-E6-01/02 Cumplida; US-E6-03 No iniciada) |
 | E7 | Coordinación | Chat, notificaciones | **In Progress (backend)** (US-E7-01 No iniciada; US-E7-02 Parcial backend) |
@@ -236,7 +236,9 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 
 **Criterios:** lat/lng o bounding box; performance NFR.
 
-**Estado:** **Parcial (backend):** filtros geo para oferta vía `GET /api/v1/matches/open?near=lat,lng&radiusKm=...` (bounding box). Pendiente: geocoding real (Google/Mapbox), distancia exacta y UX de mapa.
+**Estado:** **Parcial (backend, avanzado):** filtros geo para oferta vía `GET /api/v1/matches/open?near=lat,lng&radiusKm=...` (bounding box) + endpoints internos de geocoding (`/api/v1/geo/places/*`) y persistencia de `placeId` + dirección normalizada en `Venue`.
+
+Pendiente: implementar “distancia exacta” en resultados (si se requiere), optimización de performance (índices/queries) y UX de mapa (frontend).
 
 ---
 
@@ -248,7 +250,7 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 
 **Criterios:** visibilidad en listados; caducidad opcional.
 
-**Estado:** No iniciada.
+**Estado:** **Done (backend):** modelo `VacantHour` + endpoints internos protegidos (`/api/v1/vacant-hours/publish|list|cancel`) que crean/cancelan un `Match` asociado, visible en discovery.
 
 ---
 
@@ -286,7 +288,9 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 
 **Criterios:** fórmula versionada; migración desde puntos si aplica.
 
-**Estado:** **Parcial (backend):** `UserRating` + `UserRatingHistory`, cálculo Elo al finalizar resultado (K-factor configurable), endpoints `GET /api/v1/users/:userId/ratings` y `/ratings/history`, y matchmaking priorizando Elo. Pendiente: exponer leaderboard Elo por categoría y tunear fórmula/política por deporte.
+**Estado:** **Parcial (backend, avanzado):** `UserRating` + `UserRatingHistory`, cálculo Elo al finalizar resultado (K-factor configurable) con política configurable (rating inicial, clamps min/max, K provisional), endpoints `GET /api/v1/users/:userId/ratings` y `/ratings/history`, **leaderboard por categoría** (`GET /api/v1/ratings/leaderboard`) y matchmaking priorizando Elo.
+
+Pendiente: leaderboard por deporte (si el rating se separa por sport), y política Elo por deporte/categoría si cambia el sistema de puntuación.
 
 ---
 
@@ -351,9 +355,10 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 - Evento `MATCH_SLOT_OPENED` emitido cuando `leave` abre cupo
 - `DevicePushToken` + provider Noop/FCM
 - Dispatch como **worker real** con deliveries PENDING + retries/backoff + deshabilitado de tokens inválidos
-- Worker automático in-process (env gated)
+- Worker automático in-process (env gated) + endpoint de métricas internas
+- **Worker separado (servicio)** con lock distribuido (advisory lock) para escalado
 
-Pendiente: proceso worker separado (escalado), observabilidad/alertas, notificaciones in-app y expandir tipos (pagos/chat).
+Pendiente: notificaciones **in-app** (bandeja), expandir tipos (pagos/chat) y observabilidad “full” (dashboards/alertas externas).
 
 ---
 

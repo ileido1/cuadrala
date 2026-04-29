@@ -108,13 +108,14 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
 
   async cancelMatchSV(_matchId: string): Promise<MatchDetailDTO> {
     const ROW = await PRISMA.$transaction(async (_tx) => {
-      const DRAFT = await _tx.matchResultDraft.findUnique({
+      const DRAFTS = await _tx.matchResultDraft.findMany({
         where: { matchId: _matchId },
         select: { id: true },
       });
-      if (DRAFT !== null) {
-        await _tx.matchResultConfirmation.deleteMany({ where: { draftId: DRAFT.id } });
-        await _tx.matchResultDraft.delete({ where: { id: DRAFT.id } });
+      const DRAFT_IDS = DRAFTS.map((_d) => _d.id);
+      if (DRAFT_IDS.length > 0) {
+        await _tx.matchResultConfirmation.deleteMany({ where: { draftId: { in: DRAFT_IDS } } });
+        await _tx.matchResultDraft.deleteMany({ where: { id: { in: DRAFT_IDS } } });
       }
 
       return _tx.match.update({

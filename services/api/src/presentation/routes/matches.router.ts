@@ -14,6 +14,7 @@ import {
 } from '../controllers/matches.controller.js';
 import {
   postConfirmMatchResultDraftCON,
+  postReproposeMatchResultDraftCON,
   putMatchResultDraftCON,
 } from '../controllers/match_results.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
@@ -33,4 +34,5 @@ MATCHES_ROUTER.post('/matches/:matchId/start', requireAuth, asyncHandler(postSta
 MATCHES_ROUTER.post('/matches/:matchId/finish', requireAuth, asyncHandler(postFinishMatchCON));
 MATCHES_ROUTER.put('/matches/:matchId/result-draft', requireAuth, asyncHandler(putMatchResultDraftCON));
 MATCHES_ROUTER.post('/matches/:matchId/result-draft/confirm', requireAuth, asyncHandler(postConfirmMatchResultDraftCON));
+MATCHES_ROUTER.post('/matches/:matchId/result-draft/reproposal', requireAuth, asyncHandler(postReproposeMatchResultDraftCON));
 

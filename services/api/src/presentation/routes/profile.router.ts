@@ -7,6 +7,11 @@ import {
   postUpsertMyNotificationSubscriptionCON,
 } from '../controllers/notification_subscriptions.controller.js';
 import {
+  getMyInAppNotificationsCON,
+  patchMarkAllMyInAppNotificationsReadCON,
+  patchMarkMyInAppNotificationReadCON,
+} from '../controllers/in_app_notifications.controller.js';
+import {
   deleteMyDevicePushTokenCON,
   getMyDevicePushTokensCON,
   postUpsertMyDevicePushTokenCON,
@@ -24,6 +29,17 @@ export const PROFILE_ROUTER = Router();
 
 PROFILE_ROUTER.get('/me', requireAuth, asyncHandler(getProfileCON));
 PROFILE_ROUTER.patch('/me', requireAuth, asyncHandler(patchProfileCON));
+PROFILE_ROUTER.get('/me/notifications', requireAuth, asyncHandler(getMyInAppNotificationsCON));
+PROFILE_ROUTER.patch(
+  '/me/notifications/:deliveryId/read',
+  requireAuth,
+  asyncHandler(patchMarkMyInAppNotificationReadCON),
+);
+PROFILE_ROUTER.patch(
+  '/me/notifications/read-all',
+  requireAuth,
+  asyncHandler(patchMarkAllMyInAppNotificationsReadCON),
+);
 PROFILE_ROUTER.get(
   '/me/notification-subscriptions',
   requireAuth,

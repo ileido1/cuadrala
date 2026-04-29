@@ -1,6 +1,7 @@
 import type {
   CreateNotificationDeliveryDTO,
   DueNotificationDeliveryWithEventDTO,
+  InAppNotificationDTO,
   NotificationDeliveryRepository,
 } from '../../domain/ports/notification_delivery_repository.js';
 
@@ -126,6 +127,77 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
         OR: [{ status: 'PENDING' }, { status: 'FAILED', nextAttemptAt: { not: null } }],
       },
     });
+  }
+
+  async listInAppByUserSV(_dto: {
+    userId: string;
+    status: 'unread' | 'all';
+    page: number;
+    limit: number;
+  }): Promise<{ items: InAppNotificationDTO[]; total: number }> {
+    const PAGE = Number.isFinite(_dto.page) ? _dto.page : 1;
+    const LIMIT = Number.isFinite(_dto.limit) ? _dto.limit : 20;
+    const SKIP = (Math.max(1, PAGE) - 1) * Math.max(1, LIMIT);
+
+    const WHERE: Parameters<typeof PRISMA.notificationDelivery.count>[0]['where'] = { userId: _dto.userId };
+    if (_dto.status === 'unread') {
+      WHERE.readAt = null;
+    }
+
+    const [TOTAL, ROWS] = await Promise.all([
+      PRISMA.notificationDelivery.count({ where: WHERE }),
+      PRISMA.notificationDelivery.findMany({
+        where: WHERE,
+        orderBy: { createdAt: 'desc' },
+        skip: SKIP,
+        take: LIMIT,
+        select: {
+          id: true,
+          eventId: true,
+          userId: true,
+          status: true,
+          createdAt: true,
+          sentAt: true,
+          readAt: true,
+          event: { select: { type: true, matchId: true, categoryId: true, payload: true } },
+        },
+      }),
+    ]);
+
+    return {
+      total: TOTAL,
+      items: ROWS.map((_r) => ({
+        deliveryId: _r.id,
+        eventId: _r.eventId,
+        userId: _r.userId,
+        deliveryStatus: _r.status,
+        createdAt: _r.createdAt,
+        sentAt: _r.sentAt,
+        readAt: _r.readAt,
+        event: {
+          type: _r.event.type,
+          matchId: _r.event.matchId,
+          categoryId: _r.event.categoryId,
+          payload: _r.event.payload as unknown,
+        },
+      })),
+    };
+  }
+
+  async markReadSV(_dto: { userId: string; deliveryId: string; readAt: Date }): Promise<boolean> {
+    const RES = await PRISMA.notificationDelivery.updateMany({
+      where: { id: _dto.deliveryId, userId: _dto.userId },
+      data: { readAt: _dto.readAt },
+    });
+    return RES.count > 0;
+  }
+
+  async markReadAllSV(_dto: { userId: string; readAt: Date }): Promise<{ updatedCount: number }> {
+    const RES = await PRISMA.notificationDelivery.updateMany({
+      where: { userId: _dto.userId, readAt: null },
+      data: { readAt: _dto.readAt },
+    });
+    return { updatedCount: RES.count };
   }
 }
 

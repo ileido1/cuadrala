@@ -491,5 +491,108 @@ Garantizar que **torneos existentes** no cambian ante nuevas versiones y que **t
 |  |  | Tests integración `e0_03_*` / `e8_*` (DB condicional) |  |
 |  |  | `npm test` + `npm run lint` |  |
 
+---
+
+## Sprint 25 — E1: Auth hardening (logout + refresh rotation)
+
+### Objetivo
+
+Endurecer autenticación para producción: **logout**, estrategia consistente para **refresh** (rotación e invalidación), y **tests de integración DB**.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Definir estrategia de logout/invalidación (denylist/rotation) | **Implementación auth hardening** |  |  |
+| Endpoint `POST /api/v1/auth/logout` + OpenAPI | **Tests DB: register → refresh → logout → refresh inválido** |  |  |
+| Persistencia de refresh tokens (hash) + rotación |  |  |  |
+| 401/403/409 consistentes y mensajes en español |  |  |  |
+| `npm run lint && npm test` en verde |  |  |  |
+
+---
+
+## Sprint 26 — E5: Resultados 4/4 (rechazos + re-propuesta)
+
+### Objetivo
+
+Completar el flujo competitivo: permitir **REJECTED** y **re-propuesta** de resultados con auditoría mínima.
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Modelo/estado para re-propuesta (draft versioning) |  |  |  |
+| Endpoint re-proponer borrador y reset confirmaciones |  |  |  |
+| Tests DB: reject → re-propose → 4/4 confirm → Elo |  |  |  |
+| OpenAPI actualizado |  |  |  |
+
+---
+
+## Sprint 27 — E5-02: Ranking recalculation robusto (idempotente/transaccional)
+
+### Objetivo
+
+Hacer el recálculo de ranking **seguro e idempotente**, con transacciones y pruebas.
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Definir fuente de verdad (MatchResult) y fórmula |  |  |  |
+| Job/endpoint interno idempotente (por categoryId) |  |  |  |
+| Tests DB: recalcular 2 veces => mismo resultado |  |  |  |
+| Observability mínima (logs/métricas) |  |  |  |
+
+---
+
+## Sprint 28 — E6-03: Comprobantes (upload)
+
+### Objetivo
+
+Permitir adjuntar comprobantes a obligaciones (sin custodia), con storage seguro.
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Definir storage (local/S3/GCS) + límites MIME/tamaño |  |  |  |
+| Endpoint upload + lectura segura |  |  |  |
+| Tests (contrato + integración si aplica) |  |  |  |
+| OpenAPI actualizado |  |  |  |
+
+---
+
+## Sprint 29 — E2: Matchmaking v2 (similaridad + restricciones)
+
+### Objetivo
+
+Mejorar sugerencias: **similaridad real** (Elo/categoría/geo) y restricciones por disponibilidad.
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Heurística de similaridad (no solo top-N) |  |  |  |
+| Restricciones geo (venue/radio) y exclusiones |  |  |  |
+| Tests DB: suggestions deterministas para seed |  |  |  |
+| OpenAPI actualizado |  |  |  |
+
+---
+
+## Sprint 30 — E7: Notificaciones in-app (bandeja)
+
+### Objetivo
+
+Agregar bandeja de notificaciones in-app (read/unread) y expandir tipos (pagos/chat).
+
+### Backlog sugerido
+
+| Backlog | In Progress | Done | Blocked |
+|---|---|---|---|
+| Modelo `InAppNotification` (o reutilizar `NotificationEvent`) |  |  |  |
+| Endpoints: list + mark read |  |  |  |
+| Tests (contrato + DB) |  |  |  |
+| OpenAPI actualizado |  |  |  |
+
 
 

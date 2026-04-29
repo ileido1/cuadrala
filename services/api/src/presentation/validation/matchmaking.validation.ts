@@ -6,4 +6,5 @@ export const MATCHMAKING_PARAMS_SCHEMA = z.object({
 
 export const MATCHMAKING_QUERY_SCHEMA = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+  radiusKm: z.coerce.number().positive().max(200).optional(),
 });

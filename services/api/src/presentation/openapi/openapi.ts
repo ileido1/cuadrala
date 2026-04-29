@@ -550,6 +550,50 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/matches/{matchId}/result-draft/reproposal': {
+      post: {
+        tags: ['Matches'],
+        summary: 'Crear re-propuesta de resultado tras REJECTED (versiona y resetea confirmaciones)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['scores'],
+                properties: {
+                  scores: {
+                    type: 'array',
+                    minItems: 4,
+                    maxItems: 4,
+                    items: {
+                      type: 'object',
+                      required: ['userId', 'points'],
+                      properties: {
+                        userId: { type: 'string', format: 'uuid' },
+                        points: { type: 'integer', minimum: 0, maximum: 10000 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido' },
+          '404': { description: 'Borrador no encontrado / partido no encontrado' },
+          '409': { description: 'Conflicto (no REJECTED / no FINISHED)' },
+        },
+      },
+    },
     '/api/v1/matchmaking/{matchId}/suggestions': {
       get: {
         tags: ['Matchmaking'],
@@ -561,6 +605,8 @@ const OPENAPI_CONST = {
             required: true,
             schema: { type: 'string', format: 'uuid' },
           },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 50 } },
+          { name: 'radiusKm', in: 'query', required: false, schema: { type: 'number', minimum: 0.1, maximum: 200 } },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -607,7 +653,7 @@ const OPENAPI_CONST = {
           },
         },
         responses: {
-          '200': { description: 'OK' },
+          '201': { description: 'Creado' },
           '400': { description: 'Validación fallida' },
         },
       },
@@ -642,6 +688,31 @@ const OPENAPI_CONST = {
       post: {
         tags: ['Auth'],
         summary: 'Refrescar token',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['refreshToken'],
+                properties: {
+                  refreshToken: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Cerrar sesión (logout)',
         requestBody: {
           required: true,
           content: {
@@ -938,6 +1009,77 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/transactions/{transactionId}/receipt': {
+      post: {
+        tags: ['Monetization'],
+        summary: 'Adjuntar comprobante (imagen) a transacción',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'transactionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Created' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'No autorizado' },
+          '404': { description: 'Transacción no encontrada' },
+        },
+      },
+    },
+    '/api/v1/transactions/{transactionId}/receipt/{receiptId}': {
+      get: {
+        tags: ['Monetization'],
+        summary: 'Descargar comprobante (imagen) de transacción',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'transactionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'receiptId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'image/jpeg': { schema: { type: 'string', format: 'binary' } },
+              'image/png': { schema: { type: 'string', format: 'binary' } },
+              'image/webp': { schema: { type: 'string', format: 'binary' } },
+            },
+          },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'No autorizado' },
+          '404': { description: 'Comprobante no encontrado' },
+        },
+      },
+    },
     '/api/v1/users/{userId}/subscription': {
       patch: {
         tags: ['Monetization'],
@@ -1030,6 +1172,50 @@ const OPENAPI_CONST = {
         responses: {
           '200': { description: 'OK' },
           '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/notifications': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'Listar notificaciones in-app del usuario actual',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['unread', 'all'], default: 'unread' } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/notifications/{deliveryId}/read': {
+      patch: {
+        tags: ['Notifications'],
+        summary: 'Marcar una notificación in-app como leída',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'deliveryId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+        },
+      },
+    },
+    '/api/v1/users/me/notifications/read-all': {
+      patch: {
+        tags: ['Notifications'],
+        summary: 'Marcar todas las notificaciones in-app como leídas',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
           '401': { description: 'No autorizado' },
         },
       },
@@ -1132,6 +1318,38 @@ const OPENAPI_CONST = {
         },
         responses: {
           '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/notifications/events/match-cancelled': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Crear evento MATCH_CANCELLED y deliveries (endpoint interno)',
+        parameters: [
+          { name: 'x-dispatch-secret', in: 'header', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['matchId', 'categoryId', 'userIds'],
+                properties: {
+                  matchId: { type: 'string', format: 'uuid' },
+                  categoryId: { type: 'string', format: 'uuid' },
+                  userIds: { type: 'array', minItems: 1, items: { type: 'string', format: 'uuid' } },
+                  payload: { type: 'object', additionalProperties: true },
+                },
+                additionalProperties: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
           '401': { description: 'No autorizado' },
         },
       },

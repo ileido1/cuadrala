@@ -1,4 +1,5 @@
 import type {
+  CreateMatchCancelledEventDTO,
   CreateMatchSlotOpenedEventDTO,
   NotificationEventDTO,
   NotificationEventRepository,
@@ -11,6 +12,17 @@ export class PrismaNotificationEventRepository implements NotificationEventRepos
     return PRISMA.notificationEvent.create({
       data: {
         type: 'MATCH_SLOT_OPENED',
+        matchId: _dto.matchId,
+        categoryId: _dto.categoryId,
+        payload: _dto.payload as never,
+      },
+    });
+  }
+
+  async createMatchCancelledSV(_dto: CreateMatchCancelledEventDTO): Promise<NotificationEventDTO> {
+    return PRISMA.notificationEvent.create({
+      data: {
+        type: 'MATCH_CANCELLED',
         matchId: _dto.matchId,
         categoryId: _dto.categoryId,
         payload: _dto.payload as never,

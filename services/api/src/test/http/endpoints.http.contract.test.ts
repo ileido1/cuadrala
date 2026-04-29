@@ -429,6 +429,47 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     expect(RES.body.code).toBe('NO_AUTORIZADO');
   });
 
+  it('GET /api/v1/users/me/notifications responde 401 sin token', async () => {
+    const RES = await request(APP).get('/api/v1/users/me/notifications');
+
+    expect(RES.status).toBe(401);
+    expect(RES.body.code).toBe('NO_AUTORIZADO');
+  });
+
+  it('PATCH /api/v1/users/me/notifications/:deliveryId/read responde 401 sin token', async () => {
+    const RES = await request(APP).patch(
+      '/api/v1/users/me/notifications/550e8400-e29b-41d4-a716-446655440001/read',
+    );
+
+    expect(RES.status).toBe(401);
+    expect(RES.body.code).toBe('NO_AUTORIZADO');
+  });
+
+  it('PATCH /api/v1/users/me/notifications/read-all responde 401 sin token', async () => {
+    const RES = await request(APP).patch('/api/v1/users/me/notifications/read-all');
+
+    expect(RES.status).toBe(401);
+    expect(RES.body.code).toBe('NO_AUTORIZADO');
+  });
+
+  it('POST /api/v1/transactions/:transactionId/receipt responde 401 sin token', async () => {
+    const RES = await request(APP).post(
+      '/api/v1/transactions/550e8400-e29b-41d4-a716-446655440001/receipt',
+    );
+
+    expect(RES.status).toBe(401);
+    expect(RES.body.code).toBe('NO_AUTORIZADO');
+  });
+
+  it('GET /api/v1/transactions/:transactionId/receipt/:receiptId responde 401 sin token', async () => {
+    const RES = await request(APP).get(
+      '/api/v1/transactions/550e8400-e29b-41d4-a716-446655440001/receipt/550e8400-e29b-41d4-a716-446655440002',
+    );
+
+    expect(RES.status).toBe(401);
+    expect(RES.body.code).toBe('NO_AUTORIZADO');
+  });
+
   it('DELETE /api/v1/users/me/notification-subscriptions responde 401 sin token', async () => {
     const RES = await request(APP).delete(
       '/api/v1/users/me/notification-subscriptions/550e8400-e29b-41d4-a716-446655440001',
