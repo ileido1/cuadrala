@@ -30,7 +30,12 @@ alwaysApply: false
 - Cards y contenedores con **radio medio** y padding generoso (evitar densidad excesiva).
 
 ## Patrones UX por pantalla (referencias)
-- **Auth**: login simple con CTA verde, links sutiles.
+- **Auth (como la captura)**:
+  - Header centrado: icono en contenedor verde + título “Cuádrala” + tagline.
+  - Toggle superior tipo segmented: **“Ingresar / Crear cuenta”** (mismo layout en login y register).
+  - Inputs **filled** con radio medio, labels simples (“Email”, “Contraseña”).
+  - Link a la derecha: **“¿Olvidaste tu contraseña?”** (si endpoint no existe: placeholder).
+  - CTA principal full-width verde: **“Iniciar sesión”** / **“Crear cuenta”**.
 - **Home**: resumen + CTA “Crear partida / Nuevo torneo”.
 - **Partidas abiertas**: search + filtros (chips), lista de cards + CTA “Unirse”.
 - **Detalle de partida**: info clave (fecha/precio) en cards; lista de jugadores con badges; CTA principal abajo.
@@ -46,6 +51,12 @@ alwaysApply: false
 - **Loading**: skeleton o placeholder en listas.
 - **Empty**: mensaje + CTA (crear/unirse).
 - **Error**: mostrar `code` técnico en debug/log y mensaje claro al usuario; CTA retry.
+
+## Convenciones de implementación (Flutter)
+- **Theme**: preferir `ThemeData`/`ColorScheme` como fuente de verdad (no hardcode de colores por widget).
+- **Botones**: `FilledButton` para primary, `OutlinedButton` para secundarios, `TextButton` para links.
+- **Inputs**: `InputDecorationTheme` con `filled: true` y `contentPadding` consistente.
+- **Spacing**: usar `SizedBox` con múltiplos de 4/8 (8pt system).
 
 ## No hacer
 - No mezclar estilos (evitar nuevos radios, sombras fuertes o colores fuera de paleta).
