@@ -2,7 +2,7 @@
 
 **Versión:** 1.1  
 **Alcance de este documento:** Fase 1 del flujo spec-driven (sin implementación de código).  
-**Stack objetivo:** Flutter (Android/iOS/Web), Riverpod, Dio, GoRouter; backend Node.js + TypeScript + PostgreSQL + Prisma; Clean Architecture + Repository + SOLID.  
+**Stack objetivo:** Flutter (Android/iOS/Web), BLoC, Dio, GoRouter; backend Node.js + TypeScript + PostgreSQL + Prisma; Clean Architecture + Repository + SOLID.  
 **Entorno de desarrollo:** Ubuntu.
 
 ---
@@ -140,7 +140,7 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 
 ### 5.1 Vista lógica (capas)
 
-- **Presentación (cliente):** UI Flutter (Material) con navegación declarativa; estado UI/sesión con Riverpod; datos remotos con cliente HTTP (Dio) + caché/reintentos en capa de infraestructura.
+ - **Presentación (cliente):** UI Flutter (Material) con navegación declarativa; estado UI/sesión con BLoC/Cubit; datos remotos con cliente HTTP (Dio) + caché/reintentos en capa de infraestructura.
 - **API (backend):** HTTP/JSON (REST o RPC documentado); autenticación JWT (u OAuth2 si se amplía); validación de entrada; casos de uso orquestando reglas de negocio.
 - **Dominio:** entidades y reglas (torneo, partido, ranking, matchmaking); sin dependencias de framework.
 - **Infraestructura:** Prisma + PostgreSQL; adaptadores de repositorio; clientes de notificaciones push y almacenamiento de archivos si aplica.
@@ -151,7 +151,7 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         CLIENTE (Flutter)                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────────┐  │
-│  │  Widgets/UI  │  │  Riverpod    │  │   Dio (+ OpenAPI client)        │  │
+│  │  Widgets/UI  │  │  BLoC/Cubit  │  │   Dio (+ OpenAPI client)        │  │
 │  │  + GoRouter  │  │  state/auth  │  │   retry, interceptors, cache    │  │
 │  └──────┬───────┘  └──────┬───────┘  └───────────────┬────────────────┘  │
 │         │                  │                           │                  │
@@ -185,16 +185,16 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 
 **A) Listar partidos incompletos con filtros**
 
-1. Pantalla Flutter dispara un provider (Riverpod) → request HTTP (Dio) a `GET /matches?status=incomplete&venueId=&courtId=&priceMin=&priceMax=`.
+1. Pantalla Flutter interactúa con un BLoC/Cubit → request HTTP (Dio) a `GET /matches?status=incomplete&venueId=&courtId=&priceMin=&priceMax=`.
 2. Controller valida query params → caso de uso `ListIncompleteMatches`.
 3. Repositorio ejecuta consulta Prisma con índices en `status`, `venue_id`, `price_per_person`.
-4. Respuesta DTO → caché en capa de infraestructura (política de stale/refresh) y estado UI en Riverpod.
+4. Respuesta DTO → caché en capa de infraestructura (política de stale/refresh) y estado UI en BLoC/Cubit.
 
 **B) Registrar resultado y actualizar ranking**
 
 1. Organizador confirma resultado → `POST /tournaments/:id/matches/:matchId/results`.
 2. Caso de uso valida permisos y estado del torneo → persiste `match_result` y dispara `UpdateRankingForCategory`.
-3. Transacción en BD; invalidación/refetch de cache en cliente vía providers (Riverpod) según política de datos.
+3. Transacción en BD; invalidación/refetch de cache en cliente vía BLoC/Cubit según política de datos.
 
 **C) Coordinación y faltantes**
 
@@ -500,7 +500,7 @@ apps/mobile/
 │   │   └── <feature>/
 │   │       ├── data/       # datasources, repositories, mappers, models DTO
 │   │       ├── domain/     # entidades/VOs del cliente si aplica
-│   │       └── presentation/ # screens/widgets/providers
+│   │       └── presentation/ # screens/widgets/blocs
 │   └── main.dart
 ├── test/                   # unit + widget tests
 ├── integration_test/       # flujos smoke (login, discovery, etc.)
