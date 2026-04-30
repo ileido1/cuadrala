@@ -1,0 +1,53 @@
+---
+description: UI/UX y Design System de Cuádrala (Flutter Material 3) basado en pantallas de referencia
+globs: "{apps/mobile/**,**/*.dart}"
+alwaysApply: false
+---
+
+# Cuádrala UI/UX (Flutter)
+
+## Estilo visual (baseline)
+- **Look**: limpio, deportivo, con foco en legibilidad y CTAs claros.
+- **Componentes predominantes**: cards blancas con borde suave, chips/badges de estado, FAB verde, bottom nav 5 tabs.
+- **Iconografía**: simple/lineal; usar iconos Material y mantener consistencia (mismos tamaños por rol).
+
+## Tokens (extraídos del design system)
+- **Primary**: verde “Pádel” (CTA principal, FAB, highlights).
+- **Accent**: lima (chips destacados / tags).
+- **Secondary**: navy (acciones secundarias / botones dark).
+- **Destructive**: rojo (rechazar/cancelar).
+- **Neutrals**: background blanco, foreground oscuro, muted grises, border gris claro.
+
+> Nota: si el equipo define los hex oficiales en `ThemeData.colorScheme`, no inventar nuevos colores fuera de la paleta.
+
+## Tipografía y jerarquía
+- **Títulos** grandes en pantallas clave (Home “Tu resumen”, detalle “Club Palermo”).
+- **Subtítulos** para contexto (sede/cancha/fecha).
+- **Numerales** (precio, Elo, métricas) con peso alto y alineación consistente.
+
+## Layout, spacing y radios
+- Usar **grid/spacing consistente** (8pt system).
+- Cards y contenedores con **radio medio** y padding generoso (evitar densidad excesiva).
+
+## Patrones UX por pantalla (referencias)
+- **Auth**: login simple con CTA verde, links sutiles.
+- **Home**: resumen + CTA “Crear partida / Nuevo torneo”.
+- **Partidas abiertas**: search + filtros (chips), lista de cards + CTA “Unirse”.
+- **Detalle de partida**: info clave (fecha/precio) en cards; lista de jugadores con badges; CTA principal abajo.
+- **Crear partida**: formulario por secciones con selectors y CTA “Publicar”.
+- **Resultados**: pantalla de “resultado propuesto” con confirm/rechazar.
+- **Torneos**: listado por tabs; detalle con schedule/tabla; estado por badges.
+- **Chat**: burbujas + input fijo + botón enviar circular.
+- **Notificaciones**: lista con icono por tipo + unread dot + tabs (todas/no leídas) + “Marcar leídas”.
+- **Perfil**: header con avatar + métricas + ranking + datos técnicos.
+- **Pagos**: total por persona + estado por jugador + CTA “Subir comprobante”.
+
+## Estados obligatorios
+- **Loading**: skeleton o placeholder en listas.
+- **Empty**: mensaje + CTA (crear/unirse).
+- **Error**: mostrar `code` técnico en debug/log y mensaje claro al usuario; CTA retry.
+
+## No hacer
+- No mezclar estilos (evitar nuevos radios, sombras fuertes o colores fuera de paleta).
+- No esconder CTA primaria: en flujos críticos, **botón principal fijo** (bottom) como en referencias.
+

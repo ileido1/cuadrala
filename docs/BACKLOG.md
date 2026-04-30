@@ -14,6 +14,8 @@
 | **Torneos parametrizables** | Un torneo **no** se limita al formato “Americano”. Debe soportar **parámetros configurables**: formato (round robin, eliminación, suizo, americano, personalizado), número de participantes, categorías, ventanas de tiempo, etc. El “Americano” es **un preset** dentro del catálogo de formatos, no el único tipo. |
 | **TDD / Orchestrator** | Cada épica se aborda en el flujo: Explorer → Proposer → Spec Writer → Designer → Task Planner → **Tester (Red)** → Implementer (Green) → Verifier. Las historias están ordenadas por **dependencias** dentro de cada épica. |
 
+**Backlog Mobile (Flutter)**: las historias de la app están en `docs/BACKLOG_MOBILE.md` y la planificación de sprints en `docs/MOBILE_SPRINTS.md`.
+
 ---
 
 ## 1. Mapa de épicas y orden recomendado (TDD)
