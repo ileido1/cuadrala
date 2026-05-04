@@ -199,18 +199,16 @@ final class _LogoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Column(
       children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: scheme.primary,
-            borderRadius: BorderRadius.circular(16),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Image.asset(
+            'assets/images/logo.png',
+            width: 72,
+            height: 72,
+            fit: BoxFit.cover,
           ),
-          child: Icon(Icons.emoji_events, color: scheme.onPrimary, size: 34),
         ),
         const SizedBox(height: 14),
         const Text(
