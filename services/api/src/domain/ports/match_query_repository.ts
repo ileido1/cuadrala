@@ -31,6 +31,9 @@ export type MatchParticipantDTO = {
 
 export type MatchDetailDTO = MatchListItemDTO & {
   courtId: string | null;
+  clubName?: string;
+  courtName?: string;
+  locationLabel?: string;
   tournamentId: string | null;
   participants: MatchParticipantDTO[];
   createdAt: Date;

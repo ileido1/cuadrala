@@ -94,6 +94,20 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
         pricePerPlayerCents: true,
         maxParticipants: true,
         courtId: true,
+        court: {
+          select: {
+            name: true,
+            venue: {
+              select: {
+                name: true,
+                addressLine1: true,
+                addressCity: true,
+                formattedAddress: true,
+                address: true,
+              },
+            },
+          },
+        },
         tournamentId: true,
         createdAt: true,
         updatedAt: true,
@@ -108,9 +122,21 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
     if (ROW === null) return null;
 
     const BASE = toListItemDTO(ROW);
+    const CLUB_NAME = ROW.court?.venue.name;
+    const COURT_NAME = ROW.court?.name;
+    const LOCATION_LABEL =
+      ROW.court?.venue.addressLine1 ??
+      ROW.court?.venue.formattedAddress ??
+      ROW.court?.venue.address ??
+      ROW.court?.venue.addressCity ??
+      undefined;
+
     return {
       ...BASE,
       courtId: ROW.courtId,
+      ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
+      ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
+      ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
       tournamentId: ROW.tournamentId,
       participants: ROW.participants.map((_p) => ({ userId: _p.userId, joinedAt: _p.createdAt })),
       createdAt: ROW.createdAt,

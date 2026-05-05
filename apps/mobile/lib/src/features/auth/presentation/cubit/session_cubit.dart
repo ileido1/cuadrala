@@ -26,4 +26,9 @@ class SessionCubit extends Cubit<SessionState> {
     await _authRepository.logout();
     emit(const SessionState.unauthenticated());
   }
+
+  /// Útil después de login/register: los tokens ya se guardaron en storage.
+  void markAuthenticated() {
+    emit(const SessionState.authenticated());
+  }
 }

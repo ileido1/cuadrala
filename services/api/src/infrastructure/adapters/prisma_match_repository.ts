@@ -16,9 +16,29 @@ function computeOpenMatchDTO(_row: {
   pricePerPlayerCents: number;
   maxParticipants: number;
   _count: { participants: number };
+  court: null | {
+    name: string;
+    venue: {
+      name: string;
+      addressLine1: string | null;
+      addressCity: string | null;
+      formattedAddress: string | null;
+      address: string | null;
+    };
+  };
 }): OpenMatchDTO {
   const PARTICIPANT_COUNT = _row._count.participants;
   const OPEN_SPOTS = Math.max(0, _row.maxParticipants - PARTICIPANT_COUNT);
+
+  const CLUB_NAME = _row.court?.venue.name;
+  const COURT_NAME = _row.court?.name;
+  const LOCATION_LABEL =
+    _row.court?.venue.addressLine1 ??
+    _row.court?.venue.formattedAddress ??
+    _row.court?.venue.address ??
+    _row.court?.venue.addressCity ??
+    undefined;
+
   return {
     id: _row.id,
     sportId: _row.sportId,
@@ -29,6 +49,9 @@ function computeOpenMatchDTO(_row: {
     maxParticipants: _row.maxParticipants,
     participantCount: PARTICIPANT_COUNT,
     openSpots: OPEN_SPOTS,
+    ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
+    ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
+    ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
   };
 }
 
@@ -105,6 +128,20 @@ export class PrismaMatchRepository implements MatchRepository {
           pricePerPlayerCents: true,
           maxParticipants: true,
           _count: { select: { participants: true } },
+          court: {
+            select: {
+              name: true,
+              venue: {
+                select: {
+                  name: true,
+                  addressLine1: true,
+                  addressCity: true,
+                  formattedAddress: true,
+                  address: true,
+                },
+              },
+            },
+          },
         },
       }),
     ]);

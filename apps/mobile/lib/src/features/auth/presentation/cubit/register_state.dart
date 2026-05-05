@@ -6,8 +6,23 @@ sealed class RegisterState extends Equatable {
   const factory RegisterState.idle() = RegisterIdle;
   const factory RegisterState.loading() = RegisterLoading;
   const factory RegisterState.success() = RegisterSuccess;
-  const factory RegisterState.failure({required String message}) =
-      RegisterFailure;
+  const factory RegisterState.failure({
+    required String message,
+    RegisterFieldErrors? fieldErrors,
+  }) = RegisterFailure;
+}
+
+final class RegisterFieldErrors extends Equatable {
+  const RegisterFieldErrors({this.email, this.password, this.name});
+
+  final String? email;
+  final String? password;
+  final String? name;
+
+  bool get isEmpty => email == null && password == null && name == null;
+
+  @override
+  List<Object?> get props => [email, password, name];
 }
 
 final class RegisterIdle extends RegisterState {
@@ -32,10 +47,11 @@ final class RegisterSuccess extends RegisterState {
 }
 
 final class RegisterFailure extends RegisterState {
-  const RegisterFailure({required this.message});
+  const RegisterFailure({required this.message, this.fieldErrors});
 
   final String message;
+  final RegisterFieldErrors? fieldErrors;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, fieldErrors];
 }

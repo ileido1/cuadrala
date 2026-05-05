@@ -26,6 +26,9 @@ export type OpenMatchDTO = {
   maxParticipants: number;
   participantCount: number;
   openSpots: number;
+  clubName?: string;
+  courtName?: string;
+  locationLabel?: string;
 };
 
 export interface MatchRepository {

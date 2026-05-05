@@ -3,6 +3,7 @@ final class Routes {
   static const register = '/register';
   static const home = '/home';
   static const matches = '/matches';
+  static const createMatch = '/matches/create';
   static const tournaments = '/tournaments';
   static const notifications = '/notifications';
 

@@ -2,18 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../auth/presentation/cubit/session_cubit.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../shared/widgets/danger_button.dart';
+import '../../home/presentation/cubit/home_cubit.dart';
+import '../../home/presentation/home_screen.dart';
+import '../../matches/presentation/cubit/open_matches_cubit.dart';
+import '../../matches/presentation/open_matches_screen.dart';
+import 'cubit/shell_cubit.dart';
 
-final class ShellScreen extends StatefulWidget {
+final class ShellScreen extends StatelessWidget {
   const ShellScreen({super.key});
 
   @override
-  State<ShellScreen> createState() => _ShellScreenState();
+  Widget build(BuildContext context) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => ShellCubit()),
+        BlocProvider(create: (_) => getIt<HomeCubit>()),
+        BlocProvider(create: (_) => getIt<OpenMatchesCubit>()),
+      ],
+      child: const _ShellView(),
+    );
+  }
 }
 
-class _ShellScreenState extends State<ShellScreen> {
-  int _index = 0;
+final class _ShellView extends StatefulWidget {
+  const _ShellView();
 
+  @override
+  State<_ShellView> createState() => _ShellViewState();
+}
+
+class _ShellViewState extends State<_ShellView> {
   @override
   Widget build(BuildContext context) {
     final items = <BottomNavigationBarItem>[
@@ -31,8 +51,8 @@ class _ShellScreenState extends State<ShellScreen> {
     ];
 
     final pages = <Widget>[
-      const Center(child: Text('Inicio')),
-      const Center(child: Text('Partidas')),
+      const HomeScreen(),
+      const OpenMatchesScreen(),
       const Center(child: Text('Torneos')),
       const Center(child: Text('Notif.')),
       Center(
@@ -53,15 +73,22 @@ class _ShellScreenState extends State<ShellScreen> {
       ),
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: Text(items[_index].label ?? '')),
-      body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        items: items,
-        onTap: (i) => setState(() => _index = i),
-        type: BottomNavigationBarType.fixed,
+    return BlocListener<ShellCubit, int>(
+      listener: (context, tabIndex) {
+        setState(() => _index = tabIndex);
+      },
+      child: Scaffold(
+        appBar: AppBar(title: Text(items[_index].label ?? '')),
+        body: IndexedStack(index: _index, children: pages),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _index,
+          items: items,
+          onTap: (i) => context.read<ShellCubit>().selectTab(i),
+          type: BottomNavigationBarType.fixed,
+        ),
       ),
     );
   }
+
+  int _index = 0;
 }

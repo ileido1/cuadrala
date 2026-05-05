@@ -18,10 +18,42 @@ class RegisterCubit extends Cubit<RegisterState> {
       await _authRepository.register(request);
       emit(const RegisterState.success());
     } catch (e) {
-      final message = e is AppFailure
-          ? e.message
-          : 'No se pudo crear la cuenta. Inténtalo de nuevo.';
-      emit(RegisterState.failure(message: message));
+      if (e is AppFailure) {
+        emit(
+          RegisterState.failure(
+            message: e.message,
+            fieldErrors: _extractFieldErrors(e),
+          ),
+        );
+        return;
+      }
+      emit(
+        const RegisterState.failure(
+          message: 'No se pudo crear la cuenta. Inténtalo de nuevo.',
+        ),
+      );
     }
+  }
+
+  RegisterFieldErrors? _extractFieldErrors(AppFailure failure) {
+    if (failure.code != 'VALIDACION_FALLIDA') return null;
+    final details = failure.details;
+    if (details is! Map) return null;
+    final fieldErrorsRaw = details['fieldErrors'];
+    if (fieldErrorsRaw is! Map) return null;
+
+    String? firstStringOrNull(Object? value) {
+      if (value is List && value.isNotEmpty && value.first is String) {
+        return value.first as String;
+      }
+      return null;
+    }
+
+    final email = firstStringOrNull(fieldErrorsRaw['email']);
+    final password = firstStringOrNull(fieldErrorsRaw['password']);
+    final name = firstStringOrNull(fieldErrorsRaw['name']);
+
+    final result = RegisterFieldErrors(email: email, password: password, name: name);
+    return result.isEmpty ? null : result;
   }
 }

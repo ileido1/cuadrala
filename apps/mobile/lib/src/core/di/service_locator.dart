@@ -5,6 +5,8 @@ import 'package:get_it/get_it.dart';
 import '../env/app_env.dart';
 import '../failures/app_failure_mapper.dart';
 import '../network/api_client.dart';
+import '../network/auth_token_interceptor.dart';
+import '../network/inject_dio_extra_interceptor.dart';
 import '../storage/flutter_secure_token_storage.dart';
 import '../../features/auth/data/auth_api.dart';
 import '../../features/auth/data/auth_repository.dart';
@@ -12,6 +14,14 @@ import '../../features/auth/data/secure_token_storage.dart';
 import '../../features/auth/presentation/cubit/login_cubit.dart';
 import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/session_cubit.dart';
+import '../../features/catalog/data/catalog_api.dart';
+import '../../features/catalog/data/catalog_repository.dart';
+import '../../features/home/presentation/cubit/home_cubit.dart';
+import '../../features/matches/data/matches_api.dart';
+import '../../features/matches/data/matches_repository.dart';
+import '../../features/matches/presentation/cubit/open_matches_cubit.dart';
+import '../../features/profile/data/profile_api.dart';
+import '../../features/profile/data/profile_repository.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -21,7 +31,7 @@ Future<void> setupDependencies() async {
 
   getIt.registerLazySingleton<Dio>(() {
     final env = getIt<AppEnv>();
-    return Dio(
+    final dio = Dio(
       BaseOptions(
         baseUrl: env.baseUrl,
         connectTimeout: const Duration(seconds: 10),
@@ -30,14 +40,8 @@ Future<void> setupDependencies() async {
         headers: const {'content-type': 'application/json'},
       ),
     );
+    return dio;
   });
-
-  getIt.registerLazySingleton<ApiClient>(
-    () => ApiClient(
-      dio: getIt<Dio>(),
-      failureMapper: getIt<AppFailureMapper>(),
-    ),
-  );
 
   getIt.registerLazySingleton<FlutterSecureStorage>(
     () => const FlutterSecureStorage(),
@@ -45,6 +49,13 @@ Future<void> setupDependencies() async {
 
   getIt.registerLazySingleton<SecureTokenStorage>(
     () => FlutterSecureTokenStorage(secureStorage: getIt<FlutterSecureStorage>()),
+  );
+
+  getIt.registerLazySingleton<ApiClient>(
+    () => ApiClient(
+      dio: getIt<Dio>(),
+      failureMapper: getIt<AppFailureMapper>(),
+    ),
   );
 
   getIt.registerLazySingleton<AuthApi>(
@@ -58,6 +69,33 @@ Future<void> setupDependencies() async {
     ),
   );
 
+  // Interceptores (token + retry) deben registrarse después de AuthRepository.
+  getIt<Dio>().interceptors.addAll([
+    InjectDioExtraInterceptor(dio: getIt<Dio>()),
+    AuthTokenInterceptor(
+      authRepository: getIt<AuthRepository>(),
+      refreshSession: () => getIt<AuthRepository>().refresh(),
+    ),
+  ]);
+
+  getIt.registerLazySingleton<CatalogApi>(() => DioCatalogApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<CatalogRepository>(
+    () => CatalogRepository(catalogApi: getIt<CatalogApi>()),
+  );
+
+  getIt.registerLazySingleton<MatchesApi>(() => DioMatchesApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<MatchesRepository>(
+    () => MatchesRepository(
+      matchesApi: getIt<MatchesApi>(),
+      catalogRepository: getIt<CatalogRepository>(),
+    ),
+  );
+
+  getIt.registerLazySingleton<ProfileApi>(() => DioProfileApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepository(profileApi: getIt<ProfileApi>()),
+  );
+
   getIt.registerFactory<SessionCubit>(
     () => SessionCubit(authRepository: getIt<AuthRepository>()),
   );
@@ -66,6 +104,17 @@ Future<void> setupDependencies() async {
   );
   getIt.registerFactory<RegisterCubit>(
     () => RegisterCubit(authRepository: getIt<AuthRepository>()),
+  );
+
+  getIt.registerFactory<HomeCubit>(
+    () => HomeCubit(
+      profileRepository: getIt<ProfileRepository>(),
+      matchesRepository: getIt<MatchesRepository>(),
+    ),
+  );
+
+  getIt.registerFactory<OpenMatchesCubit>(
+    () => OpenMatchesCubit(matchesRepository: getIt<MatchesRepository>()),
   );
 }
 

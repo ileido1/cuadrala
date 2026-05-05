@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../data/models/login_request.dart';
 import 'cubit/login_cubit.dart';
 import 'cubit/login_state.dart';
+import 'cubit/session_cubit.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/primary_button.dart';
 
@@ -30,7 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: const Key('login.screen'),
-      body: BlocBuilder<LoginCubit, LoginState>(
+      body: BlocConsumer<LoginCubit, LoginState>(
+        listener: (context, state) {
+          if (state is LoginSuccess) {
+            context.read<SessionCubit>().markAuthenticated();
+            context.go(Routes.home);
+          }
+        },
         builder: (context, state) {
           final isLoading = state is LoginLoading;
           final errorMessage = state is LoginFailure ? state.message : null;

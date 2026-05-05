@@ -9,6 +9,7 @@ import '../features/auth/presentation/cubit/session_cubit.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
+import '../features/matches/presentation/create_match_screen.dart';
 import '../features/notifications/presentation/notification_detail_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
@@ -44,6 +45,10 @@ final class AppRouter {
             GoRoute(
               path: Routes.home,
               builder: (context, state) => const ShellScreen(),
+            ),
+            GoRoute(
+              path: Routes.createMatch,
+              builder: (context, state) => const CreateMatchScreen(),
             ),
             GoRoute(
               path: '/matches/:matchId',

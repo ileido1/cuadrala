@@ -57,6 +57,7 @@ alwaysApply: false
 - **Botones**: `FilledButton` para primary, `OutlinedButton` para secundarios, `TextButton` para links.
 - **Inputs**: `InputDecorationTheme` con `filled: true` y `contentPadding` consistente.
 - **Spacing**: usar `SizedBox` con múltiplos de 4/8 (8pt system).
+- **Logo oficial**: usar `assets/images/logo.png` en headers (Auth) y mantener **launcher icon + splash** alineados con el mismo asset (regenerar con `flutter_launcher_icons` / `flutter_native_splash` cuando cambie el logo).
 
 ## No hacer
 - No mezclar estilos (evitar nuevos radios, sombras fuertes o colores fuera de paleta).

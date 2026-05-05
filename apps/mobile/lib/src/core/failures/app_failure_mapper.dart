@@ -32,6 +32,15 @@ final class AppFailureMapper {
     Object? details,
   }) {
     if (statusCode == 401) {
+      if (backendCode == 'CREDENCIALES_INVALIDAS') {
+        return AppFailure(
+          code: backendCode!,
+          message: backendMessage?.isNotEmpty == true
+              ? backendMessage!
+              : 'Correo o contraseña incorrectos.',
+          details: details,
+        );
+      }
       return const AppFailure(
         code: 'AUTH_UNAUTHORIZED',
         message: 'Sesión expirada. Inicia sesión nuevamente.',
@@ -57,8 +66,12 @@ final class AppFailureMapper {
     if (statusCode != null) {
       final data = ex.response?.data;
       if (data is Map<String, Object?>) {
+        // Backend standard: { success:false, code, message, details }
+        // Some other servers might omit `success`; accept both.
+        final hasErrorShape =
+            data['code'] is String || data['message'] is String || data['details'] != null;
         final success = data['success'];
-        if (success == false) {
+        if (success == false || (success == null && hasErrorShape)) {
           return fromHttp(
             statusCode: statusCode,
             backendCode: data['code'] as String?,

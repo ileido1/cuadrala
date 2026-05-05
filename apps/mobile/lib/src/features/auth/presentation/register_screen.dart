@@ -6,6 +6,7 @@ import '../../../router/routes.dart';
 import '../../../shared/widgets/primary_button.dart';
 import 'cubit/register_cubit.dart';
 import 'cubit/register_state.dart';
+import 'cubit/session_cubit.dart';
 import '../data/models/register_request.dart';
 
 final class RegisterScreen extends StatefulWidget {
@@ -35,12 +36,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: BlocConsumer<RegisterCubit, RegisterState>(
         listener: (context, state) {
           if (state is RegisterSuccess) {
+            context.read<SessionCubit>().markAuthenticated();
             context.go(Routes.home);
+          }
+          if (state is RegisterFailure) {
+            final messenger = ScaffoldMessenger.of(context);
+            messenger.hideCurrentSnackBar();
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
           }
         },
         builder: (context, state) {
           final isLoading = state is RegisterLoading;
-          final errorMessage = state is RegisterFailure ? state.message : null;
+          final fieldErrors = state is RegisterFailure ? state.fieldErrors : null;
 
           Widget content() => Column(
                 mainAxisSize: MainAxisSize.min,
@@ -57,7 +69,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     key: const Key('register.name'),
                     controller: _nameController,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(labelText: 'Nombre'),
+                    decoration: InputDecoration(
+                      labelText: 'Nombre',
+                      errorText: fieldErrors?.name,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -65,7 +80,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      errorText: fieldErrors?.email,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -73,21 +91,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _passwordController,
                     obscureText: true,
                     textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(labelText: 'Contraseña'),
-                  ),
-                  if (errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        errorMessage,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      errorText: fieldErrors?.password,
                     ),
-                  ],
+                  ),
+                  // El mensaje global se muestra como SnackBar (toast).
                   const SizedBox(height: 12),
                   PrimaryButton(
                     label: 'Crear cuenta',
