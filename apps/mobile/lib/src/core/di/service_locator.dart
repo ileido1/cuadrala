@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 
 import '../env/app_env.dart';
 import '../failures/app_failure_mapper.dart';
+import '../location/location_service.dart';
 import '../network/api_client.dart';
 import '../network/auth_token_interceptor.dart';
 import '../network/inject_dio_extra_interceptor.dart';
@@ -17,9 +18,16 @@ import '../../features/auth/presentation/cubit/session_cubit.dart';
 import '../../features/catalog/data/catalog_api.dart';
 import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/home/presentation/cubit/home_cubit.dart';
+import '../../features/chat/data/chat_api.dart';
+import '../../features/chat/data/chat_repository.dart';
 import '../../features/matches/data/matches_api.dart';
 import '../../features/matches/data/matches_repository.dart';
 import '../../features/matches/presentation/cubit/open_matches_cubit.dart';
+import '../../features/monetization/data/monetization_api.dart';
+import '../../features/monetization/data/monetization_repository.dart';
+import '../../features/onboarding/data/onboarding_api.dart';
+import '../../features/onboarding/data/onboarding_repository.dart';
+import '../../features/onboarding/presentation/cubit/onboarding_cubit.dart';
 import '../../features/profile/data/profile_api.dart';
 import '../../features/profile/data/profile_repository.dart';
 
@@ -28,6 +36,9 @@ final GetIt getIt = GetIt.instance;
 Future<void> setupDependencies() async {
   getIt.registerSingleton<AppEnv>(AppEnv.fromEnvironment());
   getIt.registerLazySingleton<AppFailureMapper>(AppFailureMapper.new);
+  getIt.registerLazySingleton<LocationService>(
+    () => const GeolocatorLocationService(),
+  );
 
   getIt.registerLazySingleton<Dio>(() {
     final env = getIt<AppEnv>();
@@ -96,8 +107,39 @@ Future<void> setupDependencies() async {
     () => ProfileRepository(profileApi: getIt<ProfileApi>()),
   );
 
+  getIt.registerLazySingleton<ChatApi>(() => DioChatApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<ChatRepository>(
+    () => ChatRepository(chatApi: getIt<ChatApi>()),
+  );
+
+  getIt.registerLazySingleton<MonetizationApi>(
+    () => DioMonetizationApi(apiClient: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<MonetizationRepository>(
+    () => MonetizationRepository(
+      monetizationApi: getIt<MonetizationApi>(),
+      profileRepository: getIt<ProfileRepository>(),
+    ),
+  );
+
+  getIt.registerLazySingleton<OnboardingApi>(
+    () => DioOnboardingApi(apiClient: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<OnboardingRepository>(
+    () => OnboardingRepository(api: getIt<OnboardingApi>()),
+  );
+  getIt.registerFactory<OnboardingCubit>(
+    () => OnboardingCubit(
+      repository: getIt<OnboardingRepository>(),
+      profileRepository: getIt<ProfileRepository>(),
+    ),
+  );
+
   getIt.registerFactory<SessionCubit>(
-    () => SessionCubit(authRepository: getIt<AuthRepository>()),
+    () => SessionCubit(
+      authRepository: getIt<AuthRepository>(),
+      onboardingRepository: getIt<OnboardingRepository>(),
+    ),
   );
   getIt.registerFactory<LoginCubit>(
     () => LoginCubit(authRepository: getIt<AuthRepository>()),

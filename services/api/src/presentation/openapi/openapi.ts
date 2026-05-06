@@ -63,6 +63,43 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/categories': {
+      get: {
+        tags: ['Catalog'],
+        summary: 'Listar categorías',
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    data: {
+                      type: 'object',
+                      properties: {
+                        categories: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            required: ['id', 'name', 'slug'],
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              name: { type: 'string' },
+                              slug: { type: 'string' },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/api/v1/sports': {
       get: {
         tags: ['Catalog'],
@@ -754,6 +791,34 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/auth/social': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Iniciar sesión con Google/Apple',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['provider', 'idToken'],
+                properties: {
+                  provider: { type: 'string', enum: ['google', 'apple'] },
+                  idToken: { type: 'string' },
+                  name: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '500': { description: 'Error interno' },
+        },
+      },
+    },
     '/api/v1/auth/refresh': {
       post: {
         tags: ['Auth'],
@@ -861,6 +926,187 @@ const OPENAPI_CONST = {
                   dominantHand: { type: 'string', enum: ['RIGHT', 'LEFT', 'AMBIDEXTROUS'] },
                   sidePreference: { type: 'string', enum: ['RIGHT', 'LEFT', 'ANY'] },
                   birthYear: { type: ['integer', 'null'], minimum: 1900 },
+                  phone: { type: ['string', 'null'], description: 'E.164 (8-15 dígitos, + opcional).' },
+                  avatarUrl: { type: ['string', 'null'], format: 'uri' },
+                  city: { type: ['string', 'null'], maxLength: 120 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/onboarding-status': {
+      get: {
+        tags: ['Onboarding'],
+        summary: 'Estado de onboarding del usuario',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    data: {
+                      type: 'object',
+                      required: ['completedSteps', 'pendingSteps', 'isComplete'],
+                      properties: {
+                        completedSteps: {
+                          type: 'array',
+                          items: {
+                            type: 'string',
+                            enum: ['identity', 'sports', 'sport_profiles', 'location', 'availability'],
+                          },
+                        },
+                        pendingSteps: {
+                          type: 'array',
+                          items: {
+                            type: 'string',
+                            enum: ['identity', 'sports', 'sport_profiles', 'location', 'availability'],
+                          },
+                        },
+                        isComplete: { type: 'boolean' },
+                        completedAt: { type: ['string', 'null'], format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/sport-profiles': {
+      get: {
+        tags: ['Onboarding'],
+        summary: 'Listar perfiles deportivos propios',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+      put: {
+        tags: ['Onboarding'],
+        summary: 'Reemplazar perfiles deportivos propios',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['items'],
+                properties: {
+                  items: {
+                    type: 'array',
+                    maxItems: 10,
+                    items: {
+                      type: 'object',
+                      required: ['sportId', 'skillLevel'],
+                      properties: {
+                        sportId: { type: 'string', format: 'uuid' },
+                        skillLevel: { type: 'number', minimum: 1.0, maximum: 7.0 },
+                        sidePreference: { type: 'string', enum: ['RIGHT', 'LEFT', 'ANY'] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/availability': {
+      get: {
+        tags: ['Onboarding'],
+        summary: 'Listar disponibilidad propia',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+      put: {
+        tags: ['Onboarding'],
+        summary: 'Reemplazar disponibilidad propia',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['items'],
+                properties: {
+                  items: {
+                    type: 'array',
+                    maxItems: 21,
+                    items: {
+                      type: 'object',
+                      required: ['dayOfWeek', 'slot'],
+                      properties: {
+                        dayOfWeek: {
+                          type: 'string',
+                          enum: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'],
+                        },
+                        slot: { type: 'string', enum: ['MORNING', 'AFTERNOON', 'EVENING'] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/location': {
+      get: {
+        tags: ['Onboarding'],
+        summary: 'Consultar ubicación de referencia',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+      put: {
+        tags: ['Onboarding'],
+        summary: 'Crear o actualizar ubicación de referencia',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['latitude', 'longitude', 'radiusKm'],
+                properties: {
+                  label: { type: ['string', 'null'], maxLength: 200 },
+                  latitude: { type: 'number', minimum: -90, maximum: 90 },
+                  longitude: { type: 'number', minimum: -180, maximum: 180 },
+                  radiusKm: { type: 'integer', minimum: 1, maximum: 100 },
                 },
               },
             },
@@ -1664,6 +1910,23 @@ const OPENAPI_CONST = {
           '400': { description: 'Validación fallida' },
           '401': { description: 'No autorizado' },
           '404': { description: 'No encontrado' },
+        },
+      },
+    },
+    '/api/v1/admin/matches/{matchId}/cancel': {
+      patch: {
+        tags: ['Admin'],
+        summary: 'Cancelar un partido (override, endpoint interno)',
+        parameters: [
+          { name: 'x-admin-secret', in: 'header', required: true, schema: { type: 'string' } },
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'Partido no encontrado' },
+          '409': { description: 'Conflicto (estado no cancelable)' },
         },
       },
     },

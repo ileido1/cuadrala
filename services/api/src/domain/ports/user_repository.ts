@@ -11,7 +11,11 @@ export type UserDTO = {
 export interface UserRepository {
   findByIdSV(_id: string): Promise<UserDTO | null>;
   findByEmailSV(_emailLower: string): Promise<UserDTO | null>;
-  createUserSV(_data: { emailLower: string; name: string; passwordHash: string }): Promise<UserDTO>;
+  createUserSV(_data: {
+    emailLower: string;
+    name: string;
+    passwordHash: string | null;
+  }): Promise<UserDTO>;
   updateUserNameSV(_id: string, _name: string): Promise<UserDTO>;
 
   /** Conteo de usuarios existentes por IDs (validación de input). */

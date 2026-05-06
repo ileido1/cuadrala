@@ -6,5 +6,6 @@ export type CategoryDTO = {
 
 export interface CategoryRepository {
   findByIdSV(_id: string): Promise<CategoryDTO | null>;
+  findAllSV(): Promise<CategoryDTO[]>;
 }
 

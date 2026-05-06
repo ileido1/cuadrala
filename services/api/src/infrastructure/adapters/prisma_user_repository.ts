@@ -36,7 +36,7 @@ export class PrismaUserRepository implements UserRepository {
   async createUserSV(_data: {
     emailLower: string;
     name: string;
-    passwordHash: string;
+    passwordHash: string | null;
   }): Promise<UserDTO> {
     const ROW = await PRISMA.user.create({
       data: {

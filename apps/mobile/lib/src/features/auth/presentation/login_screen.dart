@@ -6,6 +6,8 @@ import '../data/models/login_request.dart';
 import 'cubit/login_cubit.dart';
 import 'cubit/login_state.dart';
 import 'cubit/session_cubit.dart';
+import 'cubit/session_state.dart';
+import 'widgets/auth_header.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/primary_button.dart';
 
@@ -19,6 +21,7 @@ final class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -27,49 +30,78 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _submit() {
+    context.read<LoginCubit>().submit(
+          LoginRequest(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: const Key('login.screen'),
       body: BlocConsumer<LoginCubit, LoginState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is LoginSuccess) {
-            context.read<SessionCubit>().markAuthenticated();
-            context.go(Routes.home);
+            await context.read<SessionCubit>().markAuthenticated();
+            if (!context.mounted) return;
+            final session = context.read<SessionCubit>().state;
+            if (session is SessionAuthenticated &&
+                session.onboardingComplete == false) {
+              context.go(Routes.onboarding);
+            } else {
+              context.go(Routes.home);
+            }
           }
         },
         builder: (context, state) {
           final isLoading = state is LoginLoading;
           final errorMessage = state is LoginFailure ? state.message : null;
+          final scheme = Theme.of(context).colorScheme;
 
           Widget content() => Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _LogoHeader(),
-                  const SizedBox(height: 20),
-                  _AuthToggle(
-                    selected: _AuthToggleSelected.login,
-                    onSelectLogin: () {},
-                    onSelectRegister:
-                        isLoading ? null : () => context.go(Routes.register),
+                  const AuthHeader(
+                    title: 'Bienvenido de vuelta',
+                    subtitle: 'Inicia sesión para seguir cuadrando partidas.',
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   TextField(
                     key: const Key('login.email'),
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    autocorrect: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Correo electrónico',
+                      hintText: 'tu@email.com',
+                      prefixIcon: Icon(Icons.mail_outline),
+                    ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   TextField(
                     key: const Key('login.password'),
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(labelText: 'Contraseña'),
+                    onSubmitted: (_) => _submit(),
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -77,43 +109,65 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Text(
                         '¿Olvidaste tu contraseña?',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                   ),
                   if (errorMessage != null) ...[
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        errorMessage,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: scheme.errorContainer.withValues(alpha: .35),
+                        border: Border.all(color: scheme.error.withValues(alpha: .35)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: scheme.error, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage,
+                              style: TextStyle(
+                                color: scheme.onErrorContainer,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(height: 12),
                   ],
-                  const SizedBox(height: 12),
                   PrimaryButton(
                     key: const Key('login.submit'),
                     label: 'Iniciar sesión',
                     isLoading: isLoading,
-                    onPressed: () => context.read<LoginCubit>().submit(
-                          LoginRequest(
-                            email: _emailController.text.trim(),
-                            password: _passwordController.text,
+                    onPressed: _submit,
+                  ),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        '¿No tienes cuenta? ',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                      InkWell(
+                        key: const Key('login.go_register'),
+                        onTap: isLoading ? null : () => context.go(Routes.register),
+                        child: Text(
+                          'Crear cuenta',
+                          style: TextStyle(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    key: const Key('login.go_register'),
-                    onPressed:
-                        isLoading ? null : () => context.go(Routes.register),
-                    child: const Text('Crear cuenta'),
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -121,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
           return SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Center(
@@ -136,101 +190,6 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         },
       ),
-    );
-  }
-}
-
-enum _AuthToggleSelected { login, register }
-
-final class _AuthToggle extends StatelessWidget {
-  const _AuthToggle({
-    required this.selected,
-    required this.onSelectLogin,
-    required this.onSelectRegister,
-  });
-
-  final _AuthToggleSelected selected;
-  final VoidCallback? onSelectLogin;
-  final VoidCallback? onSelectRegister;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    Widget buildButton({
-      required String label,
-      required bool active,
-      required VoidCallback? onPressed,
-    }) {
-      if (active) {
-        return Expanded(
-          child: FilledButton(
-            onPressed: onPressed,
-            style: FilledButton.styleFrom(
-              backgroundColor: scheme.surfaceContainerHighest,
-              foregroundColor: scheme.onSurface,
-            ),
-            child: Text(label),
-          ),
-        );
-      }
-
-      return Expanded(
-        child: OutlinedButton(
-          onPressed: onPressed,
-          child: Text(label),
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        buildButton(
-          label: 'Ingresar',
-          active: selected == _AuthToggleSelected.login,
-          onPressed: onSelectLogin,
-        ),
-        const SizedBox(width: 12),
-        buildButton(
-          label: 'Crear cuenta',
-          active: selected == _AuthToggleSelected.register,
-          onPressed: onSelectRegister,
-        ),
-      ],
-    );
-  }
-}
-
-final class _LogoHeader extends StatelessWidget {
-  const _LogoHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: Image.asset(
-            'assets/images/logo.png',
-            width: 72,
-            height: 72,
-            fit: BoxFit.cover,
-          ),
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          'Cuádrala',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Armar el juego nunca fue tan fácil.',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }

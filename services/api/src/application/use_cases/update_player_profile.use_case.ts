@@ -11,6 +11,15 @@ export class UpdatePlayerProfileUseCase {
     if (Object.keys(_patch).length === 0) {
       throw new AppError('VALIDACION_FALLIDA', 'No hay campos para actualizar.', 400);
     }
+    if (_patch.birthDate !== undefined && _patch.birthDate !== null) {
+      const YEAR = _patch.birthDate.getUTCFullYear();
+      const NOW = new Date().getUTCFullYear();
+      if (YEAR < 1900 || YEAR > NOW) {
+        throw new AppError('VALIDACION_FALLIDA', 'birthDate es inválido.', 400);
+      }
+      // Mantener consistencia: si llega birthDate, derivamos birthYear.
+      _patch.birthYear = YEAR;
+    }
     if (_patch.birthYear !== undefined && _patch.birthYear !== null) {
       const YEAR = _patch.birthYear;
       const NOW = new Date().getFullYear();

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
+// ignore_for_file: use_build_context_synchronously
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../../router/routes.dart';
 import '../data/matches_repository.dart';
+import '../../monetization/data/monetization_repository.dart';
+import '../../monetization/presentation/pay_method_screen.dart';
 import '../../profile/data/profile_repository.dart';
 import 'cubit/match_detail_cubit.dart';
 import 'cubit/match_detail_state.dart';
@@ -31,11 +37,114 @@ final class MatchDetailScreen extends StatelessWidget {
 final class _MatchDetailView extends StatelessWidget {
   const _MatchDetailView();
 
+  Future<bool> _confirm(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) async {
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    return res == true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: const Key('match.detail'),
-      appBar: AppBar(title: const Text('Detalle de partida')),
+      appBar: AppBar(
+        title: const Text('Detalle de partida'),
+        actions: [
+          BlocBuilder<MatchDetailCubit, MatchDetailState>(
+            buildWhen: (prev, next) => next is MatchDetailLoaded,
+            builder: (context, state) {
+              if (state is! MatchDetailLoaded) return const SizedBox.shrink();
+              final m = state.match;
+              final finished = m.status == 'FINISHED';
+
+              return PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'lifecycle') {
+                    if (!context.mounted) return;
+                    context.push(Routes.matchLifecycle(m.id));
+                  }
+                  if (value == 'chat') {
+                    if (!context.mounted) return;
+                    context.push(Routes.matchChat(m.id));
+                  }
+                  if (value == 'cancel') {
+                    final cubit = context.read<MatchDetailCubit>();
+                    final ok = await _confirm(
+                      context,
+                      title: 'Cancelar partida',
+                      message: 'Se notificará a los jugadores.',
+                      confirmLabel: 'Cancelar',
+                    );
+                    if (!ok) return;
+                    await cubit.cancel();
+                  }
+                  if (value == 'start') {
+                    final cubit = context.read<MatchDetailCubit>();
+                    final ok = await _confirm(
+                      context,
+                      title: 'Iniciar partida',
+                      message: '¿Confirmas que la partida empieza ahora?',
+                      confirmLabel: 'Iniciar',
+                    );
+                    if (!ok) return;
+                    await cubit.start();
+                  }
+                  if (value == 'finish') {
+                    final cubit = context.read<MatchDetailCubit>();
+                    final ok = await _confirm(
+                      context,
+                      title: 'Finalizar partida',
+                      message: '¿Confirmas que la partida terminó?',
+                      confirmLabel: 'Finalizar',
+                    );
+                    if (!ok) return;
+                    await cubit.finish();
+                  }
+                  if (value == 'result') {
+                    if (!context.mounted) return;
+                    context.push(Routes.matchResult(m.id));
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'lifecycle',
+                    child: Text('Ciclo de vida'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'chat',
+                    child: Text('Chat'),
+                  ),
+                  if (finished)
+                    const PopupMenuItem(
+                      value: 'result',
+                      child: Text('Cargar resultado'),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
       body: BlocBuilder<MatchDetailCubit, MatchDetailState>(
         builder: (context, state) {
           if (state is MatchDetailLoading || state is MatchDetailInitial) {
@@ -74,6 +183,8 @@ final class _MatchDetailView extends StatelessWidget {
 
           final canJoin = m.status == 'SCHEDULED' && m.openSpots > 0;
           final isParticipant = loaded.isParticipant;
+          final isFinished = m.status == 'FINISHED';
+          final hasPrice = m.pricePerPlayerCents > 0;
 
           return Column(
             children: [
@@ -176,21 +287,14 @@ final class _MatchDetailView extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 8),
-              ...m.participants.map(
-                (p) => Card(
-                  child: ListTile(
-                    title: Text('Usuario ${idPreview(p.userId)}'),
-                    subtitle: Text('Se unió: ${formatTimeHm(p.joinedAt)}'),
-                  ),
-                ),
-              ),
+              ...m.participants.map((p) {
+                return _ParticipantTile(
+                  matchId: m.id,
+                  userId: p.userId,
+                  joinedAt: p.joinedAt,
+                );
+              }),
               const SizedBox(height: 12),
-              Text(
-                'MVP: acciones (unirse/pagar) vienen en sprints siguientes.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-              ),
                   ],
                 ),
               ),
@@ -214,18 +318,34 @@ final class _MatchDetailView extends StatelessWidget {
                     child: FilledButton(
                       onPressed: loaded.actionLoading
                           ? null
-                          : isParticipant
-                              ? () => context.read<MatchDetailCubit>().leave()
-                              : canJoin
-                                  ? () => context.read<MatchDetailCubit>().join()
-                                  : null,
+                          : isFinished
+                              ? () => context.push(Routes.matchResult(m.id))
+                              : (isParticipant && hasPrice)
+                                  ? () => context.push(
+                                        PayMethodScreen.route(
+                                          matchId: m.id,
+                                          amountPerPersonCents: m.pricePerPlayerCents,
+                                          matchTitle: m.clubName ?? 'Partida',
+                                        ),
+                                      )
+                              : isParticipant
+                                  ? () => context.read<MatchDetailCubit>().leave()
+                                  : canJoin
+                                      ? () => context.read<MatchDetailCubit>().join()
+                                      : null,
                       child: loaded.actionLoading
                           ? const SizedBox(
                               height: 18,
                               width: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(isParticipant ? 'Salir' : 'Unirme'),
+                          : Text(
+                              isFinished
+                                  ? 'Cargar resultado'
+                                  : (isParticipant && hasPrice)
+                                      ? 'Pagar ahora'
+                                      : (isParticipant ? 'Salir' : 'Unirme'),
+                            ),
                     ),
                   ),
                 ),
@@ -234,6 +354,68 @@ final class _MatchDetailView extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+final class _ParticipantTile extends StatefulWidget {
+  const _ParticipantTile({
+    required this.matchId,
+    required this.userId,
+    required this.joinedAt,
+  });
+
+  final String matchId;
+  final String userId;
+  final DateTime joinedAt;
+
+  @override
+  State<_ParticipantTile> createState() => _ParticipantTileState();
+}
+
+final class _ParticipantTileState extends State<_ParticipantTile> {
+  late final Future<UserTransactionsResult> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = getIt<MonetizationRepository>().listUserTransactions(
+      userId: widget.userId,
+      limit: 100,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _future,
+      builder: (context, snapshot) {
+        final txs = snapshot.data?.transactions ?? const [];
+        final paid = txs.any((t) => t.matchId == widget.matchId && t.status == 'CONFIRMED');
+        final scheme = Theme.of(context).colorScheme;
+        return Card(
+          child: ListTile(
+            title: Text('Usuario ${idPreview(widget.userId)}'),
+            subtitle: Text('Se unió: ${formatTimeHm(widget.joinedAt)}'),
+            trailing: paid
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: scheme.primary.withValues(alpha: 0.12),
+                    ),
+                    child: Text(
+                      'Pagado',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: scheme.primary,
+                          ),
+                    ),
+                  )
+                : null,
+          ),
+        );
+      },
     );
   }
 }

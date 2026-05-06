@@ -2,10 +2,12 @@ import '../../../core/network/api_client.dart';
 import 'models/auth_tokens.dart';
 import 'models/login_request.dart';
 import 'models/register_request.dart';
+import 'models/social_login_request.dart';
 
 abstract interface class AuthApi {
   Future<AuthTokens> login(LoginRequest request);
   Future<AuthTokens> register(RegisterRequest request);
+  Future<AuthTokens> socialLogin(SocialLoginRequest request);
   Future<AuthTokens> refresh({required String refreshToken});
   Future<void> logout({required String refreshToken});
 }
@@ -37,6 +39,15 @@ final class DioAuthApi implements AuthApi {
   Future<AuthTokens> register(RegisterRequest request) async {
     final json = await _apiClient.postJson(
       '/api/v1/auth/register',
+      body: request.toJson(),
+    );
+    return _decodeAuthTokens(json);
+  }
+
+  @override
+  Future<AuthTokens> socialLogin(SocialLoginRequest request) async {
+    final json = await _apiClient.postJson(
+      '/api/v1/auth/social',
       body: request.toJson(),
     );
     return _decodeAuthTokens(json);

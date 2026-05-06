@@ -30,6 +30,9 @@ const ENV_SCHEMA = z.object({
   MAPS_PROVIDER: z.enum(['noop', 'stub', 'mapbox', 'google']).default('noop'),
   MAPBOX_ACCESS_TOKEN: z.string().optional(),
   GOOGLE_MAPS_API_KEY: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+  /** Bundle ID (iOS) o Service ID (web) según tu configuración de Apple Sign In. */
+  APPLE_SIGNIN_AUDIENCE: z.string().optional(),
   NOTIFICATIONS_WORKER_ENABLED: z
     .enum(['true', 'false'])
     .optional()

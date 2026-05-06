@@ -31,6 +31,13 @@ final class _FakeCatalogApi implements CatalogApi {
           },
         ],
       };
+
+  @override
+  Future<Map<String, Object?>> listCategoriesEnvelope() async => {
+        'categories': <Map<String, Object?>>[
+          {'id': 'cat_1', 'name': 'Primera', 'slug': 'primera'},
+        ],
+      };
 }
 
 final class _FakeMatchesApi implements MatchesApi {
@@ -60,13 +67,16 @@ final class _FakeMatchesApi implements MatchesApi {
         'sportId': 'sport_padel',
         'categoryId': 'cat',
         'type': 'OPEN',
-        'status': 'OPEN',
+        'status': 'SCHEDULED',
         'scheduledAt': now,
         'pricePerPlayerCents': 450000,
         'maxParticipants': 4,
         'participantCount': 0,
         'openSpots': 4,
         'courtId': null,
+        'clubName': 'Club',
+        'courtName': 'Cancha 1',
+        'locationLabel': 'Dirección',
         'tournamentId': null,
         'participants': <Object?>[],
         'createdAt': now,
@@ -168,7 +178,7 @@ void main() {
       expect(find.byKey(const Key('match.detail')), findsOneWidget);
     });
 
-    testWidgets('si NO está autenticado, deep link protegido redirige a login',
+    testWidgets('si NO está autenticado, deep link protegido redirige a /welcome',
         (tester) async {
       final sessionCubit = _MockSessionCubit();
       when(() => sessionCubit.state).thenReturn(const SessionState.unauthenticated());
@@ -180,7 +190,7 @@ void main() {
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('login.screen')), findsOneWidget);
+      expect(find.byKey(const Key('welcome.screen')), findsOneWidget);
     });
   });
 }

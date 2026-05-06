@@ -6,20 +6,23 @@ import type {
 
 import { PRISMA } from '../prisma_client.js';
 
+const SELECT = {
+  userId: true,
+  dominantHand: true,
+  sidePreference: true,
+  birthYear: true,
+  birthDate: true,
+  phone: true,
+  avatarUrl: true,
+  city: true,
+  onboardingCompletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 export class PrismaPlayerProfileRepository implements PlayerProfileRepository {
   async findByUserIdSV(_userId: string): Promise<PlayerProfileDTO | null> {
-    const ROW = await PRISMA.playerProfile.findUnique({
-      where: { userId: _userId },
-      select: {
-        userId: true,
-        dominantHand: true,
-        sidePreference: true,
-        birthYear: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-    return ROW;
+    return PRISMA.playerProfile.findUnique({ where: { userId: _userId }, select: SELECT });
   }
 
   async upsertByUserIdSV(_userId: string, _patch: UpsertPlayerProfileDTO): Promise<PlayerProfileDTO> {
@@ -31,23 +34,27 @@ export class PrismaPlayerProfileRepository implements PlayerProfileRepository {
         dominantHand: _patch.dominantHand ?? 'RIGHT',
         sidePreference: _patch.sidePreference ?? 'ANY',
         birthYear: _patch.birthYear ?? null,
+        birthDate: _patch.birthDate ?? null,
+        phone: _patch.phone ?? null,
+        avatarUrl: _patch.avatarUrl ?? null,
+        city: _patch.city ?? null,
+        onboardingCompletedAt: _patch.onboardingCompletedAt ?? null,
         updatedAt: NOW,
       },
       update: {
         ...(_patch.dominantHand !== undefined ? { dominantHand: _patch.dominantHand } : {}),
         ...(_patch.sidePreference !== undefined ? { sidePreference: _patch.sidePreference } : {}),
         ...(_patch.birthYear !== undefined ? { birthYear: _patch.birthYear } : {}),
+        ...(_patch.birthDate !== undefined ? { birthDate: _patch.birthDate } : {}),
+        ...(_patch.phone !== undefined ? { phone: _patch.phone } : {}),
+        ...(_patch.avatarUrl !== undefined ? { avatarUrl: _patch.avatarUrl } : {}),
+        ...(_patch.city !== undefined ? { city: _patch.city } : {}),
+        ...(_patch.onboardingCompletedAt !== undefined
+          ? { onboardingCompletedAt: _patch.onboardingCompletedAt }
+          : {}),
         updatedAt: NOW,
       },
-      select: {
-        userId: true,
-        dominantHand: true,
-        sidePreference: true,
-        birthYear: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: SELECT,
     });
   }
 }
-

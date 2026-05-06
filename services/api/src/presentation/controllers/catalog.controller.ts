@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
 import {
+  LIST_CATEGORIES_UC,
   LIST_FORMAT_PRESETS_BY_SPORT_UC,
   LIST_SPORTS_UC,
   PUBLISH_FORMAT_PRESET_VERSION_UC,
@@ -10,6 +11,16 @@ import {
   PUBLISH_FORMAT_PRESET_VERSION_BODY_SCHEMA,
   SPORT_ID_PARAM_SCHEMA,
 } from '../validation/catalog.validation.js';
+
+export async function getCategoriesCON(_req: Request, _res: Response): Promise<void> {
+  const DATA = await LIST_CATEGORIES_UC.executeSV();
+
+  _res.status(200).json({
+    success: true,
+    message: 'Categorías obtenidas correctamente.',
+    data: { categories: DATA },
+  });
+}
 
 export async function getSportsCON(_req: Request, _res: Response): Promise<void> {
   const DATA = await LIST_SPORTS_UC.executeSV();

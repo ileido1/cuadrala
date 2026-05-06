@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../router/routes.dart';
 import '../../catalog/data/catalog_repository.dart';
+import '../../catalog/data/models/category_dto.dart';
 import '../../catalog/data/models/sport_dto.dart';
 import '../data/matches_repository.dart';
 
@@ -21,10 +22,10 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   List<SportDto> _sports = const [];
   String? _selectedSportId;
 
+  List<CategoryDto> _categories = const [];
   String? _categoryId;
   int _players = 4;
   int _pricePerPlayer = 4500;
-  bool _privateMatch = false;
 
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = const TimeOfDay(hour: 20, minute: 0);
@@ -48,18 +49,26 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   Future<void> _bootstrap() async {
     setState(() => _loading = true);
     try {
-      final sports = await getIt<CatalogRepository>().listSports();
-      String? selected = sports.isEmpty ? null : sports.first.id;
+      final catalog = getIt<CatalogRepository>();
+      final results = await Future.wait([
+        catalog.listSports(),
+        catalog.listCategories(),
+      ]);
+      final sports = results[0] as List<SportDto>;
+      final categories = results[1] as List<CategoryDto>;
+      String? selectedSport = sports.isEmpty ? null : sports.first.id;
       for (final s in sports) {
         if (s.code.toUpperCase() == 'PADEL') {
-          selected = s.id;
+          selectedSport = s.id;
           break;
         }
       }
       if (!mounted) return;
       setState(() {
         _sports = sports;
-        _selectedSportId = selected;
+        _selectedSportId = selectedSport;
+        _categories = categories;
+        _categoryId = categories.isEmpty ? null : categories.first.id;
         _loading = false;
       });
     } catch (_) {
@@ -67,6 +76,8 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       setState(() {
         _sports = const [];
         _selectedSportId = null;
+        _categories = const [];
+        _categoryId = null;
         _loading = false;
       });
     }
@@ -228,14 +239,25 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: _SectionCard(
-                                title: 'Categoría',
-                                child: _CompactButton(
-                                  icon: Icons.tune,
-                                  label: _categoryId == null ? 'Seleccionar' : 'Seleccionada',
-                                  onTap: () => _pickCategoryId(context),
+                              child:                         _SectionCard(
+                          title: 'Categoría',
+                          child: _categories.isEmpty
+                              ? const Text('Sin categorías disponibles')
+                              : Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _categories
+                                      .map(
+                                        (c) => ChoiceChip(
+                                          label: Text(c.name),
+                                          selected: _categoryId == c.id,
+                                          onSelected: (_) =>
+                                              setState(() => _categoryId = c.id),
+                                        ),
+                                      )
+                                      .toList(),
                                 ),
-                              ),
+                        ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -277,27 +299,6 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                             onChanged: (v) => setState(() {
                               _pricePerPlayer = int.tryParse(v) ?? _pricePerPlayer;
                             }),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _SectionCard(
-                          title: 'Partida Privada',
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Solo con link de invitación',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: scheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                              ),
-                              Switch(
-                                value: _privateMatch,
-                                onChanged: (v) => setState(() => _privateMatch = v),
-                              ),
-                            ],
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -345,46 +346,6 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     );
   }
 
-  Future<void> _pickCategoryId(BuildContext context) async {
-    final controller = TextEditingController(text: _categoryId ?? '');
-    final result = await showModalBottomSheet<String?>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Categoría (UUID)',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(hintText: 'Pega categoryId…'),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-                  child: const Text('Aplicar'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (result == null) return;
-    final value = result.trim();
-    setState(() => _categoryId = value.isEmpty ? null : value);
-  }
 }
 
 String _formatDateShort(DateTime d) {

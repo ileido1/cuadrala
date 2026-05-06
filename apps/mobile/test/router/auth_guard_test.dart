@@ -19,7 +19,7 @@ class _FakeGoRouterState extends Fake implements GoRouterState {
 
 void main() {
   group('auth redirect / guard', () {
-    test('sin sesión: ruta protegida redirige a /login', () {
+    test('sin sesión: ruta protegida redirige a /welcome', () {
       // Arrange
       const session = SessionState.unauthenticated();
       final state = _FakeGoRouterState(Routes.home);
@@ -28,7 +28,7 @@ void main() {
       final redirect = authRedirect(session, state);
 
       // Assert
-      expect(redirect, Routes.login);
+      expect(redirect, Routes.welcome);
     });
 
     test('con sesión: /login redirige a /home', () {

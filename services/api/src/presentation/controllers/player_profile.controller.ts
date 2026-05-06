@@ -30,7 +30,11 @@ export async function patchMyPlayerProfileCON(_req: Request, _res: Response): Pr
   }
 
   const BODY = UPDATE_PLAYER_PROFILE_BODY_SCHEMA.parse(_req.body);
-  const UPDATED = await UPDATE_PLAYER_PROFILE_UC.executeSV(USER_ID, BODY);
+  const PATCH = {
+    ...BODY,
+    birthDate: BODY.birthDate === undefined || BODY.birthDate === null ? BODY.birthDate : new Date(`${BODY.birthDate}T00:00:00.000Z`),
+  };
+  const UPDATED = await UPDATE_PLAYER_PROFILE_UC.executeSV(USER_ID, PATCH);
 
   _res.status(200).json({
     success: true,

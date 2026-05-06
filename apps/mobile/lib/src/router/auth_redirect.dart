@@ -8,8 +8,11 @@ String? authRedirect(SessionState session, GoRouterState state) {
 }
 
 String? authRedirectForLocation(SessionState session, String location) {
-  final isAuthRoute =
-      location == Routes.login || location == Routes.register || location == '/';
+  final isLoginOrRegister =
+      location == Routes.login || location == Routes.register;
+  final isWelcome = location == Routes.welcome;
+  final isAuthRoute = isLoginOrRegister || isWelcome || location == '/';
+  final isOnboardingRoute = location.startsWith(Routes.onboarding);
 
   final isProtected = location.startsWith(Routes.home) ||
       location.startsWith(Routes.matches) ||
@@ -18,7 +21,26 @@ String? authRedirectForLocation(SessionState session, String location) {
 
   return switch (session) {
     SessionLoading() => null,
-    SessionAuthenticated() => isAuthRoute ? Routes.home : null,
-    SessionUnauthenticated() => isProtected ? Routes.login : null,
+    SessionAuthenticated(onboardingComplete: final complete) => () {
+        // Aún no se sabe si el onboarding está completo: no forzamos redirect.
+        if (complete == null) {
+          return isAuthRoute ? Routes.home : null;
+        }
+        if (complete == false) {
+          // Pendiente: bloquear cualquier ruta protegida y empujar al onboarding.
+          if (isOnboardingRoute) return null;
+          if (isProtected || isAuthRoute) return Routes.onboarding;
+          return null;
+        }
+        // Onboarding completo: si va a auth/onboarding, lo mandamos a home.
+        if (isOnboardingRoute || isAuthRoute) return Routes.home;
+        return null;
+      }(),
+    SessionUnauthenticated() => () {
+        if (isOnboardingRoute) return Routes.welcome;
+        // Si toca una ruta protegida sin sesión, lo mandamos al gateway de bienvenida.
+        if (isProtected) return Routes.welcome;
+        return null;
+      }(),
   };
 }

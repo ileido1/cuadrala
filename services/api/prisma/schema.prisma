@@ -108,6 +108,22 @@ enum VacantHourStatus {
   CANCELLED
 }
 
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum AvailabilitySlot {
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
 // --- Catálogo multi-deporte (E0) ---
 
 /// Deporte configurable (PADEL, etc.); el producto puede mostrar solo pádel en MVP.
@@ -117,10 +133,11 @@ model Sport {
   name      String
   createdAt DateTime @default(now())
 
-  formatPresets TournamentFormatPreset[]
-  matches       Match[]
-  tournaments   Tournament[]
-  vacantHours   VacantHour[]
+  formatPresets       TournamentFormatPreset[]
+  matches             Match[]
+  tournaments         Tournament[]
+  vacantHours         VacantHour[]
+  playerSportProfiles PlayerSportProfile[]
 }
 
 /// Preset de formato de torneo por deporte (Americano, Round Robin, etc.).
@@ -164,25 +181,27 @@ model User {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  tournamentRegistrations   TournamentRegistration[]
-  matchParticipants         MatchParticipant[]
-  rankingEntries            RankingEntry[]
-  matchResultScores         MatchResultScore[]
-  matchResultDraftsCreated  MatchResultDraft[]         @relation("UserMatchResultDraftsCreated")
-  matchResultConfirmations  MatchResultConfirmation[]
-  ratings                   UserRating[]
-  ratingHistory             UserRatingHistory[]
-  transactions              Transaction[]
-  notificationSubscriptions NotificationSubscription[]
-  notificationDeliveries    NotificationDelivery[]
-  devicePushTokens          DevicePushToken[]
-  refreshTokens             RefreshToken[]
-  uploadedTransactionReceipts TransactionReceipt[] @relation("UserUploadedTransactionReceipts")
+  tournamentRegistrations     TournamentRegistration[]
+  matchParticipants           MatchParticipant[]
+  rankingEntries              RankingEntry[]
+  matchResultScores           MatchResultScore[]
+  matchResultDraftsCreated    MatchResultDraft[]         @relation("UserMatchResultDraftsCreated")
+  matchResultConfirmations    MatchResultConfirmation[]
+  ratings                     UserRating[]
+  ratingHistory               UserRatingHistory[]
+  transactions                Transaction[]
+  notificationSubscriptions   NotificationSubscription[]
+  notificationDeliveries      NotificationDelivery[]
+  devicePushTokens            DevicePushToken[]
+  refreshTokens               RefreshToken[]
+  uploadedTransactionReceipts TransactionReceipt[]       @relation("UserUploadedTransactionReceipts")
   chatMessages                ChatMessage[]
 
   categories       UserCategory[]
   playerProfile    PlayerProfile?
-  organizedMatches Match[]        @relation("MatchOrganizer")
+  availability     UserAvailability[]
+  location         UserLocation?
+  organizedMatches Match[]            @relation("MatchOrganizer")
 }
 
 model RefreshToken {
@@ -211,14 +230,71 @@ model RefreshToken {
 }
 
 model PlayerProfile {
-  id             String         @id @default(uuid())
-  userId         String         @unique
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dominantHand   DominantHand   @default(RIGHT)
-  sidePreference SidePreference @default(ANY)
-  birthYear      Int?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                    String         @id @default(uuid())
+  userId                String         @unique
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dominantHand          DominantHand   @default(RIGHT)
+  sidePreference        SidePreference @default(ANY)
+  birthYear             Int?
+  /// Fecha de nacimiento (YYYY-MM-DD). Se usa para segmentación por categorías.
+  birthDate             DateTime?
+  /// E.164 (+5491145454545). Validado por backend con regex laxa.
+  phone                 String?
+  avatarUrl             String?
+  city                  String?
+  /// Marca el momento en que el usuario completó todos los pasos requeridos del onboarding.
+  onboardingCompletedAt DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  sportProfiles PlayerSportProfile[]
+
+  @@index([userId])
+}
+
+/// Perfil técnico por deporte: nivel, lado preferido, etc. Reemplaza al `sidePreference` global de PlayerProfile (que se mantiene como default heredado).
+model PlayerSportProfile {
+  id              String         @id @default(uuid())
+  playerProfileId String
+  playerProfile   PlayerProfile  @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  sportId         String
+  sport           Sport          @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  /// Nivel autodeclarado (escala genérica 1.0 a 7.0). Para pádel/tenis 1.0=principiante, 7.0=elite.
+  skillLevel      Decimal        @db.Decimal(3, 1)
+  sidePreference  SidePreference @default(ANY)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([playerProfileId, sportId])
+  @@index([sportId])
+}
+
+/// Disponibilidad horaria del usuario por día y franja (multi-fila).
+model UserAvailability {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek DayOfWeek
+  slot      AvailabilitySlot
+  createdAt DateTime         @default(now())
+
+  @@unique([userId, dayOfWeek, slot])
+  @@index([userId])
+}
+
+/// Ubicación de referencia y radio de búsqueda del usuario.
+model UserLocation {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Etiqueta libre (ej. "Caracas — La Castellana").
+  label     String?
+  latitude  Decimal  @db.Decimal(10, 7)
+  longitude Decimal  @db.Decimal(10, 7)
+  /// Radio en km (1–100).
+  radiusKm  Int      @default(10)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
@@ -466,17 +542,17 @@ model VacantHour {
 }
 
 model MatchResultDraft {
-  id              String                 @id @default(uuid())
-  matchId         String
-  match           Match                  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  id               String                 @id @default(uuid())
+  matchId          String
+  match            Match                  @relation(fields: [matchId], references: [id], onDelete: Cascade)
   /// Incremental por match (auditoría mínima y control de repropuestas). Inicia en 1.
-  version         Int
-  status          MatchResultDraftStatus @default(DRAFT)
-  payload         Json
+  version          Int
+  status           MatchResultDraftStatus @default(DRAFT)
+  payload          Json
   proposedByUserId String
   proposedByUser   User                   @relation("UserMatchResultDraftsCreated", fields: [proposedByUserId], references: [id], onDelete: Cascade)
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   confirmations MatchResultConfirmation[]
 
@@ -601,19 +677,19 @@ model TransactionReceipt {
 }
 
 model NotificationSubscription {
-  id         String    @id @default(uuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  nearLat    Float?
-  nearLng    Float?
-  radiusKm   Float?
-  enabled    Boolean   @default(true)
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  nearLat      Float?
+  nearLng      Float?
+  radiusKm     Float?
+  enabled      Boolean   @default(true)
   /// Preferencias por tipo de evento. Si falta una key, se asume habilitado.
   enabledTypes Json?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([userId])
   @@index([enabled])
@@ -624,12 +700,12 @@ model NotificationSubscription {
 // --- Chat (E7-01) ---
 
 model ChatThread {
-  id          String     @id @default(uuid())
-  matchId     String?    @unique
-  match       Match?     @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  tournamentId String?   @unique
-  tournament  Tournament? @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  createdAt   DateTime   @default(now())
+  id           String      @id @default(uuid())
+  matchId      String?     @unique
+  match        Match?      @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  tournamentId String?     @unique
+  tournament   Tournament? @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
 
   messages ChatMessage[]
 
@@ -637,13 +713,13 @@ model ChatThread {
 }
 
 model ChatMessage {
-  id        String     @id @default(uuid())
-  threadId  String
-  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid())
+  threadId     String
+  thread       ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   senderUserId String
-  sender    User       @relation(fields: [senderUserId], references: [id], onDelete: Restrict)
-  text      String
-  createdAt DateTime   @default(now())
+  sender       User       @relation(fields: [senderUserId], references: [id], onDelete: Restrict)
+  text         String
+  createdAt    DateTime   @default(now())
 
   @@index([threadId, createdAt])
   @@index([senderUserId, createdAt])

@@ -47,5 +47,7 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Usamos tu ubicación para sugerirte clubes y partidas cercanas.</string>
 	</dict>
 </plist>

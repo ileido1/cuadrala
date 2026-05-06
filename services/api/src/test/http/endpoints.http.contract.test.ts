@@ -650,4 +650,12 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     expect(RES.status).toBe(401);
     expect(RES.body.code).toBe('NO_AUTORIZADO');
   });
+
+  it('PATCH /api/v1/admin/matches/:matchId/cancel responde 401 si falta x-admin-secret', async () => {
+    const RES = await request(APP).patch(
+      '/api/v1/admin/matches/550e8400-e29b-41d4-a716-446655440001/cancel',
+    );
+    expect(RES.status).toBe(401);
+    expect(RES.body.code).toBe('NO_AUTORIZADO');
+  });
 });

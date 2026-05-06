@@ -116,4 +116,69 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       );
     }
   }
+
+  Future<void> cancel() async {
+    await _runAction(
+      action: () => _matchesRepository.cancelMatch(_matchId),
+      successMessage: 'Partida cancelada.',
+      fallbackError: 'No se pudo cancelar.',
+    );
+  }
+
+  Future<void> start() async {
+    await _runAction(
+      action: () => _matchesRepository.startMatch(_matchId),
+      successMessage: 'Partida iniciada.',
+      fallbackError: 'No se pudo iniciar.',
+    );
+  }
+
+  Future<void> finish() async {
+    await _runAction(
+      action: () => _matchesRepository.finishMatch(_matchId),
+      successMessage: 'Partida finalizada.',
+      fallbackError: 'No se pudo finalizar.',
+    );
+  }
+
+  Future<void> _runAction({
+    required Future<void> Function() action,
+    required String successMessage,
+    required String fallbackError,
+  }) async {
+    final current = state;
+    if (current is! MatchDetailLoaded) return;
+    if (current.actionLoading) return;
+
+    emit(
+      MatchDetailLoaded(
+        match: current.match,
+        viewerUserId: current.viewerUserId,
+        actionLoading: true,
+      ),
+    );
+
+    try {
+      await action();
+      final match = await _matchesRepository.getMatchById(_matchId);
+      emit(
+        MatchDetailLoaded(
+          match: match,
+          viewerUserId: current.viewerUserId,
+          actionLoading: false,
+          actionMessage: successMessage,
+        ),
+      );
+    } catch (e) {
+      final message = e is AppFailure ? e.message : fallbackError;
+      emit(
+        MatchDetailLoaded(
+          match: current.match,
+          viewerUserId: current.viewerUserId,
+          actionLoading: false,
+          actionMessage: message,
+        ),
+      );
+    }
+  }
 }

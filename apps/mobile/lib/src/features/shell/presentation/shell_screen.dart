@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../auth/presentation/cubit/session_cubit.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../shared/widgets/danger_button.dart';
 import '../../home/presentation/cubit/home_cubit.dart';
 import '../../home/presentation/home_screen.dart';
 import '../../matches/presentation/cubit/open_matches_cubit.dart';
 import '../../matches/presentation/open_matches_screen.dart';
+import '../../profile/presentation/profile_screen.dart';
 import 'cubit/shell_cubit.dart';
 
 final class ShellScreen extends StatelessWidget {
@@ -55,22 +54,7 @@ class _ShellViewState extends State<_ShellView> {
       const OpenMatchesScreen(),
       const Center(child: Text('Torneos')),
       const Center(child: Text('Notif.')),
-      Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: DangerButton(
-            label: 'Cerrar sesión',
-            onPressed: () async {
-              await context.read<SessionCubit>().logout();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sesión cerrada.')),
-                );
-              }
-            },
-          ),
-        ),
-      ),
+      const ProfileScreen(),
     ];
 
     return BlocListener<ShellCubit, int>(

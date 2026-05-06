@@ -22,6 +22,15 @@ import {
   patchMyPlayerProfileCON,
 } from '../controllers/player_profile.controller.js';
 import { getUserRatingHistoryCON, getUserRatingsCON } from '../controllers/ratings.controller.js';
+import {
+  getMyAvailabilityCON,
+  getMyLocationCON,
+  getMyOnboardingStatusCON,
+  getMySportProfilesCON,
+  putMyAvailabilityCON,
+  putMyLocationCON,
+  putMySportProfilesCON,
+} from '../controllers/onboarding.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 
@@ -64,6 +73,15 @@ PROFILE_ROUTER.delete(
 );
 PROFILE_ROUTER.get('/me/profile', requireAuth, asyncHandler(getMyPlayerProfileCON));
 PROFILE_ROUTER.patch('/me/profile', requireAuth, asyncHandler(patchMyPlayerProfileCON));
+
+PROFILE_ROUTER.get('/me/onboarding-status', requireAuth, asyncHandler(getMyOnboardingStatusCON));
+PROFILE_ROUTER.get('/me/sport-profiles', requireAuth, asyncHandler(getMySportProfilesCON));
+PROFILE_ROUTER.put('/me/sport-profiles', requireAuth, asyncHandler(putMySportProfilesCON));
+PROFILE_ROUTER.get('/me/availability', requireAuth, asyncHandler(getMyAvailabilityCON));
+PROFILE_ROUTER.put('/me/availability', requireAuth, asyncHandler(putMyAvailabilityCON));
+PROFILE_ROUTER.get('/me/location', requireAuth, asyncHandler(getMyLocationCON));
+PROFILE_ROUTER.put('/me/location', requireAuth, asyncHandler(putMyLocationCON));
+
 PROFILE_ROUTER.get('/:userId/stats', asyncHandler(getUserStatsCON));
 PROFILE_ROUTER.get('/:userId/ratings', asyncHandler(getUserRatingsCON));
 PROFILE_ROUTER.get('/:userId/ratings/history', asyncHandler(getUserRatingHistoryCON));

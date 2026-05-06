@@ -8,9 +8,17 @@ import '../features/auth/presentation/cubit/register_cubit.dart';
 import '../features/auth/presentation/cubit/session_cubit.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
+import '../features/auth/presentation/welcome_screen.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
 import '../features/matches/presentation/create_match_screen.dart';
+import '../features/matches/presentation/match_lifecycle_screen.dart';
+import '../features/matches/presentation/result_draft_screen.dart';
+import '../features/chat/presentation/match_chat_screen.dart';
+import '../features/monetization/presentation/pay_method_screen.dart';
+import '../features/monetization/presentation/upload_receipt_screen.dart';
+import '../features/monetization/presentation/waiting_confirmation_screen.dart';
 import '../features/notifications/presentation/notification_detail_screen.dart';
+import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
 import 'auth_redirect.dart';
@@ -29,6 +37,10 @@ final class AppRouter {
               redirect: (_, __) => Routes.home,
             ),
             GoRoute(
+              path: Routes.welcome,
+              builder: (context, state) => const WelcomeScreen(),
+            ),
+            GoRoute(
               path: Routes.login,
               builder: (context, state) => BlocProvider<LoginCubit>(
                 create: (_) => getIt<LoginCubit>(),
@@ -43,6 +55,10 @@ final class AppRouter {
               ),
             ),
             GoRoute(
+              path: Routes.onboarding,
+              builder: (context, state) => const OnboardingFlowScreen(),
+            ),
+            GoRoute(
               path: Routes.home,
               builder: (context, state) => const ShellScreen(),
             ),
@@ -51,10 +67,77 @@ final class AppRouter {
               builder: (context, state) => const CreateMatchScreen(),
             ),
             GoRoute(
+              path: '/matches/:matchId/result',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                return ResultDraftScreen(matchId: matchId);
+              },
+            ),
+            GoRoute(
+              path: '/matches/:matchId/lifecycle',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                return MatchLifecycleScreen(matchId: matchId);
+              },
+            ),
+            GoRoute(
               path: '/matches/:matchId',
               builder: (context, state) {
                 final matchId = state.pathParameters['matchId'] ?? '';
                 return MatchDetailScreen(matchId: matchId);
+              },
+            ),
+            GoRoute(
+              path: '/matches/:matchId/chat',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                return MatchChatScreen(matchId: matchId);
+              },
+            ),
+            GoRoute(
+              path: '/matches/:matchId/pay/method',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                final amountCents =
+                    int.tryParse(state.uri.queryParameters['amountCents'] ?? '') ?? 0;
+                final title = state.uri.queryParameters['title'] ?? 'Partida';
+                return PayMethodScreen(
+                  matchId: matchId,
+                  amountPerPersonCents: amountCents,
+                  matchTitle: title,
+                );
+              },
+            ),
+            GoRoute(
+              path: '/matches/:matchId/pay/upload-receipt',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                final tx = state.uri.queryParameters['tx'] ?? '';
+                final method = state.uri.queryParameters['method'] ?? 'TRANSFER';
+                final amountCents =
+                    int.tryParse(state.uri.queryParameters['amountCents'] ?? '') ?? 0;
+                final title = state.uri.queryParameters['title'] ?? 'Partida';
+                return UploadReceiptScreen(
+                  matchId: matchId,
+                  transactionId: tx,
+                  method: method,
+                  amountPerPersonCents: amountCents,
+                  matchTitle: title,
+                );
+              },
+            ),
+            GoRoute(
+              path: '/matches/:matchId/pay/waiting',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                final amountCents =
+                    int.tryParse(state.uri.queryParameters['amountCents'] ?? '') ?? 0;
+                final title = state.uri.queryParameters['title'] ?? 'Partida';
+                return WaitingConfirmationScreen(
+                  matchId: matchId,
+                  amountPerPersonCents: amountCents,
+                  matchTitle: title,
+                );
               },
             ),
             GoRoute(

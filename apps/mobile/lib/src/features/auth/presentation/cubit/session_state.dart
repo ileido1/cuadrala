@@ -4,7 +4,8 @@ sealed class SessionState extends Equatable {
   const SessionState();
 
   const factory SessionState.loading() = SessionLoading;
-  const factory SessionState.authenticated() = SessionAuthenticated;
+  const factory SessionState.authenticated({bool? onboardingComplete}) =
+      SessionAuthenticated;
   const factory SessionState.unauthenticated({String? reason}) =
       SessionUnauthenticated;
 }
@@ -17,10 +18,13 @@ final class SessionLoading extends SessionState {
 }
 
 final class SessionAuthenticated extends SessionState {
-  const SessionAuthenticated();
+  const SessionAuthenticated({this.onboardingComplete});
+
+  /// `null` = aún no se sabe (no se consultó); `false` = pendiente; `true` = OK.
+  final bool? onboardingComplete;
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [onboardingComplete];
 }
 
 final class SessionUnauthenticated extends SessionState {

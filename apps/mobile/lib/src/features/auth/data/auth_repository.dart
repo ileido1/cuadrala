@@ -3,6 +3,7 @@ import 'auth_api.dart';
 import 'models/auth_tokens.dart';
 import 'models/login_request.dart';
 import 'models/register_request.dart';
+import 'models/social_login_request.dart';
 import 'secure_token_storage.dart';
 
 class AuthRepository {
@@ -28,6 +29,13 @@ class AuthRepository {
 
   Future<AuthTokens> register(RegisterRequest request) async {
     final tokens = await _authApi.register(request);
+    await _secureTokenStorage.writeRefreshToken(tokens.refreshToken);
+    _tokensInMemory = tokens;
+    return tokens;
+  }
+
+  Future<AuthTokens> socialLogin(SocialLoginRequest request) async {
+    final tokens = await _authApi.socialLogin(request);
     await _secureTokenStorage.writeRefreshToken(tokens.refreshToken);
     _tokensInMemory = tokens;
     return tokens;

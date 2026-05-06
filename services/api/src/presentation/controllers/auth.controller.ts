@@ -5,12 +5,14 @@ import {
   LOGOUT_UC,
   REFRESH_SESSION_UC,
   REGISTER_USER_UC,
+  SOCIAL_LOGIN_UC,
 } from '../composition/auth.composition.js';
 import {
   LOGIN_BODY_SCHEMA,
   LOGOUT_BODY_SCHEMA,
   REFRESH_BODY_SCHEMA,
   REGISTER_BODY_SCHEMA,
+  SOCIAL_LOGIN_BODY_SCHEMA,
 } from '../validation/auth.validation.js';
 
 export async function postRegisterCON(_req: Request, _res: Response): Promise<void> {
@@ -83,5 +85,30 @@ export async function postLogoutCON(_req: Request, _res: Response): Promise<void
   _res.status(200).json({
     success: true,
     message: 'Sesión cerrada correctamente.',
+  });
+}
+
+export async function postSocialLoginCON(_req: Request, _res: Response): Promise<void> {
+  const BODY = SOCIAL_LOGIN_BODY_SCHEMA.parse(_req.body);
+  const RESULT = await SOCIAL_LOGIN_UC.executeSV({
+    provider: BODY.provider,
+    idToken: BODY.idToken,
+    ...(BODY.name !== undefined ? { name: BODY.name } : {}),
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Sesión iniciada correctamente.',
+    data: {
+      user: {
+        id: RESULT.userId,
+        email: RESULT.email,
+        name: RESULT.name,
+        subscriptionType: RESULT.subscriptionType,
+      },
+      accessToken: RESULT.accessToken,
+      refreshToken: RESULT.refreshToken,
+      expiresIn: RESULT.expiresIn,
+    },
   });
 }

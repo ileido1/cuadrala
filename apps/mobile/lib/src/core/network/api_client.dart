@@ -12,6 +12,36 @@ final class ApiClient {
   final Dio _dio;
   final AppFailureMapper _failureMapper;
 
+  Future<Map<String, Object?>> postMultipart(
+    String path, {
+    required FormData formData,
+    Map<String, Object?>? queryParameters,
+    Map<String, Object?>? headers,
+  }) async {
+    try {
+      final response = await _dio.post<Object?>(
+        path,
+        data: formData,
+        queryParameters: queryParameters,
+        options: Options(
+          headers: headers,
+          contentType: 'multipart/form-data',
+        ),
+      );
+
+      final data = response.data;
+      if (data is Map<String, Object?>) {
+        return data;
+      }
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
+    } catch (e) {
+      throw _failureMapper.fromException(e);
+    }
+  }
+
   Future<Map<String, Object?>> postJson(
     String path, {
     Object? body,

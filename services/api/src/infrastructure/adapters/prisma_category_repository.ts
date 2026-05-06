@@ -7,5 +7,10 @@ export class PrismaCategoryRepository implements CategoryRepository {
     const ROW = await PRISMA.category.findUnique({ where: { id: _id } });
     return ROW === null ? null : { id: ROW.id, name: ROW.name, slug: ROW.slug };
   }
+
+  async findAllSV(): Promise<CategoryDTO[]> {
+    const ROWS = await PRISMA.category.findMany({ orderBy: { name: 'asc' } });
+    return ROWS.map((_r) => ({ id: _r.id, name: _r.name, slug: _r.slug }));
+  }
 }
 

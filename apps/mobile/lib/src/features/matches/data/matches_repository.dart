@@ -126,6 +126,42 @@ class MatchesRepository {
     return _matchesApi.finishMatch(matchId: matchId);
   }
 
+  Future<void> upsertResultDraft({
+    required String matchId,
+    required List<Map<String, Object?>> scores,
+  }) async {
+    await _matchesApi.upsertResultDraftEnvelope(
+      matchId: matchId,
+      body: {'scores': scores},
+    );
+  }
+
+  Future<Map<String, Object?>> confirmResultDraft({
+    required String matchId,
+    required String status, // 'CONFIRMED' | 'REJECTED'
+  }) async {
+    final json = await _matchesApi.confirmResultDraftEnvelope(
+      matchId: matchId,
+      body: {'status': status},
+    );
+    final data = json['data'];
+    if (data is Map<String, Object?>) return data;
+    throw const AppFailure(
+      code: 'INVALID_RESPONSE',
+      message: 'Respuesta inválida del servidor.',
+    );
+  }
+
+  Future<void> reproposeResultDraft({
+    required String matchId,
+    required List<Map<String, Object?>> scores,
+  }) async {
+    await _matchesApi.reproposeResultDraftEnvelope(
+      matchId: matchId,
+      body: {'scores': scores},
+    );
+  }
+
   /// Resuelve un `sportId` estable para discovery: prioriza PADEL si existe.
   Future<String> resolveDefaultSportId() async {
     final sports = await _catalogRepository.listSports();
