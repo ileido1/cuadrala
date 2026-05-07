@@ -3,6 +3,8 @@
 **Versión:** 1.0  
 **Última actualización:** alineado con visión multi-deporte (alcance inicial: pádel en Venezuela / Caracas).
 
+> **Nota (fuente de verdad de delivery):** para planificación integrada **Backend + Mobile** (sprints realizados/pedientes y US por sprint), ver `docs/BACKLOG_UNIFICADO.md`. Este archivo se mantiene como **backlog de producto/backend (US‑E*)**.
+
 ---
 
 ## 0. Principios de alcance
@@ -20,18 +22,19 @@
 
 ## 1. Mapa de épicas y orden recomendado (TDD)
 
-Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7**. Dentro de cada épica, seguir el orden de las historias (IDs).
+Orden global sugerido: **E0 → E1 → E2 → E3 → E4 → E5 → E6 → E7 → E8**. Dentro de cada épica, seguir el orden de las historias (IDs).
 
 | Orden | Épica | Objetivo | Estado (según historias) |
 |-------|-------|----------|--------------------------|
 | E0 | Cimientos multi-deporte y torneo parametrizable | Deportes, presets de formato, torneo genérico | **In Progress (avanzado backend)** (**US-E0-01 Done backend**; **US-E0-02 Parcial**; **US-E0-03 Done backend**) |
 | E1 | Identidad, auth y perfil competitivo | Cuenta, perfil, nivel/categoría, (futuro Elo) | **In Progress (avanzado backend)** (**US-E1-01 Done backend**; US-E1-02 Done backend; US-E1-03 Parcial) |
-| E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel | **In Progress (avanzado backend)** (US-E2-01 Parcial; US-E2-02 Done; US-E2-03 Done + join atómico; **US-E2-04 Done backend**) |
+| E2 | Partidos, descubrimiento y unión validada | Listados, filtros, join con reglas de nivel | **In Progress (avanzado backend)** (US-E2-01 Parcial; US-E2-02 Done; US-E2-03 Done + join atómico; **US-E2-04 Done backend**; **US-E2-05 Done backend** disponibilidad sede/cancha) |
 | E3 | Motor de torneos y formatos | Rotaciones, rondas, tablero (según formato) | **In Progress (avanzado backend)** (US-E3-01 Parcial; US-E3-02 Done; US-E3-03 Done; **US-E3-04 Parcial**) |
-| E4 | Sedes y geo | Directorio, mapa, horas vacantes | **In Progress (avanzado backend)** (US-E4-01 Parcial backend; US-E4-02 Parcial backend; **US-E4-03 Done backend**; **US-E4-04 Done backend (índices)**) |
+| E4 | Sedes y geo | Directorio, mapa, horas vacantes, consulta de disponibilidad | **In Progress (avanzado backend)** (US-E4-01 Parcial backend; US-E4-02 Parcial backend; **US-E4-03 Done backend**; **US-E4-04 Done backend (índices)**; US-E4-05 Pendiente; **US-E4-06 Pendiente**) |
 | E5 | Ranking y resultados | Resultados → recálculo (puntos / Elo) | **In Progress (avanzado backend)** (**US-E5-01 Done backend**; **US-E5-02 Done backend**; US-E5-03 Parcial backend) |
 | E6 | Cobro colaborativo | Obligaciones, comprobantes, sin custodia | **Done (MVP backend)** (US-E6-01/02 Cumplida; **US-E6-03 Done backend**) |
 | E7 | Coordinación | Chat, notificaciones | **In Progress (avanzado backend)** (**US-E7-01 Done backend MVP**; **US-E7-02 Parcial backend (avanzado)**; **US-E7-03 Done backend (preferencias por tipo)**) |
+| E8 | Club / sede / conciliación | Dueño de venue, datos de cobro al club, confirmar pago solo staff sede, listados backoffice | **Pendiente** — detalle en `docs/BACKLOG_UNIFICADO.md` (**US-E8-01** … **US-E8-06**) |
 
 ---
 
@@ -142,7 +145,7 @@ Pendiente: ampliar formatos (eliminación, suizo, etc.), y que el motor soporte 
 
 **Estado:** **Parcial — backend (muy avanzado):** CRUD base + lifecycle (`/leave`, `/start`, `/finish`) + **precio por jugador** (`pricePerPlayerCents`) y filtros por precio/geo en `/matches/open` + **owner `organizerUserId`** (permisos para update/cancel/start/finish) + **join atómico** (no excede `maxParticipants` bajo concurrencia) + **cancelación permitida en `IN_PROGRESS`** (solo organizer, con cleanup de drafts).
 
-Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas vacantes” (E4-03) y hardening adicional (observabilidad/worker separado).
+Pendiente: reglas de pricing/cobro conectadas a E6 (automatización); exposición de **horarios disponibles** para reserva (**US-E4-06**); hardening adicional (observabilidad/worker separado). La **validación de disponibilidad** al fijar cancha/sede/hora está en **US-E2-05**.
 
 ---
 
@@ -179,6 +182,23 @@ Pendiente: reglas de pricing/cobro conectadas a E6 (automatización), “horas v
 **Criterios:** excluye participantes actuales; respeta categoría del partido.
 
 **Estado:** **Done (backend):** endpoint `GET /api/v1/matchmaking/:matchId/suggestions` con estrategia de **similaridad** (cercanía a target Elo/fallback points), exclusión de participantes actuales, `limit` y filtro geo opcional. Tests de integración DB (`s29_*`) listos (condicionales a `TEST_DATABASE_URL`).
+
+---
+
+### US-E2-05 — Validar disponibilidad de cancha al crear o reprogramar partida
+
+**Como** sistema  
+**Quiero** impedir reservas imposibles o inconsistentes en una **sede** y **pista** concretas  
+**Para** proteger al club y al jugador de dobles reservas o datos cruzados.
+
+**Criterios de aceptación**
+
+1. Si el cliente envía `courtId` y `scheduledAt`, debe enviar **`venueId`**; el backend comprueba que la cancha pertenezca a esa sede.
+2. No se crea ni reprograma un partido si ya existe otro en **solape** (ventana de ocupación por defecto, p. ej. 90 min) en la misma cancha en estados activos (`SCHEDULED` / `IN_PROGRESS`).
+3. Si en el mismo instante existe una **`VacantHour` publicada**, el **deporte y la categoría** del partido deben coincidir con la vacante; si no, se rechaza con código estable.
+4. Ante conflicto de solape, la API puede devolver **`conflictingMatchId`** para que el cliente ofrezca unirse u otra acción.
+
+**Estado:** **Done (backend MVP):** casos de uso crear/actualizar partido + tests de integración `e7_02_*` (condicionales a `TEST_DATABASE_URL`).
 
 ---
 
@@ -356,6 +376,25 @@ Pendiente: implementar “distancia exacta” en resultados (si se requiere) y U
 3. Se documenta una política de límites (max radius, max limit, paginación).
 
 **Estado:** No iniciada (backend).
+
+---
+
+### US-E4-06 — Consultar horarios disponibles por sede y por pista
+
+**Como** jugador (o cliente de la app)  
+**Quiero** consultar **qué franjas horarias están libres** en una sede o en una cancha concreta dentro de un rango de fechas  
+**Para** elegir un horario válido al publicar una partida sin ir a prueba y error.
+
+**Criterios de aceptación**
+
+1. Endpoint que acepte **`venueId`** y opcionalmente **`courtId`**, más **`from` / `to`** (ISO date-time) y, si aplica, **deporte/categoría** para cruzar con vacantes publicadas.
+2. La respuesta lista **slots** (granularidad documentada, p. ej. 30 min) **disponibles** u **ocupados**, coherente con la regla de solape de **US-E2-05** (duración de bloque default o parámetro).
+3. OpenAPI + tests de contrato; tests de integración con partidos y `VacantHour` de ejemplo.
+4. Si el MVP solo soporta consulta por **`courtId`** (y `venueId` solo para validación), dejarlo explícito en contrato.
+
+**Estado:** **Pendiente (backend).** *Nota:* la creación de partida ya **valida** disponibilidad; falta el **listado proactivo** de horarios libres.
+
+---
 
 ## 7. Épica E5 — Ranking y resultados
 

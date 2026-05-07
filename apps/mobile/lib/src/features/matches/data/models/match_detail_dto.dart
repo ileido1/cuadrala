@@ -1,16 +1,19 @@
 final class MatchParticipantDto {
   const MatchParticipantDto({
     required this.userId,
+    this.displayName,
     required this.joinedAt,
   });
 
   final String userId;
+  final String? displayName;
   final DateTime joinedAt;
 
   static MatchParticipantDto fromJson(Map<String, Object?> json) {
     final joinedAtRaw = json['joinedAt'] ?? json['createdAt'];
     return MatchParticipantDto(
       userId: json['userId'] as String,
+      displayName: json['displayName'] as String?,
       joinedAt: DateTime.parse(joinedAtRaw as String),
     );
   }
@@ -21,6 +24,7 @@ final class MatchDetailDto {
     required this.id,
     required this.sportId,
     required this.categoryId,
+    this.categoryName,
     required this.type,
     required this.status,
     required this.scheduledAt,
@@ -41,6 +45,7 @@ final class MatchDetailDto {
   final String id;
   final String sportId;
   final String categoryId;
+  final String? categoryName;
   final String type;
   final String status;
   final DateTime? scheduledAt;
@@ -81,6 +86,7 @@ final class MatchDetailDto {
       id: json['id'] as String,
       sportId: json['sportId'] as String,
       categoryId: json['categoryId'] as String,
+      categoryName: json['categoryName'] as String?,
       type: json['type'] as String,
       status: json['status'] as String,
       scheduledAt: json['scheduledAt'] == null

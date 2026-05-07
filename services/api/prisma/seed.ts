@@ -154,39 +154,104 @@ async function seedMatchLifecycle(): Promise<void> {
     ),
   );
 
-  const VENUE = await PRISMA.venue.upsert({
-    where: { placeId: 'seed:venue:club-cuadrala' },
-    create: {
-      name: 'Club Cuadrala (Seed)',
+  const SEED_VENUES: Array<{
+    placeId: string;
+    name: string;
+    formattedAddress: string;
+    addressCity: string;
+    addressCountry: string;
+    latitude: number;
+    longitude: number;
+    courts: string[];
+  }> = [
+    {
       placeId: 'seed:venue:club-cuadrala',
-      formattedAddress: 'Av. Seed 123, Ciudad',
-      addressCity: 'Ciudad',
-      addressCountry: 'AR',
-      latitude: -34.6037,
-      longitude: -58.3816,
-      geocodedAt: new Date(),
+      name: 'Club Cuádrala',
+      formattedAddress: 'Caracas, Venezuela',
+      addressCity: 'Caracas',
+      addressCountry: 'VE',
+      latitude: 10.4806,
+      longitude: -66.9036,
+      courts: ['Cancha 1', 'Cancha 2'],
     },
-    update: {
-      name: 'Club Cuadrala (Seed)',
-      formattedAddress: 'Av. Seed 123, Ciudad',
-      addressCity: 'Ciudad',
-      addressCountry: 'AR',
-      latitude: -34.6037,
-      longitude: -58.3816,
-      geocodedAt: new Date(),
+    {
+      placeId: 'seed:venue:padel-center',
+      name: 'Pádel Center',
+      formattedAddress: 'Chacao, Caracas',
+      addressCity: 'Caracas',
+      addressCountry: 'VE',
+      latitude: 10.4925,
+      longitude: -66.8576,
+      courts: ['Cancha A', 'Cancha B'],
     },
-  });
+    {
+      placeId: 'seed:venue:la-guaira',
+      name: 'Club La Guaira',
+      formattedAddress: 'La Guaira, Venezuela',
+      addressCity: 'La Guaira',
+      addressCountry: 'VE',
+      latitude: 10.5995,
+      longitude: -66.9333,
+      courts: ['Cancha 1'],
+    },
+  ];
 
-  const EXISTING_COURT = await PRISMA.court.findFirst({
-    where: { venueId: VENUE.id, name: 'Pista 1' },
+  const SEEDED_VENUES = await Promise.all(
+    SEED_VENUES.map(async (_v) =>
+      PRISMA.venue.upsert({
+        where: { placeId: _v.placeId },
+        create: {
+          name: _v.name,
+          placeId: _v.placeId,
+          formattedAddress: _v.formattedAddress,
+          addressCity: _v.addressCity,
+          addressCountry: _v.addressCountry,
+          latitude: _v.latitude,
+          longitude: _v.longitude,
+          geocodedAt: new Date(),
+        },
+        update: {
+          name: _v.name,
+          formattedAddress: _v.formattedAddress,
+          addressCity: _v.addressCity,
+          addressCountry: _v.addressCountry,
+          latitude: _v.latitude,
+          longitude: _v.longitude,
+          geocodedAt: new Date(),
+        },
+        select: { id: true, name: true, placeId: true },
+      }),
+    ),
+  );
+
+  // Para el match demo, usa el primer venue y su primera cancha.
+  const VENUE0 = SEEDED_VENUES[0]!;
+  const courtsForVenue0 = SEED_VENUES[0]!.courts;
+
+  await Promise.all(
+    SEEDED_VENUES.map(async (_seeded, _idx) => {
+      const courtNames = SEED_VENUES[_idx]!.courts;
+      await Promise.all(
+        courtNames.map(async (_courtName) => {
+          const existing = await PRISMA.court.findFirst({
+            where: { venueId: _seeded.id, name: _courtName },
+            select: { id: true },
+          });
+          if (existing !== null) return;
+          await PRISMA.court.create({ data: { venueId: _seeded.id, name: _courtName } });
+        }),
+      );
+    }),
+  );
+
+  const COURT_ROW = await PRISMA.court.findFirst({
+    where: { venueId: VENUE0.id, name: courtsForVenue0[0]! },
     select: { id: true },
   });
-  const COURT =
-    EXISTING_COURT ??
-    (await PRISMA.court.create({
-      data: { venueId: VENUE.id, name: 'Pista 1' },
-      select: { id: true },
-    }));
+  if (COURT_ROW === null) {
+    throw new Error('[seed] No se pudo crear/encontrar la cancha seed para el venue principal.');
+  }
+  const COURT = { id: COURT_ROW.id };
 
   const scheduledAt = new Date('2030-01-01T18:00:00.000Z');
 

@@ -80,9 +80,11 @@ class MatchesRepository {
     String? type,
     DateTime? scheduledAt,
     String? courtId,
+    String? venueId,
     String? tournamentId,
     int? pricePerPlayerCents,
     int? maxParticipants,
+    int? durationMinutes,
   }) async {
     final json = await _matchesApi.createMatchEnvelope(
       body: {
@@ -91,9 +93,11 @@ class MatchesRepository {
         if (type != null) 'type': type,
         if (scheduledAt != null) 'scheduledAt': scheduledAt.toIso8601String(),
         if (courtId != null) 'courtId': courtId,
+        if (venueId != null) 'venueId': venueId,
         if (tournamentId != null) 'tournamentId': tournamentId,
         if (pricePerPlayerCents != null) 'pricePerPlayerCents': pricePerPlayerCents,
         if (maxParticipants != null) 'maxParticipants': maxParticipants,
+        if (durationMinutes != null) 'durationMinutes': durationMinutes,
       },
     );
     final data = json['data'];

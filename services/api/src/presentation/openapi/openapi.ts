@@ -433,6 +433,8 @@ const OPENAPI_CONST = {
                   type: { type: 'string', enum: ['AMERICANO', 'REGULAR'] },
                   scheduledAt: { type: 'string', format: 'date-time' },
                   courtId: { type: 'string', format: 'uuid' },
+                  venueId: { type: 'string', format: 'uuid' },
+                  durationMinutes: { type: 'integer', minimum: 1, maximum: 1440 },
                   tournamentId: { type: 'string', format: 'uuid' },
                   pricePerPlayerCents: { type: 'integer', minimum: 0, maximum: 100000000 },
                   maxParticipants: { type: 'integer', minimum: 2, maximum: 100 },
@@ -445,6 +447,7 @@ const OPENAPI_CONST = {
           '201': { description: 'Creado' },
           '400': { description: 'Validación fallida' },
           '401': { description: 'No autorizado' },
+          '409': { description: 'Conflicto (cancha u horario)' },
         },
       },
     },
@@ -477,6 +480,8 @@ const OPENAPI_CONST = {
                 properties: {
                   scheduledAt: { type: ['string', 'null'], format: 'date-time' },
                   courtId: { type: ['string', 'null'], format: 'uuid' },
+                  venueId: { type: 'string', format: 'uuid' },
+                  durationMinutes: { type: 'integer', minimum: 1, maximum: 1440 },
                   pricePerPlayerCents: { type: 'integer', minimum: 0, maximum: 100000000 },
                   maxParticipants: { type: 'integer', minimum: 2, maximum: 100 },
                 },
@@ -1810,6 +1815,116 @@ const OPENAPI_CONST = {
           '401': { description: 'No autorizado' },
           '404': { description: 'No encontrado' },
           '501': { description: 'Proveedor no configurado' },
+        },
+      },
+    },
+    '/api/v1/venues': {
+      get: {
+        tags: ['Venues'],
+        summary: 'Listar sedes',
+        parameters: [
+          { name: 'near', in: 'query', required: false, schema: { type: 'string', example: '10.1,-70.2' } },
+          { name: 'radiusKm', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 10 } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+        },
+      },
+    },
+    '/api/v1/venues/{venueId}/courts': {
+      get: {
+        tags: ['Venues'],
+        summary: 'Listar canchas por sede',
+        parameters: [
+          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+        },
+      },
+    },
+    '/api/v1/venues/{venueId}/availability': {
+      get: {
+        tags: ['Venues'],
+        summary: 'Consultar slots disponibles por sede/cancha',
+        parameters: [
+          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'courtId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'from', in: 'query', required: true, schema: { type: 'string', format: 'date-time' } },
+          { name: 'to', in: 'query', required: true, schema: { type: 'string', format: 'date-time' } },
+          { name: 'durationMinutes', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 1440, default: 90 } },
+          { name: 'stepMinutes', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 1440, default: 30 } },
+          { name: 'sportId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      required: ['venueId', 'from', 'to', 'durationMinutes', 'stepMinutes', 'courts'],
+                      properties: {
+                        venueId: { type: 'string', format: 'uuid' },
+                        from: { type: 'string', format: 'date-time' },
+                        to: { type: 'string', format: 'date-time' },
+                        durationMinutes: { type: 'integer' },
+                        stepMinutes: { type: 'integer' },
+                        courts: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            required: ['court', 'slots'],
+                            properties: {
+                              court: {
+                                type: 'object',
+                                required: ['id', 'venueId', 'name'],
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  venueId: { type: 'string', format: 'uuid' },
+                                  name: { type: 'string' },
+                                },
+                              },
+                              slots: {
+                                type: 'array',
+                                items: {
+                                  type: 'object',
+                                  required: ['scheduledAt', 'isAvailable'],
+                                  properties: {
+                                    scheduledAt: { type: 'string', format: 'date-time' },
+                                    isAvailable: { type: 'boolean' },
+                                    reason: {
+                                      type: 'string',
+                                      enum: ['OCCUPIED_MATCH', 'INCOMPATIBLE_VACANT_HOUR', 'OUT_OF_RANGE'],
+                                    },
+                                  },
+                                  additionalProperties: false,
+                                },
+                              },
+                            },
+                            additionalProperties: false,
+                          },
+                        },
+                      },
+                      additionalProperties: false,
+                    },
+                  },
+                  additionalProperties: false,
+                },
+              },
+            },
+          },
+          '400': { description: 'Validación fallida' },
         },
       },
     },

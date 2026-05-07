@@ -20,6 +20,7 @@ import '../features/monetization/presentation/waiting_confirmation_screen.dart';
 import '../features/notifications/presentation/notification_detail_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
+import '../features/tournaments/presentation/create_tournament_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
 import 'auth_redirect.dart';
 import 'go_router_refresh_stream.dart';
@@ -139,6 +140,10 @@ final class AppRouter {
                   matchTitle: title,
                 );
               },
+            ),
+            GoRoute(
+              path: Routes.createTournament,
+              builder: (context, state) => const CreateTournamentScreen(),
             ),
             GoRoute(
               path: '/tournaments/:tournamentId',

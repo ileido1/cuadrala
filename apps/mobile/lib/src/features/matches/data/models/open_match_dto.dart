@@ -3,6 +3,7 @@ final class OpenMatchDto {
     required this.id,
     required this.sportId,
     required this.categoryId,
+    this.categoryName,
     required this.status,
     required this.scheduledAt,
     required this.pricePerPlayerCents,
@@ -17,6 +18,7 @@ final class OpenMatchDto {
   final String id;
   final String sportId;
   final String categoryId;
+  final String? categoryName;
   final String status;
   final DateTime? scheduledAt;
   final int pricePerPlayerCents;
@@ -32,6 +34,7 @@ final class OpenMatchDto {
       id: json['id'] as String,
       sportId: json['sportId'] as String,
       categoryId: json['categoryId'] as String,
+      categoryName: json['categoryName'] as String?,
       status: json['status'] as String,
       scheduledAt: _parseDate(json['scheduledAt']),
       pricePerPlayerCents: (json['pricePerPlayerCents'] as num).toInt(),

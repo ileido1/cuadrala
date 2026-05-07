@@ -12,6 +12,7 @@ function toListItemDTO(_row: {
   id: string;
   sportId: string;
   categoryId: string;
+  category: { name: string } | null;
   type: 'AMERICANO' | 'REGULAR';
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
   scheduledAt: Date | null;
@@ -25,6 +26,7 @@ function toListItemDTO(_row: {
     id: _row.id,
     sportId: _row.sportId,
     categoryId: _row.categoryId,
+    ...(_row.category !== null ? { categoryName: _row.category.name } : {}),
     type: _row.type,
     status: _row.status,
     scheduledAt: _row.scheduledAt,
@@ -68,6 +70,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
           id: true,
           sportId: true,
           categoryId: true,
+          category: { select: { name: true } },
           type: true,
           status: true,
           scheduledAt: true,
@@ -88,6 +91,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
         id: true,
         sportId: true,
         categoryId: true,
+        category: { select: { name: true } },
         type: true,
         status: true,
         scheduledAt: true,
@@ -113,7 +117,11 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
         updatedAt: true,
         _count: { select: { participants: true } },
         participants: {
-          select: { userId: true, createdAt: true },
+          select: {
+            userId: true,
+            createdAt: true,
+            user: { select: { name: true } },
+          },
           orderBy: [{ createdAt: 'asc' }],
         },
       },
@@ -138,7 +146,11 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
       ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
       ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
       tournamentId: ROW.tournamentId,
-      participants: ROW.participants.map((_p) => ({ userId: _p.userId, joinedAt: _p.createdAt })),
+      participants: ROW.participants.map((_p) => ({
+        userId: _p.userId,
+        displayName: _p.user.name,
+        joinedAt: _p.createdAt,
+      })),
       createdAt: ROW.createdAt,
       updatedAt: ROW.updatedAt,
     };

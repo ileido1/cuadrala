@@ -40,16 +40,37 @@ export const CREATE_MATCH_BODY_SCHEMA = z
     type: z.enum(['AMERICANO', 'REGULAR']).optional(),
     scheduledAt: z.string().datetime({ offset: true }).optional(),
     courtId: z.string().uuid('courtId debe ser un UUID valido.').optional(),
+    venueId: z.string().uuid('venueId debe ser un UUID valido.').optional(),
+    durationMinutes: z.coerce.number().int().min(1).max(24 * 60).optional(),
     tournamentId: z.string().uuid('tournamentId debe ser un UUID valido.').optional(),
     pricePerPlayerCents: z.coerce.number().int().min(0).max(100_000_000).optional(),
     maxParticipants: z.coerce.number().int().min(2).max(100).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((_data, _ctx) => {
+    const HAS_COURT = _data.courtId !== undefined;
+    const HAS_SCHED = _data.scheduledAt !== undefined;
+    if (HAS_COURT !== HAS_SCHED) {
+      _ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'courtId y scheduledAt deben enviarse juntos.',
+      });
+      return;
+    }
+    if (HAS_COURT && _data.venueId === undefined) {
+      _ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'venueId es obligatorio al reservar una cancha.',
+      });
+    }
+  });
 
 export const UPDATE_MATCH_BODY_SCHEMA = z
   .object({
     scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
     courtId: z.string().uuid('courtId debe ser un UUID valido.').nullable().optional(),
+    venueId: z.string().uuid('venueId debe ser un UUID valido.').optional(),
+    durationMinutes: z.coerce.number().int().min(1).max(24 * 60).optional(),
     pricePerPlayerCents: z.coerce.number().int().min(0).max(100_000_000).optional(),
     maxParticipants: z.coerce.number().int().min(2).max(100).optional(),
   })

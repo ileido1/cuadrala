@@ -10,6 +10,7 @@ import { ListMatchesUseCase } from '../../application/use_cases/list_matches.use
 import { UpdateMatchUseCase } from '../../application/use_cases/update_match.use_case.js';
 import { PrismaMatchNotificationContextReadRepository } from '../../infrastructure/adapters/prisma_match_notification_context_read_repository.js';
 import { PrismaMatchRepository } from '../../infrastructure/adapters/prisma_match_repository.js';
+import { PrismaMatchCourtAvailabilityRepository } from '../../infrastructure/adapters/prisma_match_court_availability_repository.js';
 import { PrismaMatchCrudRepository } from '../../infrastructure/adapters/prisma_match_crud_repository.js';
 import { PrismaMatchOrganizerRepository } from '../../infrastructure/adapters/prisma_match_organizer_repository.js';
 import { PrismaMatchParticipationRepository } from '../../infrastructure/adapters/prisma_match_participation_repository.js';
@@ -23,6 +24,7 @@ const MATCH_REPOSITORY = new PrismaMatchRepository();
 const MATCH_READ_REPOSITORY = new PrismaMatchReadRepository();
 const MATCH_QUERY_REPOSITORY = new PrismaMatchQueryRepository();
 const MATCH_CRUD_REPOSITORY = new PrismaMatchCrudRepository();
+const MATCH_COURT_AVAILABILITY_REPOSITORY = new PrismaMatchCourtAvailabilityRepository();
 const MATCH_ORGANIZER_REPOSITORY = new PrismaMatchOrganizerRepository();
 const MATCH_PARTICIPATION_REPOSITORY = new PrismaMatchParticipationRepository();
 const MATCH_STATUS_REPOSITORY = new PrismaMatchStatusRepository();
@@ -57,11 +59,15 @@ export const FINISH_MATCH_UC = new FinishMatchUseCase(
 
 export const LIST_MATCHES_UC = new ListMatchesUseCase(MATCH_QUERY_REPOSITORY);
 export const GET_MATCH_UC = new GetMatchUseCase(MATCH_QUERY_REPOSITORY);
-export const CREATE_MATCH_UC = new CreateMatchUseCase(MATCH_CRUD_REPOSITORY);
+export const CREATE_MATCH_UC = new CreateMatchUseCase(
+  MATCH_CRUD_REPOSITORY,
+  MATCH_COURT_AVAILABILITY_REPOSITORY,
+);
 export const UPDATE_MATCH_UC = new UpdateMatchUseCase(
   MATCH_QUERY_REPOSITORY,
   MATCH_ORGANIZER_REPOSITORY,
   MATCH_CRUD_REPOSITORY,
+  MATCH_COURT_AVAILABILITY_REPOSITORY,
 );
 export const CANCEL_MATCH_UC = new CancelMatchUseCase(
   MATCH_QUERY_REPOSITORY,

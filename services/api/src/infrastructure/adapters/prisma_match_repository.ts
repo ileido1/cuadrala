@@ -16,6 +16,7 @@ function computeOpenMatchDTO(_row: {
   pricePerPlayerCents: number;
   maxParticipants: number;
   _count: { participants: number };
+  category: { name: string } | null;
   court: null | {
     name: string;
     venue: {
@@ -43,6 +44,7 @@ function computeOpenMatchDTO(_row: {
     id: _row.id,
     sportId: _row.sportId,
     categoryId: _row.categoryId,
+    ...(_row.category !== null ? { categoryName: _row.category.name } : {}),
     status: _row.status,
     scheduledAt: _row.scheduledAt,
     pricePerPlayerCents: _row.pricePerPlayerCents,
@@ -123,6 +125,7 @@ export class PrismaMatchRepository implements MatchRepository {
           id: true,
           sportId: true,
           categoryId: true,
+          category: { select: { name: true } },
           status: true,
           scheduledAt: true,
           pricePerPlayerCents: true,

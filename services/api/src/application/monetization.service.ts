@@ -195,6 +195,7 @@ export async function listUserTransactionsSV(
   transactions: {
     id: string;
     matchId: string;
+    userId: string;
     amountBase: string;
     feeAmount: string;
     amountTotal: string;
@@ -216,6 +217,7 @@ export async function listUserTransactionsSV(
     transactions: ROWS.map((_r) => ({
       id: _r.id,
       matchId: _r.matchId,
+      userId: _r.userId,
       amountBase: _r.amountBase.toString(),
       feeAmount: _r.feeAmount.toString(),
       amountTotal: _r.amountTotal.toString(),

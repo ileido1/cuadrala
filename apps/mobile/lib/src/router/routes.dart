@@ -10,6 +10,7 @@ final class Routes {
   static String matchResult(String matchId) => '/matches/$matchId/result';
   static String matchChat(String matchId) => '/matches/$matchId/chat';
   static const tournaments = '/tournaments';
+  static const createTournament = '/tournaments/create';
   static const notifications = '/notifications';
 
   static String matchDetail(String matchId) => '/matches/$matchId';

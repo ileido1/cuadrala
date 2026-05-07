@@ -9,6 +9,7 @@ import '../network/api_client.dart';
 import '../network/auth_token_interceptor.dart';
 import '../network/inject_dio_extra_interceptor.dart';
 import '../storage/flutter_secure_token_storage.dart';
+import '../storage/saved_clubs_repository.dart';
 import '../../features/auth/data/auth_api.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/secure_token_storage.dart';
@@ -25,11 +26,22 @@ import '../../features/matches/data/matches_repository.dart';
 import '../../features/matches/presentation/cubit/open_matches_cubit.dart';
 import '../../features/monetization/data/monetization_api.dart';
 import '../../features/monetization/data/monetization_repository.dart';
+import '../../features/notifications/data/notifications_api.dart';
+import '../../features/notifications/data/notifications_repository.dart';
 import '../../features/onboarding/data/onboarding_api.dart';
 import '../../features/onboarding/data/onboarding_repository.dart';
 import '../../features/onboarding/presentation/cubit/onboarding_cubit.dart';
+import '../../features/notifications/presentation/cubit/notifications_cubit.dart';
 import '../../features/profile/data/profile_api.dart';
 import '../../features/profile/data/profile_repository.dart';
+import '../../features/tournaments/data/tournaments_api.dart';
+import '../../features/tournaments/data/tournaments_repository.dart';
+import '../../features/tournaments/presentation/cubit/create_tournament_cubit.dart';
+import '../../features/tournaments/presentation/cubit/tournament_presets_cubit.dart';
+import '../../features/tournaments/presentation/cubit/tournament_schedule_cubit.dart';
+import '../../features/tournaments/presentation/cubit/tournament_scoreboard_cubit.dart';
+import '../../features/venues/data/venues_api.dart';
+import '../../features/venues/data/venues_repository.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -60,6 +72,10 @@ Future<void> setupDependencies() async {
 
   getIt.registerLazySingleton<SecureTokenStorage>(
     () => FlutterSecureTokenStorage(secureStorage: getIt<FlutterSecureStorage>()),
+  );
+
+  getIt.registerLazySingleton<SavedClubsRepository>(
+    () => SavedClubsRepository(secureStorage: getIt<FlutterSecureStorage>()),
   );
 
   getIt.registerLazySingleton<ApiClient>(
@@ -102,6 +118,9 @@ Future<void> setupDependencies() async {
     ),
   );
 
+  getIt.registerLazySingleton<VenuesApi>(() => DioVenuesApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<VenuesRepository>(() => VenuesRepository(venuesApi: getIt<VenuesApi>()));
+
   getIt.registerLazySingleton<ProfileApi>(() => DioProfileApi(apiClient: getIt<ApiClient>()));
   getIt.registerLazySingleton<ProfileRepository>(
     () => ProfileRepository(profileApi: getIt<ProfileApi>()),
@@ -120,6 +139,16 @@ Future<void> setupDependencies() async {
       monetizationApi: getIt<MonetizationApi>(),
       profileRepository: getIt<ProfileRepository>(),
     ),
+  );
+
+  getIt.registerLazySingleton<NotificationsApi>(
+    () => DioNotificationsApi(apiClient: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<NotificationsRepository>(
+    () => NotificationsRepository(api: getIt<NotificationsApi>()),
+  );
+  getIt.registerFactory<NotificationsCubit>(
+    () => NotificationsCubit(repository: getIt<NotificationsRepository>()),
   );
 
   getIt.registerLazySingleton<OnboardingApi>(
@@ -157,6 +186,32 @@ Future<void> setupDependencies() async {
 
   getIt.registerFactory<OpenMatchesCubit>(
     () => OpenMatchesCubit(matchesRepository: getIt<MatchesRepository>()),
+  );
+
+  getIt.registerLazySingleton<TournamentsApi>(
+    () => DioTournamentsApi(apiClient: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<TournamentsRepository>(
+    () => TournamentsRepository(tournamentsApi: getIt<TournamentsApi>()),
+  );
+
+  getIt.registerFactory<CreateTournamentCubit>(
+    () => CreateTournamentCubit(tournamentsRepository: getIt<TournamentsRepository>()),
+  );
+  getIt.registerFactory<TournamentPresetsCubit>(
+    () => TournamentPresetsCubit(tournamentsRepository: getIt<TournamentsRepository>()),
+  );
+  getIt.registerFactoryParam<TournamentScheduleCubit, String, void>(
+    (tournamentId, _) => TournamentScheduleCubit(
+      tournamentsRepository: getIt<TournamentsRepository>(),
+      tournamentId: tournamentId,
+    ),
+  );
+  getIt.registerFactoryParam<TournamentScoreboardCubit, String, void>(
+    (tournamentId, _) => TournamentScoreboardCubit(
+      tournamentsRepository: getIt<TournamentsRepository>(),
+      tournamentId: tournamentId,
+    ),
   );
 }
 

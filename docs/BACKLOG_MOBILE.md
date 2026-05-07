@@ -4,6 +4,9 @@
 
 **UI baseline**: ver `.cursor/rules/flutter-ui-design-system-cuadrala.mdc`.
 
+> **Nota (fuente de verdad):** el backlog + estado (Front/Back) y la planificación por sprints se consolidó en `docs/BACKLOG_UNIFICADO.md`.
+> Este archivo queda como **histórico**; sus “Estado:” pueden estar desactualizados.
+
 ---
 
 ## 1) Principios (Mobile)
@@ -47,6 +50,8 @@
 3. Deep link interno (ruta) funciona para: detalle de partida, detalle de torneo, notificaciones.
 
 **Estado:** Not started (mobile)
+
+> Nota de tracking: el shell con 5 tabs ya existe en `ShellScreen`; se sigue refinando para alinearlo al mockup (header + estilo bottom nav + tabs no-placeholder).
 
 ---
 
@@ -163,7 +168,7 @@
 2. Cards con: deporte, club/cancha, fecha/hora, precio, cupos, CTA “Unirse”.
 3. Paginación/infinite scroll + loading/empty/error.
 
-**Estado:** Not started (mobile)
+**Estado:** **In Progress (mobile)** — listado + búsqueda + chips base + infinite scroll implementados; ajustes UI en curso para alinear a mock (header sticky + FAB + chips).
 
 ---
 
@@ -273,6 +278,35 @@
 3. Si no hay endpoint de invitación, mostrar CTA “Compartir link” como alternativa.
 
 **Estado:** Not started (mobile)
+
+---
+
+#### US-M3-08 — Horarios disponibles al crear partida
+**Como** organizador  
+**Quiero** ver **qué horarios están libres** en la sede y pista que elegí  
+**Para** publicar la partida sin rechazos por solape.
+
+**Endpoints** *(plan — ver `US-E4-06` en `docs/BACKLOG.md`)*
+- Por definir: p. ej. `GET /api/v1/venues/:venueId/court-availability` o variante con `courtId` + `from`/`to`.
+
+**Criterios de aceptación**
+1. Tras seleccionar sede y cancha, la UI ofrece horarios **basados en la API** (no solo date/time picker libre), con loading/vacío/error.
+2. Coherencia con validación existente en `POST /matches` (`venueId`, `courtId`, `scheduledAt`).
+
+**Estado:** Pendiente (mobile) — **Sprint M19** (ver `docs/BACKLOG_UNIFICADO.md`).
+
+---
+
+#### US-M3-09 — UX ante conflicto de reserva *(opcional M19)*
+**Como** organizador  
+**Quiero** entender cuando la cancha **no está disponible** y qué puedo hacer  
+**Para** decidir si me uno a otro partido o cambio horario.
+
+**Criterios de aceptación**
+1. Mapear códigos `CANCHA_OCUPADA`, `HORARIO_RESERVA_INCOMPATIBLE`, `CANCHA_NO_EN_SEDE` a mensajes claros.
+2. Si la API devuelve `details.conflictingMatchId`, ofrecer CTA (abrir detalle / unirse).
+
+**Estado:** Pendiente (mobile)
 
 ---
 
@@ -392,15 +426,15 @@
 
 **Endpoints**
 - `GET /api/v1/users/me/notifications`
-- `POST /api/v1/users/me/notifications/{deliveryId}/read`
-- `POST /api/v1/users/me/notifications/read-all`
+- `PATCH /api/v1/users/me/notifications/{deliveryId}/read`
+- `PATCH /api/v1/users/me/notifications/read-all`
 
 **Criterios de aceptación**
 1. Lista con tabs (Todas / No leídas), unread dot.
 2. “Marcar leídas” por item y “Marcar todas”.
 3. Estados loading/empty/error.
 
-**Estado:** Not started (mobile)
+**Estado:** **In Progress (mobile)** — pantalla implementada (tabs Todas/No leídas, marcar todas, marcar una). Pendiente: detalle real (deep-link/payload) y tests específicos del feature.
 
 ---
 

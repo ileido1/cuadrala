@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/failures/app_failure.dart';
 import '../../../router/routes.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models/category_dto.dart';
 import '../../catalog/data/models/sport_dto.dart';
+import '../../venues/data/models/court_dto.dart';
+import '../../venues/data/models/venue_dto.dart';
+import '../../venues/data/venues_repository.dart';
 import '../data/matches_repository.dart';
 
 final class CreateMatchScreen extends StatefulWidget {
@@ -17,7 +21,12 @@ final class CreateMatchScreen extends StatefulWidget {
 
 class _CreateMatchScreenState extends State<CreateMatchScreen> {
   final _clubController = TextEditingController();
+  final _courtController = TextEditingController();
   final _notesController = TextEditingController();
+
+  List<VenueDto> _venues = const [];
+  VenueDto? _selectedVenue;
+  CourtDto? _selectedCourt;
 
   List<SportDto> _sports = const [];
   String? _selectedSportId;
@@ -28,7 +37,11 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   int _pricePerPlayer = 4500;
 
   DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = const TimeOfDay(hour: 20, minute: 0);
+  DateTime? _selectedSlotUtc;
+
+  bool _availabilityLoading = false;
+  Object? _availabilityError;
+  List<DateTime> _availableSlotsUtc = const [];
 
   bool _loading = true;
   bool _submitting = false;
@@ -36,6 +49,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   @override
   void dispose() {
     _clubController.dispose();
+    _courtController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -53,9 +67,11 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       final results = await Future.wait([
         catalog.listSports(),
         catalog.listCategories(),
+        getIt<VenuesRepository>().listVenues(limit: 100),
       ]);
       final sports = results[0] as List<SportDto>;
       final categories = results[1] as List<CategoryDto>;
+      final venues = results[2] as List<VenueDto>;
       String? selectedSport = sports.isEmpty ? null : sports.first.id;
       for (final s in sports) {
         if (s.code.toUpperCase() == 'PADEL') {
@@ -69,6 +85,9 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         _selectedSportId = selectedSport;
         _categories = categories;
         _categoryId = categories.isEmpty ? null : categories.first.id;
+        _venues = venues;
+        _selectedVenue = null;
+        _selectedCourt = null;
         _loading = false;
       });
     } catch (_) {
@@ -78,9 +97,191 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         _selectedSportId = null;
         _categories = const [];
         _categoryId = null;
+        _venues = const [];
+        _selectedVenue = null;
+        _selectedCourt = null;
         _loading = false;
       });
     }
+  }
+
+  Future<void> _pickVenueAndCourt() async {
+    final selectedVenue = await showModalBottomSheet<VenueDto>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Selecciona una sede',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                ),
+                const SizedBox(height: 10),
+                if (_venues.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+                    ),
+                    child: Text(
+                      'Aún no hay sedes disponibles.\nIntenta más tarde o cambia tu ubicación.',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _venues.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final v = _venues[i];
+                        return ListTile(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          tileColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+                          title: Text(
+                            v.name,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: v.address == null
+                              ? null
+                              : Text(
+                                  v.address!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                          leading: Icon(Icons.location_on_outlined, color: scheme.primary),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.of(context).pop(v),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedVenue == null) return;
+    if (!mounted) return;
+
+    final selectedCourt = await showModalBottomSheet<CourtDto>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Canchas — ${selectedVenue.name}',
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                ),
+                const SizedBox(height: 10),
+                FutureBuilder<List<CourtDto>>(
+                  future: getIt<VenuesRepository>().listVenueCourts(venueId: selectedVenue.id),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: scheme.error.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: scheme.error.withValues(alpha: 0.25)),
+                        ),
+                        child: Text(
+                          'No se pudieron cargar las canchas.\n${snapshot.error}',
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            height: 1.35,
+                          ),
+                        ),
+                      );
+                    }
+                    final courts = snapshot.data ?? const <CourtDto>[];
+                    if (courts.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+                        ),
+                        child: Text(
+                          'Esta sede no tiene canchas registradas.\nCrea canchas en el backend para poder publicarla.',
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            height: 1.35,
+                          ),
+                        ),
+                      );
+                    }
+                    return Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: courts.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, i) {
+                          final c = courts[i];
+                          return ListTile(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            tileColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+                            title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+                            leading: Icon(Icons.sports_tennis_outlined, color: scheme.primary),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => Navigator.of(context).pop(c),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedCourt == null) return;
+    setState(() {
+      _selectedVenue = selectedVenue;
+      _selectedCourt = selectedCourt;
+      _clubController.text = selectedVenue.name;
+      _courtController.text = selectedCourt.name;
+      _selectedSlotUtc = null;
+    });
+    await _refreshAvailability();
   }
 
   Future<void> _pickDate() async {
@@ -91,26 +292,89 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked == null) return;
-    setState(() => _selectedDate = picked);
+    setState(() {
+      _selectedDate = picked;
+      _selectedSlotUtc = null;
+    });
+    await _refreshAvailability();
   }
 
-  Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-    );
-    if (picked == null) return;
-    setState(() => _selectedTime = picked);
+  DateTime _availabilityFromUtc() {
+    return DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 6).toUtc();
   }
 
-  DateTime _scheduledAt() {
-    return DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-      _selectedTime.hour,
-      _selectedTime.minute,
-    );
+  DateTime _availabilityToUtc() {
+    return DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 23, 59).toUtc();
+  }
+
+  Future<void> _refreshAvailability() async {
+    final venueId = _selectedVenue?.id;
+    final courtId = _selectedCourt?.id;
+    if (venueId == null || courtId == null) {
+      if (!mounted) return;
+      setState(() {
+        _availabilityLoading = false;
+        _availabilityError = null;
+        _availableSlotsUtc = const [];
+      });
+      return;
+    }
+
+    setState(() {
+      _availabilityLoading = true;
+      _availabilityError = null;
+      _availableSlotsUtc = const [];
+    });
+
+    try {
+      final sportId = _selectedSportId;
+      final categoryId = _categoryId;
+      final data = await getIt<VenuesRepository>().getVenueAvailability(
+        venueId: venueId,
+        courtId: courtId,
+        from: _availabilityFromUtc(),
+        to: _availabilityToUtc(),
+        durationMinutes: 90,
+        stepMinutes: 30,
+        sportId: sportId,
+        categoryId: categoryId,
+      );
+
+      final courtsRaw = data['courts'];
+      if (courtsRaw is! List) {
+        throw Exception('Respuesta inválida: courts');
+      }
+      final mappedCourts = courtsRaw.whereType<Map<String, Object?>>().toList();
+      if (mappedCourts.isEmpty) {
+        throw Exception('Respuesta inválida: sin courts');
+      }
+      final courtEntry = mappedCourts.first;
+      final slotsRaw = courtEntry['slots'];
+      if (slotsRaw is! List) {
+        throw Exception('Respuesta inválida: slots');
+      }
+
+      final available = <DateTime>[];
+      for (final s in slotsRaw.whereType<Map<String, Object?>>()) {
+        if (s['isAvailable'] == true && s['scheduledAt'] is String) {
+          available.add(DateTime.parse(s['scheduledAt'] as String));
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _availabilityLoading = false;
+        _availabilityError = null;
+        _availableSlotsUtc = available;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _availabilityLoading = false;
+        _availabilityError = e;
+        _availableSlotsUtc = const [];
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -130,11 +394,34 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
     setState(() => _submitting = true);
     try {
+      final courtId = _selectedCourt?.id;
+      final venueId = _selectedVenue?.id;
+      if (courtId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecciona una sede y una cancha.')),
+        );
+        return;
+      }
+      if (venueId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecciona una sede.')),
+        );
+        return;
+      }
+      final slotUtc = _selectedSlotUtc;
+      if (slotUtc == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecciona un horario disponible.')),
+        );
+        return;
+      }
       final created = await getIt<MatchesRepository>().createMatch(
         sportId: sportId,
         categoryId: _categoryId!,
         type: 'REGULAR',
-        scheduledAt: _scheduledAt().toUtc(),
+        scheduledAt: slotUtc,
+        courtId: courtId,
+        venueId: venueId,
         maxParticipants: _players,
         pricePerPlayerCents: _pricePerPlayer * 100,
       );
@@ -142,12 +429,87 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       context.go(Routes.matchDetail(created.id));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo publicar: $e')),
+      if (e is AppFailure) {
+        await _showCreateMatchFailureDialog(e);
+        return;
+      }
+      await _showCreateMatchFailureDialog(
+        AppFailure(code: 'UNKNOWN', message: 'No se pudo publicar la partida.', details: e),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Future<void> _showCreateMatchFailureDialog(AppFailure failure) {
+    final scheme = Theme.of(context).colorScheme;
+
+    String title = 'No se pudo publicar';
+    String message = failure.message;
+
+    String? conflictingMatchId;
+    final details = failure.details;
+    if (details is Map) {
+      final raw = details['conflictingMatchId'];
+      if (raw is String && raw.isNotEmpty) conflictingMatchId = raw;
+    }
+
+    switch (failure.code) {
+      case 'CANCHA_OCUPADA':
+        title = 'Cancha ocupada';
+        message =
+            'La cancha ya tiene un partido en ese horario. Elige otra hora o revisa la partida existente.';
+        break;
+      case 'HORARIO_RESERVA_INCOMPATIBLE':
+        title = 'Horario no disponible';
+        message =
+            'Ese horario está publicado para otra categoría o deporte. Cambia el horario o ajusta la categoría.';
+        break;
+      case 'CANCHA_NO_EN_SEDE':
+        title = 'Cancha inválida';
+        message =
+            'La cancha no pertenece a la sede seleccionada. Vuelve a elegir sede y cancha.';
+        break;
+      default:
+        break;
+    }
+
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          content: SelectableText.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: message),
+                if (conflictingMatchId != null) ...[
+                  const TextSpan(text: '\n\n'),
+                  TextSpan(
+                    text: 'Partido en conflicto: $conflictingMatchId',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            if (conflictingMatchId != null)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.go(Routes.matchDetail(conflictingMatchId!));
+                },
+                child: const Text('Ver partido'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -198,15 +560,38 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         const SizedBox(height: 16),
                         _SectionCard(
                           title: 'Sede / Cancha',
-                          footer:
-                              'MVP: búsqueda de sedes llega en M9 (Geo/Sedes).',
-                          child: TextField(
-                            controller: _clubController,
-                            enabled: false,
-                            decoration: const InputDecoration(
-                              prefixIcon: Icon(Icons.location_on_outlined),
-                              hintText: 'Buscar club…',
-                            ),
+                          footer: _selectedCourt == null
+                              ? 'Selecciona una sede y una cancha para publicar.'
+                              : (_selectedVenue?.address == null || _selectedVenue!.address!.trim().isEmpty)
+                                  ? null
+                                  : _selectedVenue!.address!,
+                          child: Column(
+                            children: [
+                              TextField(
+                                controller: _clubController,
+                                textInputAction: TextInputAction.next,
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.location_on_outlined),
+                                  hintText: 'Selecciona una sede…',
+                                  suffixIcon: IconButton(
+                                    tooltip: 'Elegir sede/cancha',
+                                    onPressed: _pickVenueAndCourt,
+                                    icon: const Icon(Icons.list_alt_outlined),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              TextField(
+                                controller: _courtController,
+                                textInputAction: TextInputAction.done,
+                                readOnly: true,
+                                decoration: const InputDecoration(
+                                  prefixIcon: Icon(Icons.sports_tennis_outlined),
+                                  hintText: 'Selecciona una cancha…',
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -225,12 +610,52 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: _SectionCard(
-                                title: 'Hora',
-                                child: _CompactButton(
-                                  icon: Icons.schedule,
-                                  label: _selectedTime.format(context),
-                                  onTap: _pickTime,
-                                ),
+                                title: 'Horario',
+                                child: _availabilityLoading
+                                    ? const Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 6),
+                                        child: Center(child: CircularProgressIndicator()),
+                                      )
+                                    : _selectedVenue == null || _selectedCourt == null
+                                        ? const Text(
+                                            'Selecciona sede/cancha',
+                                            style: TextStyle(fontWeight: FontWeight.w700),
+                                          )
+                                        : _availabilityError != null
+                                            ? Text(
+                                                'No disponible',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w900,
+                                                  color: scheme.error,
+                                                ),
+                                              )
+                                            : _availableSlotsUtc.isEmpty
+                                                ? const Text(
+                                                    'Sin horarios',
+                                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                                  )
+                                                : Wrap(
+                                                    spacing: 8,
+                                                    runSpacing: 8,
+                                                    children: _availableSlotsUtc.map((slotUtc) {
+                                                      final local = slotUtc.toLocal();
+                                                      final label =
+                                                          '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+                                                      final selected = _selectedSlotUtc == slotUtc;
+                                                      return ChoiceChip(
+                                                        label: Text(
+                                                          label,
+                                                          style: const TextStyle(fontWeight: FontWeight.w900),
+                                                        ),
+                                                        selected: selected,
+                                                        onSelected: (_) => setState(() => _selectedSlotUtc = slotUtc),
+                                                        selectedColor: scheme.primary,
+                                                        labelStyle: TextStyle(
+                                                          color: selected ? scheme.onPrimary : scheme.onSurface,
+                                                        ),
+                                                      );
+                                                    }).toList(),
+                                                  ),
                               ),
                             ),
                           ],

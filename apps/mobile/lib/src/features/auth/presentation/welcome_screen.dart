@@ -107,53 +107,51 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 26),
                   Center(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(28),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        width: 96,
-                        height: 96,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 96,
-                          height: 96,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(28),
-                            color: scheme.primary,
+                    child: Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        color: scheme.primary,
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: scheme.primary.withValues(alpha: 0.24),
+                            blurRadius: 22,
+                            offset: const Offset(0, 12),
                           ),
-                          child: Text(
-                            'C',
-                            style: TextStyle(
-                              color: scheme.onPrimary,
-                              fontSize: 44,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.emoji_events_outlined,
+                        color: Colors.white,
+                        size: 34,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 12),
                   const Text(
                     'Cuádrala',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
                     'Arma partidas, paga y juega.\nCero grupos de WhatsApp.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: scheme.onSurfaceVariant,
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 28),
                   _SocialButton(
                     icon: Icons.g_translate,
                     label: 'Continuar con Google',
@@ -201,11 +199,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   const SizedBox(height: 22),
                   FilledButton(
                     onPressed: _isLoading ? null : () => context.go(Routes.register),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                    ),
                     child: const Text('Crear cuenta con email'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: _isLoading ? null : () => context.go(Routes.login),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                    ),
                     child: const Text('Ya tengo cuenta'),
                   ),
                   const SizedBox(height: 24),

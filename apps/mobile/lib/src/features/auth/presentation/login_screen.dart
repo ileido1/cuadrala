@@ -69,7 +69,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     title: 'Bienvenido de vuelta',
                     subtitle: 'Inicia sesión para seguir cuadrando partidas.',
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
+                  _AuthTabs(isLogin: true, isDisabled: isLoading),
+                  const SizedBox(height: 18),
                   TextField(
                     key: const Key('login.email'),
                     controller: _emailController,
@@ -120,8 +122,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        color: scheme.errorContainer.withValues(alpha: .35),
-                        border: Border.all(color: scheme.error.withValues(alpha: .35)),
+                        color: scheme.error.withValues(alpha: 0.10),
+                        border: Border.all(color: scheme.error.withValues(alpha: 0.25)),
                       ),
                       child: Row(
                         children: [
@@ -181,7 +183,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 420),
-                      child: content(),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: scheme.surface,
+                        ),
+                        child: content(),
+                      ),
                     ),
                   ),
                 ),
@@ -189,6 +196,81 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+final class _AuthTabs extends StatelessWidget {
+  const _AuthTabs({required this.isLogin, required this.isDisabled});
+
+  final bool isLogin;
+  final bool isDisabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _TabButton(
+              label: 'Ingresar',
+              selected: isLogin,
+              onTap: isDisabled ? null : () => context.go(Routes.login),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _TabButton(
+              label: 'Crear cuenta',
+              selected: !isLogin,
+              onTap: isDisabled ? null : () => context.go(Routes.register),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _TabButton extends StatelessWidget {
+  const _TabButton({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: selected ? scheme.surface : Colors.transparent,
+          border: Border.all(color: selected ? scheme.outlineVariant : Colors.transparent),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
       ),
     );
   }

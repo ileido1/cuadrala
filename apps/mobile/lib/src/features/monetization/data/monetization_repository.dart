@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import '../../../core/failures/app_failure.dart';
 import '../../profile/data/profile_repository.dart';
 import 'models/match_transactions_summary_dto.dart';
@@ -91,11 +89,13 @@ class MonetizationRepository {
 
   Future<Map<String, Object?>> uploadReceipt({
     required String transactionId,
-    required File file,
+    required List<int> fileBytes,
+    required String fileName,
   }) async {
     final json = await _api.uploadTransactionReceiptEnvelope(
       transactionId: transactionId,
-      file: file,
+      fileBytes: fileBytes,
+      fileName: fileName,
     );
     final data = json['data'];
     if (data is Map<String, Object?>) return data;

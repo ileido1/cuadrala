@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
@@ -20,7 +18,8 @@ abstract interface class MonetizationApi {
 
   Future<Map<String, Object?>> uploadTransactionReceiptEnvelope({
     required String transactionId,
-    required File file,
+    required List<int> fileBytes,
+    required String fileName,
   });
 
   Future<Map<String, Object?>> listUserTransactionsEnvelope({
@@ -62,12 +61,14 @@ final class DioMonetizationApi implements MonetizationApi {
   @override
   Future<Map<String, Object?>> uploadTransactionReceiptEnvelope({
     required String transactionId,
-    required File file,
+    required List<int> fileBytes,
+    required String fileName,
   }) async {
+    final safeName = fileName.trim().isEmpty ? 'receipt.jpg' : fileName.trim();
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(
-        file.path,
-        filename: file.uri.pathSegments.isEmpty ? 'receipt' : file.uri.pathSegments.last,
+      'file': MultipartFile.fromBytes(
+        fileBytes,
+        filename: safeName,
       ),
     });
 

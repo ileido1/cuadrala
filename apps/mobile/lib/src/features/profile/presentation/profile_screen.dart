@@ -5,14 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../auth/presentation/cubit/session_cubit.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
-import '../../../core/formatting/scheduled_label.dart';
 import '../../../router/routes.dart';
-import '../../../shared/widgets/danger_button.dart';
 import '../../onboarding/data/models/onboarding_status_dto.dart';
 import '../../onboarding/data/models/player_sport_profile_dto.dart';
 import '../../onboarding/data/models/user_availability_dto.dart';
 import '../../onboarding/data/models/user_location_dto.dart';
 import '../../onboarding/data/onboarding_repository.dart';
+import '../../catalog/data/catalog_repository.dart';
+import '../../catalog/data/models/sport_dto.dart';
 import '../data/models/user_me_dto.dart';
 import '../data/models/user_rating_dto.dart';
 import '../data/models/user_stats_dto.dart';
@@ -37,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<_ProfileVm> _load() async {
     final repo = getIt<ProfileRepository>();
     final onboarding = getIt<OnboardingRepository>();
+    final catalog = getIt<CatalogRepository>();
     final me = await repo.getMe();
     final results = await Future.wait([
       repo.getUserStats(me.id),
@@ -46,6 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onboarding.listSportProfiles(),
       onboarding.getLocation(),
       onboarding.listAvailability(),
+      catalog.listSports(),
     ]);
     return _ProfileVm(
       me: me,
@@ -56,6 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       sportProfiles: results[4] as List<PlayerSportProfileDto>,
       location: results[5] as UserLocationDto?,
       availability: results[6] as List<UserAvailabilityDto>,
+      sports: results[7] as List<SportDto>,
     );
   }
 
@@ -92,119 +95,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return RefreshIndicator(
           onRefresh: () async => setState(() => _future = _load()),
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
             children: [
-              Text(
-                vm.me.name,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${vm.me.email} · ${vm.me.subscriptionType}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 6),
+              _ProfileHeader(vm: vm),
+              const SizedBox(height: 14),
               if (!vm.onboardingStatus.isComplete)
                 _OnboardingBanner(
                   pendingCount: vm.onboardingStatus.pendingSteps.length,
                 ),
               if (!vm.onboardingStatus.isComplete) const SizedBox(height: 16),
-              _SectionTitle(title: 'Mi perfil'),
-              const SizedBox(height: 10),
-              _MyProfileCard(
-                sportProfiles: vm.sportProfiles,
-                location: vm.location,
-                availability: vm.availability,
-              ),
-              const SizedBox(height: 16),
-              _SectionTitle(title: 'Estadísticas'),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      label: 'Jugados',
-                      value: vm.stats.matchesPlayed.toString(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      label: 'Ganados',
-                      value: vm.stats.matchesWon.toString(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      label: 'Win%',
-                      value: '${(vm.stats.winRate * 100).toStringAsFixed(0)}%',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _SectionTitle(title: 'Ratings (ELO)'),
-              const SizedBox(height: 10),
-              if (vm.ratings.isEmpty)
-                Text(
-                  'Aún no tienes rating.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                )
-              else
-                ...vm.ratings.map(
-                  (r) => Card(
-                    child: ListTile(
-                      title: Text('Categoría ${idPreview(r.categoryId)}'),
-                      trailing: Text(
-                        r.rating.toStringAsFixed(0),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                      subtitle: Text(
-                        'Actualizado: ${shortDateLabel(r.updatedAt.toLocal())} · ${formatTimeHm(r.updatedAt.toLocal())}',
-                      ),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 16),
-              _SectionTitle(title: 'Historial reciente'),
-              const SizedBox(height: 10),
-              if (vm.history.isEmpty)
-                Text(
-                  'Sin historial todavía.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                )
-              else
-                ...vm.history.map(
-                  (h) => Card(
-                    child: ListTile(
-                      title: Text('Partida ${idPreview(h.matchId)}'),
-                      subtitle: Text(
-                        '${h.previousRating.toStringAsFixed(0)} → ${h.newRating.toStringAsFixed(0)} (K ${h.kFactor.toStringAsFixed(0)})',
-                      ),
-                      trailing: Text(
-                        '${shortDateLabel(h.createdAt.toLocal())} · ${formatTimeHm(h.createdAt.toLocal())}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                      ),
-                    ),
-                  ),
-                ),
+              _StatsStrip(vm: vm),
               const SizedBox(height: 18),
-              DangerButton(
-                label: 'Cerrar sesión',
+              _Top5Card(vm: vm),
+              const SizedBox(height: 18),
+              const _SectionTitle(title: 'Datos técnicos'),
+              const SizedBox(height: 10),
+              _TechCards(vm: vm),
+              const SizedBox(height: 18),
+              TextButton.icon(
                 onPressed: () async {
                   await context.read<SessionCubit>().logout();
                   if (context.mounted) {
@@ -213,6 +122,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   }
                 },
+                style: TextButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  foregroundColor: scheme.error,
+                  backgroundColor: scheme.error.withValues(alpha: 0.06),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.logout),
+                label: const Text('Cerrar sesión', style: TextStyle(fontWeight: FontWeight.w900)),
               ),
             ],
           ),
@@ -232,6 +149,7 @@ final class _ProfileVm {
     required this.sportProfiles,
     required this.location,
     required this.availability,
+    required this.sports,
   });
 
   final UserMeDto me;
@@ -242,6 +160,7 @@ final class _ProfileVm {
   final List<PlayerSportProfileDto> sportProfiles;
   final UserLocationDto? location;
   final List<UserAvailabilityDto> availability;
+  final List<SportDto> sports;
 }
 
 final class _SectionTitle extends StatelessWidget {
@@ -255,6 +174,444 @@ final class _SectionTitle extends StatelessWidget {
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w900,
           ),
+    );
+  }
+}
+
+final class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.vm});
+
+  final _ProfileVm vm;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final sportName = () {
+      if (vm.sportProfiles.isEmpty) return null;
+      final sportId = vm.sportProfiles.first.sportId;
+      return vm.sports.firstWhere(
+        (s) => s.id == sportId,
+        orElse: () => const SportDto(id: '', code: '', name: ''),
+      ).name;
+    }();
+    final categoryShort = vm.ratings.isNotEmpty ? 'Cat ${idPreview(vm.ratings.first.categoryId)}' : null;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+        border: Border(
+          bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+        ),
+      ),
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              onPressed: () => context.push(Routes.onboarding),
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Editar perfil',
+              style: IconButton.styleFrom(
+                backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.7),
+                foregroundColor: scheme.onSurface,
+                padding: const EdgeInsets.all(10),
+              ),
+            ),
+          ),
+          Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.10),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 44,
+                  backgroundColor: scheme.primary.withValues(alpha: 0.14),
+                  child: Text(
+                    _initials(vm.me.name),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 26,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                vm.me.name,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  if (sportName != null && sportName.trim().isNotEmpty)
+                    Text(
+                      sportName,
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  if (categoryShort != null)
+                    Text(
+                      '• $categoryShort',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  if (vm.me.subscriptionType != 'FREE')
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: scheme.tertiary,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'PRO',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                          color: scheme.onTertiary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _initials(String name) {
+    final raw = name.trim();
+    if (raw.isEmpty) return '?';
+    final parts = raw.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
+    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
+  }
+}
+
+final class _StatsStrip extends StatelessWidget {
+  const _StatsStrip({required this.vm});
+
+  final _ProfileVm vm;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final elo = vm.ratings.isNotEmpty ? vm.ratings.first.rating.toStringAsFixed(0) : '—';
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _MiniStat(
+              icon: Icons.show_chart,
+              iconColor: scheme.primary,
+              value: vm.stats.matchesPlayed.toString(),
+              label: 'JUGADOS',
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _MiniStat(
+              icon: Icons.emoji_events_outlined,
+              iconColor: scheme.tertiary,
+              value: '${(vm.stats.winRate * 100).toStringAsFixed(0)}%',
+              label: 'VICTORIAS',
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _MiniStat(
+              icon: Icons.military_tech_outlined,
+              iconColor: scheme.primary,
+              value: elo,
+              label: 'ELO ACTUAL',
+              highlighted: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+    this.highlighted = false,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: highlighted ? scheme.primary.withValues(alpha: 0.10) : scheme.surface,
+        border: Border.all(color: highlighted ? scheme.primary.withValues(alpha: 0.20) : scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: iconColor, size: 18),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+              letterSpacing: .4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _Top5Card extends StatelessWidget {
+  const _Top5Card({required this.vm});
+
+  final _ProfileVm vm;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Top 5 • ${vm.ratings.isNotEmpty ? 'Categoría' : 'Tu categoría'}',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            color: scheme.surface,
+            border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              _TopRow(
+                pos: 1,
+                initials: 'LU',
+                name: 'Lucas P.',
+                elo: 1320,
+              ),
+              const Divider(height: 1),
+              _TopRow(
+                pos: 2,
+                initials: _ProfileHeader._initials(vm.me.name),
+                name: vm.me.name,
+                elo: vm.ratings.isNotEmpty ? vm.ratings.first.rating.round() : 1250,
+                highlighted: true,
+              ),
+              const Divider(height: 1),
+              _TopRow(pos: 3, initials: 'DI', name: 'Diego F.', elo: 1245),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _TopRow extends StatelessWidget {
+  const _TopRow({
+    required this.pos,
+    required this.initials,
+    required this.name,
+    required this.elo,
+    this.highlighted = false,
+  });
+
+  final int pos;
+  final String initials;
+  final String name;
+  final int elo;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      color: highlighted ? scheme.primary.withValues(alpha: 0.06) : null,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 22,
+            child: Text(
+              '$pos',
+              style: TextStyle(
+                color: pos == 1 ? scheme.tertiary : scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: scheme.surfaceContainerHighest,
+            child: Text(
+              initials,
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              name,
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: highlighted ? scheme.primary : scheme.onSurface,
+              ),
+            ),
+          ),
+          Text(
+            '$elo',
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _TechCards extends StatelessWidget {
+  const _TechCards({required this.vm});
+
+  final _ProfileVm vm;
+
+  @override
+  Widget build(BuildContext context) {
+    // Fallback: usamos el primer sport profile para sidePreference.
+    final side = vm.sportProfiles.isNotEmpty ? vm.sportProfiles.first.sidePreference : SidePreference.any;
+
+    String sideLabel(SidePreference s) => switch (s) {
+          SidePreference.right => 'Derecha',
+          SidePreference.left => 'Revés',
+          SidePreference.any => 'Multi',
+        };
+
+    return Row(
+      children: [
+        Expanded(
+          child: _TechCard(
+            title: 'BRAZO',
+            value: 'Diestro',
+            icon: Icons.sports_handball_outlined,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _TechCard(
+            title: 'LADO PREF.',
+            value: sideLabel(side),
+            icon: Icons.swap_horiz,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _TechCard extends StatelessWidget {
+  const _TechCard({required this.title, required this.value, required this.icon});
+
+  final String title;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: scheme.surface,
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 11,
+                  letterSpacing: .5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -301,132 +658,6 @@ final class _OnboardingBanner extends StatelessWidget {
           FilledButton(
             onPressed: () => context.push(Routes.onboarding),
             child: const Text('Continuar'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _MyProfileCard extends StatelessWidget {
-  const _MyProfileCard({
-    required this.sportProfiles,
-    required this.location,
-    required this.availability,
-  });
-
-  final List<PlayerSportProfileDto> sportProfiles;
-  final UserLocationDto? location;
-  final List<UserAvailabilityDto> availability;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: scheme.surface,
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _row(
-            context,
-            icon: Icons.sports_tennis,
-            title: 'Deportes',
-            value: sportProfiles.isEmpty
-                ? 'Sin deportes configurados'
-                : sportProfiles
-                    .map((p) => '${idPreview(p.sportId)} · ${p.skillLevel.toStringAsFixed(1)}')
-                    .join('  ·  '),
-          ),
-          const Divider(height: 18),
-          _row(
-            context,
-            icon: Icons.place_outlined,
-            title: 'Ubicación',
-            value: location == null
-                ? 'Sin ubicación'
-                : '${location!.label ?? "${location!.latitude.toStringAsFixed(3)}, ${location!.longitude.toStringAsFixed(3)}"} · radio ${location!.radiusKm} km',
-          ),
-          const Divider(height: 18),
-          _row(
-            context,
-            icon: Icons.calendar_month,
-            title: 'Disponibilidad',
-            value: availability.isEmpty
-                ? 'Sin franjas configuradas'
-                : '${availability.length} franja(s) disponibles por semana',
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => context.push(Routes.onboarding),
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              label: const Text('Editar'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _row(BuildContext context, {required IconData icon, required String title, required String value}) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: scheme.onSurfaceVariant),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 2),
-              Text(value, style: TextStyle(color: scheme.onSurfaceVariant)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-final class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: scheme.surfaceContainerHighest,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
           ),
         ],
       ),

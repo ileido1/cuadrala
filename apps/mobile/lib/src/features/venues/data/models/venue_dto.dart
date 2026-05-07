@@ -1,0 +1,28 @@
+final class VenueDto {
+  const VenueDto({
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  final String id;
+  final String name;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
+
+  static VenueDto fromJson(Map<String, Object?> json) {
+    final latRaw = json['latitude'];
+    final lngRaw = json['longitude'];
+    return VenueDto(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      address: json['address'] as String?,
+      latitude: latRaw is num ? latRaw.toDouble() : null,
+      longitude: lngRaw is num ? lngRaw.toDouble() : null,
+    );
+  }
+}
+

@@ -15,6 +15,7 @@ export type MatchListItemDTO = {
   id: string;
   sportId: string;
   categoryId: string;
+  categoryName?: string;
   type: 'AMERICANO' | 'REGULAR';
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
   scheduledAt: Date | null;
@@ -26,6 +27,7 @@ export type MatchListItemDTO = {
 
 export type MatchParticipantDTO = {
   userId: string;
+  displayName?: string;
   joinedAt: Date;
 };
 

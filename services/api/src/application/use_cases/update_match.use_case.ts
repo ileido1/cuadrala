@@ -1,14 +1,18 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import type { MatchCourtAvailabilityRepository } from '../../domain/ports/match_court_availability_repository.js';
 import type { MatchCrudRepository } from '../../domain/ports/match_crud_repository.js';
 import type { MatchOrganizerRepository } from '../../domain/ports/match_organizer_repository.js';
 import type { MatchQueryRepository } from '../../domain/ports/match_query_repository.js';
 import type { MatchDetailDTO, UpdateMatchPatchDTO } from '../../domain/ports/match_crud_repository.js';
+import { assertMatchCourtSlotAvailableSV } from '../services/assert_match_court_slot_available.js';
 
 export type UpdateMatchUseCaseInput = {
   matchId: string;
   actorUserId: string;
   scheduledAt?: Date | null;
   courtId?: string | null;
+  venueId?: string;
+  durationMinutes?: number;
   pricePerPlayerCents?: number;
   maxParticipants?: number;
 };
@@ -18,6 +22,7 @@ export class UpdateMatchUseCase {
     private readonly _matchQueryRepository: MatchQueryRepository,
     private readonly _matchOrganizerRepository: MatchOrganizerRepository,
     private readonly _matchCrudRepository: MatchCrudRepository,
+    private readonly _matchCourtAvailabilityRepository: MatchCourtAvailabilityRepository,
   ) {}
 
   async executeSV(_input: UpdateMatchUseCaseInput): Promise<MatchDetailDTO> {
@@ -74,6 +79,28 @@ export class UpdateMatchUseCase {
           400,
         );
       }
+    }
+
+    const NEXT_COURT = _input.courtId !== undefined ? _input.courtId : MATCH.courtId;
+    const NEXT_SCHEDULED =
+      _input.scheduledAt !== undefined ? _input.scheduledAt : MATCH.scheduledAt;
+    const SCHEDULE_TOUCHED = _input.courtId !== undefined || _input.scheduledAt !== undefined;
+
+    if (
+      SCHEDULE_TOUCHED &&
+      NEXT_COURT !== null &&
+      NEXT_SCHEDULED !== null &&
+      typeof NEXT_COURT === 'string'
+    ) {
+      await assertMatchCourtSlotAvailableSV(this._matchCourtAvailabilityRepository, {
+        ...(_input.venueId !== undefined ? { venueId: _input.venueId } : {}),
+        courtId: NEXT_COURT,
+        scheduledAt: NEXT_SCHEDULED,
+        sportId: MATCH.sportId,
+        categoryId: MATCH.categoryId,
+        ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
+        excludeMatchId: _input.matchId,
+      });
     }
 
     return this._matchCrudRepository.updateMatchSV(_input.matchId, PATCH);

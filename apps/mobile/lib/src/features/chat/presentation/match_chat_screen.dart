@@ -173,15 +173,26 @@ class _MatchChatViewState extends State<_MatchChatView> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      FilledButton(
-                        onPressed: sending ? null : () => _send(context),
-                        child: sending
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.send),
+                      SizedBox(
+                        width: 52,
+                        height: 52,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            minimumSize: Size.zero,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: sending ? null : () => _send(context),
+                          child: sending
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.send, size: 20),
+                        ),
                       ),
                     ],
                   ),

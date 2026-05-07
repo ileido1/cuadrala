@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -48,7 +48,8 @@ final class UploadReceiptScreen extends StatefulWidget {
 
 class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
   bool _uploading = false;
-  File? _file;
+  Uint8List? _imageBytes;
+  String _fileName = 'receipt.jpg';
 
   Future<void> _pick() async {
     final picker = ImagePicker();
@@ -58,18 +59,25 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
       imageQuality: 85,
     );
     if (xfile == null) return;
-    setState(() => _file = File(xfile.path));
+    final bytes = await xfile.readAsBytes();
+    final name = xfile.name.trim();
+    if (!mounted) return;
+    setState(() {
+      _imageBytes = bytes;
+      _fileName = name.isNotEmpty ? name : 'receipt.jpg';
+    });
   }
 
   Future<void> _upload() async {
-    final file = _file;
-    if (file == null) return;
+    final bytes = _imageBytes;
+    if (bytes == null) return;
 
     setState(() => _uploading = true);
     try {
       await getIt<MonetizationRepository>().uploadReceipt(
         transactionId: widget.transactionId,
-        file: file,
+        fileBytes: bytes,
+        fileName: _fileName,
       );
       if (!mounted) return;
       context.go(
@@ -101,7 +109,8 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            'Sube una captura o foto del comprobante para que el organizador lo confirme.',
+            'Sube una captura o foto del comprobante para que el organizador '
+            'lo confirme.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w700,
@@ -142,7 +151,7 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
                 border: Border.all(color: scheme.outlineVariant),
                 color: scheme.surface,
               ),
-              child: _file == null
+              child: _imageBytes == null
                   ? Center(
                       child: Text(
                         'Toca para seleccionar una imagen',
@@ -153,8 +162,8 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
                     )
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.file(
-                        _file!,
+                      child: Image.memory(
+                        _imageBytes!,
                         fit: BoxFit.cover,
                         width: double.infinity,
                       ),
@@ -165,7 +174,7 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _uploading || _file == null ? null : _upload,
+              onPressed: _uploading || _imageBytes == null ? null : _upload,
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
@@ -183,4 +192,3 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
     );
   }
 }
-

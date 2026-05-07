@@ -1,5 +1,8 @@
 ## Plan de Sprints — App Mobile (Flutter)
 
+> **Nota (fuente de verdad):** la planificación y estado de sprints (realizados / en curso / pendientes) se consolidó en `docs/BACKLOG_UNIFICADO.md`.
+> Este archivo queda como **histórico** y puede no reflejar el estado actual.
+
 **Suposiciones**
 - Backend ya está “avanzado” (Sprints 25–36) y el contrato de endpoints está en `services/api/src/presentation/openapi/openapi.ts`.
 - Arquitectura Flutter: feature-first + BLoC/Cubit (ver `docs/SDD.md` y reglas de `.cursor/rules/flutter-architecture-best-practices.mdc`).
@@ -118,4 +121,37 @@
 - US-M9-01 Búsqueda de lugares + detalle
 - US-M9-02 Vacant hours publish/list/cancel
 - (Opcional) mejoras de performance, caching, offline-lite, analytics
+
+---
+
+## Sprint M10 — UI alineada a Mockup Sandbox (cuadrala-sport)
+
+**Objetivo**: alinear la app Flutter con los mockups en `Cuadrada-Sport/artifacts/mockup-sandbox` (jerarquía visual, headers, cards, chips, FAB y bottom nav).
+
+**Historias**
+- **US-M0-02** Tema Material 3 + tokens (ajustes finos: radios/spacing/bordes)
+- **US-M2-01** Home “Tu resumen” con CTAs (ajuste visual)
+- **US-M3-01** Listado de partidas abiertas (ajuste visual + FAB)
+- **US-M3-02** Detalle de partida (ajuste visual)
+- **US-M6-01** Inbox de notificaciones (alineado a mock)
+
+**Entregable**
+- Header compartido estilo mock (`AppHeader`) aplicado en pantallas principales.
+- Notificaciones dejan de ser placeholder en el tab y se ven como en referencia.
+- `flutter analyze` + `flutter test` en verde.
+
+---
+
+## Sprint M19 — Disponibilidad de pistas (venue + court)
+
+> **Fuente de verdad:** `docs/BACKLOG_UNIFICADO.md` (sprint **M19**). Este bloque resume el alcance mobile + API.
+
+**Objetivo**: al **crear partida**, el usuario ve **horarios disponibles** por sede y pista; el backend valida reservas coherentes (**`US-E2-05`**, ya implementado).
+
+**Historias**
+- **`US-E4-06`** (back) Endpoint(s) de **slots libres/ocupados** por `venueId` / `courtId` y rango temporal.
+- **`US-M3-08`** (app) Integrar selector de hora con datos de **`US-E4-06`** en flujo “Nueva partida”.
+- **`US-M3-09`** *(opcional)* Mensajes y CTAs para `CANCHA_OCUPADA` / `HORARIO_RESERVA_INCOMPATIBLE`.
+
+**Entregable**: crear partida eligiendo solo franjas válidas; documentación OpenAPI y tests integración en API según especificación de `US-E4-06`.
 

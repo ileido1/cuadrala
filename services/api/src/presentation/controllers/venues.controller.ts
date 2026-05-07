@@ -128,3 +128,19 @@ export async function postCourtCON(_req: Request, _res: Response): Promise<void>
   });
 }
 
+export async function getVenueCourtsCON(_req: Request, _res: Response): Promise<void> {
+  const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
+
+  const ROWS = await PRISMA.court.findMany({
+    where: { venueId: PARAMS.venueId },
+    orderBy: [{ createdAt: 'desc' }],
+    select: { id: true, venueId: true, name: true, createdAt: true },
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Canchas obtenidas correctamente.',
+    data: { items: ROWS },
+  });
+}
+

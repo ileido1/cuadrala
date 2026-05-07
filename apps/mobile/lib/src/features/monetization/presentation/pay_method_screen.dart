@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 // ignore_for_file: deprecated_member_use
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/failures/app_failure.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/monetization_repository.dart';
@@ -102,8 +103,9 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
       throw Exception('No se pudo crear la obligación.');
     } catch (e) {
       if (!mounted) return;
+      final msg = e is AppFailure ? e.message : e.toString();
       setState(() {
-        _error = 'No se pudo preparar el pago.';
+        _error = msg.isNotEmpty ? msg : 'No se pudo preparar el pago.';
         _loading = false;
       });
     }

@@ -4,6 +4,7 @@ final class AppTheme {
   static ThemeData light() {
     const primary = Color(0xFF17A34A); // verde cancha (aprox)
     const secondary = Color(0xFF0F172A); // navy
+    const tertiary = Color(0xFFC5FF00); // accent (lima)
     const surface = Color(0xFFFFFFFF);
     const surfaceContainer = Color(0xFFF3F4F6); // muted
     const outline = Color(0xFFE5E7EB); // border
@@ -14,12 +15,15 @@ final class AppTheme {
     ).copyWith(
       primary: primary,
       secondary: secondary,
+      tertiary: tertiary,
+      onTertiary: const Color(0xFF0F172A),
       surface: surface,
       surfaceContainerHighest: surfaceContainer,
       outline: outline,
     );
 
     const radius = 12.0;
+    const radiusLg = 18.0;
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
@@ -69,7 +73,7 @@ final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -79,16 +83,16 @@ final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       cardTheme: CardThemeData(
         color: scheme.surface,
-        elevation: 0,
+        elevation: 1,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(radiusLg),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
         ),
       ),
     );

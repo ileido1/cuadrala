@@ -10,46 +10,33 @@ class AuthHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.asset(
-                'assets/images/logo.png',
-                width: 44,
-                height: 44,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    color: scheme.primary,
-                  ),
-                  child: Text(
-                    'C',
-                    style: TextStyle(
-                      color: scheme.onPrimary,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 22,
-                    ),
-                  ),
-                ),
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: scheme.primary.withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
               ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Cuádrala',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-            ),
-          ],
+            ],
+          ),
+          child: const Icon(Icons.emoji_events_outlined, color: Colors.white, size: 30),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 10),
+        const Text(
+          'Cuádrala',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.4),
+        ),
+        const SizedBox(height: 18),
         Text(
           title,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.w900,
@@ -60,9 +47,10 @@ class AuthHeader extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle!,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

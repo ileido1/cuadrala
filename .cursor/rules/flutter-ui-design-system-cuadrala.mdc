@@ -31,9 +31,9 @@ alwaysApply: false
 
 ## Patrones UX por pantalla (referencias)
 - **Auth (como la captura)**:
-  - Header centrado: icono en contenedor verde + título “Cuádrala” + tagline.
+  - Header centrado: icono/hero en contenedor verde + título “Cuádrala” + tagline.
   - Toggle superior tipo segmented: **“Ingresar / Crear cuenta”** (mismo layout en login y register).
-  - Inputs **filled** con radio medio, labels simples (“Email”, “Contraseña”).
+  - Inputs **filled/muted** con radio grande, labels simples (“Correo electrónico”, “Contraseña”).
   - Link a la derecha: **“¿Olvidaste tu contraseña?”** (si endpoint no existe: placeholder).
   - CTA principal full-width verde: **“Iniciar sesión”** / **“Crear cuenta”**.
 - **Home**: resumen + CTA “Crear partida / Nuevo torneo”.
@@ -55,8 +55,11 @@ alwaysApply: false
 ## Convenciones de implementación (Flutter)
 - **Theme**: preferir `ThemeData`/`ColorScheme` como fuente de verdad (no hardcode de colores por widget).
 - **Botones**: `FilledButton` para primary, `OutlinedButton` para secundarios, `TextButton` para links.
-- **Inputs**: `InputDecorationTheme` con `filled: true` y `contentPadding` consistente.
+- **Inputs**: `InputDecorationTheme` con `filled: true` + look “muted” (fondo suave) y `contentPadding` consistente.
 - **Spacing**: usar `SizedBox` con múltiplos de 4/8 (8pt system).
+- **Headers**: usar `AppHeader` para pantallas principales; onboarding usa header propio con el mismo look.
+- **Bottom nav**: estilo blur/surface con borde superior suave (sin appBar en `ShellScreen`).
+- **Bottom actions**: en flujos críticos, CTA fijo inferior (barra de acciones) cuando aplique (ej. detalle de partida).
 - **Logo oficial**: usar `assets/images/logo.png` en headers (Auth) y mantener **launcher icon + splash** alineados con el mismo asset (regenerar con `flutter_launcher_icons` / `flutter_native_splash` cuando cambie el logo).
 
 ## No hacer

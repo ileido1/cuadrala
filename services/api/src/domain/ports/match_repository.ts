@@ -20,6 +20,7 @@ export type OpenMatchDTO = {
   id: string;
   sportId: string;
   categoryId: string;
+  categoryName?: string;
   status: string;
   scheduledAt: Date | null;
   pricePerPlayerCents: number;

@@ -103,6 +103,8 @@ export async function postCreateMatchCON(_req: Request, _res: Response): Promise
     ...(BODY.type !== undefined ? { type: BODY.type } : {}),
     ...(BODY.scheduledAt !== undefined ? { scheduledAt: new Date(BODY.scheduledAt) } : {}),
     ...(BODY.courtId !== undefined ? { courtId: BODY.courtId } : {}),
+    ...(BODY.venueId !== undefined ? { venueId: BODY.venueId } : {}),
+    ...(BODY.durationMinutes !== undefined ? { durationMinutes: BODY.durationMinutes } : {}),
     ...(BODY.tournamentId !== undefined ? { tournamentId: BODY.tournamentId } : {}),
     ...(BODY.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: BODY.pricePerPlayerCents } : {}),
     ...(BODY.maxParticipants !== undefined ? { maxParticipants: BODY.maxParticipants } : {}),
@@ -129,6 +131,8 @@ export async function patchUpdateMatchCON(_req: Request, _res: Response): Promis
     actorUserId: USER_ID,
     ...(BODY.scheduledAt !== undefined ? { scheduledAt: BODY.scheduledAt === null ? null : new Date(BODY.scheduledAt) } : {}),
     ...(BODY.courtId !== undefined ? { courtId: BODY.courtId } : {}),
+    ...(BODY.venueId !== undefined ? { venueId: BODY.venueId } : {}),
+    ...(BODY.durationMinutes !== undefined ? { durationMinutes: BODY.durationMinutes } : {}),
     ...(BODY.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: BODY.pricePerPlayerCents } : {}),
     ...(BODY.maxParticipants !== undefined ? { maxParticipants: BODY.maxParticipants } : {}),
   });
