@@ -33,11 +33,18 @@ final class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
     }
   }
 
-  Future<void> generate() async {
+  Future<void> generate({
+    required List<String> participantUserIds,
+    bool? doubleRound,
+    bool? thirdPlaceMatch,
+  }) async {
     emit(const TournamentScheduleGenerating());
     try {
       final schedule = await _tournamentsRepository.generateTournamentSchedule(
         tournamentId: _tournamentId,
+        participantUserIds: participantUserIds,
+        doubleRound: doubleRound,
+        thirdPlaceMatch: thirdPlaceMatch,
       );
       emit(TournamentScheduleSuccess(schedule: schedule));
     } on AppFailure catch (e) {

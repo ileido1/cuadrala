@@ -2,6 +2,7 @@ import '../../../core/failures/app_failure.dart';
 import 'models/create_tournament_request.dart';
 import 'models/create_tournament_response.dart';
 import 'models/tournament_preset_dto.dart';
+import 'models/tournament_registration_dto.dart';
 import 'models/tournament_schedule_dto.dart';
 import 'models/tournament_scoreboard_dto.dart';
 import 'tournaments_api.dart';
@@ -19,7 +20,7 @@ class TournamentsRepository {
       sportId: sportId,
     );
 
-    final raw = data['items'];
+    final raw = data['presets'] ?? data['items'];
     final items = raw is List
         ? raw
             .whereType<Map>()
@@ -65,10 +66,19 @@ class TournamentsRepository {
 
   Future<TournamentScheduleDto> generateTournamentSchedule({
     required String tournamentId,
+    required List<String> participantUserIds,
+    bool? doubleRound,
+    bool? thirdPlaceMatch,
   }) async {
     try {
+      final body = <String, Object?>{
+        'participantUserIds': participantUserIds,
+        if (doubleRound != null) 'doubleRound': doubleRound,
+        if (thirdPlaceMatch != null) 'thirdPlaceMatch': thirdPlaceMatch,
+      };
       final data = await _tournamentsApi.generateTournamentScheduleEnvelope(
         tournamentId: tournamentId,
+        body: body,
       );
       return TournamentScheduleDto.fromJson(data);
     } on AppFailure catch (e) {
@@ -97,6 +107,43 @@ class TournamentsRepository {
       tournamentId: tournamentId,
     );
     return TournamentScoreboardDto.fromJson(data);
+  }
+
+  Future<List<TournamentRegistrationDto>> listRegistrations({
+    required String tournamentId,
+  }) async {
+    final data = await _tournamentsApi.listRegistrationsEnvelope(
+      tournamentId: tournamentId,
+    );
+    final rawItems = data['items'];
+    if (rawItems is! List) {
+      throw const AppFailure(code: 'INVALID_RESPONSE', message: 'Respuesta inválida del servidor.');
+    }
+    return rawItems
+        .whereType<Map<String, Object?>>()
+        .map(TournamentRegistrationDto.fromJson)
+        .toList();
+  }
+
+  Future<TournamentRegistrationDto> registerParticipant({
+    required String tournamentId,
+    required String userId,
+  }) async {
+    final data = await _tournamentsApi.createRegistrationEnvelope(
+      tournamentId: tournamentId,
+      body: {'userId': userId},
+    );
+    return TournamentRegistrationDto.fromJson(data);
+  }
+
+  Future<void> withdrawRegistration({
+    required String tournamentId,
+    required String userId,
+  }) async {
+    await _tournamentsApi.withdrawRegistration(
+      tournamentId: tournamentId,
+      userId: userId,
+    );
   }
 }
 

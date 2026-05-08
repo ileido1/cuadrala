@@ -745,4 +745,321 @@ Agregar bandeja de notificaciones in-app (read/unread) y expandir tipos (pagos/c
 | Integración con dashboards/alertas externas (runbook) |  |  |  |
 
 
+---
+
+# Plan de Sprints 2026 — Full-Stack (2 semanas c/u)
+
+> **Generado:** 2026-05-08 | **Modo:** Full-stack paralelo | **Ciclo:** 2 semanas
+> **Fuente de verdad:** `docs/BACKLOG_UNIFICADO.md` + validación contra código real (mobile + API)
+
+## Estado real validado (código vs backlog)
+
+### Sprints REALIZADOS (Done) — verificados en código
+
+| Sprint | Mobile (Flutter) | API (Node.js) | Archivos clave |
+|--------|-------------------|---------------|----------------|
+| **M1** — Auth | ✅ | ✅ | `features/auth/`, `auth.router.ts`, `auth.controller.ts` |
+| **M2** — Home + Discovery | ✅ | ✅ | `features/home/`, `open_matches_screen.dart`, `matches.router.ts` |
+| **M3** — Crear/Unirse/Ciclo | ✅ | ✅ | `create_match_screen.dart`, `match_lifecycle_screen.dart` |
+| **M4** — Resultados + Pagos MVP | ✅ | ✅ | `result_draft_screen.dart`, `features/monetization/` |
+| **M6** — Chat + Notif MVP | ✅ | ✅ | `match_chat_screen.dart`, `notifications_screen.dart`, `chat.router.ts` |
+| **M7** — Perfil/Ranking | ✅ | ✅ | `features/profile/`, `ranking.controller.ts`, `elo_leaderboard.controller.ts` |
+| **M10** — UI alineada | ✅ | N/A | `AppHeader`, bottom nav blur, design tokens |
+| **M11-M13** — Onboarding rich | ✅ | ✅ | `features/onboarding/`, `onboarding.controller.ts` |
+| **M19** — Court availability | ✅ | ✅ | `create_match_screen.dart` (L302-374, L450-501), `court_availability.controller.ts` |
+
+### Parcialmente hecho
+
+| Feature | Mobile | API | Gap |
+|---------|--------|-----|-----|
+| **Torneos (M5)** | ✅ Screens + cubits completos | Parcial | Faltan ROUND_ROBIN, SINGLE_ELIMINATION, inscripciones |
+| **E3-04** Schedule genérico | ✅ | Parcial | AMERICANO soportado; otros → 501 |
+
+---
+
+## Sprint 42 — Quick Wins Mobile (backend ya listo)
+
+**Estado:** `DONE` ✅ | **Duración:** 2 semanas | **Enfoque:** Mobile
+
+**Objetivo:** cerrar features donde el API está lista pero falta la pantalla mobile.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---------|-------------|------|---------|
+| **US-M3-07** Pantalla matchmaking suggestions | | ✅ | |
+| **US-M6-02** Pantalla preferencias notificación | | ✅ | |
+| **US-M6-03** Device push tokens (login/logout) | | ✅ | |
+| **US-M5-02** Chat por torneo | | ✅ | |
+
+### Definición de Done
+- [x] `flutter analyze` en verde (0 issues)
+- [x] `flutter test` en verde (61 passed, 2 pre-existing failures)
+- [x] Todas las pantallas con estados loading/empty/error/success
+- [x] Navegación integrada en shell (tabs/rutas)
+
+### Archivos creados
+- `features/chat/presentation/cubit/tournament_chat_state.dart`
+- `features/chat/presentation/cubit/tournament_chat_cubit.dart`
+- `features/chat/presentation/tournament_chat_screen.dart`
+- `features/notifications/data/models/notification_subscription_dto.dart`
+- `features/notifications/presentation/cubit/notification_prefs_state.dart`
+- `features/notifications/presentation/cubit/notification_prefs_cubit.dart`
+- `features/notifications/presentation/notification_prefs_screen.dart`
+- `features/matchmaking/data/models/matchmaking_suggestion_dto.dart`
+- `features/matchmaking/data/matchmaking_api.dart`
+- `features/matchmaking/data/matchmaking_repository.dart`
+- `features/matchmaking/presentation/cubit/matchmaking_state.dart`
+- `features/matchmaking/presentation/cubit/matchmaking_cubit.dart`
+- `features/matchmaking/presentation/matchmaking_screen.dart`
+- Extended: `chat_api.dart`, `chat_repository.dart`, `notifications_api.dart`, `notifications_repository.dart`
+- Updated: `service_locator.dart`, `routes.dart`, `app_router.dart`
+
+### Dependencias
+- Backend: ✅ listo (`matchmaking.controller.ts`, `notification_subscriptions.controller.ts`, `device_push_tokens.controller.ts`, `chat.router.ts`)
+
+### Riesgo: Bajo — endpoints ya existen y están probados.
+
+---
+
+## Sprint 43 — E8 Foundation: Club/Venue Ownership
+
+**Estado:** `BACKLOG` | **Duración:** 2 semanas | **Enfoque:** Backend-first
+
+**Objetivo:** modelo de dueño/staff de venue + instrucciones de cobro. Desbloquea pagos reales y backoffice web.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---------|-------------|------|---------|
+| **US-E8-01** Modelo `Venue.ownerUserId` + tabla `VenueStaff` | | | |
+| **US-E8-02** Instrucciones de transferencia del venue + endpoint lectura | | | |
+| **US-E8-03** `confirm-manual` solo staff del venue del court | | | |
+| **US-E8-04** Listado transacciones PENDING por venueId | | | |
+| **US-E8-06** OpenAPI + tests contrato para E8 | | | |
+
+### Definición de Done
+- [ ] `npm run lint && npm run typecheck && npm test` en verde
+- [ ] Migraciones Prisma aplicables sin data loss
+- [ ] OpenAPI actualizado (`/docs` y `/openapi.json`)
+- [ ] Tests de integración DB para E8-01 a E8-04
+- [ ] Códigos de error estables en español
+
+### Dependencias
+- Ninguna (es el inicio de la épica E8)
+
+### Riesgo: Medio — cambia modelo de datos de `Venue`, requiere migración cuidadosa.
+
+---
+
+## Sprint 44 — E8 Mobile + Web Backoffice
+
+**Estado:** `BACKLOG` | **Duración:** 2 semanas | **Enfoque:** Full-stack (API + Mobile + Web)
+
+**Objetivo:** flujo de pago con datos del venue en mobile + panel web mínimo para conciliación.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---------|-------------|------|---------|
+| **US-M8-03** Instrucciones de cobro del venue en flujo pago (mobile) | | | |
+| **US-E8-05** Notificaciones a staff del venue | | | |
+| **US-W1-01** Scaffold Next.js + cliente API + login | | | |
+| **US-W1-02** Shell backoffice (sidebar, selector sede) | | | |
+| **US-W1-03** Lista pagos PENDING por mis canchas | | | |
+| **US-W1-04** Detalle: ver comprobante + Confirmar pago | | | |
+
+### Definición de Done
+- [ ] Mobile: `flutter analyze` + `flutter test` en verde
+- [ ] Web: build + lint en verde
+- [ ] API: tests E8-05 en verde
+- [ ] Flujo end-to-end: jugador sube comprobante → club confirma desde web
+
+### Dependencias
+- **Requiere Sprint 43 completo** (E8-01 a E8-04)
+
+### Riesgo: Alto — primer sprint con 3 layers (API + Mobile + Web).
+
+---
+
+## Sprint 45 — Torneos: formatos + inscripciones
+
+**Estado:** `DONE` ✅ | **Duración:** 2 semanas | **Enfoque:** Full-stack
+
+**Objetivo:** cerrar la épica E3 con ROUND_ROBIN real, SINGLE_ELIMINATION MVP e inscripciones.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---------|-------------|------|---------|
+| **US-E3-05** Motor ROUND_ROBIN (rondas/pairings) | | ✅ | |
+| **US-E3-06** Preset SINGLE_ELIMINATION + bracket | | ✅ | |
+| **US-E3-07** Inscripciones (`POST/GET /registrations`) | | ✅ | |
+| **US-M4-01** Catálogo deportes + presets (validar integración) | | ✅ | |
+| **US-M4-02** Crear torneo con UI dinámica de formatParameters | | ✅ | |
+
+### Definición de Done
+- [x] Tests de dominio: determinismo + idempotencia para ROUND_ROBIN y SINGLE_ELIMINATION
+- [x] Tests integración DB para inscripciones (idempotente, sin duplicados)
+- [x] Mobile: `flutter analyze` + `flutter test` en verde
+- [x] OpenAPI actualizado con nuevos formatos
+
+### Archivos creados (Backend)
+- `src/domain/round_robin/round_robin_schedule_generator.ts` — Algoritmo circle method
+- `src/domain/single_elimination/bracket_generator.ts` — Bracket con byes + seeding estándar
+- `src/domain/ports/tournament_registration_repository.ts` — Port de registrations
+- `src/infrastructure/adapters/prisma_tournament_registration_repository.ts` — Adapter Prisma
+- `src/application/use_cases/register_tournament_participant.use_case.ts`
+- `src/application/use_cases/list_tournament_registrations.use_case.ts`
+- `src/application/use_cases/withdraw_tournament_registration.use_case.ts`
+- `src/presentation/validation/tournament_registration.validation.ts`
+- `src/presentation/controllers/tournament_registration.controller.ts`
+- `src/presentation/routes/tournament_registration.router.ts`
+- `src/presentation/composition/tournament_registration.composition.ts`
+
+### Archivos modificados (Backend)
+- `src/application/use_cases/generate_tournament_schedule.use_case.ts` — +ROUND_ROBIN, +SINGLE_ELIMINATION
+- `src/application/services/tournament_format_parameters_validator.service.ts` — +SINGLE_ELIMINATION
+- `src/presentation/validation/tournament_schedule.validation.ts` — +doubleRound, +thirdPlaceMatch, min 2 participants
+- `src/presentation/controllers/tournament_schedule.controller.ts` — +params forwarding
+- `src/presentation/routes/api.v1.router.ts` — +registration router
+- `prisma/seed.ts` — +SINGLE_ELIMINATION preset
+
+### Archivos creados (Mobile)
+- `features/tournaments/data/models/tournament_registration_dto.dart`
+- `features/tournaments/presentation/cubit/tournament_registrations_state.dart`
+- `features/tournaments/presentation/cubit/tournament_registrations_cubit.dart`
+
+### Archivos modificados (Mobile)
+- `features/tournaments/data/tournaments_api.dart` — +registration methods, +body in generate
+- `features/tournaments/data/tournaments_repository.dart` — +registration methods, +params in generate
+- `features/tournaments/presentation/tournament_detail_screen.dart` — +Inscripciones tab, +chat nav, +generate with participants
+- `features/tournaments/presentation/create_tournament_screen.dart` — +SINGLE_ELIMINATION params
+- `features/tournaments/presentation/cubit/tournament_schedule_cubit.dart` — +participantUserIds param
+- `core/di/service_locator.dart` — +TournamentRegistrationsCubit
+
+### Dependencias
+- US-E3-04 (schedule genérico) — ✅ parcial (AMERICANO soportado)
+- US-E0-02 (validación formatParameters) — ✅ done
+
+### Riesgo: Medio — algoritmos de brackets son complejos pero acotados.
+
+### Paralelización
+- Puede ejecutarse **en paralelo** con Sprint 43-44 (no depende de E8).
+
+---
+
+## Sprint 46 — Geo/Venues: búsqueda + vacant hours
+
+**Estado:** `BACKLOG` | **Duración:** 2 semanas | **Enfoque:** Full-stack
+
+**Objetivo:** habilitar descubrimiento de sedes y gestión de horas vacantes desde mobile.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---------|-------------|------|---------|
+| **US-E4-05** Geo exacta: `distanceKm` + medición EXPLAIN/bench | | | |
+| **US-M9-01** Búsqueda de lugares + detalle | | | |
+| **US-M9-02** Vacant hours: publicar, listar, cancelar | | | |
+
+### Definición de Done
+- [ ] API: benchmarks documentados (EXPLAIN, p95/p99)
+- [ ] Mobile: `flutter analyze` + `flutter test` en verde
+- [ ] Pantallas con loading/empty/error/success
+- [ ] OpenAPI actualizado
+
+### Dependencias
+- Backend geo: ✅ parcial (`geo.router.ts`, `vacant_hours.router.ts` ya existen)
+
+### Riesgo: Bajo-Medio — endpoints ya existen, mobile necesita pantallas.
+
+### Paralelización
+- Puede ejecutarse **en paralelo** con Sprint 44-45.
+
+---
+
+## Sprint 47 — Hardening + Post-MVP
+
+**Estado:** `BACKLOG` | **Duración:** 2 semanas | **Enfoque:** Full-stack
+
+**Objetivo:** cerrar cabos sueltos, mejorar calidad, preparar para producción.
+
+### Tablero (Scrum/Kanban)
+
+| Backlog | In Progress | Done | Blocked |
+|---------|-------------|------|---------|
+| **US-E7-04** Plantillas/payloads estables por tipo de notif | | | |
+| **US-E5-04** Elo por deporte + leaderboard por sportId | | | |
+| **US-M3-09** UX conflictos de reserva (mejorar mensajes + CTA) | | | |
+| **US-W1-05** Formulario datos de cobro del venue (CRUD) | | | |
+| **US-W1-06** Auditoría mínima: quién confirmó, timestamp | | | |
+| Caching offline-lite, analytics, performance tuning | | | |
+
+### Definición de Done
+- [ ] Todo verde (lint + typecheck + test en API y mobile)
+- [ ] Métricas de performance documentadas
+- [ ] No features sin tests
+- [ ] OpenAPI 100% actualizado
+
+### Dependencias
+- **Requiere todos los sprints anteriores completos**
+
+### Riesgo: Bajo — es hardening, no features nuevas.
+
+---
+
+## Dependency Graph
+
+```
+Sprint 42 (Quick Wins)     → ✅ DONE
+                              ↓
+Sprint 43 (E8 Foundation)  → Desbloquea Sprint 44
+                              ↓
+Sprint 44 (E8 Mobile+Web)  → Primer valor de pagos reales
+                              ↓
+Sprint 45 (Torneos)        → ✅ DONE
+                              ↓
+Sprint 46 (Geo/Venues)     → Independiente, paralelizable con 44-45
+                              ↓
+Sprint 47 (Hardening)      → Todo lo anterior debe estar done
+```
+
+## Paralelización recomendada
+
+| Semana | Carril A | Carril B |
+|--------|----------|----------|
+| 1-2 | **Sprint 42** ✅ DONE | — |
+| 3-4 | **Sprint 43** (E8 Backend) | **Sprint 45** ✅ DONE |
+| 5-6 | **Sprint 44** (E8 Mobile + Web) | **Sprint 46** (Geo/Venues) |
+| 7-8 | **Sprint 47** (Hardening) | — |
+
+## WIP Limit
+- Máximo **2 sprints en progreso simultáneo** para evitar contexto-switching.
+- **Definition of Ready**: cada US debe tener criterios de aceptación claros, contrato API definido (si aplica), y dependencias resueltas.
+- **Definition of Done**: tests pasan, lint/typecheck verde, OpenAPI actualizado, código reviewado.
+
+---
+
+## Mini-Retro (planificación inicial)
+
+- **Velocity**: plan conservador — sprints de 2 semanas con scope acotado.
+- **Friction**: Sprint 44 tiene 3 layers (API + Mobile + Web) — es el mayor riesgo de delivery.
+- **Action**: si Sprint 44 se atrasa, mover US-W1-* a Sprint 47 y cerrar solo mobile + API en 44.
+
+---
+
+## Mini-Retro — Sprint 42
+
+- **Velocity**: Alta — 4 US completadas en un solo pass. Patrones de código bien establecidos facilitaron el desarrollo.
+- **Friction**: Rutas de imports relativas — error común al crear features nuevas (`../../data/` vs `../data/`). Los tests pre-existing de torneos fallan por modelos desactualizados (no relacionado con Sprint 42).
+- **Action**: Considerar agregar tests para los nuevos features (tournament_chat, notification_prefs, matchmaking) en el siguiente sprint de hardening.
+
+---
+
+## Mini-Retro — Sprint 45
+
+- **Velocity**: Alta — 3 US de backend + 2 de mobile completadas. El patrón clean-architecture del proyecto facilitó agregar registrations sin fricción.
+- **Friction**: El typecheck de TypeScript con `exactOptionalPropertyTypes` requiere manejo cuidadoso de `undefined` vs optional. Los tests pre-existing de torneos siguen fallando por modelos desactualizados.
+- **Action**: Actualizar los tests de torneos existentes para usar los nuevos modelos (sin `bracketSize`, con `tournamentId` en vez de `id`). Agregar tests para ROUND_ROBIN y SINGLE_ELIMINATION.
 

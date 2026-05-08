@@ -16,6 +16,8 @@ export async function postGenerateTournamentScheduleCON(_req: Request, _res: Res
   const RESULT = await GENERATE_TOURNAMENT_SCHEDULE_UC.executeSV({
     tournamentId: PARAMS.tournamentId,
     participantUserIds: BODY.participantUserIds,
+    ...(BODY.doubleRound !== undefined ? { doubleRound: BODY.doubleRound } : {}),
+    ...(BODY.thirdPlaceMatch !== undefined ? { thirdPlaceMatch: BODY.thirdPlaceMatch } : {}),
   });
 
   _res.status(201).json({

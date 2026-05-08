@@ -40,8 +40,13 @@ import '../../features/tournaments/presentation/cubit/create_tournament_cubit.da
 import '../../features/tournaments/presentation/cubit/tournament_presets_cubit.dart';
 import '../../features/tournaments/presentation/cubit/tournament_schedule_cubit.dart';
 import '../../features/tournaments/presentation/cubit/tournament_scoreboard_cubit.dart';
+import '../../features/tournaments/presentation/cubit/tournament_registrations_cubit.dart';
 import '../../features/venues/data/venues_api.dart';
 import '../../features/venues/data/venues_repository.dart';
+import '../../features/matchmaking/data/matchmaking_api.dart';
+import '../../features/matchmaking/data/matchmaking_repository.dart';
+import '../../features/matchmaking/presentation/cubit/matchmaking_cubit.dart';
+import '../../features/notifications/presentation/cubit/notification_prefs_cubit.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -212,6 +217,31 @@ Future<void> setupDependencies() async {
       tournamentsRepository: getIt<TournamentsRepository>(),
       tournamentId: tournamentId,
     ),
+  );
+
+  getIt.registerFactoryParam<TournamentRegistrationsCubit, String, void>(
+    (tournamentId, _) => TournamentRegistrationsCubit(
+      tournamentsRepository: getIt<TournamentsRepository>(),
+      tournamentId: tournamentId,
+    ),
+  );
+
+  getIt.registerFactoryParam<MatchmakingCubit, String, void>(
+    (matchId, _) => MatchmakingCubit(
+      repository: getIt<MatchmakingRepository>(),
+      matchId: matchId,
+    ),
+  );
+
+  getIt.registerLazySingleton<MatchmakingApi>(
+    () => DioMatchmakingApi(apiClient: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<MatchmakingRepository>(
+    () => MatchmakingRepository(api: getIt<MatchmakingApi>()),
+  );
+
+  getIt.registerFactory<NotificationPrefsCubit>(
+    () => NotificationPrefsCubit(repository: getIt<NotificationsRepository>()),
   );
 }
 

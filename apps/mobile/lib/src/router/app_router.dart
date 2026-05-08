@@ -14,10 +14,13 @@ import '../features/matches/presentation/create_match_screen.dart';
 import '../features/matches/presentation/match_lifecycle_screen.dart';
 import '../features/matches/presentation/result_draft_screen.dart';
 import '../features/chat/presentation/match_chat_screen.dart';
+import '../features/chat/presentation/tournament_chat_screen.dart';
+import '../features/matchmaking/presentation/matchmaking_screen.dart';
 import '../features/monetization/presentation/pay_method_screen.dart';
 import '../features/monetization/presentation/upload_receipt_screen.dart';
 import '../features/monetization/presentation/waiting_confirmation_screen.dart';
 import '../features/notifications/presentation/notification_detail_screen.dart';
+import '../features/notifications/presentation/notification_prefs_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
 import '../features/tournaments/presentation/create_tournament_screen.dart';
@@ -158,6 +161,24 @@ final class AppRouter {
                 final notificationId =
                     state.pathParameters['notificationId'] ?? '';
                 return NotificationDetailScreen(notificationId: notificationId);
+              },
+            ),
+            GoRoute(
+              path: Routes.notificationPrefs,
+              builder: (context, state) => const NotificationPrefsScreen(),
+            ),
+            GoRoute(
+              path: '/matches/:matchId/suggestions',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                return MatchmakingScreen(matchId: matchId);
+              },
+            ),
+            GoRoute(
+              path: '/tournaments/:tournamentId/chat',
+              builder: (context, state) {
+                final tournamentId = state.pathParameters['tournamentId'] ?? '';
+                return TournamentChatScreen(tournamentId: tournamentId);
               },
             ),
           ],

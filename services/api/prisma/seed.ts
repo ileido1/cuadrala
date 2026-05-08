@@ -28,6 +28,7 @@ async function seedCatalog(): Promise<void> {
   const PRESETS_V1: Array<{ code: string; name: string; defaultParameters: Prisma.InputJsonValue }> = [
     { code: 'AMERICANO', name: 'Americano', defaultParameters: {} },
     { code: 'ROUND_ROBIN', name: 'Todos contra todos', defaultParameters: { doubleRound: false } },
+    { code: 'SINGLE_ELIMINATION', name: 'Eliminación simple', defaultParameters: { thirdPlaceMatch: false } },
   ];
 
   const SEEDED_SPORTS = await Promise.all(

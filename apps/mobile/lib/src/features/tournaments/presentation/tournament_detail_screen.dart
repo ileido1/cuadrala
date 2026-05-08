@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../router/routes.dart';
 import '../data/models/tournament_schedule_dto.dart';
 import '../data/models/tournament_scoreboard_dto.dart';
+import 'cubit/tournament_registrations_cubit.dart';
+import 'cubit/tournament_registrations_state.dart';
 import 'cubit/tournament_schedule_cubit.dart';
 import 'cubit/tournament_schedule_state.dart';
 import 'cubit/tournament_scoreboard_cubit.dart';
@@ -24,17 +28,28 @@ final class TournamentDetailScreen extends StatelessWidget {
         BlocProvider(
           create: (_) => getIt<TournamentScoreboardCubit>(param1: tournamentId)..load(),
         ),
+        BlocProvider(
+          create: (_) => getIt<TournamentRegistrationsCubit>(param1: tournamentId)..load(),
+        ),
       ],
       child: DefaultTabController(
-        length: 2,
+        length: 3,
         child: Scaffold(
           key: const Key('tournament.detail'),
           appBar: AppBar(
             title: const Text('Torneo'),
+            actions: [
+              IconButton(
+                onPressed: () => context.push(Routes.tournamentChat(tournamentId)),
+                icon: const Icon(Icons.chat_bubble_outline),
+                tooltip: 'Chat del torneo',
+              ),
+            ],
             bottom: const TabBar(
               tabs: [
                 Tab(text: 'Fixture'),
                 Tab(text: 'Tabla'),
+                Tab(text: 'Inscripciones'),
               ],
             ),
           ),
@@ -42,6 +57,7 @@ final class TournamentDetailScreen extends StatelessWidget {
             children: [
               _ScheduleTab(tournamentId: tournamentId),
               _ScoreboardTab(tournamentId: tournamentId),
+              _RegistrationsTab(tournamentId: tournamentId),
             ],
           ),
         ),
@@ -65,21 +81,36 @@ final class _ScheduleTab extends StatelessWidget {
             TournamentScheduleInitial() => const Center(child: CircularProgressIndicator()),
             TournamentScheduleLoading() => const Center(child: CircularProgressIndicator()),
             TournamentScheduleGenerating() => const Center(child: CircularProgressIndicator()),
-            TournamentScheduleUnsupported() => _InfoBox(
+            TournamentScheduleUnsupported() => const _InfoBox(
                 message: 'Este torneo no soporta generación automática de fixture.',
               ),
-            TournamentScheduleConflict() => _InfoBox(
+            TournamentScheduleConflict() => const _InfoBox(
                 message: 'Ya existe un fixture generado. Refresca para verlo.',
               ),
             TournamentScheduleEmpty() => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _InfoBox(message: 'Aún no hay fixture para este torneo.'),
+                  const _InfoBox(message: 'Aún no hay fixture para este torneo.'),
                   const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => context.read<TournamentScheduleCubit>().generate(),
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Generar fixture'),
+                  BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+                    builder: (context, regState) {
+                      final participantIds = regState is TournamentRegistrationsLoaded
+                          ? regState.items.map((r) => r.userId).toList()
+                          : <String>[];
+                      return FilledButton.icon(
+                        onPressed: participantIds.length >= 2
+                            ? () => context.read<TournamentScheduleCubit>().generate(
+                                  participantUserIds: participantIds,
+                                )
+                            : null,
+                        icon: const Icon(Icons.auto_awesome),
+                        label: Text(
+                          participantIds.length >= 2
+                              ? 'Generar fixture'
+                              : 'Se necesitan al menos 2 inscritos',
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -119,6 +150,106 @@ final class _ScoreboardTab extends StatelessWidget {
             TournamentScoreboardSuccess(:final scoreboard) =>
               _ScoreboardTable(scoreboard: scoreboard),
           };
+        },
+      ),
+    );
+  }
+}
+
+final class _RegistrationsTab extends StatelessWidget {
+  const _RegistrationsTab({required this.tournamentId});
+
+  final String tournamentId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      child: BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+        builder: (context, state) {
+          if (state is TournamentRegistrationsLoading || state is TournamentRegistrationsInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state is TournamentRegistrationsFailure) {
+            return _ErrorBox(
+              message: state.message,
+              onRetry: () => context.read<TournamentRegistrationsCubit>().load(),
+            );
+          }
+
+          final loaded = state as TournamentRegistrationsLoaded;
+          final activeItems = loaded.items.where((r) => r.status != 'WITHDRAWN').toList();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${activeItems.length} inscrito${activeItems.length == 1 ? '' : 's'}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+              if (loaded.registerError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  loaded.registerError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Expanded(
+                child: activeItems.isEmpty
+                    ? const _InfoBox(message: 'Aún no hay inscritos en este torneo.')
+                    : ListView.separated(
+                        itemCount: activeItems.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final reg = activeItems[index];
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  child: Text(
+                                    reg.userId.substring(0, 2).toUpperCase(),
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        reg.userId,
+                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                      ),
+                                      Text(
+                                        reg.status,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
         },
       ),
     );
@@ -300,4 +431,3 @@ final class _ErrorBox extends StatelessWidget {
     );
   }
 }
-

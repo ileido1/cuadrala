@@ -79,6 +79,20 @@ export class TournamentFormatParametersValidatorService implements TournamentFor
       return OUT;
     }
 
+    if (_input.presetCode === 'SINGLE_ELIMINATION' && _input.presetSchemaVersion === 1) {
+      assertNoExtraKeys(PARAMS, ['thirdPlaceMatch']);
+
+      const OUT: { thirdPlaceMatch?: boolean } = {};
+      if (PARAMS.thirdPlaceMatch !== undefined) {
+        if (typeof PARAMS.thirdPlaceMatch !== 'boolean') {
+          throwValidationFailed();
+        }
+        OUT.thirdPlaceMatch = PARAMS.thirdPlaceMatch;
+      }
+
+      return OUT;
+    }
+
     // SchemaVersion/presetCode sin validador conocido → rechazo estricto si el cliente mandó parámetros.
     throwValidationFailed();
   }
