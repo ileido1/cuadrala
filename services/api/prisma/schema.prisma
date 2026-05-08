@@ -202,6 +202,7 @@ model User {
   uploadedTransactionReceipts TransactionReceipt[]       @relation("UserUploadedTransactionReceipts")
   chatMessages                ChatMessage[]
   venueStaffRoles             VenueStaff[]
+  ownedVenue                  Venue?
 
   categories       UserCategory[]
   playerProfile    PlayerProfile?
@@ -389,6 +390,9 @@ model Venue {
   paymentCvu        String?
   paymentAlias      String?
   paymentNotes      String?
+  /// Usuario propietario de la sede (nullable para compatibilidad hacia atrás).
+  ownerUserId       String?   @unique
+  owner             User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
   createdAt         DateTime  @default(now())
 
   courts      Court[]
