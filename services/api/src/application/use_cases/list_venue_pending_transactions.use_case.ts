@@ -9,6 +9,9 @@ export class ListVenuePendingTransactionsUseCase {
   async executeSV(_input: {
     venueId: string;
     userId: string;
+    from?: string;
+    to?: string;
+    matchId?: string;
   }): Promise<{
     items: Array<{
       id: string;
@@ -33,7 +36,11 @@ export class ListVenuePendingTransactionsUseCase {
       );
     }
 
-    const ROWS = await listPendingTransactionsByVenueRepo(_input.venueId);
+    const ROWS = await listPendingTransactionsByVenueRepo(_input.venueId, {
+      ...(_input.from !== undefined ? { from: _input.from } : {}),
+      ...(_input.to !== undefined ? { to: _input.to } : {}),
+      ...(_input.matchId !== undefined ? { matchId: _input.matchId } : {}),
+    });
 
     return {
       items: ROWS.map((tx) => ({

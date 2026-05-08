@@ -96,19 +96,42 @@ export async function getVenuesCON(_req: Request, _res: Response): Promise<void>
 
 export async function postVenueCON(_req: Request, _res: Response): Promise<void> {
   const BODY = CREATE_VENUE_BODY_SCHEMA.parse(_req.body);
-  const CREATED = await PRISMA.venue.create({
-    data: {
-      name: BODY.name,
-      address: BODY.address ?? null,
-      latitude: BODY.latitude ?? null,
-      longitude: BODY.longitude ?? null,
-      paymentHolder: BODY.paymentHolder ?? null,
-      paymentBank: BODY.paymentBank ?? null,
-      paymentCvu: BODY.paymentCvu ?? null,
-      paymentAlias: BODY.paymentAlias ?? null,
-      paymentNotes: BODY.paymentNotes ?? null,
-    },
-    select: { id: true, name: true, address: true, latitude: true, longitude: true, createdAt: true },
+
+  if (BODY.ownerUserId !== undefined) {
+    const USER = await PRISMA.user.findUnique({ where: { id: BODY.ownerUserId } });
+    if (USER === null) {
+      throw new AppError('USUARIO_NO_ENCONTRADO', 'El usuario indicado como propietario no existe.', 400);
+    }
+  }
+
+  const CREATED = await PRISMA.$transaction(async (_tx) => {
+    const VENUE = await _tx.venue.create({
+      data: {
+        name: BODY.name,
+        address: BODY.address ?? null,
+        latitude: BODY.latitude ?? null,
+        longitude: BODY.longitude ?? null,
+        paymentHolder: BODY.paymentHolder ?? null,
+        paymentBank: BODY.paymentBank ?? null,
+        paymentCvu: BODY.paymentCvu ?? null,
+        paymentAlias: BODY.paymentAlias ?? null,
+        paymentNotes: BODY.paymentNotes ?? null,
+        ownerUserId: BODY.ownerUserId ?? null,
+      },
+      select: { id: true, name: true, address: true, latitude: true, longitude: true, createdAt: true },
+    });
+
+    if (BODY.ownerUserId !== undefined) {
+      await _tx.venueStaff.create({
+        data: {
+          venueId: VENUE.id,
+          userId: BODY.ownerUserId,
+          role: 'OWNER',
+        },
+      });
+    }
+
+    return VENUE;
   });
 
   _res.status(201).json({

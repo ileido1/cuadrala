@@ -8,6 +8,7 @@ import {
 } from '../composition/venue_staff.composition.js';
 import {
   LIST_VENUE_TRANSACTIONS_PARAMS_SCHEMA,
+  LIST_VENUE_TRANSACTIONS_QUERY_SCHEMA,
   UPSERT_VENUE_STAFF_BODY_SCHEMA,
   VENUE_ID_PARAMS_SCHEMA,
 } from '../validation/venue_staff.validation.js';
@@ -55,10 +56,14 @@ export async function getVenuePendingTransactionsCON(_req: Request, _res: Respon
   }
 
   const PARAMS = LIST_VENUE_TRANSACTIONS_PARAMS_SCHEMA.parse(_req.params);
+  const QUERY = LIST_VENUE_TRANSACTIONS_QUERY_SCHEMA.parse(_req.query);
 
   const RESULT = await LIST_VENUE_PENDING_TRANSACTIONS_UC.executeSV({
     venueId: PARAMS.venueId,
     userId: ACTOR_USER_ID,
+    ...(QUERY.from !== undefined ? { from: QUERY.from } : {}),
+    ...(QUERY.to !== undefined ? { to: QUERY.to } : {}),
+    ...(QUERY.matchId !== undefined ? { matchId: QUERY.matchId } : {}),
   });
 
   _res.status(200).json({

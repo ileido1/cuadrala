@@ -60,16 +60,36 @@ export async function findTransactionWithVenueRepo(_id: string) {
   });
 }
 
-export async function listPendingTransactionsByVenueRepo(_venueId: string) {
-  return PRISMA.transaction.findMany({
-    where: {
-      status: 'PENDING',
-      match: {
-        court: {
-          venueId: _venueId,
-        },
+export async function listPendingTransactionsByVenueRepo(
+  _venueId: string,
+  _filters?: {
+    from?: string;
+    to?: string;
+    matchId?: string;
+  },
+) {
+  const WHERE: Prisma.TransactionWhereInput = {
+    status: 'PENDING',
+    match: {
+      court: {
+        venueId: _venueId,
       },
     },
+  };
+
+  if (_filters?.from !== undefined || _filters?.to !== undefined) {
+    WHERE.createdAt = {
+      ...(_filters.from !== undefined ? { gte: new Date(_filters.from) } : {}),
+      ...(_filters.to !== undefined ? { lte: new Date(_filters.to) } : {}),
+    };
+  }
+
+  if (_filters?.matchId !== undefined) {
+    WHERE.matchId = _filters.matchId;
+  }
+
+  return PRISMA.transaction.findMany({
+    where: WHERE,
     include: {
       match: {
         include: {

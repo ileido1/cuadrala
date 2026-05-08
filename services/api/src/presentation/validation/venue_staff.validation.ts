@@ -18,3 +18,11 @@ export const LIST_VENUE_TRANSACTIONS_PARAMS_SCHEMA = z
     venueId: z.string().uuid('venueId debe ser un UUID valido.'),
   })
   .strict();
+
+export const LIST_VENUE_TRANSACTIONS_QUERY_SCHEMA = z
+  .object({
+    from: z.string().datetime({ offset: true }).optional(),
+    to: z.string().datetime({ offset: true }).optional(),
+    matchId: z.string().uuid('matchId debe ser un UUID valido.').optional(),
+  })
+  .strict();
