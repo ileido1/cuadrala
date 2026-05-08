@@ -6,9 +6,11 @@ import { FinishMatchUseCase } from '../../application/use_cases/finish_match.use
 import { CancelMatchUseCase } from '../../application/use_cases/cancel_match.use_case.js';
 import { CreateMatchUseCase } from '../../application/use_cases/create_match.use_case.js';
 import { GetMatchUseCase } from '../../application/use_cases/get_match.use_case.js';
+import { GetMatchPaymentInfoUseCase } from '../../application/use_cases/get_match_payment_info.use_case.js';
 import { ListMatchesUseCase } from '../../application/use_cases/list_matches.use_case.js';
 import { UpdateMatchUseCase } from '../../application/use_cases/update_match.use_case.js';
 import { PrismaMatchNotificationContextReadRepository } from '../../infrastructure/adapters/prisma_match_notification_context_read_repository.js';
+import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { PrismaMatchRepository } from '../../infrastructure/adapters/prisma_match_repository.js';
 import { PrismaMatchCourtAvailabilityRepository } from '../../infrastructure/adapters/prisma_match_court_availability_repository.js';
 import { PrismaMatchCrudRepository } from '../../infrastructure/adapters/prisma_match_crud_repository.js';
@@ -73,5 +75,11 @@ export const CANCEL_MATCH_UC = new CancelMatchUseCase(
   MATCH_QUERY_REPOSITORY,
   MATCH_ORGANIZER_REPOSITORY,
   MATCH_CRUD_REPOSITORY,
+);
+
+export const GET_MATCH_PAYMENT_INFO_UC = new GetMatchPaymentInfoUseCase(
+  MATCH_QUERY_REPOSITORY,
+  MATCH_PARTICIPATION_REPOSITORY,
+  PRISMA,
 );
 
