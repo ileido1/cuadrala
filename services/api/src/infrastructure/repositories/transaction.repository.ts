@@ -43,6 +43,48 @@ export async function findTransactionByIdRepo(_id: string) {
   return PRISMA.transaction.findUnique({ where: { id: _id } });
 }
 
+export async function findTransactionWithVenueRepo(_id: string) {
+  return PRISMA.transaction.findUnique({
+    where: { id: _id },
+    include: {
+      match: {
+        include: {
+          court: {
+            include: {
+              venue: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+export async function listPendingTransactionsByVenueRepo(_venueId: string) {
+  return PRISMA.transaction.findMany({
+    where: {
+      status: 'PENDING',
+      match: {
+        court: {
+          venueId: _venueId,
+        },
+      },
+    },
+    include: {
+      match: {
+        include: {
+          court: {
+            include: {
+              venue: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
 export async function confirmTransactionManualRepo(_id: string) {
   return PRISMA.transaction.update({
     where: { id: _id },

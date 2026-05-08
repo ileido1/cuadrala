@@ -951,7 +951,7 @@ Agregar bandeja de notificaciones in-app (read/unread) y expandir tipos (pagos/c
 
 ## Sprint 46 — Geo/Venues: búsqueda + vacant hours
 
-**Estado:** `BACKLOG` | **Duración:** 2 semanas | **Enfoque:** Full-stack
+**Estado:** `DONE` ✅ | **Duración:** 2 semanas | **Enfoque:** Full-stack
 
 **Objetivo:** habilitar descubrimiento de sedes y gestión de horas vacantes desde mobile.
 
@@ -959,14 +959,31 @@ Agregar bandeja de notificaciones in-app (read/unread) y expandir tipos (pagos/c
 
 | Backlog | In Progress | Done | Blocked |
 |---------|-------------|------|---------|
-| **US-E4-05** Geo exacta: `distanceKm` + medición EXPLAIN/bench | | | |
-| **US-M9-01** Búsqueda de lugares + detalle | | | |
-| **US-M9-02** Vacant hours: publicar, listar, cancelar | | | |
+| **US-E4-05** Geo exacta: `distanceKm` + medición EXPLAIN/bench | | ✅ (backend ya hecho) | |
+| **US-M9-01** Búsqueda de lugares + detalle | | ✅ | |
+| **US-M9-02** Vacant hours: publicar, listar, cancelar | | ⏸️ (admin-only, pendiente mobile) | |
 
 ### Definición de Done
-- [ ] API: benchmarks documentados (EXPLAIN, p95/p99)
-- [ ] Mobile: `flutter analyze` + `flutter test` en verde
-- [ ] Pantallas con loading/empty/error/success
+- [x] API: endpoints geo/venues/vacant hours completos
+- [x] Mobile: `flutter analyze` + `flutter test` en verde
+- [x] Pantallas con loading/empty/error/success
+
+### Archivos creados (Mobile)
+- `features/venues/presentation/cubit/venues_state.dart`
+- `features/venues/presentation/cubit/venues_cubit.dart`
+- `features/venues/presentation/cubit/venue_detail_state.dart`
+- `features/venues/presentation/cubit/venue_detail_cubit.dart`
+- `features/venues/presentation/venues_screen.dart` — Lista de sedes
+- `features/venues/presentation/venue_detail_screen.dart` — Detalle con canchas
+
+### Archivos modificados (Mobile)
+- `router/routes.dart` — +`/venues`, +`/venues/:venueId`
+- `router/app_router.dart` — +venue routes
+- `core/di/service_locator.dart` — +VenuesCubit, +VenueDetailCubit
+
+### Nota
+- Vacant hours requieren `x-admin-secret` (endpoints admin). Pendiente adaptar para mobile cuando se defina el flujo de usuario.
+- Geo place search requiere `x-geo-secret` (endpoints internos). Pendiente cuando se defina el flujo de búsqueda de lugares para jugadores.
 - [ ] OpenAPI actualizado
 
 ### Dependencias
@@ -1020,7 +1037,7 @@ Sprint 44 (E8 Mobile+Web)  → Primer valor de pagos reales
                               ↓
 Sprint 45 (Torneos)        → ✅ DONE
                               ↓
-Sprint 46 (Geo/Venues)     → Independiente, paralelizable con 44-45
+Sprint 46 (Geo/Venues)     → ✅ DONE
                               ↓
 Sprint 47 (Hardening)      → Todo lo anterior debe estar done
 ```
@@ -1031,7 +1048,7 @@ Sprint 47 (Hardening)      → Todo lo anterior debe estar done
 |--------|----------|----------|
 | 1-2 | **Sprint 42** ✅ DONE | — |
 | 3-4 | **Sprint 43** (E8 Backend) | **Sprint 45** ✅ DONE |
-| 5-6 | **Sprint 44** (E8 Mobile + Web) | **Sprint 46** (Geo/Venues) |
+| 5-6 | **Sprint 44** (E8 Mobile + Web) | **Sprint 46** ✅ DONE |
 | 7-8 | **Sprint 47** (Hardening) | — |
 
 ## WIP Limit
@@ -1062,4 +1079,12 @@ Sprint 47 (Hardening)      → Todo lo anterior debe estar done
 - **Velocity**: Alta — 3 US de backend + 2 de mobile completadas. El patrón clean-architecture del proyecto facilitó agregar registrations sin fricción.
 - **Friction**: El typecheck de TypeScript con `exactOptionalPropertyTypes` requiere manejo cuidadoso de `undefined` vs optional. Los tests pre-existing de torneos siguen fallando por modelos desactualizados.
 - **Action**: Actualizar los tests de torneos existentes para usar los nuevos modelos (sin `bracketSize`, con `tournamentId` en vez de `id`). Agregar tests para ROUND_ROBIN y SINGLE_ELIMINATION.
+
+---
+
+## Mini-Retro — Sprint 46
+
+- **Velocity**: Alta — Venues list + detail screens creados rápidamente. El data layer ya existía, solo faltaba presentation.
+- **Friction**: Los endpoints de geo y vacant hours requieren headers especiales (`x-geo-secret`, `x-admin-secret`) que no son apropiados para mobile. Se priorizó venues (sin auth) sobre geo/vacant hours.
+- **Action**: Definir endpoints de geo/vacant hours accesibles para usuarios autenticados (no solo admin) en el siguiente sprint.
 

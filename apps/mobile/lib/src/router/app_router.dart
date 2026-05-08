@@ -23,6 +23,8 @@ import '../features/notifications/presentation/notification_detail_screen.dart';
 import '../features/notifications/presentation/notification_prefs_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
+import '../features/venues/presentation/venues_screen.dart';
+import '../features/venues/presentation/venue_detail_screen.dart';
 import '../features/tournaments/presentation/create_tournament_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
 import 'auth_redirect.dart';
@@ -105,10 +107,12 @@ final class AppRouter {
                 final amountCents =
                     int.tryParse(state.uri.queryParameters['amountCents'] ?? '') ?? 0;
                 final title = state.uri.queryParameters['title'] ?? 'Partida';
+                final venueId = state.uri.queryParameters['venueId'];
                 return PayMethodScreen(
                   matchId: matchId,
                   amountPerPersonCents: amountCents,
                   matchTitle: title,
+                  venueId: venueId,
                 );
               },
             ),
@@ -179,6 +183,18 @@ final class AppRouter {
               builder: (context, state) {
                 final tournamentId = state.pathParameters['tournamentId'] ?? '';
                 return TournamentChatScreen(tournamentId: tournamentId);
+              },
+            ),
+            GoRoute(
+              path: Routes.venues,
+              builder: (context, state) => const VenuesScreen(),
+            ),
+            GoRoute(
+              path: '/venues/:venueId',
+              builder: (context, state) {
+                final venueId = state.pathParameters['venueId'] ?? '';
+                final venueName = state.uri.queryParameters['name'] ?? 'Sede';
+                return VenueDetailScreen(venueId: venueId, venueName: venueName);
               },
             ),
           ],

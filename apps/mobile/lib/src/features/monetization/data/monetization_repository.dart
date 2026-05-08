@@ -2,6 +2,7 @@ import '../../../core/failures/app_failure.dart';
 import '../../profile/data/profile_repository.dart';
 import 'models/match_transactions_summary_dto.dart';
 import 'models/transaction_dto.dart';
+import 'models/venue_payment_info_dto.dart';
 import 'monetization_api.dart';
 
 final class UserTransactionsResult {
@@ -154,6 +155,20 @@ class MonetizationRepository {
         .toList();
 
     return UserTransactionsResult(userId: resolvedUserId, transactions: items);
+  }
+
+  Future<VenuePaymentInfoDto> getVenuePaymentInfo({
+    required String venueId,
+  }) async {
+    final json = await _api.getVenuePaymentInfoEnvelope(venueId: venueId);
+    final data = json['data'];
+    if (data is Map<String, Object?>) {
+      return VenuePaymentInfoDto.fromJson(data);
+    }
+    throw const AppFailure(
+      code: 'INVALID_RESPONSE',
+      message: 'Respuesta inválida del servidor.',
+    );
   }
 }
 

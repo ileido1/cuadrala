@@ -33,6 +33,7 @@ export type MatchParticipantDTO = {
 
 export type MatchDetailDTO = MatchListItemDTO & {
   courtId: string | null;
+  venueId: string | null;
   clubName?: string;
   courtName?: string;
   locationLabel?: string;

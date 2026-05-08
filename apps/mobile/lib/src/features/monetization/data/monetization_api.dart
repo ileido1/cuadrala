@@ -26,6 +26,10 @@ abstract interface class MonetizationApi {
     required String userId,
     int? limit,
   });
+
+  Future<Map<String, Object?>> getVenuePaymentInfoEnvelope({
+    required String venueId,
+  });
 }
 
 final class DioMonetizationApi implements MonetizationApi {
@@ -89,6 +93,13 @@ final class DioMonetizationApi implements MonetizationApi {
         if (limit != null) 'limit': limit,
       },
     );
+  }
+
+  @override
+  Future<Map<String, Object?>> getVenuePaymentInfoEnvelope({
+    required String venueId,
+  }) {
+    return _apiClient.getJson('/api/v1/venues/$venueId/payment-info');
   }
 }
 

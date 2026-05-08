@@ -62,6 +62,11 @@ enum PaymentMethod {
   MANUAL
 }
 
+enum VenueStaffRole {
+  OWNER
+  STAFF
+}
+
 enum MatchResultDraftStatus {
   DRAFT
   REJECTED
@@ -196,6 +201,7 @@ model User {
   refreshTokens               RefreshToken[]
   uploadedTransactionReceipts TransactionReceipt[]       @relation("UserUploadedTransactionReceipts")
   chatMessages                ChatMessage[]
+  venueStaffRoles             VenueStaff[]
 
   categories       UserCategory[]
   playerProfile    PlayerProfile?
@@ -377,12 +383,32 @@ model Venue {
   addressLine1      String?
   addressPostalCode String?
   geocodedAt        DateTime?
+  /// Instrucciones de pago para transferencias al venue.
+  paymentHolder     String?
+  paymentBank       String?
+  paymentCvu        String?
+  paymentAlias      String?
+  paymentNotes      String?
   createdAt         DateTime  @default(now())
 
   courts      Court[]
   vacantHours VacantHour[]
+  staff       VenueStaff[]
 
   @@index([latitude, longitude])
+}
+
+model VenueStaff {
+  id        String         @id @default(uuid())
+  venueId   String
+  venue     Venue          @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      VenueStaffRole @default(STAFF)
+  createdAt DateTime       @default(now())
+
+  @@unique([venueId, userId])
+  @@index([userId])
 }
 
 model Court {

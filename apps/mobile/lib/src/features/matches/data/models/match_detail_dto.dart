@@ -33,6 +33,7 @@ final class MatchDetailDto {
     required this.participantCount,
     required this.openSpots,
     required this.courtId,
+    this.venueId,
     required this.clubName,
     required this.courtName,
     required this.locationLabel,
@@ -54,6 +55,7 @@ final class MatchDetailDto {
   final int participantCount;
   final int openSpots;
   final String? courtId;
+  final String? venueId;
   final String? clubName;
   final String? courtName;
   final String? locationLabel;
@@ -97,6 +99,7 @@ final class MatchDetailDto {
       participantCount: participantCount,
       openSpots: openSpots,
       courtId: json['courtId'] as String?,
+      venueId: json['venueId'] as String?,
       clubName: json['clubName'] as String?,
       courtName: json['courtName'] as String?,
       locationLabel: json['locationLabel'] as String?,

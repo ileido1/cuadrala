@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 
+import { AppError } from '../../domain/errors/app_error.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import {
   CREATE_COURT_BODY_SCHEMA,
@@ -101,6 +102,11 @@ export async function postVenueCON(_req: Request, _res: Response): Promise<void>
       address: BODY.address ?? null,
       latitude: BODY.latitude ?? null,
       longitude: BODY.longitude ?? null,
+      paymentHolder: BODY.paymentHolder ?? null,
+      paymentBank: BODY.paymentBank ?? null,
+      paymentCvu: BODY.paymentCvu ?? null,
+      paymentAlias: BODY.paymentAlias ?? null,
+      paymentNotes: BODY.paymentNotes ?? null,
     },
     select: { id: true, name: true, address: true, latitude: true, longitude: true, createdAt: true },
   });
@@ -141,6 +147,38 @@ export async function getVenueCourtsCON(_req: Request, _res: Response): Promise<
     success: true,
     message: 'Canchas obtenidas correctamente.',
     data: { items: ROWS },
+  });
+}
+
+export async function getVenuePaymentInfoCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
+
+  const VENUE = await PRISMA.venue.findUnique({
+    where: { id: PARAMS.venueId },
+    select: {
+      id: true,
+      name: true,
+      paymentHolder: true,
+      paymentBank: true,
+      paymentCvu: true,
+      paymentAlias: true,
+      paymentNotes: true,
+    },
+  });
+
+  if (VENUE === null) {
+    throw new AppError('NO_ENCONTRADO', 'Sede no encontrada.', 404);
+  }
+
+  _res.status(200).json({
+    success: true,
+    message: 'Informacion de pago obtenida correctamente.',
+    data: VENUE,
   });
 }
 

@@ -18,6 +18,11 @@ export const CREATE_VENUE_BODY_SCHEMA = z
     address: z.string().min(1).max(200).optional(),
     latitude: z.coerce.number().min(-90).max(90).optional(),
     longitude: z.coerce.number().min(-180).max(180).optional(),
+    paymentHolder: z.string().min(1).max(200).optional(),
+    paymentBank: z.string().min(1).max(200).optional(),
+    paymentCvu: z.string().min(1).max(200).optional(),
+    paymentAlias: z.string().min(1).max(200).optional(),
+    paymentNotes: z.string().min(1).max(500).optional(),
   })
   .strict();
 

@@ -382,7 +382,9 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
   });
 
   it('PATCH /api/v1/transactions/:transactionId/confirm-manual responde 400 si transactionId no es UUID', async () => {
-    const RES = await request(APP).patch('/api/v1/transactions/x/confirm-manual');
+    const RES = await request(APP)
+      .patch('/api/v1/transactions/x/confirm-manual')
+      .set('Authorization', `Bearer ${VALID_ACCESS_TOKEN}`);
 
     expect(RES.status).toBe(400);
     expect(RES.body.code).toBe('VALIDACION_FALLIDA');

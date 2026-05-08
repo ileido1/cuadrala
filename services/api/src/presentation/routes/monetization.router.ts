@@ -41,6 +41,7 @@ MONETIZATION_ROUTER.get(
 );
 MONETIZATION_ROUTER.patch(
   '/transactions/:transactionId/confirm-manual',
+  requireAuth,
   asyncHandler(patchConfirmTransactionManualCON),
 );
 MONETIZATION_ROUTER.post(

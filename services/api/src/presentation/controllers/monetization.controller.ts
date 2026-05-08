@@ -1,12 +1,13 @@
 import type { Request, Response } from 'express';
 
+import { AppError } from '../../domain/errors/app_error.js';
 import {
-  confirmTransactionManualSV,
   createMatchObligationsSV,
   getMatchTransactionsSummarySV,
   listUserTransactionsSV,
   updateUserSubscriptionSV,
 } from '../../application/monetization.service.js';
+import { CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC } from '../composition/venue_staff.composition.js';
 import {
   CREATE_OBLIGATIONS_BODY_SCHEMA,
   MATCH_ID_PARAM_SCHEMA,
@@ -41,9 +42,17 @@ export async function patchConfirmTransactionManualCON(
   _req: Request,
   _res: Response,
 ): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
   const PARAMS = TRANSACTION_ID_PARAM_SCHEMA.parse(_req.params);
 
-  const RESULT = await confirmTransactionManualSV(PARAMS.transactionId);
+  const RESULT = await CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC.executeSV({
+    transactionId: PARAMS.transactionId,
+    userId: ACTOR_USER_ID,
+  });
 
   _res.status(200).json({
     success: true,

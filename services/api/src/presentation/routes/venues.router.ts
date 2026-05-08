@@ -3,12 +3,14 @@ import { Router } from 'express';
 import {
   getVenuesCON,
   getVenueCourtsCON,
+  getVenuePaymentInfoCON,
   postVenueCON,
   postCourtCON,
 } from '../controllers/venues.controller.js';
 import { getVenueCourtAvailabilityCON } from '../controllers/court_availability.controller.js';
 import { postVenueGeocodeCON } from '../controllers/venue_geocoding.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 export const VENUES_ROUTER = Router();
 
@@ -18,4 +20,5 @@ VENUES_ROUTER.get('/venues/:venueId/availability', asyncHandler(getVenueCourtAva
 VENUES_ROUTER.post('/venues', asyncHandler(postVenueCON));
 VENUES_ROUTER.post('/venues/:venueId/courts', asyncHandler(postCourtCON));
 VENUES_ROUTER.post('/venues/:venueId/geocode', asyncHandler(postVenueGeocodeCON));
+VENUES_ROUTER.get('/venues/:venueId/payment-info', requireAuth, asyncHandler(getVenuePaymentInfoCON));
 

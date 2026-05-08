@@ -103,6 +103,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
             name: true,
             venue: {
               select: {
+                id: true,
                 name: true,
                 addressLine1: true,
                 addressCity: true,
@@ -142,6 +143,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
     return {
       ...BASE,
       courtId: ROW.courtId,
+      venueId: ROW.court?.venue.id ?? null,
       ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
       ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
       ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),

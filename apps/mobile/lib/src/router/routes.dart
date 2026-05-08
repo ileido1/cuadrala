@@ -15,6 +15,8 @@ final class Routes {
   static String tournamentChat(String tournamentId) => '/tournaments/$tournamentId/chat';
   static const notifications = '/notifications';
   static const notificationPrefs = '/notifications/prefs';
+  static const venues = '/venues';
+  static String venueDetail(String venueId) => '/venues/$venueId';
 
   static String matchDetail(String matchId) => '/matches/$matchId';
   static String tournamentDetail(String tournamentId) => '/tournaments/$tournamentId';
