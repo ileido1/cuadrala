@@ -660,4 +660,99 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     expect(RES.status).toBe(401);
     expect(RES.body.code).toBe('NO_AUTORIZADO');
   });
+
+  describe('E8 — Club/Venue Ownership', () => {
+    it('POST /api/v1/venues/:venueId/staff responde 401 sin token', async () => {
+      const RES = await request(APP)
+        .post('/api/v1/venues/550e8400-e29b-41d4-a716-446655440001/staff')
+        .send({ userId: '550e8400-e29b-41d4-a716-446655440002' })
+        .set('Content-Type', 'application/json');
+
+      expect(RES.status).toBe(401);
+      expect(RES.body.code).toBe('NO_AUTORIZADO');
+    });
+
+    it('GET /api/v1/venues/:venueId/transactions/pending responde 401 sin token', async () => {
+      const RES = await request(APP).get(
+        '/api/v1/venues/550e8400-e29b-41d4-a716-446655440001/transactions/pending',
+      );
+
+      expect(RES.status).toBe(401);
+      expect(RES.body.code).toBe('NO_AUTORIZADO');
+    });
+
+    it('GET /api/v1/venues/:venueId/payment-info responde 401 sin token', async () => {
+      const RES = await request(APP).get(
+        '/api/v1/venues/550e8400-e29b-41d4-a716-446655440001/payment-info',
+      );
+
+      expect(RES.status).toBe(401);
+      expect(RES.body.code).toBe('NO_AUTORIZADO');
+    });
+
+    it('GET /api/v1/matches/:matchId/payment-info responde 401 sin token', async () => {
+      const RES = await request(APP).get(
+        '/api/v1/matches/550e8400-e29b-41d4-a716-446655440001/payment-info',
+      );
+
+      expect(RES.status).toBe(401);
+      expect(RES.body.code).toBe('NO_AUTORIZADO');
+    });
+
+    it('POST /api/v1/venues/bad/staff responde 400 con UUID invalido', async () => {
+      const RES = await request(APP)
+        .post('/api/v1/venues/bad/staff')
+        .set('Authorization', `Bearer ${VALID_ACCESS_TOKEN}`)
+        .send({ userId: '550e8400-e29b-41d4-a716-446655440002' })
+        .set('Content-Type', 'application/json');
+
+      expect(RES.status).toBe(400);
+      expect(RES.body.code).toBe('VALIDACION_FALLIDA');
+    });
+
+    it('GET /api/v1/venues/bad/transactions/pending responde 400 con UUID invalido', async () => {
+      const RES = await request(APP)
+        .get('/api/v1/venues/bad/transactions/pending')
+        .set('Authorization', `Bearer ${VALID_ACCESS_TOKEN}`);
+
+      expect(RES.status).toBe(400);
+      expect(RES.body.code).toBe('VALIDACION_FALLIDA');
+    });
+
+    it('GET /api/v1/venues/:id/payment-info con token valido y UUID valido responde 200, 404 o 500 (sin DB en contrato)', async () => {
+      const RES = await request(APP)
+        .get('/api/v1/venues/550e8400-e29b-41d4-a716-446655440001/payment-info')
+        .set('Authorization', `Bearer ${VALID_ACCESS_TOKEN}`);
+
+      // Sin DB, puede devolver 500 (PrismaClientInitializationError)
+      expect([200, 404, 500]).toContain(RES.status);
+      if (RES.status === 200) {
+        expect(RES.body.success).toBe(true);
+        expect(RES.body.data).toBeDefined();
+        expect(RES.body.data).toHaveProperty('paymentHolder');
+        expect(RES.body.data).toHaveProperty('paymentBank');
+        expect(RES.body.data).toHaveProperty('paymentCvu');
+        expect(RES.body.data).toHaveProperty('paymentAlias');
+        expect(RES.body.data).toHaveProperty('paymentNotes');
+      }
+    });
+
+    it('GET /api/v1/matches/:id/payment-info con token invalido responde 401', async () => {
+      const RES = await request(APP)
+        .get('/api/v1/matches/550e8400-e29b-41d4-a716-446655440001/payment-info')
+        .set('Authorization', 'Bearer token-invalido');
+
+      expect(RES.status).toBe(401);
+      expect(RES.body.code).toBe('TOKEN_INVALIDO');
+    });
+
+    it('PATCH /api/v1/transactions/:id/confirm-manual responde 401 sin token', async () => {
+      const RES = await request(APP).patch(
+        '/api/v1/transactions/550e8400-e29b-41d4-a716-446655440001/confirm-manual',
+      );
+
+      expect(RES.status).toBe(401);
+      expect(RES.body.code).toBe('NO_AUTORIZADO');
+    });
+  });
 });
