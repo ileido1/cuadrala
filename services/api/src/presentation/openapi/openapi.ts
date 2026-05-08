@@ -1315,7 +1315,8 @@ const OPENAPI_CONST = {
     '/api/v1/transactions/{transactionId}/confirm-manual': {
       patch: {
         tags: ['Monetization'],
-        summary: 'Confirmar pago manual',
+        summary: 'Confirmar pago manual (solo staff de la sede)',
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: 'transactionId',
@@ -1327,6 +1328,9 @@ const OPENAPI_CONST = {
         responses: {
           '200': { description: 'OK' },
           '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido (no staff)' },
+          '404': { description: 'Transacción no encontrada' },
         },
       },
     },
@@ -1925,6 +1929,100 @@ const OPENAPI_CONST = {
             },
           },
           '400': { description: 'Validación fallida' },
+        },
+      },
+    },
+    '/api/v1/venues/{venueId}/payment-info': {
+      get: {
+        tags: ['Venues'],
+        summary: 'Obtener información de pago de una sede',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '404': { description: 'No encontrado' },
+        },
+      },
+    },
+    '/api/v1/venues/{venueId}/staff': {
+      get: {
+        tags: ['Venues'],
+        summary: 'Listar staff de una sede',
+        parameters: [
+          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+        },
+      },
+      post: {
+        tags: ['Venues'],
+        summary: 'Agregar o actualizar miembro del staff de una sede',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['userId'],
+                properties: {
+                  userId: { type: 'string', format: 'uuid' },
+                  role: { type: 'string', enum: ['OWNER', 'STAFF'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Actualizado' },
+          '201': { description: 'Creado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/venues/{venueId}/transactions/pending': {
+      get: {
+        tags: ['Venues'],
+        summary: 'Listar transacciones pendientes de una sede',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'from', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+          { name: 'to', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+          { name: 'matchId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido' },
+        },
+      },
+    },
+    '/api/v1/matches/{matchId}/payment-info': {
+      get: {
+        tags: ['Matches'],
+        summary: 'Obtener información de pago de un partido (solo participantes)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido (no participante)' },
+          '404': { description: 'Partido no encontrado o sin sede' },
         },
       },
     },
