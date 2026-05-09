@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -18,6 +19,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let userB: string;
     let matchId: string;
     let txAId: string;
+    let authToken: string;
 
     beforeAll(async () => {
       await resetDatabaseForTestsSV();
@@ -57,6 +59,22 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       expect(CREATE.status).toBe(201);
       matchId = CREATE.body.data.matchId as string;
+
+      // Setup: Venue + Court + VenueStaff para que el confirm-manual funcione
+      const VENUE = await PRISMA.venue.create({
+        data: { name: 'Sede Test Monet' },
+      });
+      const COURT = await PRISMA.court.create({
+        data: { name: 'Cancha 1', venueId: VENUE.id },
+      });
+      await PRISMA.match.update({
+        where: { id: matchId },
+        data: { courtId: COURT.id },
+      });
+      await PRISMA.venueStaff.create({
+        data: { venueId: VENUE.id, userId: userA, role: 'STAFF' },
+      });
+      authToken = signAccessTokenSV(userA, `ma-${TS}@test.local`);
     });
 
     afterAll(async () => {
@@ -116,7 +134,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     });
 
     it('PATCH confirm-manual confirma una transacción', async () => {
-      const RES = await request(APP).patch(`/api/v1/transactions/${txAId}/confirm-manual`);
+      const RES = await request(APP)
+        .patch(`/api/v1/transactions/${txAId}/confirm-manual`)
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(RES.status).toBe(200);
       expect(RES.body.data.status).toBe('CONFIRMED');

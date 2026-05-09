@@ -15,6 +15,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let sportPadelId: string;
     let categoryId: string;
     let courtId: string;
+    let venueId: string;
 
     const TOKENS: Record<string, string> = {};
     const USER_IDS: Record<string, string> = {};
@@ -42,6 +43,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           categoryId,
           type: 'REGULAR',
           courtId,
+          venueId,
           scheduledAt: new Date(Date.now() + 60_000).toISOString(),
           maxParticipants: _maxParticipants,
         })
@@ -93,6 +95,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           longitude: -66.903,
         },
       });
+      venueId = VENUE.id;
       const COURT = await PRISMA.court.create({ data: { venueId: VENUE.id, name: 'Court E14' } });
       courtId = COURT.id;
 
