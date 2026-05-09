@@ -46,6 +46,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       });
       const COURT_FAR = await PRISMA.court.create({ data: { name: 'Court far', venueId: VENUE_FAR.id } });
 
+      const NOW = Date.now();
+
       // Match near y barato
       await request(APP)
         .post('/api/v1/matches')
@@ -56,6 +58,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           type: 'REGULAR',
           maxParticipants: 4,
           courtId: COURT_NEAR.id,
+          venueId: VENUE_NEAR.id,
+          scheduledAt: new Date(NOW + 60_000).toISOString(),
           pricePerPlayerCents: 1000,
         })
         .set('Content-Type', 'application/json');
@@ -70,6 +74,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           type: 'REGULAR',
           maxParticipants: 4,
           courtId: COURT_NEAR.id,
+          venueId: VENUE_NEAR.id,
+          scheduledAt: new Date(NOW + 180 * 60_000).toISOString(), // 3h later to avoid overlap
           pricePerPlayerCents: 9000,
         })
         .set('Content-Type', 'application/json');
@@ -84,6 +90,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           type: 'REGULAR',
           maxParticipants: 4,
           courtId: COURT_FAR.id,
+          venueId: VENUE_FAR.id,
+          scheduledAt: new Date(NOW + 60_000).toISOString(),
           pricePerPlayerCents: 1000,
         })
         .set('Content-Type', 'application/json');

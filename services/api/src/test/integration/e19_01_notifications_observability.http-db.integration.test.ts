@@ -16,6 +16,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let sportPadelId: string;
     let categoryId: string;
     let courtId: string;
+    let venueId: string;
 
     const TOKENS: Record<string, string> = {};
     const USER_IDS: Record<string, string> = {};
@@ -34,7 +35,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       return { token: REG.body.data.accessToken as string, userId: REG.body.data.user.id as string };
     }
 
-    async function createMatchSV(_token: string, _maxParticipants = 4): Promise<string> {
+    async function createMatchSV(_token: string, _maxParticipants = 4, _offsetMinutes?: number): Promise<string> {
+      const OFFSET_MS = (_offsetMinutes ?? 1) * 60_000;
       const CREATE = await request(APP)
         .post('/api/v1/matches')
         .set('Authorization', `Bearer ${_token}`)
@@ -43,7 +45,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           categoryId,
           type: 'REGULAR',
           courtId,
-          scheduledAt: new Date(Date.now() + 60_000).toISOString(),
+          venueId,
+          scheduledAt: new Date(Date.now() + OFFSET_MS).toISOString(),
           maxParticipants: _maxParticipants,
         })
         .set('Content-Type', 'application/json');
@@ -100,6 +103,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           longitude: -66.903,
         },
       });
+      venueId = VENUE.id;
       const COURT = await PRISMA.court.create({ data: { venueId: VENUE.id, name: 'Court E19' } });
       courtId = COURT.id;
 
@@ -125,7 +129,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await createMatchingSubscriptionSV(SUB.token);
       await registerDeviceTokenSV(SUB.token, `fcm-e19-${Date.now()}-aaaaaaaaaaaaaaaa`);
 
-      const MATCH_ID = await createMatchSV(TOKENS.P1!, 4);
+      const MATCH_ID = await createMatchSV(TOKENS.P1!, 4, 1);
       await joinSV(MATCH_ID, TOKENS.P2!);
       await joinSV(MATCH_ID, TOKENS.P3!);
       await joinSV(MATCH_ID, TOKENS.P4!);
@@ -161,7 +165,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await createMatchingSubscriptionSV(SUB.token);
       await registerDeviceTokenSV(SUB.token, `fcm-test-fail-${Date.now()}-bbbbbbbbbbbbbbbb`);
 
-      const MATCH_ID = await createMatchSV(TOKENS.P1!, 4);
+      const MATCH_ID = await createMatchSV(TOKENS.P1!, 4, 150);
       await joinSV(MATCH_ID, TOKENS.P2!);
       await joinSV(MATCH_ID, TOKENS.P3!);
       await joinSV(MATCH_ID, TOKENS.P4!);
@@ -209,7 +213,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         SUBS.push({ token: U.token, userId: U.userId, deviceToken: DEVICE });
       }
 
-      const MATCH_ID = await createMatchSV(TOKENS.P1!, 4);
+      const MATCH_ID = await createMatchSV(TOKENS.P1!, 4, 300);
       await joinSV(MATCH_ID, TOKENS.P2!);
       await joinSV(MATCH_ID, TOKENS.P3!);
       await joinSV(MATCH_ID, TOKENS.P4!);
