@@ -101,7 +101,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(GET.body.data.payload).toBeDefined();
     });
 
-    it('ROUND_ROBIN: generate responde 501 FORMATO_NO_SOPORTADO (MVP)', async () => {
+    it('ROUND_ROBIN: generate genera calendario correctamente', async () => {
       const TOURNAMENT = await request(APP)
         .post('/api/v1/tournaments')
         .send({
@@ -127,8 +127,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         })
         .set('Content-Type', 'application/json');
 
-      expect(RES.status).toBe(501);
-      expect(RES.body.code).toBe('FORMATO_NO_SOPORTADO');
+      expect(RES.status).toBe(201);
+      expect(RES.body.data.created).toBe(true);
+      expect(RES.body.data.schedule.formatCode).toBe('ROUND_ROBIN');
+      expect(RES.body.data.schedule.payload.rounds).toBeInstanceOf(Array);
     });
   },
 );
