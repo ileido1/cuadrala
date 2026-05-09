@@ -84,6 +84,16 @@ class ApiClient {
       this.client.post('/auth/register', { email, password, name }),
   };
 
+  readonly venues = {
+    pendingTransactions: (
+      venueId: string,
+      params?: { from?: string; to?: string; matchId?: string }
+    ) =>
+      this.client.get(`/venues/${venueId}/transactions/pending`, {
+        params,
+      }),
+  };
+
   get instance(): AxiosInstance {
     return this.client;
   }
