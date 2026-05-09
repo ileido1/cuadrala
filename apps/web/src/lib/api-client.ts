@@ -87,8 +87,13 @@ class ApiClient {
   readonly venues = {
     list: () => this.client.get('/venues'),
     get: (id: string) => this.client.get(`/venues/${id}`),
-    pendingTransactions: (id: string) =>
-      this.client.get(`/venues/${id}/transactions/pending`),
+    pendingTransactions: (
+      venueId: string,
+      params?: { from?: string; to?: string; matchId?: string }
+    ) =>
+      this.client.get(`/venues/${venueId}/transactions/pending`, {
+        params,
+      }),
     upcomingMatches: (id: string) =>
       this.client.get(`/venues/${id}/matches?upcoming=true`),
   };
