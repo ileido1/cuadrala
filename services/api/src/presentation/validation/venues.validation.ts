@@ -23,6 +23,7 @@ export const CREATE_VENUE_BODY_SCHEMA = z
     paymentCvu: z.string().min(1).max(200).optional(),
     paymentAlias: z.string().min(1).max(200).optional(),
     paymentNotes: z.string().min(1).max(500).optional(),
+    ownerUserId: z.string().uuid('ownerUserId debe ser un UUID valido.').optional(),
   })
   .strict();
 

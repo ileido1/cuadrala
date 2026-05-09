@@ -1,3 +1,5 @@
+import type { PrismaClient } from '../../generated/prisma/client.js';
+
 import { AppError } from '../../domain/errors/app_error.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 import { findTransactionWithVenueRepo } from '../../infrastructure/repositories/transaction.repository.js';
@@ -5,6 +7,7 @@ import { findTransactionWithVenueRepo } from '../../infrastructure/repositories/
 export class ConfirmTransactionAsVenueStaffUseCase {
   constructor(
     private readonly _venueStaffRepository: VenueStaffRepository,
+    private readonly _prisma: PrismaClient,
   ) {}
 
   async executeSV(_input: {
@@ -47,8 +50,7 @@ export class ConfirmTransactionAsVenueStaffUseCase {
     }
 
     // Confirmar la transacción
-    const { PRISMA } = await import('../../infrastructure/prisma_client.js');
-    const UPDATED = await PRISMA.transaction.update({
+    const UPDATED = await this._prisma.transaction.update({
       where: { id: _input.transactionId },
       data: {
         status: 'CONFIRMED',

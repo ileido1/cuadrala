@@ -5,6 +5,7 @@ import {
   CANCEL_MATCH_UC,
   CREATE_MATCH_UC,
   FINISH_MATCH_UC,
+  GET_MATCH_PAYMENT_INFO_UC,
   GET_MATCH_UC,
   JOIN_MATCH_UC,
   LEAVE_MATCH_UC,
@@ -207,5 +208,25 @@ export async function postFinishMatchCON(_req: Request, _res: Response): Promise
   const PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
   await FINISH_MATCH_UC.executeSV(PARAMS.matchId, USER_ID);
   _res.status(204).send();
+}
+
+export async function getMatchPaymentInfoCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
+
+  const RESULT = await GET_MATCH_PAYMENT_INFO_UC.executeSV({
+    matchId: PARAMS.matchId,
+    userId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Informacion de pago obtenida correctamente.',
+    data: RESULT,
+  });
 }
 

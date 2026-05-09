@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import {
   getMatchByIdCON,
+  getMatchPaymentInfoCON,
   getMatchesCON,
   getOpenMatchesCON,
   postFinishMatchCON,
@@ -32,6 +33,7 @@ MATCHES_ROUTER.post('/matches/:matchId/join', requireAuth, asyncHandler(postJoin
 MATCHES_ROUTER.post('/matches/:matchId/leave', requireAuth, asyncHandler(postLeaveMatchCON));
 MATCHES_ROUTER.post('/matches/:matchId/start', requireAuth, asyncHandler(postStartMatchCON));
 MATCHES_ROUTER.post('/matches/:matchId/finish', requireAuth, asyncHandler(postFinishMatchCON));
+MATCHES_ROUTER.get('/matches/:matchId/payment-info', requireAuth, asyncHandler(getMatchPaymentInfoCON));
 MATCHES_ROUTER.put('/matches/:matchId/result-draft', requireAuth, asyncHandler(putMatchResultDraftCON));
 MATCHES_ROUTER.post('/matches/:matchId/result-draft/confirm', requireAuth, asyncHandler(postConfirmMatchResultDraftCON));
 MATCHES_ROUTER.post('/matches/:matchId/result-draft/reproposal', requireAuth, asyncHandler(postReproposeMatchResultDraftCON));
