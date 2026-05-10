@@ -8,6 +8,7 @@ import type {
 } from '../../domain/ports/match_query_repository.js';
 
 import { PRISMA } from '../prisma_client.js';
+import type { MatchWhereInput } from '../../generated/prisma.js';
 
 function toListItemDTO(_row: {
   id: string;
@@ -166,7 +167,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
   ): Promise<{ items: (MatchListItemDTO & { courtId: string | null; courtName: string | null })[]; total: number }> {
     const { courtId, date, status } = _filters;
 
-    const WHERE: any = {
+    const WHERE: MatchWhereInput = {
       court: { venueId: _venueId },
       ...(courtId !== undefined ? { courtId } : {}),
       ...(status !== undefined ? { status } : {}),

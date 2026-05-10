@@ -105,7 +105,6 @@ export function generateSingleEliminationScheduleSV(
   const IDS = normalizeParticipantIdsSV(_input.participantUserIds);
   const N = IDS.length;
   const BRACKET_SIZE = nextPowerOfTwoSV(N);
-  const BYES = BRACKET_SIZE - N;
   const TOTAL_ROUNDS = Math.log2(BRACKET_SIZE);
 
   // Distribuir byes: los seeds más altos (primeros en el array ordenado) reciben bye
@@ -116,14 +115,12 @@ export function generateSingleEliminationScheduleSV(
   // Para un bracket de 8: seeds 1,8,4,5,2,7,3,6
   const positions = generateStandardSeedingPositionsSV(BRACKET_SIZE);
 
-  let byeCount = 0;
   for (let i = 0; i < BRACKET_SIZE; i++) {
     const SEED_POS = positions[i]!;
     if (i < N) {
       seededPositions[SEED_POS] = IDS[i]!;
     } else {
       seededPositions[SEED_POS] = '__BYE__';
-      byeCount++;
     }
   }
 
