@@ -1,21 +1,75 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { useVenue } from '~/contexts/venue-context';
+import { useVenueCourts } from '~/hooks/useVenueCourts';
+import { useCourtSlots } from '~/hooks/useCourtSlots';
+import { DayPicker } from '~/components/schedule/DayPicker';
+import { CourtTabs } from '~/components/schedule/CourtTabs';
+import { SlotGrid } from '~/components/schedule/SlotGrid';
+
+function todayString(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function SchedulePage() {
+  const { currentVenue } = useVenue();
+  const venueId = currentVenue?.id ?? null;
+
+  const [selectedDate, setSelectedDate] = useState<string>(todayString());
+  const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
+
+  const { courts, isLoading: courtsLoading } = useVenueCourts(venueId);
+
+  // Default to first court once loaded
+  const activeCourtId = useMemo(() => {
+    if (selectedCourtId) return selectedCourtId;
+    if (courts.length > 0) return courts[0].id;
+    return null;
+  }, [selectedCourtId, courts]);
+
+  const { slots, isLoading: slotsLoading } = useCourtSlots(
+    venueId,
+    activeCourtId,
+    selectedDate,
+  );
+
+  const handleDateChange = (date: string) => {
+    setSelectedDate(date);
+  };
+
+  const handleCourtSelect = (courtId: string) => {
+    setSelectedCourtId(courtId);
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-64 text-gray-500">
-      <svg
-        className="w-16 h-16 mb-4 text-gray-300"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-        />
-      </svg>
-      <p className="text-lg font-medium">Próximamente</p>
-      <p className="text-sm text-gray-400">Esta sección aún no está disponible</p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Horarios</h1>
+          {currentVenue && (
+            <p className="mt-1 text-sm text-gray-500">{currentVenue.name}</p>
+          )}
+        </div>
+        <DayPicker value={selectedDate} onChange={handleDateChange} />
+      </div>
+
+      <CourtTabs
+        courts={courts}
+        selectedCourtId={activeCourtId}
+        onSelect={handleCourtSelect}
+        isLoading={courtsLoading}
+      />
+
+      <SlotGrid
+        slots={slots}
+        stepMinutes={30}
+        isLoading={slotsLoading}
+      />
     </div>
   );
 }

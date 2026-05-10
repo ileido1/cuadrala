@@ -10,6 +10,31 @@ abstract class VenuesApi {
 
   Future<Map<String, Object?>> listVenueCourtsEnvelope({
     required String venueId,
+    String? status,
+  });
+
+  Future<Map<String, Object?>> createCourtEnvelope({
+    required String venueId,
+    required String name,
+    String? sportType,
+    bool? indoor,
+    bool? lighting,
+    String? surfaceType,
+  });
+
+  Future<Map<String, Object?>> updateCourtEnvelope({
+    required String venueId,
+    required String courtId,
+    String? name,
+    String? sportType,
+    bool? indoor,
+    bool? lighting,
+    String? surfaceType,
+  });
+
+  Future<Map<String, Object?>> cancelCourtEnvelope({
+    required String venueId,
+    required String courtId,
   });
 
   Future<Map<String, Object?>> getVenueAvailabilityEnvelope({
@@ -48,8 +73,67 @@ final class DioVenuesApi implements VenuesApi {
   }
 
   @override
-  Future<Map<String, Object?>> listVenueCourtsEnvelope({required String venueId}) {
-    return _apiClient.getEnvelopeDataMap('/api/v1/venues/$venueId/courts');
+  Future<Map<String, Object?>> listVenueCourtsEnvelope({required String venueId, String? status}) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/venues/$venueId/courts',
+      queryParameters: status != null ? {'status': status} : null,
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> createCourtEnvelope({
+    required String venueId,
+    required String name,
+    String? sportType,
+    bool? indoor,
+    bool? lighting,
+    String? surfaceType,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/venues/$venueId/courts',
+      method: 'POST',
+      body: {
+        'name': name,
+        if (sportType != null) 'sportType': sportType,
+        if (indoor != null) 'indoor': indoor,
+        if (lighting != null) 'lighting': lighting,
+        if (surfaceType != null) 'surfaceType': surfaceType,
+      },
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> updateCourtEnvelope({
+    required String venueId,
+    required String courtId,
+    String? name,
+    String? sportType,
+    bool? indoor,
+    bool? lighting,
+    String? surfaceType,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/venues/$venueId/courts/$courtId',
+      method: 'PUT',
+      body: {
+        if (name != null) 'name': name,
+        if (sportType != null) 'sportType': sportType,
+        if (indoor != null) 'indoor': indoor,
+        if (lighting != null) 'lighting': lighting,
+        if (surfaceType != null) 'surfaceType': surfaceType,
+      },
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> cancelCourtEnvelope({
+    required String venueId,
+    required String courtId,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/venues/$venueId/courts/$courtId',
+      method: 'DELETE',
+    );
   }
 
   @override

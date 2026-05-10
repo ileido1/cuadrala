@@ -170,12 +170,45 @@ final class ApiClient {
     String path, {
     Map<String, Object?>? queryParameters,
     Map<String, Object?>? headers,
+    String? method,
+    Map<String, Object?>? body,
   }) async {
-    final json = await getJson(
+    final json = await _requestJson(
       path,
+      method: method,
       queryParameters: queryParameters,
       headers: headers,
+      body: body,
     );
     return decodeEnvelopeDataMap(json);
+  }
+
+  Future<Map<String, Object?>> _requestJson(
+    String path, {
+    String? method,
+    Map<String, Object?>? queryParameters,
+    Map<String, Object?>? headers,
+    Object? body,
+  }) async {
+    final m = method?.toUpperCase() ?? 'GET';
+    try {
+      final response = await (_dio.request<Object?>(
+        path,
+        data: body,
+        queryParameters: queryParameters,
+        options: Options(method: m, headers: headers),
+      ));
+
+      final data = response.data;
+      if (data is Map<String, Object?>) {
+        return data;
+      }
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
+    } catch (e) {
+      throw _failureMapper.fromException(e);
+    }
   }
 }

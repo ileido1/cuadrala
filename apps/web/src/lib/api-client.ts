@@ -94,8 +94,31 @@ class ApiClient {
       this.client.get(`/venues/${venueId}/transactions/pending`, {
         params,
       }),
+    transactions: {
+      confirm: (venueId: string, transactionId: string) =>
+        this.client.patch(`/venues/${venueId}/transactions/${transactionId}/confirm`),
+    },
     upcomingMatches: (id: string) =>
       this.client.get(`/venues/${id}/matches?upcoming=true`),
+    matches: {
+      list: (
+        venueId: string,
+        params?: { courtId?: string; date?: string; status?: string; page?: number; limit?: number }
+      ) =>
+        this.client.get(`/venues/${venueId}/matches`, { params }),
+    },
+    courts: {
+      list: (venueId: string, params?: { status?: 'ACTIVE' | 'INACTIVE' }) =>
+        this.client.get(`/venues/${venueId}/courts`, { params }),
+      create: (venueId: string, data: { name: string; sportType?: string; indoor?: boolean; lighting?: boolean; surfaceType?: string | null }) =>
+        this.client.post(`/venues/${venueId}/courts`, data),
+      update: (venueId: string, courtId: string, data: { name?: string; sportType?: string; indoor?: boolean; lighting?: boolean; surfaceType?: string | null }) =>
+        this.client.put(`/venues/${venueId}/courts/${courtId}`, data),
+      cancel: (venueId: string, courtId: string) =>
+        this.client.delete(`/venues/${venueId}/courts/${courtId}`),
+      slots: (venueId: string, courtId: string, params: { date: string; durationMinutes?: number; stepMinutes?: number; sportId?: string; categoryId?: string }) =>
+        this.client.get(`/venues/${venueId}/courts/${courtId}/slots`, { params }),
+    },
   };
 
   get instance(): AxiosInstance {

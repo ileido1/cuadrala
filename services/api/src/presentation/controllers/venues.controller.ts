@@ -3,11 +3,16 @@ import type { Request, Response } from 'express';
 import { AppError } from '../../domain/errors/app_error.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import {
+  COURT_ID_PARAM_SCHEMA,
   CREATE_COURT_BODY_SCHEMA,
   CREATE_VENUE_BODY_SCHEMA,
+  LIST_COURTS_QUERY_SCHEMA,
   LIST_VENUES_QUERY_SCHEMA,
+  UPDATE_COURT_BODY_SCHEMA,
   VENUE_ID_PARAM_SCHEMA,
 } from '../validation/venues.validation.js';
+import { CreateCourtUseCase, ListCourtsUseCase, UpdateCourtUseCase, CancelCourtUseCase } from '../../application/use_cases/court.use_cases.js';
+import { courtRepositoryFactory, createCourtRepo, getCourtByIdRepo, listCourtsByVenueRepo, updateCourtRepo, cancelCourtRepo } from '../../infrastructure/repositories/court_repository_factory.js';
 
 function parseNearSV(_near: string): { lat: number; lng: number } {
   const [LAT_STR, LNG_STR] = _near.split(',');
@@ -145,31 +150,47 @@ export async function postCourtCON(_req: Request, _res: Response): Promise<void>
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = CREATE_COURT_BODY_SCHEMA.parse(_req.body);
 
-  const CREATED = await PRISMA.court.create({
-    data: { venueId: PARAMS.venueId, name: BODY.name },
-    select: { id: true, venueId: true, name: true, createdAt: true },
-  });
+  // Verificar que la sede existe
+  const VENUE = await PRISMA.venue.findUnique({ where: { id: PARAMS.venueId }, select: { id: true } });
+  if (VENUE === null) {
+    throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
+  }
+
+  const INPUT: { venueId: string; name: string; sportType?: 'PADEL' | 'TENNIS'; indoor?: boolean; lighting?: boolean; surfaceType?: string | null } = {
+    venueId: PARAMS.venueId,
+    name: BODY.name,
+    ...(BODY.sportType !== undefined ? { sportType: BODY.sportType } : {}),
+    ...(BODY.indoor !== undefined ? { indoor: BODY.indoor } : {}),
+    ...(BODY.lighting !== undefined ? { lighting: BODY.lighting } : {}),
+    ...(BODY.surfaceType !== undefined ? { surfaceType: BODY.surfaceType } : {}),
+  };
+  const useCase = new CreateCourtUseCase({ create: createCourtRepo, findById: getCourtByIdRepo, findByVenue: listCourtsByVenueRepo, update: updateCourtRepo, cancel: cancelCourtRepo } as any);
+  const result = await useCase.executeSV(INPUT as any);
 
   _res.status(201).json({
     success: true,
     message: 'Cancha creada correctamente.',
-    data: CREATED,
+    data: result.court,
   });
 }
 
 export async function getVenueCourtsCON(_req: Request, _res: Response): Promise<void> {
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
+  const QUERY = LIST_COURTS_QUERY_SCHEMA.parse(_req.query);
 
-  const ROWS = await PRISMA.court.findMany({
-    where: { venueId: PARAMS.venueId },
-    orderBy: [{ createdAt: 'desc' }],
-    select: { id: true, venueId: true, name: true, createdAt: true },
-  });
+  // Verificar que la sede existe
+  const VENUE = await PRISMA.venue.findUnique({ where: { id: PARAMS.venueId }, select: { id: true } });
+  if (VENUE === null) {
+    throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
+  }
+
+  const useCase = new ListCourtsUseCase(courtRepositoryFactory() as any);
+  const result = await useCase.executeSV({ venueId: PARAMS.venueId, status: QUERY.status } as any);
 
   _res.status(200).json({
     success: true,
     message: 'Canchas obtenidas correctamente.',
-    data: { items: ROWS },
+    data: { items: result.courts },
   });
 }
 
@@ -202,6 +223,53 @@ export async function getVenuePaymentInfoCON(_req: Request, _res: Response): Pro
     success: true,
     message: 'Informacion de pago obtenida correctamente.',
     data: VENUE,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// PUT /venues/:venueId/courts/:courtId
+// ---------------------------------------------------------------------------
+
+export async function putCourtCON(_req: Request, _res: Response): Promise<void> {
+  const PARAMS = { ...VENUE_ID_PARAM_SCHEMA.parse(_req.params), ...COURT_ID_PARAM_SCHEMA.parse(_req.params) };
+  const BODY = UPDATE_COURT_BODY_SCHEMA.parse(_req.body);
+
+  // Verificar que la sede existe
+  const VENUE = await PRISMA.venue.findUnique({ where: { id: PARAMS.venueId }, select: { id: true } });
+  if (VENUE === null) {
+    throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
+  }
+
+  const useCase = new UpdateCourtUseCase(courtRepositoryFactory() as any);
+  const result = await useCase.executeSV({ courtId: PARAMS.courtId, ...BODY } as any);
+
+  _res.status(200).json({
+    success: true,
+    message: 'Cancha actualizada correctamente.',
+    data: result.court,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// DELETE /venues/:venueId/courts/:courtId
+// ---------------------------------------------------------------------------
+
+export async function deleteCourtCON(_req: Request, _res: Response): Promise<void> {
+  const PARAMS = { ...VENUE_ID_PARAM_SCHEMA.parse(_req.params), ...COURT_ID_PARAM_SCHEMA.parse(_req.params) };
+
+  // Verificar que la sede existe
+  const VENUE = await PRISMA.venue.findUnique({ where: { id: PARAMS.venueId }, select: { id: true } });
+  if (VENUE === null) {
+    throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
+  }
+
+  const useCase = new CancelCourtUseCase(courtRepositoryFactory() as any);
+  const result = await useCase.executeSV({ courtId: PARAMS.courtId } as any);
+
+  _res.status(200).json({
+    success: true,
+    message: 'Cancha cancelada correctamente.',
+    data: result.court,
   });
 }
 

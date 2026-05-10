@@ -3,17 +3,35 @@ final class CourtDto {
     required this.id,
     required this.venueId,
     required this.name,
+    required this.sportType,
+    required this.indoor,
+    required this.lighting,
+    this.surfaceType,
+    required this.status,
+    required this.createdAt,
   });
 
   final String id;
   final String venueId;
   final String name;
+  final String sportType;
+  final bool indoor;
+  final bool lighting;
+  final String? surfaceType;
+  final String status;
+  final DateTime createdAt;
 
   static CourtDto fromJson(Map<String, Object?> json) {
     return CourtDto(
       id: json['id'] as String,
       venueId: json['venueId'] as String,
       name: json['name'] as String,
+      sportType: (json['sportType'] as String?) ?? 'PADEL',
+      indoor: (json['indoor'] as bool?) ?? false,
+      lighting: (json['lighting'] as bool?) ?? false,
+      surfaceType: json['surfaceType'] as String?,
+      status: (json['status'] as String?) ?? 'ACTIVE',
+      createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
 }

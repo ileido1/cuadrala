@@ -129,6 +129,16 @@ enum AvailabilitySlot {
   EVENING
 }
 
+enum CourtStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SportType {
+  PADEL
+  TENNIS
+}
+
 // --- Catálogo multi-deporte (E0) ---
 
 /// Deporte configurable (PADEL, etc.); el producto puede mostrar solo pádel en MVP.
@@ -416,11 +426,16 @@ model VenueStaff {
 }
 
 model Court {
-  id        String   @id @default(uuid())
-  venueId   String
-  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  name      String
-  createdAt DateTime @default(now())
+  id          String      @id @default(uuid())
+  venueId     String
+  venue       Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name        String
+  sportType   SportType   @default(PADEL)
+  indoor      Boolean     @default(false)
+  lighting    Boolean     @default(false)
+  surfaceType String?
+  status      CourtStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
 
   matches     Match[]
   vacantHours VacantHour[]

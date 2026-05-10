@@ -6,6 +6,12 @@ export type ListMatchesFiltersDTO = {
   scheduledTo?: Date;
 };
 
+export type ListVenueMatchesFiltersDTO = {
+  courtId?: string;
+  date?: string; // YYYY-MM-DD
+  status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+};
+
 export type PageDTO = {
   page: number;
   limit: number;
@@ -49,5 +55,10 @@ export interface MatchQueryRepository {
     _page: PageDTO,
   ): Promise<{ items: MatchListItemDTO[]; total: number }>;
   getMatchByIdSV(_matchId: string): Promise<MatchDetailDTO | null>;
+  listMatchesByVenueSV(
+    _venueId: string,
+    _filters: ListVenueMatchesFiltersDTO,
+    _page: PageDTO,
+  ): Promise<{ items: (MatchListItemDTO & { courtId: string | null; courtName: string | null })[]; total: number }>;
 }
 

@@ -1,5 +1,6 @@
 import type {
   ListMatchesFiltersDTO,
+  ListVenueMatchesFiltersDTO,
   MatchDetailDTO,
   MatchListItemDTO,
   MatchQueryRepository,
@@ -155,6 +156,64 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
       })),
       createdAt: ROW.createdAt,
       updatedAt: ROW.updatedAt,
+    };
+  }
+
+  async listMatchesByVenueSV(
+    _venueId: string,
+    _filters: ListVenueMatchesFiltersDTO,
+    _page: PageDTO,
+  ): Promise<{ items: (MatchListItemDTO & { courtId: string | null; courtName: string | null })[]; total: number }> {
+    const { courtId, date, status } = _filters;
+
+    const WHERE: any = {
+      court: { venueId: _venueId },
+      ...(courtId !== undefined ? { courtId } : {}),
+      ...(status !== undefined ? { status } : {}),
+      ...(date !== undefined
+        ? {
+            scheduledAt: {
+              gte: new Date(`${date}T00:00:00.000Z`),
+              lt: new Date(`${date}T23:59:59.999Z`),
+            },
+          }
+        : {}),
+    };
+
+    const SKIP = (_page.page - 1) * _page.limit;
+    const TAKE = _page.limit;
+
+    const [TOTAL, ROWS] = await PRISMA.$transaction([
+      PRISMA.match.count({ where: WHERE }),
+      PRISMA.match.findMany({
+        where: WHERE,
+        orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }],
+        skip: SKIP,
+        take: TAKE,
+        select: {
+          id: true,
+          sportId: true,
+          categoryId: true,
+          category: { select: { name: true } },
+          type: true,
+          status: true,
+          scheduledAt: true,
+          pricePerPlayerCents: true,
+          maxParticipants: true,
+          courtId: true,
+          court: { select: { name: true } },
+          _count: { select: { participants: true } },
+        },
+      }),
+    ]);
+
+    return {
+      items: ROWS.map((_row) => ({
+        ...toListItemDTO(_row),
+        courtId: _row.courtId,
+        courtName: _row.court?.name ?? null,
+      })),
+      total: TOTAL,
     };
   }
 }

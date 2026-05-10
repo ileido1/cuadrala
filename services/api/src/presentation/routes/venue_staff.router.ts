@@ -3,6 +3,7 @@ import { Router } from 'express';
 import {
   getVenuePendingTransactionsCON,
   getVenueStaffCON,
+  patchConfirmVenueTransactionCON,
   postUpsertVenueStaffCON,
 } from '../controllers/venue_staff.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
@@ -25,4 +26,10 @@ VENUE_STAFF_ROUTER.get(
   '/venues/:venueId/transactions/pending',
   requireAuth,
   asyncHandler(getVenuePendingTransactionsCON),
+);
+
+VENUE_STAFF_ROUTER.patch(
+  '/venues/:venueId/transactions/:transactionId/confirm',
+  requireAuth,
+  asyncHandler(patchConfirmVenueTransactionCON),
 );
