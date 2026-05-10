@@ -89,3 +89,21 @@ export interface PaymentsFilters {
   to?: string;
   matchId?: string;
 }
+
+// Court slot types
+export type CourtAvailabilityReason = 'OCCUPIED_MATCH' | 'INCOMPATIBLE_VACANT_HOUR' | 'OUT_OF_RANGE';
+
+export interface CourtSlot {
+  start: string;
+  end: string;
+  isAvailable: boolean;
+  reason?: CourtAvailabilityReason;
+}
+
+export interface CourtSlotsResponse {
+  courtId: string;
+  date: string;
+  durationMinutes: number;
+  stepMinutes: number;
+  slots: CourtSlot[];
+}

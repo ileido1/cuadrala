@@ -109,6 +109,8 @@ class ApiClient {
         this.client.put(`/venues/${venueId}/courts/${courtId}`, data),
       cancel: (venueId: string, courtId: string) =>
         this.client.delete(`/venues/${venueId}/courts/${courtId}`),
+      slots: (venueId: string, courtId: string, params: { date: string; durationMinutes?: number; stepMinutes?: number; sportId?: string; categoryId?: string }) =>
+        this.client.get(`/venues/${venueId}/courts/${courtId}/slots`, { params }),
     },
   };
 
