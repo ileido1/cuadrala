@@ -76,8 +76,6 @@ export interface UpdateCourtRequest {
   surfaceType?: string | null;
 }
 
-export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'refunded';
-
 export interface PaginatedPaymentsResponse {
   data: PendingPayment[];
   meta: {
