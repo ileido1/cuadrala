@@ -65,3 +65,16 @@ export const LIST_COURTS_QUERY_SCHEMA = z
   })
   .strict();
 
+export const LIST_VENUE_MATCHES_QUERY_SCHEMA = z
+  .object({
+    courtId: z.string().uuid('courtId debe ser un UUID válido.').optional(),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'date debe estar en formato YYYY-MM-DD.')
+      .optional(),
+    status: z.enum(['SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED']).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
+

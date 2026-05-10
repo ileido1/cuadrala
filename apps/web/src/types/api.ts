@@ -107,3 +107,37 @@ export interface CourtSlotsResponse {
   stepMinutes: number;
   slots: CourtSlot[];
 }
+
+// Match types
+export type MatchStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+export type MatchType = 'AMERICANO' | 'REGULAR';
+
+export interface MatchListItem {
+  id: string;
+  courtId: string | null;
+  courtName: string | null;
+  status: MatchStatus;
+  scheduledAt: string | null;
+  type: MatchType;
+  participantCount: number;
+  maxParticipants: number;
+  pricePerPlayerCents: number;
+  categoryName?: string;
+}
+
+export interface MatchListFilters {
+  courtId?: string;
+  date?: string;
+  status?: MatchStatus;
+  page?: number;
+  limit?: number;
+}
+
+export interface MatchListResponse {
+  items: MatchListItem[];
+  pageInfo: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}

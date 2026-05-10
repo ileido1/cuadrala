@@ -100,6 +100,13 @@ class ApiClient {
     },
     upcomingMatches: (id: string) =>
       this.client.get(`/venues/${id}/matches?upcoming=true`),
+    matches: {
+      list: (
+        venueId: string,
+        params?: { courtId?: string; date?: string; status?: string; page?: number; limit?: number }
+      ) =>
+        this.client.get(`/venues/${venueId}/matches`, { params }),
+    },
     courts: {
       list: (venueId: string, params?: { status?: 'ACTIVE' | 'INACTIVE' }) =>
         this.client.get(`/venues/${venueId}/courts`, { params }),

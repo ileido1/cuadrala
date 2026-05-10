@@ -9,6 +9,7 @@ import {
   putCourtCON,
   deleteCourtCON,
 } from '../controllers/venues.controller.js';
+import { listVenueMatchesCON } from '../controllers/list_venue_matches.controller.js';
 import { getVenueCourtAvailabilityCON } from '../controllers/court_availability.controller.js';
 import { getCourtSlotsCON } from '../controllers/court_slots.controller.js';
 import { postVenueGeocodeCON } from '../controllers/venue_geocoding.controller.js';
@@ -27,4 +28,9 @@ VENUES_ROUTER.put('/venues/:venueId/courts/:courtId', asyncHandler(putCourtCON))
 VENUES_ROUTER.delete('/venues/:venueId/courts/:courtId', asyncHandler(deleteCourtCON));
 VENUES_ROUTER.post('/venues/:venueId/geocode', asyncHandler(postVenueGeocodeCON));
 VENUES_ROUTER.get('/venues/:venueId/payment-info', requireAuth, asyncHandler(getVenuePaymentInfoCON));
+VENUES_ROUTER.get(
+  '/venues/:venueId/matches',
+  requireAuth,
+  asyncHandler(listVenueMatchesCON),
+);
 
