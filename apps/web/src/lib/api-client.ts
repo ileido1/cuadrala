@@ -121,6 +121,12 @@ class ApiClient {
     },
   };
 
+  readonly tournaments = {
+    list: (params?: { status?: string; sportId?: string; categoryId?: string; page?: number; limit?: number }) =>
+      this.client.get('/tournaments', { params }),
+    get: (id: string) => this.client.get(`/tournaments/${id}`),
+  };
+
   get instance(): AxiosInstance {
     return this.client;
   }

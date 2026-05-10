@@ -141,3 +141,59 @@ export interface MatchListResponse {
     total: number;
   };
 }
+
+// Tournament types
+export type TournamentStatus = 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type RegistrationStatus = 'PENDING' | 'CONFIRMED' | 'WITHDRAWN';
+
+export interface TournamentListItem {
+  id: string;
+  name: string;
+  status: TournamentStatus;
+  sportId: string;
+  sportName: string;
+  categoryId: string;
+  categoryName: string;
+  startsAt: string | null;
+  registrationCount: number;
+  maxParticipants: number;
+}
+
+export interface TournamentDetail extends TournamentListItem {
+  formatPresetId: string;
+  formatPresetName: string;
+  presetSchemaVersion: number;
+  formatParameters: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Registration {
+  id: string;
+  userId: string;
+  userName: string;
+  status: RegistrationStatus;
+  createdAt: string;
+}
+
+export interface TournamentListFilters {
+  status?: TournamentStatus;
+  sportId?: string;
+  categoryId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TournamentListResponse {
+  items: TournamentListItem[];
+  pageInfo: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+export interface TournamentDetailResponse {
+  tournament: TournamentDetail;
+  registrations: Registration[];
+}
