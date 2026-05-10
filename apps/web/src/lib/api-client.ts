@@ -127,6 +127,12 @@ class ApiClient {
     get: (id: string) => this.client.get(`/tournaments/${id}`),
   };
 
+  readonly matches = {
+    list: (params?: { courtId?: string; date?: string; status?: string; page?: number; limit?: number }) =>
+      this.client.get('/matches', { params }),
+    get: (matchId: string) => this.client.get(`/matches/${matchId}`),
+  };
+
   get instance(): AxiosInstance {
     return this.client;
   }

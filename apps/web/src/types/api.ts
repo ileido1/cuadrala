@@ -142,6 +142,38 @@ export interface MatchListResponse {
   };
 }
 
+// Match detail types
+export interface MatchParticipantDto {
+  userId: string;
+  displayName?: string;
+  joinedAt: string;
+}
+
+export interface MatchDetailDto {
+  id: string;
+  sportId: string;
+  categoryId: string;
+  categoryName?: string;
+  type: MatchType;
+  status: MatchStatus;
+  scheduledAt: string | null;
+  pricePerPlayerCents: number;
+  maxParticipants: number;
+  participantCount: number;
+  openSpots: number;
+  courtId: string | null;
+  courtName: string | null;
+  participants: MatchParticipantDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MatchDetailResponse {
+  data: MatchDetailDto;
+}
+
+// Tournament types
+
 // Tournament types
 export type TournamentStatus = 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type RegistrationStatus = 'PENDING' | 'CONFIRMED' | 'WITHDRAWN';
