@@ -94,6 +94,10 @@ class ApiClient {
       this.client.get(`/venues/${venueId}/transactions/pending`, {
         params,
       }),
+    transactions: {
+      confirm: (venueId: string, transactionId: string) =>
+        this.client.patch(`/venues/${venueId}/transactions/${transactionId}/confirm`),
+    },
     upcomingMatches: (id: string) =>
       this.client.get(`/venues/${id}/matches?upcoming=true`),
     courts: {

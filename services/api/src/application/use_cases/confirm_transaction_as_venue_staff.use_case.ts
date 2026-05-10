@@ -18,6 +18,13 @@ export class ConfirmTransactionAsVenueStaffUseCase {
     if (!TX) {
       throw new AppError('TRANSACCION_NO_ENCONTRADA', 'La transacción indicada no existe.', 404);
     }
+    if (TX.status === 'CONFIRMED') {
+      return {
+        id: TX.id,
+        status: TX.status,
+        confirmedAt: TX.confirmedAt?.toISOString() ?? '',
+      };
+    }
     if (TX.status !== 'PENDING') {
       throw new AppError(
         'TRANSACCION_NO_PENDIENTE',

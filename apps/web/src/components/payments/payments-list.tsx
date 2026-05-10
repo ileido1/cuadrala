@@ -17,6 +17,8 @@ export function PaymentsList({ venueId }: PaymentsListProps) {
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [state, setState] = useState<PaymentsState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchPayments = async (filters?: PaymentsFilters) => {
@@ -67,6 +69,31 @@ export function PaymentsList({ venueId }: PaymentsListProps) {
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(dateString));
+  };
+
+  const handleConfirm = async (payment: PendingPayment) => {
+    // Optimistic update
+    setPayments((prev) =>
+      prev.map((p) =>
+        p.id === payment.id ? { ...p, status: 'confirmed' as const } : p
+      )
+    );
+    setConfirmingId(payment.id);
+    setConfirmError(null);
+
+    try {
+      await apiClient.venues.transactions.confirm(venueId, payment.id);
+      setConfirmingId(null);
+    } catch {
+      // Rollback
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.id === payment.id ? { ...p, status: 'pending' as const } : p
+        )
+      );
+      setConfirmingId(null);
+      setConfirmError('Error al confirmar el pago');
+    }
   };
 
   if (state === 'loading') {
@@ -150,12 +177,25 @@ export function PaymentsList({ venueId }: PaymentsListProps) {
                 <PaymentStatusBadge status={payment.status} />
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm">
-                <button
-                  onClick={() => router.push(`/dashboard/payments/${payment.id}`)}
-                  className="text-primary-600 hover:text-primary-900 font-medium"
-                >
-                  Ver detalle
-                </button>
+                {payment.status === 'pending' ? (
+                  <button
+                    onClick={() => handleConfirm(payment)}
+                    disabled={confirmingId === payment.id}
+                    className="text-primary-600 hover:text-primary-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {confirmingId === payment.id ? 'Confirmando...' : 'Confirmar'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => router.push(`/dashboard/payments/${payment.id}`)}
+                    className="text-primary-600 hover:text-primary-900 font-medium"
+                  >
+                    Ver detalle
+                  </button>
+                )}
+                {confirmError && confirmingId === null && payment.status === 'pending' && (
+                  <span className="text-red-600 text-xs ml-2">{confirmError}</span>
+                )}
               </td>
             </tr>
           ))}

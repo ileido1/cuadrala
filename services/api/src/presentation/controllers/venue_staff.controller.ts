@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 
 import { AppError } from '../../domain/errors/app_error.js';
 import {
+  CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC,
   LIST_VENUE_PENDING_TRANSACTIONS_UC,
   LIST_VENUE_STAFF_UC,
   UPSERT_VENUE_STAFF_UC,
@@ -12,6 +13,7 @@ import {
   UPSERT_VENUE_STAFF_BODY_SCHEMA,
   VENUE_ID_PARAMS_SCHEMA,
 } from '../validation/venue_staff.validation.js';
+import { TRANSACTION_ID_PARAM_SCHEMA } from '../validation/monetization.validation.js';
 
 export async function postUpsertVenueStaffCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -69,6 +71,33 @@ export async function getVenuePendingTransactionsCON(_req: Request, _res: Respon
   _res.status(200).json({
     success: true,
     message: 'Transacciones pendientes obtenidas correctamente.',
+    data: RESULT,
+  });
+}
+
+export async function patchConfirmVenueTransactionCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = {
+    venueId: _req.params.venueId,
+    transactionId: _req.params.transactionId,
+  };
+  const VALIDATED = {
+    venueId: VENUE_ID_PARAMS_SCHEMA.shape.venueId.parse(PARAMS.venueId),
+    transactionId: TRANSACTION_ID_PARAM_SCHEMA.shape.transactionId.parse(PARAMS.transactionId),
+  };
+
+  const RESULT = await CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC.executeSV({
+    transactionId: VALIDATED.transactionId,
+    userId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Transacción confirmada correctamente.',
     data: RESULT,
   });
 }
