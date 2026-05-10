@@ -44,6 +44,40 @@ export interface PendingPayment {
 
 export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'refunded';
 
+// Court types
+export type CourtStatus = 'ACTIVE' | 'INACTIVE';
+export type SportType = 'PADEL' | 'TENNIS';
+
+export interface Court {
+  id: string;
+  venueId: string;
+  name: string;
+  sportType: SportType;
+  indoor: boolean;
+  lighting: boolean;
+  surfaceType: string | null;
+  status: CourtStatus;
+  createdAt: string;
+}
+
+export interface CreateCourtRequest {
+  name: string;
+  sportType?: SportType;
+  indoor?: boolean;
+  lighting?: boolean;
+  surfaceType?: string | null;
+}
+
+export interface UpdateCourtRequest {
+  name?: string;
+  sportType?: SportType;
+  indoor?: boolean;
+  lighting?: boolean;
+  surfaceType?: string | null;
+}
+
+export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'refunded';
+
 export interface PaginatedPaymentsResponse {
   data: PendingPayment[];
   meta: {

@@ -56,3 +56,11 @@ export async function updateCourtRepo(_id: string, _data: UpdateCourtInput): Pro
 export async function cancelCourtRepo(_id: string): Promise<Court> {
   return getCourtRepository().cancel(_id);
 }
+
+/**
+ * Factory que retorna una implementación de ICourtRepository
+ * compatible con la inyección esperada por los Use Cases.
+ */
+export function courtRepositoryFactory(): ICourtRepository {
+  return getCourtRepository();
+}

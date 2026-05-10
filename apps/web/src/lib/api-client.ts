@@ -96,6 +96,16 @@ class ApiClient {
       }),
     upcomingMatches: (id: string) =>
       this.client.get(`/venues/${id}/matches?upcoming=true`),
+    courts: {
+      list: (venueId: string, params?: { status?: 'ACTIVE' | 'INACTIVE' }) =>
+        this.client.get(`/venues/${venueId}/courts`, { params }),
+      create: (venueId: string, data: { name: string; sportType?: string; indoor?: boolean; lighting?: boolean; surfaceType?: string | null }) =>
+        this.client.post(`/venues/${venueId}/courts`, data),
+      update: (venueId: string, courtId: string, data: { name?: string; sportType?: string; indoor?: boolean; lighting?: boolean; surfaceType?: string | null }) =>
+        this.client.put(`/venues/${venueId}/courts/${courtId}`, data),
+      cancel: (venueId: string, courtId: string) =>
+        this.client.delete(`/venues/${venueId}/courts/${courtId}`),
+    },
   };
 
   get instance(): AxiosInstance {

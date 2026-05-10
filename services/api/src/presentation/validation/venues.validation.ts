@@ -36,6 +36,32 @@ export const VENUE_ID_PARAM_SCHEMA = z
 export const CREATE_COURT_BODY_SCHEMA = z
   .object({
     name: z.string().min(1).max(120),
+    sportType: z.enum(['PADEL', 'TENNIS']).optional(),
+    indoor: z.boolean().optional(),
+    lighting: z.boolean().optional(),
+    surfaceType: z.string().max(60).nullable().optional(),
+  })
+  .strict();
+
+export const UPDATE_COURT_BODY_SCHEMA = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    sportType: z.enum(['PADEL', 'TENNIS']).optional(),
+    indoor: z.boolean().optional(),
+    lighting: z.boolean().optional(),
+    surfaceType: z.string().max(60).nullable().optional(),
+  })
+  .strict();
+
+export const COURT_ID_PARAM_SCHEMA = z
+  .object({
+    courtId: z.string().uuid('courtId debe ser un UUID válido.'),
+  })
+  .strict();
+
+export const LIST_COURTS_QUERY_SCHEMA = z
+  .object({
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   })
   .strict();
 
