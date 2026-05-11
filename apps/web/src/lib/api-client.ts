@@ -87,6 +87,8 @@ class ApiClient {
   readonly venues = {
     list: () => this.client.get('/venues'),
     get: (id: string) => this.client.get(`/venues/${id}`),
+    dashboardStats: (venueId: string) =>
+      this.client.get(`/venues/${venueId}/dashboard-stats`),
     pendingTransactions: (
       venueId: string,
       params?: { from?: string; to?: string; matchId?: string }
@@ -95,15 +97,23 @@ class ApiClient {
         params,
       }),
     transactions: {
+      stats: (venueId: string) =>
+        this.client.get(`/venues/${venueId}/transactions/stats`),
+      history: (venueId: string, page?: number) =>
+        this.client.get(`/venues/${venueId}/transactions/history`, {
+          params: page ? { page } : {},
+        }),
       confirm: (venueId: string, transactionId: string) =>
         this.client.patch(`/venues/${venueId}/transactions/${transactionId}/confirm`),
     },
+    update: (venueId: string, data: unknown) =>
+      this.client.patch(`/venues/${venueId}`, data),
     upcomingMatches: (id: string) =>
       this.client.get(`/venues/${id}/matches?upcoming=true`),
     matches: {
       list: (
         venueId: string,
-        params?: { courtId?: string; date?: string; status?: string; page?: number; limit?: number }
+        params?: { courtId?: string; date?: string; from?: string; to?: string; status?: string; page?: number; limit?: number }
       ) =>
         this.client.get(`/venues/${venueId}/matches`, { params }),
     },

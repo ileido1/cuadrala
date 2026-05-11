@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useVenue } from '~/contexts/venue-context';
+import { apiClient } from '~/lib/api-client';
+import type { MatchListItem } from '~/types/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -14,6 +16,7 @@ interface Booking {
   timeEnd: string;   // "09:00"
   status: BookingStatus;
   courtName?: string;
+  match?: MatchListItem;
 }
 
 interface DayColumn {
@@ -22,38 +25,6 @@ interface DayColumn {
   dayLabel: string;      // "Lun 11"
   bookings: Booking[];
 }
-
-// ─── Mock data ─────────────────────────────────────────────────────────────
-
-const MOCK_WEEK_BOOKINGS: Booking[] = [
-  // Lunes 13
-  { id: '1', playerName: 'Juan P.', timeStart: '09:00', timeEnd: '10:00', status: 'confirmed' },
-  { id: '2', playerName: 'María G.', timeStart: '11:00', timeEnd: '12:00', status: 'pending' },
-  { id: '3', playerName: 'Pedro L.', timeStart: '14:00', timeEnd: '15:00', status: 'cancelled' },
-  { id: '4', playerName: 'Laura M.', timeStart: '16:00', timeEnd: '17:00', status: 'confirmed' },
-  // Martes 14
-  { id: '5', playerName: 'Carlos R.', timeStart: '08:00', timeEnd: '09:00', status: 'confirmed' },
-  { id: '6', playerName: 'Ana S.', timeStart: '10:00', timeEnd: '11:00', status: 'pending' },
-  { id: '7', playerName: 'Miguel T.', timeStart: '15:00', timeEnd: '16:00', status: 'confirmed' },
-  // Miércoles 15
-  { id: '8', playerName: 'Sofia V.', timeStart: '09:30', timeEnd: '10:30', status: 'confirmed' },
-  { id: '9', playerName: 'Diego H.', timeStart: '13:00', timeEnd: '14:00', status: 'cancelled' },
-  { id: '10', playerName: 'Luis F.', timeStart: '17:00', timeEnd: '18:00', status: 'pending' },
-  // Jueves 16
-  { id: '11', playerName: 'Carmen K.', timeStart: '08:30', timeEnd: '09:30', status: 'confirmed' },
-  { id: '12', playerName: 'Pablo N.', timeStart: '12:00', timeEnd: '13:00', status: 'confirmed' },
-  // Viernes 17
-  { id: '13', playerName: 'Elena J.', timeStart: '10:00', timeEnd: '11:00', status: 'pending' },
-  { id: '14', playerName: 'Roberto Q.', timeStart: '14:30', timeEnd: '15:30', status: 'confirmed' },
-  { id: '15', playerName: 'Patricia W.', timeStart: '18:00', timeEnd: '19:00', status: 'cancelled' },
-  // Sábado 18
-  { id: '16', playerName: 'Francisco Z.', timeStart: '09:00', timeEnd: '10:00', status: 'confirmed' },
-  { id: '17', playerName: 'Isabel O.', timeStart: '11:00', timeEnd: '12:00', status: 'pending' },
-  { id: '18', playerName: 'Antonio B.', timeStart: '16:00', timeEnd: '17:00', status: 'confirmed' },
-  // Domingo 19
-  { id: '19', playerName: 'Rosa A.', timeStart: '10:00', timeEnd: '11:00', status: 'confirmed' },
-  { id: '20', playerName: 'Javier Y.', timeStart: '15:00', timeEnd: '16:00', status: 'pending' },
-];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -90,18 +61,13 @@ function buildWeekColumns(baseDateStr: string): DayColumn[] {
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const dayIdx = date.getDay();
     const dayLabel = `${DAY_NAMES_SHORT[dayIdx]} ${String(date.getDate()).padStart(2, '0')}`;
-    const bookings = MOCK_WEEK_BOOKINGS.filter((b) => {
-      // Match booking to day by checking if day of week matches
-      // Simplified: assign bookings to days based on day index pattern
-      return true; // All bookings shown in mock for demo
-    });
-    return { date, dateStr, dayLabel, bookings };
+    return { date, dateStr, dayLabel, bookings: [] };
   });
 }
 
-function getBookingsForDay(bookings: Booking[], dayIndex: number): Booking[] {
-  // Distribute mock bookings across week days by modulo
-  return bookings.filter((_, idx) => idx % 7 === dayIndex);
+function getBookingsForDay(_bookings: Booking[], _dayIndex: number): Booking[] {
+  // Bookings are now populated via real API data
+  return [];
 }
 
 function getStatusColor(status: BookingStatus): string {
@@ -238,17 +204,61 @@ function WeeklyCalendar({ weekColumns, cellHeight }: WeeklyCalendarProps) {
 export default function SchedulePage() {
   const { currentVenue } = useVenue();
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [matches, setMatches] = useState<MatchListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  // Week anchored to Monday 13 May 2024 as per design
+  // Fetch matches for the week (May 13-19, 2024 anchored)
+  useEffect(() => {
+    if (!currentVenue) return;
+
+    const from = '2024-05-13';
+    const to = '2024-05-19';
+
+    apiClient.venues.matches.list(currentVenue.id, { from, to })
+      .then((res) => {
+        const data = res.data.data as { items: MatchListItem[] };
+        setMatches(data.items);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [currentVenue]);
+
+  // Build week columns from real matches data
   const weekColumns = useMemo(() => {
     const baseStr = '2024-05-13';
-    return buildWeekColumns(baseStr).map((col, i) => ({
-      ...col,
-      bookings: getBookingsForDay(MOCK_WEEK_BOOKINGS, i),
-    }));
-  }, []);
+    const columns = buildWeekColumns(baseStr);
 
-  const dateRange = '11 - 17 Mayo, 2024';
+    // Map matches to bookings
+    return columns.map((col) => {
+      const dayMatches = matches.filter((match) => {
+        if (!match.scheduledAt) return false;
+        const matchDate = new Date(match.scheduledAt).toISOString().split('T')[0];
+        return matchDate === col.dateStr;
+      });
+
+      const bookings: Booking[] = dayMatches.map((match) => {
+        const scheduledDate = new Date(match.scheduledAt!);
+        const hour = scheduledDate.getHours();
+        const startHour = String(hour).padStart(2, '0');
+        const endHour = String(hour + 1).padStart(2, '0');
+
+        return {
+          id: match.id,
+          playerName: `Match ${match.participantCount}/${match.maxParticipants}`,
+          timeStart: `${startHour}:00`,
+          timeEnd: `${endHour}:00`,
+          status: match.status === 'SCHEDULED' ? 'confirmed' : match.status === 'IN_PROGRESS' ? 'pending' : 'cancelled',
+          courtName: match.courtName ?? undefined,
+          match,
+        };
+      });
+
+      return { ...col, bookings };
+    });
+  }, [matches]);
+
+  const dateRange = '13 - 19 Mayo, 2024';
 
   return (
     <div className="space-y-6">
