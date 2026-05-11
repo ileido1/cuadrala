@@ -1,5 +1,6 @@
 import '../../../core/failures/app_failure.dart';
 import '../../profile/data/profile_repository.dart';
+import 'models/match_payment_info_dto.dart';
 import 'models/match_transactions_summary_dto.dart';
 import 'models/transaction_dto.dart';
 import 'models/venue_payment_info_dto.dart';
@@ -164,6 +165,27 @@ class MonetizationRepository {
     final data = json['data'];
     if (data is Map<String, Object?>) {
       return VenuePaymentInfoDto.fromJson(data);
+    }
+    throw const AppFailure(
+      code: 'INVALID_RESPONSE',
+      message: 'Respuesta inválida del servidor.',
+    );
+  }
+
+  Future<MatchPaymentInfoDto> getMatchPaymentInfo({
+    required String matchId,
+  }) async {
+    final json = await _api.getMatchPaymentInfoEnvelope(matchId: matchId);
+    final code = json['code'] as String?;
+    if (code == 'SIN_SEDE' || code == 'NO_AUTORIZADO') {
+      throw AppFailure(
+        code: code ?? 'ERROR',
+        message: json['message'] as String? ?? 'No disponible.',
+      );
+    }
+    final data = json['data'];
+    if (data is Map<String, Object?>) {
+      return MatchPaymentInfoDto.fromJson(data);
     }
     throw const AppFailure(
       code: 'INVALID_RESPONSE',
