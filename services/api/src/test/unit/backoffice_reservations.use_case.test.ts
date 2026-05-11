@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { AppError } from '../../domain/errors/app_error.js';
+import { AppError } from '../../domain/errors/app_error';
 import {
   CreateReservationUseCase,
   type CreateReservationInput,
@@ -12,8 +12,8 @@ import {
   type ListReservationsInput,
   CancelReservationUseCase,
   type CancelReservationInput,
-} from '../../../application/use_cases/reservation.use_cases.js';
-import { ReservationType, ReservationStatus } from '../../../domain/entities/reservation.entity.js';
+} from '../../../application/use_cases/reservation.use_cases';
+import { ReservationType, ReservationStatus } from '../../../domain/entities/reservation.entity';
 
 // ---------------------------------------------------------------------------
 // Helpers

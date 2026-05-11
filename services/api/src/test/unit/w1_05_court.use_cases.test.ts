@@ -6,14 +6,14 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { AppError } from '../../domain/errors/app_error.js';
+import { AppError } from '../../domain/errors/app_error';
 import {
   CourtStatus,
   SportType,
   type Court,
   type CreateCourtInput,
   type UpdateCourtInput,
-} from '../../domain/entities/court.entity.js';
+} from '../../domain/entities/court.entity';
 import {
   CreateCourtUseCase,
   type CreateCourtInputDTO,
@@ -23,7 +23,7 @@ import {
   type UpdateCourtInputDTO,
   CancelCourtUseCase,
   type CancelCourtInputDTO,
-} from '../../application/use_cases/court.use_cases.js';
+} from '../../application/use_cases/court.use_cases';
 
 // ---------------------------------------------------------------------------
 // Helpers

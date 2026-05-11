@@ -5,7 +5,7 @@ import {
   type Court,
   type CreateCourtInput,
   type UpdateCourtInput,
-} from '../../domain/entities/court.entity.js';
+} from '../../domain/entities/court.entity';
 
 describe('US-W1-05 — Dominio Court: entity types', () => {
   describe('CourtStatus enum', () => {
