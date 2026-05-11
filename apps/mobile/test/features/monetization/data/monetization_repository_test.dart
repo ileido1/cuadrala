@@ -80,6 +80,84 @@ void main() {
         ),
       );
     });
+
+    group('getMatchPaymentInfo', () {
+      test('throws AppFailure on SIN_SEDE error code', () async {
+        final api = _MockMonetizationApi();
+        final profile = _MockProfileRepository();
+        final repo = MonetizationRepository(
+          monetizationApi: api,
+          profileRepository: profile,
+        );
+
+        when(() => api.getMatchPaymentInfoEnvelope(matchId: any(named: 'matchId')))
+            .thenAnswer((_) async => {
+                  'code': 'SIN_SEDE',
+                  'message': 'El partido no tiene sede asignada.',
+                });
+
+        expect(
+          () => repo.getMatchPaymentInfo(matchId: 'm1'),
+          throwsA(
+            predicate(
+              (e) => e is AppFailure && e.code == 'SIN_SEDE',
+            ),
+          ),
+        );
+      });
+
+      test('throws AppFailure on NO_AUTORIZADO error code', () async {
+        final api = _MockMonetizationApi();
+        final profile = _MockProfileRepository();
+        final repo = MonetizationRepository(
+          monetizationApi: api,
+          profileRepository: profile,
+        );
+
+        when(() => api.getMatchPaymentInfoEnvelope(matchId: any(named: 'matchId')))
+            .thenAnswer((_) async => {
+                  'code': 'NO_AUTORIZADO',
+                  'message': 'No tienes autorización para ver esta información.',
+                });
+
+        expect(
+          () => repo.getMatchPaymentInfo(matchId: 'm1'),
+          throwsA(
+            predicate(
+              (e) => e is AppFailure && e.code == 'NO_AUTORIZADO',
+            ),
+          ),
+        );
+      });
+
+      test('parses MatchPaymentInfoDto from data field', () async {
+        final api = _MockMonetizationApi();
+        final profile = _MockProfileRepository();
+        final repo = MonetizationRepository(
+          monetizationApi: api,
+          profileRepository: profile,
+        );
+
+        when(() => api.getMatchPaymentInfoEnvelope(matchId: any(named: 'matchId')))
+            .thenAnswer((_) async => {
+                  'data': {
+                    'paymentHolder': 'Carlos Ruiz',
+                    'paymentBank': 'BBVA',
+                    'paymentCvu': '1234567890123456789012',
+                    'paymentAlias': 'carlos.transferencia',
+                    'paymentNotes': 'Indicá tu nombre como referencia',
+                  },
+                });
+
+        final dto = await repo.getMatchPaymentInfo(matchId: 'm1');
+
+        expect(dto.paymentHolder, 'Carlos Ruiz');
+        expect(dto.paymentBank, 'BBVA');
+        expect(dto.paymentCvu, '1234567890123456789012');
+        expect(dto.paymentAlias, 'carlos.transferencia');
+        expect(dto.paymentNotes, 'Indicá tu nombre como referencia');
+      });
+    });
   });
 }
 

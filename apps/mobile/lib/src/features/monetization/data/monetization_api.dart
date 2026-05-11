@@ -30,6 +30,10 @@ abstract interface class MonetizationApi {
   Future<Map<String, Object?>> getVenuePaymentInfoEnvelope({
     required String venueId,
   });
+
+  Future<Map<String, Object?>> getMatchPaymentInfoEnvelope({
+    required String matchId,
+  });
 }
 
 final class DioMonetizationApi implements MonetizationApi {
@@ -100,6 +104,13 @@ final class DioMonetizationApi implements MonetizationApi {
     required String venueId,
   }) {
     return _apiClient.getJson('/api/v1/venues/$venueId/payment-info');
+  }
+
+  @override
+  Future<Map<String, Object?>> getMatchPaymentInfoEnvelope({
+    required String matchId,
+  }) {
+    return _apiClient.getJson('/api/v1/matches/$matchId/payment-info');
   }
 }
 

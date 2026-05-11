@@ -8,8 +8,8 @@ import '../../../core/failures/app_failure.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/monetization_repository.dart';
+import '../data/models/match_payment_info_dto.dart';
 import '../data/models/transaction_dto.dart';
-import '../data/models/venue_payment_info_dto.dart';
 import 'upload_receipt_screen.dart';
 
 final class PayMethodScreen extends StatefulWidget {
@@ -18,24 +18,20 @@ final class PayMethodScreen extends StatefulWidget {
     required this.matchId,
     required this.amountPerPersonCents,
     required this.matchTitle,
-    this.venueId,
   });
 
   final String matchId;
   final int amountPerPersonCents;
   final String matchTitle;
-  final String? venueId;
 
   static String route({
     required String matchId,
     required int amountPerPersonCents,
     required String matchTitle,
-    String? venueId,
   }) {
     final qp = <String, String>{
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
-      if (venueId != null) 'venueId': venueId,
     };
     final query = Uri(queryParameters: qp).query;
     return '/matches/$matchId/pay/method?$query';
@@ -51,7 +47,7 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
   String? _error;
   String? _transactionId;
   String _method = 'TRANSFER';
-  VenuePaymentInfoDto? _paymentInfo;
+  MatchPaymentInfoDto? _paymentInfo;
 
   @override
   void initState() {
@@ -67,13 +63,11 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     try {
       final repo = getIt<MonetizationRepository>();
 
-      VenuePaymentInfoDto? info;
-      if (widget.venueId != null) {
-        try {
-          info = await repo.getVenuePaymentInfo(venueId: widget.venueId!);
-        } catch (_) {
-          info = null;
-        }
+      MatchPaymentInfoDto? info;
+      try {
+        info = await repo.getMatchPaymentInfo(matchId: widget.matchId);
+      } catch (_) {
+        info = null;
       }
 
       final me = await getIt<ProfileRepository>().getMe();
@@ -320,7 +314,7 @@ final class _MatchHeaderCard extends StatelessWidget {
 final class _BankInfoCard extends StatelessWidget {
   const _BankInfoCard({required this.paymentInfo});
 
-  final VenuePaymentInfoDto paymentInfo;
+  final MatchPaymentInfoDto paymentInfo;
 
   @override
   Widget build(BuildContext context) {
