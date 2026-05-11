@@ -62,25 +62,25 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 
 ### 3.2 MVP — historias principales
 
-| ID | Historia | Criterio de aceptación (alto nivel) | Requisitos |
-|----|----------|-------------------------------------|------------|
-| US-M01 | Como **usuario**, quiero **registrarme e iniciar sesión** para **usar la app de forma personalizada**. | Autenticación estable; sesión recuperable; cierre de sesión. | FR-001, FR-002, NFR-SEC-01 |
-| US-M02 | Como **jugador**, quiero **definir mi perfil y categoría/nivel** para **ser emparejado correctamente**. | Perfil editable; categoría o nivel visible según reglas del torneo/partido. | FR-003, FR-004 |
-| US-M03 | Como **organizador**, quiero **crear un partido (caimanera/americano)** con **fecha, sede, cancha y cupo** para **convocar jugadores**. | Partido creado con estado (borrador/abierto/cerrado/cancelado); visible para invitados o lista según configuración. | FR-010, FR-011 |
-| US-M04 | Como **jugador**, quiero **unirme o solicitar unirme** a un partido para **completar el cupo**. | Flujo de unión o solicitud; notificación al organizador si aplica. | FR-012 |
-| US-M05 | Como **organizador**, quiero **crear un torneo por categorías** con **inscripciones** para **gestionar americanos o eliminatorias según formato**. | Torneo con fechas, sede, formato, categorías; jugadores inscritos por categoría. | FR-020, FR-021 |
-| US-M06 | Como **sistema**, debo **registrar resultados y actualizar ranking por categoría** para **reflejar el desempeño**. | Introducción de resultados autorizada; ranking consultable y consistente con reglas definidas. | FR-030, FR-031 |
-| US-M07 | Como **jugador**, quiero **matchmaking por nivel/categoría** para **jugar partidas equilibradas**. | Emparejamiento o restricción por categoría en torneo/partido; reglas configurables por organizador. | FR-040 |
-| US-M08 | Como **integrante de un partido/torneo**, quiero **un canal de comunicación** para **coordinar hora, cambios y avisos**. | Mensajes asociados a entidad (partido/torneo); lista de participantes visible según privacidad. | FR-050, FR-051 |
+| ID | Historia | Criterio de aceptación (alto nivel) | Requisitos | Estado |
+|----|----------|-------------------------------------|------------|--------|
+| US-M01 | Como **usuario**, quiero **registrarme e iniciar sesión** para **usar la app de forma personalizada**. | Autenticación estable; sesión recuperable; cierre de sesión. | FR-001, FR-002, NFR-SEC-01 | ✅ Implementado |
+| US-M02 | Como **jugador**, quiero **definir mi perfil y categoría/nivel** para **ser emparejado correctamente**. | Perfil editable; categoría o nivel visible según reglas del torneo/partido. | FR-003, FR-004 | ✅ Implementado |
+| US-M03 | Como **organizador**, quiero **crear un partido (caimanera/americano)** con **fecha, sede, cancha y cupo** para **convocar jugadores**. | Partido creado con estado (borrador/abierto/cerrado/cancelado); visible para invitados o lista según configuración. | FR-010, FR-011 | ✅ Implementado |
+| US-M04 | Como **jugador**, quiero **unirme o solicitar unirme** a un partido para **completar el cupo**. | Flujo de unión o solicitud; notificación al organizador si aplica. | FR-012 | ✅ Implementado |
+| US-M05 | Como **organizador**, quiero **crear un torneo por categorías** con **inscripciones** para **gestionar americanos o eliminatorias según formato**. | Torneo con fechas, sede, formato, categorías; jugadores inscritos por categoría. | FR-020, FR-021 | ✅ Implementado |
+| US-M06 | Como **sistema**, debo **registrar resultados y actualizar ranking por categoría** para **reflejar el desempeño**. | Introducción de resultados autorizada; ranking consultable y consistente con reglas definidas. | FR-030, FR-031 | ✅ Implementado |
+| US-M07 | Como **jugador**, quiero **matchmaking por nivel/categoría** para **jugar partidas equilibradas**. | Emparejamiento o restricción por categoría en torneo/partido; reglas configurables por organizador. | FR-040 | ✅ Implementado |
+| US-M08 | Como **integrante de un partido/torneo**, quiero **un canal de comunicación** para **coordinar hora, cambios y avisos**. | Mensajes asociados a entidad (partido/torneo); lista de participantes visible según privacidad. | FR-050, FR-051 | ✅ Mobile + Web (lectura) |
 
 ### 3.3 Funcionalidades adicionales obligatorias (MVP ampliado o MVP+)
 
-| ID | Historia | Criterio de aceptación (alto nivel) | Requisitos |
-|----|----------|-------------------------------------|------------|
-| US-A01 | Como **organizador o jugador**, quiero **marcar jugadores faltantes y cuadrar el partido** para **no cancelar por huecos**. | Estado “faltan X”; invitaciones o lista de suplentes; transición a “completo” cuando se cumple cupo. | FR-060, FR-061 |
-| US-A02 | Como **jugador**, quiero **ver partidas incompletas** y **filtrar por cancha, sede y precio por persona** para **encontrar dónde unirme**. | Listado con filtros; datos de precio y sede coherentes con el partido. | FR-062, FR-063 |
-| US-A03 | Como **jugador**, quiero **indicar disponibilidad** (franjas o días) para **que otros me propongan partidos**. | Disponibilidad guardada y usable en sugerencias o invitaciones (alcance según diseño de privacidad). | FR-064 |
-| US-A04 | Como **grupo**, necesitamos **coordinación clara** (avisos, confirmaciones) **sin depender solo de chat externo**. | Notificaciones in-app o push para eventos clave; hilos por contexto. | FR-050, FR-065, NFR-OBS-01 |
+| ID | Historia | Criterio de aceptación (alto nivel) | Requisitos | Estado |
+|----|----------|-------------------------------------|------------|--------|
+| US-A01 | Como **organizador o jugador**, quiero **marcar jugadores faltantes y cuadrar el partido** para **no cancelar por huecos**. | Estado "faltan X"; invitaciones o lista de suplentes; transición a "completo" cuando se cumple cupo. | FR-060, FR-061 | ✅ Implementado |
+| US-A02 | Como **jugador**, quiero **ver partidas incompletas** y **filtrar por cancha, sede y precio por persona** para **encontrar dónde unirme**. | Listado con filtros; datos de precio y sede coherentes con el partido. | FR-062, FR-063 | ✅ Implementado |
+| US-A03 | Como **jugador**, quiero **indicar disponibilidad** (franjas o días) para **que otros me propongan partidos**. | Disponibilidad guardada y usable en sugerencias o invitaciones (alcance según diseño de privacidad). | FR-064 | ✅ Implementado (m8-05) |
+| US-A04 | Como **grupo**, necesitamos **coordinación clara** (avisos, confirmaciones) **sin depender solo de chat externo**. | Notificaciones in-app o push para eventos clave; hilos por contexto. | FR-050, FR-065, NFR-OBS-01 | ❌ Pendiente (sin push) |
 
 ### 3.4 Mapa de trazabilidad requisitos ↔ historias
 
@@ -816,6 +816,109 @@ Activar pasarela integrada solo si se cumplen todos:
 - Congelar contratos OpenAPI para `auth`, `matches`, `tournaments`, `ranking`, `conversations`.
 - Definir fixtures de Prisma para tests de integración (torneo con categorías, partido incompleto con filtros).
 - Criterios “Definition of Ready” para cada historia: datos de prueba, estados esperados, permisos.
+
+---
+
+## 13. Estado de implementación por Sprint
+
+> Estado al completar **sprint-45** (mayo 2026). Última actualización: fin de sprint-45.
+
+### 13.1 PRs merged en sprint-45
+
+| PR | Rama | Descripción | Historias |
+|----|------|-------------|-----------|
+| #11 | `sprint-44/w1-05-crud-courts` | Courts CRUD + disponibilidad de canchas | US-W1-05, US-W1-06, US-W1-07 |
+| #12 | `fix/sprint-44-tests-lint` | Fix lint/tests (migration campos courts) | — |
+| #13 | `sprint-45/web-backoffice-complete` | Tournament management UI web | US-W1-09 |
+| #14 | `sprint-45/web-backoffice-complete` | Match management UI web | US-W1-10 |
+| #15 | `sprint-45/extras` | Chat Web UI, Profile Web UI, Onboarding mobile, Availability mobile | US-W1-13, US-W1-14, m8-04, m8-05 |
+
+### 13.2 Estado de historias por US
+
+#### Historias MVP (US-M01 a US-M08)
+
+| ID | Descripción | Estado | Notas |
+|----|-------------|--------|-------|
+| US-M01 | Registro e inicio de sesión | ✅ Implementado | |
+| US-M02 | Perfil y categoría/nivel | ✅ Implementado | |
+| US-M03 | Crear partido (caimanera/americano) | ✅ Implementado | |
+| US-M04 | Unirse o solicitar unirse a partido | ✅ Implementado | |
+| US-M05 | Crear torneo por categorías | ✅ Implementado | |
+| US-M06 | Registrar resultados y ranking | ✅ Implementado | |
+| US-M07 | Matchmaking por nivel/categoría | ✅ Implementado | |
+| US-M08 | Chat por partido/torneo | ✅ Mobile + Web (lectura) | UI móvil solo lectura; Web en `/dashboard/chat` |
+
+#### Historias adicionales (US-A01 a US-A04)
+
+| ID | Descripción | Estado | Notas |
+|----|-------------|--------|-------|
+| US-A01 | Faltantes y cuadrar partido | ✅ Implementado | |
+| US-A02 | Partidas incompletas + filtros | ✅ Implementado | |
+| US-A03 | Disponibilidad del jugador | ✅ Implementado | Screen + cubit (`m8-05`) |
+| US-A04 | Notificaciones push | ❌ Pendiente | Sin implementación de push notifications |
+
+#### Historias Web (US-W1-xx)
+
+| ID | Descripción | Estado | Notas |
+|----|-------------|--------|-------|
+| US-W1-01 | Backoffice shell Next.js | ✅ Implementado | PR #5 |
+| US-W1-02 | Backoffice sidebar + topbar | ✅ Implementado | PR #5 |
+| US-W1-03 | Lista pagos pendientes | ✅ Implementado | PR #8, polling 30s |
+| US-W1-05 | Courts CRUD | ✅ Implementado | PR #11 |
+| US-W1-06 | Disponibilidad de cancha (slots) | ✅ Implementado | PR #11 |
+| US-W1-07 | Listar partidos por venue | ✅ Implementado | PR #11 |
+| US-W1-09 | Tournament management UI | ✅ Implementado | PR #13 |
+| US-W1-10 | Match management UI | ✅ Implementado | PR #14 |
+| US-W1-12 | Leaderboard con displayName | ✅ Implementado | API join en endpoint |
+| US-W1-13 | Chat Web UI | ✅ Implementado | PR #15, solo lectura |
+| US-W1-14 | Profile Web UI | ✅ Implementado | PR #15 |
+
+#### Historias Mobile (US-Mxx)
+
+| ID | Descripción | Estado | Notas |
+|----|-------------|--------|-------|
+| m8-03 | Info de pago a nivel partido | ✅ Implementado | PR #14 |
+| m8-04 | Onboarding completion | ✅ Implementado | PR #15 |
+| m8-05 | Availability screen | ✅ Implementado | PR #15, cubit implementado |
+
+### 13.3 Backlog actualizado con estado
+
+#### Fase 1 — MVP core
+
+| Prioridad | Ítem | Historias / FR | Estado |
+|-----------|------|----------------|--------|
+| P0 | Perfil y categorías | US-M02, FR-003, FR-004 | ✅ Listo |
+| P0 | Partidos: crear, listar, unirse | US-M03, US-M04, FR-010–FR-012 | ✅ Listo |
+| P0 | Torneos e inscripciones | US-M05, FR-020, FR-021 | ✅ Listo |
+| P0 | Resultados y ranking básico | US-M06, FR-030, FR-031 | ✅ Listo |
+| P1 | Matchmaking por categoría en partido/torneo | US-M07, FR-040 | ✅ Listo |
+| P1 | Conversaciones por partido/torneo | US-M08, FR-050, FR-051 | ✅ Listo (lectura) |
+
+#### Fase 2 — Funcionalidades obligatorias adicionales
+
+| Prioridad | Ítem | Historias / FR | Estado |
+|-----------|------|----------------|--------|
+| P0 | Faltantes y cuadrar partido (convocatoria/suplentes) | US-A01, FR-060, FR-061 | ✅ Listo |
+| P0 | Partidas incompletas + filtros sede/cancha/precio | US-A02, FR-062, FR-063 | ✅ Listo |
+| P1 | Disponibilidad del jugador | US-A03, FR-064 | ✅ Listo |
+| P1 | Notificaciones push + in-app | US-A04, FR-065, NFR-OBS-01 | ❌ Pendiente |
+
+#### Fase 3 — Post-MVP
+
+| Prioridad | Ítem | Notas | Estado |
+|-----------|------|-------|--------|
+| P2 | Pagos compartidos / reservas con club | Integración externa, compliance | ❌ Pendiente |
+| P2 | WebSockets para chat en tiempo real | Sustituir polling | ❌ Pendiente |
+| P2 | Rankings avanzados (ELO, temporadas) | Reglas configurables | ❌ Pendiente |
+| P2 | Moderación y reportes | Contenido y usuarios | ❌ Pendiente |
+| P2 | Analytics de producto | Embudos, retención | ❌ Pendiente |
+
+### 13.4 Pendientes técnicos notable
+
+- **US-A04 (push notifications):** Sin infraestructura push (FCM/APNS) ni lógica de notificaciones event-driven.
+- **US-M08 (chat):** Web UI es solo lectura; chat completo requiere WebSocket o polling refinado.
+- **Pagos:** ledger base existe (`transactions` + `PaymentStatus`), pero sin integration gateway ni flow de fee parametrizable.
+- **Auth Web:** Estrategia MVP en memoria (sin httpOnly cookies) — viable para validación inicial.
 
 ---
 
