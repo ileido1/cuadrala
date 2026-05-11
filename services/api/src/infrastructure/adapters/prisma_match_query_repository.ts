@@ -165,7 +165,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
     _filters: ListVenueMatchesFiltersDTO,
     _page: PageDTO,
   ): Promise<{ items: (MatchListItemDTO & { courtId: string | null; courtName: string | null })[]; total: number }> {
-    const { courtId, date, status } = _filters;
+    const { courtId, from, to, date, status } = _filters;
 
     const WHERE: MatchWhereInput = {
       court: { venueId: _venueId },
@@ -176,6 +176,14 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
             scheduledAt: {
               gte: new Date(`${date}T00:00:00.000Z`),
               lt: new Date(`${date}T23:59:59.999Z`),
+            },
+          }
+        : {}),
+      ...(from !== undefined || to !== undefined
+        ? {
+            scheduledAt: {
+              ...(from !== undefined ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}),
+              ...(to !== undefined ? { lte: new Date(`${to}T23:59:59.999Z`) } : {}),
             },
           }
         : {}),

@@ -24,6 +24,9 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
         lighting: true,
         surfaceType: 'cemento',
         status: CourtStatus.ACTIVE,
+        pricePerHourCents: 850000,
+        capacity: '4v4',
+        durationMinutes: 60,
         createdAt: new Date('2025-01-01'),
       };
       expect(court.status).toBe(CourtStatus.ACTIVE);
@@ -46,6 +49,9 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
         lighting: true,
         surfaceType: null,
         status: CourtStatus.ACTIVE,
+        pricePerHourCents: null,
+        capacity: null,
+        durationMinutes: 60,
         createdAt: new Date('2025-01-01'),
       };
       expect(court.sportType).toBe(SportType.TENNIS);
@@ -63,6 +69,9 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
         lighting: false,
         surfaceType: null,
         status: CourtStatus.ACTIVE,
+        pricePerHourCents: null,
+        capacity: null,
+        durationMinutes: 60,
         createdAt: new Date(),
       };
       expect(court.id).toBeDefined();
@@ -80,6 +89,9 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
         lighting: false,
         surfaceType: null,
         status: CourtStatus.INACTIVE,
+        pricePerHourCents: null,
+        capacity: null,
+        durationMinutes: 60,
         createdAt: new Date(),
       };
       expect(court.surfaceType).toBeNull();

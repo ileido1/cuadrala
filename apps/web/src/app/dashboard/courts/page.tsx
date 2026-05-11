@@ -1,102 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useVenue } from '~/contexts/venue-context';
+import { apiClient } from '~/lib/api-client';
 import type { Court, SportType } from '~/types/api';
-
-// Mock data extending Court with UI-specific fields
-interface CourtUI {
-  id: string;
-  venueId: string;
-  name: string;
-  sportType: SportType;
-  indoor: boolean;
-  lighting: boolean;
-  surfaceType: string | null;
-  status: string;
-  pricePerHour: number;
-  capacity: number;
-  duration: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const MOCK_COURTS: CourtUI[] = [
-  {
-    id: '1',
-    venueId: '1',
-    name: 'Cancha 1',
-    sportType: 'PADEL',
-    indoor: true,
-    lighting: true,
-    surfaceType: 'Cesped artificial',
-    status: 'ACTIVE',
-    pricePerHour: 8500,
-    capacity: 4,
-    duration: 60,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    venueId: '1',
-    name: 'Cancha 2',
-    sportType: 'PADEL',
-    indoor: true,
-    lighting: true,
-    surfaceType: 'Cesped artificial',
-    status: 'ACTIVE',
-    pricePerHour: 8500,
-    capacity: 4,
-    duration: 60,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    venueId: '1',
-    name: 'Cancha 3',
-    sportType: 'TENNIS',
-    indoor: false,
-    lighting: true,
-    surfaceType: 'Dura',
-    status: 'ACTIVE',
-    pricePerHour: 7000,
-    capacity: 4,
-    duration: 60,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    venueId: '1',
-    name: 'Cancha 4',
-    sportType: 'PADEL',
-    indoor: true,
-    lighting: true,
-    surfaceType: 'Cesped artificial',
-    status: 'ACTIVE', // Using ACTIVE for demo, UI shows Maintenance
-    pricePerHour: 8500,
-    capacity: 4,
-    duration: 60,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    venueId: '1',
-    name: 'Cancha 5',
-    sportType: 'TENNIS',
-    indoor: false,
-    lighting: false,
-    surfaceType: 'Tierra batida',
-    status: 'ACTIVE', // Using ACTIVE for demo, UI shows different status
-    pricePerHour: 9000,
-    capacity: 4,
-    duration: 60,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
 
 type TabValue = 'all' | 'active' | 'maintenance';
 
@@ -146,8 +53,8 @@ function ClockIcon({ className = 'w-5 h-5' }: { className?: string }) {
 }
 
 // Court card component
-function CourtCard({ court, index }: { court: CourtUI; index: number }) {
-  const displayStatus = COURT_DISPLAY_STATUS[court.id] || 'ACTIVE';
+function CourtCard({ court, index }: { court: Court; index: number }) {
+  const displayStatus = court.status === 'ACTIVE' ? 'ACTIVE' : court.status === 'INACTIVE' ? 'INACTIVE' : 'MAINTENANCE';
 
   const getStatusBadge = (status: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE') => {
     switch (status) {
@@ -205,7 +112,7 @@ function CourtCard({ court, index }: { court: CourtUI; index: number }) {
         <div className="text-center">
           <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Precio</p>
           <p className="text-lg font-bold text-slate-800">
-            ${court.pricePerHour.toLocaleString('es-CL')}
+            ${(court.pricePerHour ?? 0).toLocaleString('es-CL')}
           </p>
           <p className="text-xs text-slate-400">hora</p>
         </div>
@@ -219,7 +126,7 @@ function CourtCard({ court, index }: { court: CourtUI; index: number }) {
         <div className="text-center">
           <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Duración</p>
           <p className="text-lg font-bold text-slate-800 flex items-center justify-center gap-1">
-            <span>{court.duration / 60}</span>
+            <span>{(court.duration ?? 60) / 60}</span>
             <p className="text-xs text-slate-400">hora</p>
           </p>
         </div>
@@ -239,10 +146,25 @@ function CourtCard({ court, index }: { court: CourtUI; index: number }) {
 }
 
 export default function CourtsPage() {
+  const { currentVenue } = useVenue();
   const [activeTab, setActiveTab] = useState<TabValue>('active');
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  const filteredCourts = MOCK_COURTS.filter((court) => {
-    const displayStatus = COURT_DISPLAY_STATUS[court.id] || 'ACTIVE';
+  useEffect(() => {
+    if (!currentVenue) return;
+
+    apiClient.venues.courts.list(currentVenue.id)
+      .then((res) => {
+        setCourts(res.data.data as Court[]);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [currentVenue]);
+
+  const filteredCourts = courts.filter((court) => {
+    const displayStatus = court.status === 'ACTIVE' ? 'ACTIVE' : court.status === 'INACTIVE' ? 'INACTIVE' : 'MAINTENANCE';
     if (activeTab === 'all') return true;
     if (activeTab === 'active') return displayStatus === 'ACTIVE';
     if (activeTab === 'maintenance') return displayStatus === 'MAINTENANCE';
@@ -302,7 +224,26 @@ export default function CourtsPage() {
       </div>
 
       {/* Courts Grid */}
-      {filteredCourts.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="card p-6 animate-pulse">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-secondary-200" />
+              </div>
+              <div className="space-y-2 mb-4">
+                <div className="h-4 bg-secondary-200 rounded w-20" />
+                <div className="h-3 bg-secondary-200 rounded w-32" />
+              </div>
+              <div className="grid grid-cols-3 gap-3 py-3 border-y border-secondary-200">
+                <div className="h-8 bg-secondary-200 rounded" />
+                <div className="h-8 bg-secondary-200 rounded" />
+                <div className="h-8 bg-secondary-200 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredCourts.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

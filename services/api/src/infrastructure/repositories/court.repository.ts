@@ -45,6 +45,9 @@ export class CourtRepository implements ICourtRepository {
         lighting: _data.lighting ?? false,
         surfaceType: _data.surfaceType ?? null,
         status: 'ACTIVE',
+        pricePerHourCents: _data.pricePerHourCents ?? null,
+        capacity: _data.capacity ?? null,
+        durationMinutes: _data.durationMinutes ?? 60,
       },
     });
     return prismaToCourtEntity(model)!;
@@ -57,6 +60,9 @@ export class CourtRepository implements ICourtRepository {
     if (_data.indoor !== undefined) data.indoor = _data.indoor;
     if (_data.lighting !== undefined) data.lighting = _data.lighting;
     if (_data.surfaceType !== undefined) data.surfaceType = _data.surfaceType;
+    if (_data.pricePerHourCents !== undefined) data.pricePerHourCents = _data.pricePerHourCents;
+    if (_data.capacity !== undefined) data.capacity = _data.capacity;
+    if (_data.durationMinutes !== undefined) data.durationMinutes = _data.durationMinutes;
 
     const model = await PRISMA.court.update({
       where: { id: _id },

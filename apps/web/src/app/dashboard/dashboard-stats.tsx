@@ -3,44 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
-import type { Venue, PendingTransaction, UpcomingMatch } from '~/types/api';
-
-// MOCK DATA - These will be replaced with real API data
-const MOCK_STATS = {
-  totalIncome: 284500,
-  totalIncomeTrend: 12.5,
-  courtsCount: 12,
-  courtsOccupied: 5,
-  occupancyRate: 74,
-  occupancyTrend: 5,
-};
-
-const MOCK_WEEKLY_INCOME = [
-  { day: 'Lun', amount: 45000 },
-  { day: 'Mar', amount: 62000 },
-  { day: 'Mié', amount: 38000 },
-  { day: 'Jue', amount: 55000 },
-  { day: 'Vie', amount: 78000 },
-  { day: 'Sáb', amount: 95000 },
-  { day: 'Dom', amount: 72000 },
-];
-
-const MOCK_COURT_OCCUPANCY = [
-  { name: 'Cancha 1', occupancy: 85 },
-  { name: 'Cancha 2', occupancy: 72 },
-  { name: 'Cancha 3', occupancy: 90 },
-  { name: 'Cancha 4', occupancy: 45 },
-  { name: 'Cancha 5', occupancy: 68 },
-  { name: 'Cancha 6', occupancy: 55 },
-  { name: 'Cancha 7', occupancy: 38 },
-  { name: 'Cancha 8', occupancy: 80 },
-];
-
-const MOST_RESERVED_COURT = {
-  name: 'Cancha 3',
-  hours: 126,
-  reservations: 21,
-};
+import type { DashboardStatsResponse } from '~/types/api';
 
 interface StatCardProps {
   label: string;
@@ -48,9 +11,26 @@ interface StatCardProps {
   trend?: number;
   icon: React.ReactNode;
   isMoney?: boolean;
+  loading?: boolean;
 }
 
-function StatCard({ label, value, trend, icon, isMoney }: StatCardProps) {
+function StatCard({ label, value, trend, icon, isMoney, loading }: StatCardProps) {
+  if (loading) {
+    return (
+      <div className="card p-6 animate-pulse">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-secondary-200" />
+            <div>
+              <p className="h-3 bg-secondary-200 rounded w-20 mb-2" />
+              <div className="h-8 bg-secondary-200 rounded w-16" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card p-6">
       <div className="flex items-start justify-between">
@@ -104,22 +84,40 @@ const ConversionIcon = () => (
 );
 
 // Weekly Income Bar Chart
-function WeeklyIncomeChart() {
-  const maxAmount = Math.max(...MOCK_WEEKLY_INCOME.map(d => d.amount));
+function WeeklyIncomeChart({ data, loading }: { data: { day: string; amount: number }[]; loading?: boolean }) {
+  if (loading) {
+    return (
+      <div className="card p-6">
+        <h3 className="section-heading mb-6">Ingresos por semana</h3>
+        <div className="flex items-end justify-between gap-2 h-40">
+          {[...Array(7)].map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-2 flex-1">
+              <div className="w-full flex items-end justify-center h-32">
+                <div className="w-full max-w-10 bg-secondary-200 rounded-t animate-pulse" style={{ height: '60%' }} />
+              </div>
+              <span className="text-xs text-secondary-500 font-medium">---</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const maxAmount = Math.max(...data.map(d => d.amount), 1);
 
   return (
     <div className="card p-6">
       <h3 className="section-heading mb-6">Ingresos por semana</h3>
       <div className="flex items-end justify-between gap-2 h-40">
-        {MOCK_WEEKLY_INCOME.map((data, i) => (
+        {data.map((item, i) => (
           <div key={i} className="flex flex-col items-center gap-2 flex-1">
             <div className="w-full flex items-end justify-center h-32">
               <div
                 className="w-full max-w-10 bg-primary rounded-t-md transition-all"
-                style={{ height: `${(data.amount / maxAmount) * 100}%` }}
+                style={{ height: `${(item.amount / maxAmount) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-secondary-500 font-medium">{data.day}</span>
+            <span className="text-xs text-secondary-500 font-medium">{item.day}</span>
           </div>
         ))}
       </div>
@@ -128,12 +126,31 @@ function WeeklyIncomeChart() {
 }
 
 // Court Occupancy Progress Bars
-function CourtOccupancyChart() {
+function CourtOccupancyChart({ data, loading }: { data: { name: string; occupancy: number }[]; loading?: boolean }) {
+  if (loading) {
+    return (
+      <div className="card p-6">
+        <h3 className="section-heading mb-4">Ocupación por cancha</h3>
+        <div className="space-y-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="h-3 bg-secondary-200 rounded w-20 animate-pulse" />
+              <div className="flex-1 h-2 bg-secondary-100 rounded-full overflow-hidden">
+                <div className="h-full bg-secondary-200 rounded-full animate-pulse" style={{ width: '60%' }} />
+              </div>
+              <div className="h-3 bg-secondary-200 rounded w-10 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card p-6">
       <h3 className="section-heading mb-4">Ocupación por cancha</h3>
       <div className="space-y-4">
-        {MOCK_COURT_OCCUPANCY.map((court, i) => (
+        {data.map((court, i) => (
           <div key={i} className="flex items-center gap-3">
             <span className="text-sm text-secondary-600 w-20 text-right">{court.name}</span>
             <div className="flex-1 h-2 bg-secondary-100 rounded-full overflow-hidden">
@@ -151,13 +168,39 @@ function CourtOccupancyChart() {
 }
 
 // Most Reserved Court Card
-function MostReservedCourt() {
+function MostReservedCourt({ data, loading }: { data: { name: string; hours: number; reservations: number } | null; loading?: boolean }) {
+  if (loading) {
+    return (
+      <div className="card p-6 bg-gradient-to-br from-primary to-primary-700 animate-pulse">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <p className="text-primary-200 text-sm mb-1">Cancha más reservada</p>
+            <div className="h-8 bg-white/30 rounded w-32 mb-2" />
+          </div>
+          <div className="w-12 h-12 rounded-full bg-white/20" />
+        </div>
+        <div className="flex gap-6">
+          <div>
+            <p className="text-primary-200 text-xs uppercase tracking-wide mb-1">Horas</p>
+            <div className="h-6 bg-white/30 rounded w-8" />
+          </div>
+          <div>
+            <p className="text-primary-200 text-xs uppercase tracking-wide mb-1">Reservas</p>
+            <div className="h-6 bg-white/30 rounded w-8" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
   return (
     <div className="card p-6 bg-gradient-to-br from-primary to-primary-700 text-white">
       <div className="flex items-start justify-between mb-4">
         <div>
           <p className="text-primary-100 text-sm mb-1">Cancha más reservada</p>
-          <h4 className="text-2xl font-bold">{MOST_RESERVED_COURT.name}</h4>
+          <h4 className="text-2xl font-bold">{data.name}</h4>
         </div>
         <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,11 +211,11 @@ function MostReservedCourt() {
       <div className="flex gap-6">
         <div>
           <p className="text-primary-200 text-xs uppercase tracking-wide mb-1">Horas</p>
-          <p className="text-xl font-bold">{MOST_RESERVED_COURT.hours}</p>
+          <p className="text-xl font-bold">{data.hours}</p>
         </div>
         <div>
           <p className="text-primary-200 text-xs uppercase tracking-wide mb-1">Reservas</p>
-          <p className="text-xl font-bold">{MOST_RESERVED_COURT.reservations}</p>
+          <p className="text-xl font-bold">{data.reservations}</p>
         </div>
       </div>
     </div>
@@ -182,57 +225,48 @@ function MostReservedCourt() {
 export default function DashboardStats() {
   const { currentVenue } = useVenue();
 
-  const [pendingCount, setPendingCount] = useState<number | null>(null);
-  const [courtsCount, setCourtsCount] = useState<number | null>(null);
-  const [matchesCount, setMatchesCount] = useState<number | null>(null);
-
-  const [pendingLoading, setPendingLoading] = useState(true);
-  const [courtsLoading, setCourtsLoading] = useState(true);
-  const [matchesLoading, setMatchesLoading] = useState(true);
-
-  const [pendingError, setPendingError] = useState(false);
-  const [courtsError, setCourtsError] = useState(false);
-  const [matchesError, setMatchesError] = useState(false);
+  const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!currentVenue) return;
 
-    const venueId = currentVenue.id;
-
-    // Venue details
-    apiClient.venues.get(venueId)
+    apiClient.venues.dashboardStats(currentVenue.id)
       .then((res) => {
-        const data = res.data.data as Venue;
-        setCourtsCount(data.courtsCount ?? 0);
+        const apiData = res.data.data as Omit<DashboardStatsResponse, 'weeklyIncome' | 'courtOccupancy' | 'mostReservedCourt'>;
+        // El API devuelve campos base; los gráficos avanzados se enviarán en una v2
+        setStats({
+          ...apiData,
+          weeklyIncome: [],
+          courtOccupancy: [],
+          mostReservedCourt: null,
+        });
       })
-      .catch(() => setCourtsError(true))
-      .finally(() => setCourtsLoading(false));
-
-    // Pending transactions
-    apiClient.venues.pendingTransactions(venueId)
-      .then((res) => {
-        const data = res.data.data as PendingTransaction[];
-        setPendingCount(data.length);
-      })
-      .catch(() => setPendingError(true))
-      .finally(() => setPendingLoading(false));
-
-    // Upcoming matches
-    apiClient.venues.upcomingMatches(venueId)
-      .then((res) => {
-        const data = res.data.data as UpcomingMatch[];
-        setMatchesCount(data.length);
-      })
-      .catch(() => setMatchesError(true))
-      .finally(() => setMatchesLoading(false));
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
   }, [currentVenue]);
 
-  // Format currency for display
+  // Format currency for display (en centavos → pesos)
   const formatCurrency = (value: number) => {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}k`;
+    const pesos = value / 100;
+    if (pesos >= 1000) {
+      return `${(pesos / 1000).toFixed(pesos % 1000 === 0 ? 0 : 1)}k`;
     }
-    return value.toString();
+    return pesos.toString();
+  };
+
+  // Default values while loading or error
+  const displayStats = stats ?? {
+    totalRevenue: 0,
+    totalCourts: 0,
+    occupancyRate: '0/0',
+    conversionRate: 0,
+    revenueTrend: 0,
+    conversionTrend: 0,
+    weeklyIncome: [],
+    courtOccupancy: [],
+    mostReservedCourt: null,
   };
 
   return (
@@ -242,32 +276,36 @@ export default function DashboardStats() {
         <div className="animate-fade-in stagger-1">
           <StatCard
             label="INGRESOS TOTALES"
-            value={formatCurrency(MOCK_STATS.totalIncome)}
-            trend={MOCK_STATS.totalIncomeTrend}
+            value={formatCurrency(displayStats.totalRevenue)}
+            trend={displayStats.revenueTrend}
             icon={<MoneyIcon />}
             isMoney
+            loading={loading}
           />
         </div>
         <div className="animate-fade-in stagger-2">
           <StatCard
             label="TOTAL DE CANCHAS"
-            value={MOCK_STATS.courtsCount.toString()}
+            value={displayStats.totalCourts.toString()}
             icon={<CourtIcon />}
+            loading={loading}
           />
         </div>
         <div className="animate-fade-in stagger-3">
           <StatCard
             label="OCUPACIÓN"
-            value={`${MOCK_STATS.courtsOccupied}/${MOCK_STATS.courtsCount}`}
+            value={displayStats.occupancyRate}
             icon={<OccupancyIcon />}
+            loading={loading}
           />
         </div>
         <div className="animate-fade-in stagger-4">
           <StatCard
             label="TASA DE CONVERSIÓN"
-            value={`${MOCK_STATS.occupancyRate}%`}
-            trend={MOCK_STATS.occupancyTrend}
+            value={`${displayStats.conversionRate}%`}
+            trend={displayStats.conversionTrend}
             icon={<ConversionIcon />}
+            loading={loading}
           />
         </div>
       </div>
@@ -276,16 +314,25 @@ export default function DashboardStats() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Left - Weekly Income Chart */}
         <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
-          <WeeklyIncomeChart />
+          <WeeklyIncomeChart
+            data={displayStats.weeklyIncome.length > 0 ? displayStats.weeklyIncome : []}
+            loading={loading}
+          />
         </div>
 
         {/* Right - Court Occupancy + Most Reserved */}
         <div className="space-y-6">
           <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <CourtOccupancyChart />
+            <CourtOccupancyChart
+              data={displayStats.courtOccupancy.length > 0 ? displayStats.courtOccupancy : []}
+              loading={loading}
+            />
           </div>
           <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
-            <MostReservedCourt />
+            <MostReservedCourt
+              data={displayStats.mostReservedCourt}
+              loading={loading}
+            />
           </div>
         </div>
       </div>

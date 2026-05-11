@@ -21,6 +21,9 @@ export interface CreateCourtInputDTO {
   indoor?: boolean;
   lighting?: boolean;
   surfaceType?: string | null;
+  pricePerHourCents?: number | null;
+  capacity?: string | null;
+  durationMinutes?: number;
 }
 
 export interface CreateCourtOutputDTO {
@@ -46,6 +49,9 @@ export class CreateCourtUseCase {
       ...(_input.indoor !== undefined ? { indoor: _input.indoor } : {}),
       ...(_input.lighting !== undefined ? { lighting: _input.lighting } : {}),
       ...(_input.surfaceType !== undefined ? { surfaceType: _input.surfaceType } : {}),
+      ...(_input.pricePerHourCents !== undefined ? { pricePerHourCents: _input.pricePerHourCents } : {}),
+      ...(_input.capacity !== undefined ? { capacity: _input.capacity } : {}),
+      ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
     };
 
     const court = await this._courtRepository.create(INPUT);
@@ -93,6 +99,9 @@ export interface UpdateCourtInputDTO {
   indoor?: boolean;
   lighting?: boolean;
   surfaceType?: string | null;
+  pricePerHourCents?: number | null;
+  capacity?: string | null;
+  durationMinutes?: number;
 }
 
 export interface UpdateCourtOutputDTO {
@@ -125,6 +134,9 @@ export class UpdateCourtUseCase {
       ...(_input.indoor !== undefined ? { indoor: _input.indoor } : {}),
       ...(_input.lighting !== undefined ? { lighting: _input.lighting } : {}),
       ...(_input.surfaceType !== undefined ? { surfaceType: _input.surfaceType } : {}),
+      ...(_input.pricePerHourCents !== undefined ? { pricePerHourCents: _input.pricePerHourCents } : {}),
+      ...(_input.capacity !== undefined ? { capacity: _input.capacity } : {}),
+      ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
     };
 
     const updated = await this._courtRepository.update(_input.courtId, INPUT);

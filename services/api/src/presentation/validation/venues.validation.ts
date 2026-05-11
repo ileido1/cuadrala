@@ -40,6 +40,9 @@ export const CREATE_COURT_BODY_SCHEMA = z
     indoor: z.boolean().optional(),
     lighting: z.boolean().optional(),
     surfaceType: z.string().max(60).nullable().optional(),
+    pricePerHourCents: z.number().int().nonnegative().nullable().optional(),
+    capacity: z.string().max(20).nullable().optional(),
+    durationMinutes: z.number().int().positive().optional(),
   })
   .strict();
 
@@ -50,6 +53,9 @@ export const UPDATE_COURT_BODY_SCHEMA = z
     indoor: z.boolean().optional(),
     lighting: z.boolean().optional(),
     surfaceType: z.string().max(60).nullable().optional(),
+    pricePerHourCents: z.number().int().nonnegative().nullable().optional(),
+    capacity: z.string().max(20).nullable().optional(),
+    durationMinutes: z.number().int().positive().optional(),
   })
   .strict();
 
@@ -72,6 +78,67 @@ export const LIST_VENUE_MATCHES_QUERY_SCHEMA = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'date debe estar en formato YYYY-MM-DD.')
       .optional(),
+    status: z.enum(['SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED']).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
+
+// Schema para GET /venues/:venueId/dashboard-stats
+export const DASHBOARD_STATS_QUERY_SCHEMA = z
+  .object({
+    // Sin filtros por ahora, preparado para futuras métricas (ej. período)
+  })
+  .strict();
+
+// Schema para GET /venues/:venueId/transactions/stats
+export const TRANSACTIONS_STATS_QUERY_SCHEMA = z
+  .object({
+    // Sin filtros por ahora, preparado para rango de fechas
+  })
+  .strict();
+
+// Schema para GET /venues/:venueId/transactions/history
+export const TRANSACTIONS_HISTORY_QUERY_SCHEMA = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
+
+// Schema para PATCH /venues/:venueId
+export const UPDATE_VENUE_BODY_SCHEMA = z
+  .object({
+    phone: z.string().max(30).nullable().optional(),
+    email: z.string().email('Email inválido.').max(120).nullable().optional(),
+    description: z.string().max(500).nullable().optional(),
+    openingHours: z
+      .object({
+        monday: z.object({ open: z.string(), close: z.string() }).optional(),
+        tuesday: z.object({ open: z.string(), close: z.string() }).optional(),
+        wednesday: z.object({ open: z.string(), close: z.string() }).optional(),
+        thursday: z.object({ open: z.string(), close: z.string() }).optional(),
+        friday: z.object({ open: z.string(), close: z.string() }).optional(),
+        saturday: z.object({ open: z.string(), close: z.string() }).optional(),
+        sunday: z.object({ open: z.string(), close: z.string() }).optional(),
+      })
+      .nullable()
+      .optional(),
+  })
+  .strict();
+
+// Schema para GET /venues/:venueId/matches (con from/to para calendario)
+export const VENUE_MATCHES_QUERY_SCHEMA = z
+  .object({
+    from: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'from debe estar en formato YYYY-MM-DD.')
+      .optional(),
+    to: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'to debe estar en formato YYYY-MM-DD.')
+      .optional(),
+    courtId: z.string().uuid('courtId debe ser un UUID válido.').optional(),
     status: z.enum(['SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED']).optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),

@@ -107,6 +107,16 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 | FR-064 | US-A03 |
 | FR-065 | US-A04 |
 
+### 3.5 Backoffice Web (panel de sede)
+
+| ID | Historia | Criterio de aceptación (alto nivel) | Requisitos | Estado |
+|----|----------|-------------------------------------|------------|--------|
+| US-W1-15 | Como **staff de sede**, quiero **ver estadísticas de ingresos, ocupación y conversión** para **tomar decisiones operativas**. | Dashboard con KPIs reales (revenue, canchas, ocupación, tasa de conversión); tendencias semanales. | FR-080, FR-081 | ✅ Implementado |
+| US-W1-16 | Como **staff de sede**, quiero **gestionar mis canchas** (ver estado, precio, capacidad) para **mantener la oferta actualizada**. | Grid de canchas con datos reales; filtros por estado (activa/mantenimiento/inactiva). | FR-082 | ✅ Implementado |
+| US-W1-17 | Como **staff de sede**, quiero **ver el calendario semanal de reservas** para **gestionar la agenda del club**. | Vista semanal con partidos agendados por hora y día; datos desde API. | FR-083 | ✅ Implementado |
+| US-W1-18 | Como **staff de sede**, quiero **ver ingresos semanales, métodos de pago e historial de transacciones** para **conciliar cobros**. | Stats de transacciones (ingresos, tasa de éxito, métodos); tabla paginada de historial. | FR-084, FR-085 | ✅ Implementado |
+| US-W1-19 | Como **staff de sede**, quiero **editar los datos y horarios del club** para **mantener la info actualizada**. | Formulario con nombre, teléfono, dirección, email, descripción, horarios y días habilitados; guardado vía API. | FR-086 | ✅ Implementado |
+
 ---
 
 ## 4. Requisitos funcionales (catálogo)
@@ -133,6 +143,13 @@ Aplicación móvil multiplataforma (iOS/Android) para **organizar caimaneras y a
 | FR-063 | Filtros: sede, cancha, rango de precio por persona. |
 | FR-064 | Disponibilidad del usuario: franjas horarias y/o días preferentes. |
 | FR-065 | Notificaciones por eventos: solicitud de unión, partido completo, cambio de horario, mensaje nuevo. |
+| FR-080 | Dashboard de sede: estadísticas de ingresos, ocupación de canchas y tasa de conversión. |
+| FR-081 | Tendencias semanales de revenue y conversión para el dashboard de sede. |
+| FR-082 | Gestión de canchas desde backoffice: listado con estado, precio por hora, capacidad y superficie. |
+| FR-083 | Calendario semanal de reservas por sede con partidos agendados (vista backoffice). |
+| FR-084 | Estadísticas de transacciones de sede: ingresos semanales, total pagado, tasa de éxito, métodos de pago. |
+| FR-085 | Historial paginado de transacciones de sede con filtros básicos. |
+| FR-086 | Edición de configuración de sede: nombre, contacto, dirección, descripción, horarios y días habilitados. |
 
 ---
 
@@ -872,6 +889,11 @@ Activar pasarela integrada solo si se cumplen todos:
 | US-W1-12 | Leaderboard con displayName | ✅ Implementado | API join en endpoint |
 | US-W1-13 | Chat Web UI | ✅ Implementado | PR #15, solo lectura |
 | US-W1-14 | Profile Web UI | ✅ Implementado | PR #15 |
+| US-W1-15 | Dashboard Stats (Web) | ✅ Implementado | Stats de sede conectados a API real |
+| US-W1-16 | Courts management (Web) | ✅ Implementado | Grid de canchas con datos reales |
+| US-W1-17 | Schedule / Calendar (Web) | ✅ Implementado | Vista semanal con partidos reales |
+| US-W1-18 | Payments & Transactions (Web) | ✅ Implementado | Ingresos, historial y métodos de pago |
+| US-W1-19 | Venue Settings (Web) | ✅ Implementado | Edición de datos y horarios del club |
 
 #### Historias Mobile (US-Mxx)
 
@@ -903,6 +925,16 @@ Activar pasarela integrada solo si se cumplen todos:
 | P1 | Disponibilidad del jugador | US-A03, FR-064 | ✅ Listo |
 | P1 | Notificaciones push + in-app | US-A04, FR-065, NFR-OBS-01 | ❌ Pendiente |
 
+#### Fase 2.5 — Backoffice Web (panel de sede)
+
+| Prioridad | Ítem | Historias / FR | Estado |
+|-----------|------|----------------|--------|
+| P0 | Dashboard de stats e ingresos | US-W1-15, FR-080, FR-081 | ✅ Listo |
+| P0 | Gestión de canchas (grid + filtros) | US-W1-16, FR-082 | ✅ Listo |
+| P0 | Calendario semanal de reservas | US-W1-17, FR-083 | ✅ Listo |
+| P0 | Pagos, transacciones e historial | US-W1-18, FR-084, FR-085 | ✅ Listo |
+| P0 | Configuración de sede (datos + horarios) | US-W1-19, FR-086 | ✅ Listo |
+
 #### Fase 3 — Post-MVP
 
 | Prioridad | Ítem | Notas | Estado |
@@ -919,6 +951,7 @@ Activar pasarela integrada solo si se cumplen todos:
 - **US-M08 (chat):** Web UI es solo lectura; chat completo requiere WebSocket o polling refinado.
 - **Pagos:** ledger base existe (`transactions` + `PaymentStatus`), pero sin integration gateway ni flow de fee parametrizable.
 - **Auth Web:** Estrategia MVP en memoria (sin httpOnly cookies) — viable para validación inicial.
+- **Backoffice Web (completado en sprint-45+):** Dashboard, canchas, calendario, pagos y settings ya conectados a APIs reales. Pendiente: gráficos avanzados (ocupación por cancha, cancha más reservada) requieren agregaciones en backend v2.
 
 ---
 

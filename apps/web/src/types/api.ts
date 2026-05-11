@@ -3,12 +3,72 @@ export interface Venue {
   id: string;
   name: string;
   address?: string;
+  phone?: string;
+  email?: string;
+  description?: string;
+  openingTime?: string;
+  closingTime?: string;
+  activeDays?: string[];
   courtsCount?: number;
 }
 
 export interface VenueSummary {
   id: string;
   name: string;
+}
+
+// Dashboard stats (API response shape)
+export interface DashboardStatsResponse {
+  totalRevenue: number;
+  totalCourts: number;
+  occupancyRate: string; // ej. "4/5"
+  conversionRate: number;
+  revenueTrend: number;
+  conversionTrend: number;
+  // Campos computados por el front para gráficos (pueden venir vacíos del API)
+  weeklyIncome: { day: string; amount: number }[];
+  courtOccupancy: { name: string; occupancy: number }[];
+  mostReservedCourt: { name: string; hours: number; reservations: number } | null;
+}
+
+// Transaction stats
+export interface TransactionStatsResponse {
+  weeklyRevenue: number;
+  totalPaid: number;
+  successRate: number;
+  weeklyIncome: { day: string; amount: number }[];
+  paymentMethods: { method: string; percentage: number; color?: string }[];
+}
+
+// Transaction history
+export interface TransactionHistoryItem {
+  id: string;
+  date: string;
+  clientName: string;
+  courtName: string;
+  amount: number;
+  status: 'Pagado' | 'Pendiente' | 'Cancelled';
+}
+
+export interface TransactionHistoryResponse {
+  items: TransactionHistoryItem[];
+  pageInfo: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+// Venue update
+export interface VenueUpdateData {
+  name?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  description?: string;
+  openingTime?: string;
+  closingTime?: string;
+  activeDays?: string[];
 }
 
 export interface PendingTransaction {
@@ -57,6 +117,9 @@ export interface Court {
   lighting: boolean;
   surfaceType: string | null;
   status: CourtStatus;
+  pricePerHour?: number;
+  capacity?: number;
+  duration?: number;
   createdAt: string;
 }
 
@@ -128,6 +191,8 @@ export interface MatchListItem {
 export interface MatchListFilters {
   courtId?: string;
   date?: string;
+  from?: string;
+  to?: string;
   status?: MatchStatus;
   page?: number;
   limit?: number;

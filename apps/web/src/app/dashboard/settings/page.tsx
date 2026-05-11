@@ -1,3 +1,10 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useVenue } from '~/contexts/venue-context';
+import { apiClient } from '~/lib/api-client';
+import type { Venue, VenueUpdateData } from '~/types/api';
+
 const DAYS = [
   { label: 'Lun', active: true },
   { label: 'Mar', active: true },
@@ -9,6 +16,98 @@ const DAYS = [
 ] as const;
 
 export default function SettingsPage() {
+  const { currentVenue } = useVenue();
+  const [venue, setVenue] = useState<Venue | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Form state
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [email, setEmail] = useState('');
+  const [description, setDescription] = useState('');
+  const [openingTime, setOpeningTime] = useState('08:00');
+  const [closingTime, setClosingTime] = useState('23:00');
+  const [activeDays, setActiveDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+
+  useEffect(() => {
+    if (!currentVenue) return;
+
+    apiClient.venues.get(currentVenue.id)
+      .then((res) => {
+        const data = res.data.data as Venue;
+        setVenue(data);
+        setName(data.name ?? '');
+        setPhone(data.phone ?? '');
+        setAddress(data.address ?? '');
+        setEmail(data.email ?? '');
+        setDescription(data.description ?? '');
+        setOpeningTime(data.openingTime ?? '08:00');
+        setClosingTime(data.closingTime ?? '23:00');
+        setActiveDays(data.activeDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [currentVenue]);
+
+  const handleSave = async () => {
+    if (!currentVenue) return;
+
+    setSaving(true);
+    setSaved(false);
+
+    const updateData: VenueUpdateData = {
+      name,
+      phone,
+      address,
+      email,
+      description,
+      openingTime,
+      closingTime,
+      activeDays,
+    };
+
+    try {
+      await apiClient.venues.update(currentVenue.id, updateData);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleDay = (day: string) => {
+    setActiveDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="animate-fade-in">
+        <div className="mb-8">
+          <div className="h-8 bg-secondary-200 rounded w-40 animate-pulse mb-2" />
+          <div className="h-4 bg-secondary-200 rounded w-64 animate-pulse" />
+        </div>
+        <div className="card p-6 mb-6">
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i}>
+                <div className="h-3 bg-secondary-200 rounded w-24 mb-2" />
+                <div className="h-10 bg-secondary-200 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in">
       {/* Page Header */}
@@ -47,7 +146,8 @@ export default function SettingsPage() {
             <input
               type="text"
               className="input"
-              defaultValue="Club Palermo"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </div>
 
@@ -59,7 +159,8 @@ export default function SettingsPage() {
             <input
               type="text"
               className="input"
-              defaultValue="+54 9 11 4523-7890"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
             />
           </div>
 
@@ -71,7 +172,8 @@ export default function SettingsPage() {
             <input
               type="text"
               className="input"
-              defaultValue="Av. del Libertador 1234, CABA"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
             />
           </div>
 
@@ -83,7 +185,8 @@ export default function SettingsPage() {
             <input
               type="email"
               className="input"
-              defaultValue="admin@clubpalermo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
@@ -94,7 +197,8 @@ export default function SettingsPage() {
             </label>
             <textarea
               className="input min-h-[100px] resize-none"
-              defaultValue="Club deportivo especializado en pádel y tenis con 5 canchas en el corazón de Palermo."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
         </div>
@@ -128,22 +232,25 @@ export default function SettingsPage() {
               DÍAS HABILITADOS
             </label>
             <div className="flex flex-wrap gap-2">
-              {DAYS.map((day) => (
-                <button
-                  key={day.label}
-                  type="button"
-                  className={`
-                    min-w-[52px] px-3 py-2 rounded-lg text-sm font-semibold transition-all
-                    ${
-                      day.active
+              {DAYS.map((day, idx) => {
+                const dayKeys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                const isActive = activeDays.includes(dayKeys[idx]);
+                return (
+                  <button
+                    key={day.label}
+                    type="button"
+                    onClick={() => toggleDay(dayKeys[idx])}
+                    className={`
+                      min-w-[52px] px-3 py-2 rounded-lg text-sm font-semibold transition-all
+                      ${isActive
                         ? 'bg-primary text-white'
-                        : 'bg-surface-container text-secondary-500'
-                    }
-                  `}
-                >
-                  {day.label}
-                </button>
-              ))}
+                        : 'bg-surface-container text-secondary-500'}
+                    `}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -156,7 +263,8 @@ export default function SettingsPage() {
               <input
                 type="text"
                 className="input"
-                defaultValue="08:00"
+                value={openingTime}
+                onChange={(e) => setOpeningTime(e.target.value)}
               />
             </div>
 
@@ -168,7 +276,8 @@ export default function SettingsPage() {
               <input
                 type="text"
                 className="input"
-                defaultValue="23:00"
+                value={closingTime}
+                onChange={(e) => setClosingTime(e.target.value)}
               />
             </div>
           </div>
@@ -219,9 +328,20 @@ export default function SettingsPage() {
       </div>
 
       {/* Save Button */}
-      <div className="flex justify-end">
-        <button type="button" className="btn btn-primary px-8">
-          Guardar cambios
+      <div className="flex justify-end gap-4">
+        {error && (
+          <span className="text-error text-sm self-center">Error al guardar</span>
+        )}
+        {saved && (
+          <span className="text-primary text-sm self-center">Cambios guardados</span>
+        )}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="btn btn-primary px-8"
+        >
+          {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
       </div>
     </div>

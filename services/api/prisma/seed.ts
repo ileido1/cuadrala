@@ -164,6 +164,10 @@ async function seedMatchLifecycle(): Promise<void> {
     latitude: number;
     longitude: number;
     courts: string[];
+    phone?: string;
+    email?: string;
+    description?: string;
+    openingHours?: Prisma.InputJsonValue;
   }> = [
     {
       placeId: 'seed:venue:club-cuadrala',
@@ -173,7 +177,19 @@ async function seedMatchLifecycle(): Promise<void> {
       addressCountry: 'VE',
       latitude: 10.4806,
       longitude: -66.9036,
-      courts: ['Cancha 1', 'Cancha 2'],
+      courts: ['Cancha 1', 'Cancha 2', 'Cancha 3', 'Cancha 4', 'Cancha 5'],
+      phone: '+58-212-555-0100',
+      email: 'contacto@clubcuadrala.com',
+      description: 'El mejor club de pádel de Caracas con instalaciones de primera clase.',
+      openingHours: {
+        monday: { open: '07:00', close: '23:00' },
+        tuesday: { open: '07:00', close: '23:00' },
+        wednesday: { open: '07:00', close: '23:00' },
+        thursday: { open: '07:00', close: '23:00' },
+        friday: { open: '07:00', close: '23:00' },
+        saturday: { open: '08:00', close: '21:00' },
+        sunday: { open: '08:00', close: '20:00' },
+      } satisfies Prisma.InputJsonValue,
     },
     {
       placeId: 'seed:venue:padel-center',
@@ -184,6 +200,18 @@ async function seedMatchLifecycle(): Promise<void> {
       latitude: 10.4925,
       longitude: -66.8576,
       courts: ['Cancha A', 'Cancha B'],
+      phone: '+58-212-555-0200',
+      email: 'info@padelcenter.com.ve',
+      description: 'Centro especializado en pádel con tecnología de última generación.',
+      openingHours: {
+        monday: { open: '06:00', close: '22:00' },
+        tuesday: { open: '06:00', close: '22:00' },
+        wednesday: { open: '06:00', close: '22:00' },
+        thursday: { open: '06:00', close: '22:00' },
+        friday: { open: '06:00', close: '22:00' },
+        saturday: { open: '07:00', close: '20:00' },
+        sunday: { open: '08:00', close: '18:00' },
+      } satisfies Prisma.InputJsonValue,
     },
     {
       placeId: 'seed:venue:la-guaira',
@@ -194,6 +222,18 @@ async function seedMatchLifecycle(): Promise<void> {
       latitude: 10.5995,
       longitude: -66.9333,
       courts: ['Cancha 1'],
+      phone: '+58-212-555-0300',
+      email: 'clublaguaira@gmail.com',
+      description: 'Club tradicional con canchas de pádel y tenis.',
+      openingHours: {
+        monday: { open: '08:00', close: '20:00' },
+        tuesday: { open: '08:00', close: '20:00' },
+        wednesday: { open: '08:00', close: '20:00' },
+        thursday: { open: '08:00', close: '20:00' },
+        friday: { open: '08:00', close: '20:00' },
+        saturday: { open: '09:00', close: '18:00' },
+        sunday: { open: '09:00', close: '14:00' },
+      } satisfies Prisma.InputJsonValue,
     },
   ];
 
@@ -210,6 +250,10 @@ async function seedMatchLifecycle(): Promise<void> {
           latitude: _v.latitude,
           longitude: _v.longitude,
           geocodedAt: new Date(),
+          phone: _v.phone,
+          email: _v.email,
+          description: _v.description,
+          openingHours: _v.openingHours,
         },
         update: {
           name: _v.name,
@@ -219,6 +263,10 @@ async function seedMatchLifecycle(): Promise<void> {
           latitude: _v.latitude,
           longitude: _v.longitude,
           geocodedAt: new Date(),
+          phone: _v.phone,
+          email: _v.email,
+          description: _v.description,
+          openingHours: _v.openingHours,
         },
         select: { id: true, name: true, placeId: true },
       }),
@@ -239,7 +287,15 @@ async function seedMatchLifecycle(): Promise<void> {
             select: { id: true },
           });
           if (existing !== null) return;
-          await PRISMA.court.create({ data: { venueId: _seeded.id, name: _courtName } });
+          await PRISMA.court.create({
+            data: {
+              venueId: _seeded.id,
+              name: _courtName,
+              pricePerHourCents: 850000, // $8.500/hr en centavos
+              capacity: '4v4',
+              durationMinutes: 60,
+            },
+          });
         }),
       );
     }),
