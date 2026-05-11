@@ -35,38 +35,48 @@ const initialState: ProfileDataState = {
 function ProfileHeader({ user, playerProfile }: { user: ProfileUser | null; playerProfile: PlayerProfile | null }) {
   if (!user) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse">
-        <div className="h-5 bg-gray-200 rounded w-32" />
+      <div className="card p-6 animate-pulse">
+        <div className="h-20 bg-secondary-200 rounded-2xl" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center">
-          <span className="text-2xl font-bold text-primary-600">
+    <div className="card p-6 animate-fade-in">
+      <div className="flex items-center gap-5">
+        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center flex-shrink-0 shadow-md">
+          <span className="text-2xl sm:text-3xl font-bold text-primary-600">
             {user.name.charAt(0).toUpperCase()}
           </span>
         </div>
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">{user.name}</h2>
-          <p className="text-sm text-gray-500">{user.email}</p>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-secondary-900 truncate">{user.name}</h2>
+          <p className="text-sm text-secondary-500 truncate">{user.email}</p>
           {user.subscriptionType && (
-            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700">
+            <span className="inline-block mt-3 px-3 py-1.5 text-xs font-semibold rounded-full bg-primary-50 text-primary-600">
               {user.subscriptionType}
             </span>
           )}
         </div>
       </div>
       {playerProfile && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="flex gap-4 text-sm text-gray-500">
+        <div className="mt-6 pt-5 border-t border-outline">
+          <div className="flex flex-wrap gap-5 text-sm text-secondary-600">
             {playerProfile.dominantHand && (
-              <span>Mano dominante: {playerProfile.dominantHand}</span>
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                </svg>
+                {playerProfile.dominantHand}
+              </span>
             )}
             {playerProfile.birthDate && (
-              <span>Nacimiento: {new Date(playerProfile.birthDate).toLocaleDateString('es-AR')}</span>
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {new Date(playerProfile.birthDate).toLocaleDateString('es-AR')}
+              </span>
             )}
           </div>
         </div>
@@ -78,18 +88,18 @@ function ProfileHeader({ user, playerProfile }: { user: ProfileUser | null; play
 function StatsCards({ stats, isLoading }: { stats: UserStats | null; isLoading: boolean }) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-24 mb-2" />
-          <div className="h-8 bg-gray-200 rounded w-16" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in stagger-1">
+        <div className="card p-5 animate-pulse">
+          <div className="h-4 bg-secondary-200 rounded w-28 mb-3" />
+          <div className="h-9 bg-secondary-200 rounded w-16" />
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-24 mb-2" />
-          <div className="h-8 bg-gray-200 rounded w-16" />
+        <div className="card p-5 animate-pulse">
+          <div className="h-4 bg-secondary-200 rounded w-28 mb-3" />
+          <div className="h-9 bg-secondary-200 rounded w-16" />
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-24 mb-2" />
-          <div className="h-8 bg-gray-200 rounded w-16" />
+        <div className="card p-5 animate-pulse">
+          <div className="h-4 bg-secondary-200 rounded w-28 mb-3" />
+          <div className="h-9 bg-secondary-200 rounded w-16" />
         </div>
       </div>
     );
@@ -98,36 +108,38 @@ function StatsCards({ stats, isLoading }: { stats: UserStats | null; isLoading: 
   if (!stats || stats.matchesPlayed === 0) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm text-gray-500 mb-1">Partidos jugados</p>
-          <p className="text-2xl font-bold text-gray-400">Sin datos aún</p>
+        <div className="card p-5">
+          <p className="text-sm text-secondary-500 mb-2">Partidos jugados</p>
+          <p className="text-2xl font-bold text-secondary-400">Sin datos aún</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm text-gray-500 mb-1">Ratio de victorias</p>
-          <p className="text-2xl font-bold text-gray-400">—</p>
+        <div className="card p-5">
+          <p className="text-sm text-secondary-500 mb-2">Ratio de victorias</p>
+          <p className="text-2xl font-bold text-secondary-400">—</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm text-gray-500 mb-1">Victorias / Derrotas</p>
-          <p className="text-2xl font-bold text-gray-400">—</p>
+        <div className="card p-5">
+          <p className="text-sm text-secondary-500 mb-2">Victorias / Derrotas</p>
+          <p className="text-2xl font-bold text-secondary-400">—</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <p className="text-sm text-gray-500 mb-1">Partidos jugados</p>
-        <p className="text-2xl font-bold text-gray-900">{stats.matchesPlayed}</p>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in stagger-1">
+      <div className="card p-5">
+        <p className="text-sm text-secondary-500 mb-2">Partidos jugados</p>
+        <p className="text-3xl font-bold text-secondary-900">{stats.matchesPlayed}</p>
       </div>
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <p className="text-sm text-gray-500 mb-1">Ratio de victorias</p>
-        <p className="text-2xl font-bold text-gray-900">{stats.winRate.toFixed(1)}%</p>
+      <div className="card p-5">
+        <p className="text-sm text-secondary-500 mb-2">Ratio de victorias</p>
+        <p className="text-3xl font-bold text-primary-500">{stats.winRate.toFixed(1)}%</p>
       </div>
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <p className="text-sm text-gray-500 mb-1">Victorias / Derrotas</p>
-        <p className="text-2xl font-bold text-gray-900">
-          {stats.matchesWon} / {stats.matchesLost}
+      <div className="card p-5">
+        <p className="text-sm text-secondary-500 mb-2">Victorias / Derrotas</p>
+        <p className="text-3xl font-bold text-secondary-900">
+          <span className="text-primary-500">{stats.matchesWon}</span>
+          <span className="text-secondary-400 mx-1">/</span>
+          <span>{stats.matchesLost}</span>
         </p>
       </div>
     </div>
@@ -137,11 +149,11 @@ function StatsCards({ stats, isLoading }: { stats: UserStats | null; isLoading: 
 function RatingsTable({ ratings, isLoading }: { ratings: UserRating[]; isLoading: boolean }) {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-24 mb-4" />
-        <div className="space-y-2">
-          <div className="h-8 bg-gray-200 rounded" />
-          <div className="h-8 bg-gray-200 rounded" />
+      <div className="card p-5 animate-pulse">
+        <div className="h-5 bg-secondary-200 rounded w-32 mb-4" />
+        <div className="space-y-3">
+          <div className="h-12 bg-secondary-200 rounded-xl" />
+          <div className="h-12 bg-secondary-200 rounded-xl" />
         </div>
       </div>
     );
@@ -149,24 +161,24 @@ function RatingsTable({ ratings, isLoading }: { ratings: UserRating[]; isLoading
 
   if (!ratings || ratings.length === 0) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Ratings por categoría</h3>
-        <p className="text-gray-400">Sin datos aún</p>
+      <div className="card p-5">
+        <h3 className="section-heading mb-4">Ratings por categoría</h3>
+        <p className="text-secondary-400">Sin datos aún</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Ratings por categoría</h3>
+    <div className="card p-5 animate-fade-in stagger-2">
+      <h3 className="section-heading mb-4">Ratings por categoría</h3>
       <div className="space-y-2">
         {ratings.map((rating) => (
           <div
             key={rating.categoryId}
-            className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0"
+            className="flex justify-between items-center py-3.5 px-4 bg-surface-container rounded-xl"
           >
-            <span className="text-sm font-medium text-gray-700">{rating.categoryName}</span>
-            <span className="text-sm font-semibold text-primary-600">{rating.rating}</span>
+            <span className="text-sm font-semibold text-secondary-700">{rating.categoryName}</span>
+            <span className="text-sm font-bold text-primary-500">{rating.rating}</span>
           </div>
         ))}
       </div>

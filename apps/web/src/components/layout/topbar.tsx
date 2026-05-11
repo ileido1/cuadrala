@@ -11,12 +11,12 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const { currentVenue } = useVenue();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center h-16 px-4 bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-30 flex items-center h-16 sm:h-20 px-4 sm:px-6 lg:px-8 bg-surface border-b border-outline shadow-sm">
       {/* Mobile hamburger */}
       <button
         type="button"
         onClick={onMenuClick}
-        className="p-2 mr-4 rounded-md text-gray-600 hover:bg-gray-100 lg:hidden"
+        className="p-2.5 -ml-2 rounded-xl text-secondary-600 hover:bg-surface-container hover:text-secondary-900 transition-colors lg:hidden"
         aria-label="Abrir menú"
       >
         <svg
@@ -34,22 +34,37 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         </svg>
       </button>
 
-      {/* Venue name */}
-      <div className="flex-1 min-w-0">
-        <span className="text-sm font-medium text-gray-900 truncate">
+      {/* Page title / Venue selector */}
+      <div className="flex-1 min-w-0 ml-2 sm:ml-4">
+        <h1 className="text-base sm:text-lg font-semibold text-secondary-900 truncate">
           {currentVenue?.name ?? 'Sede'}
-        </span>
+        </h1>
       </div>
 
-      {/* Right side: user info + logout */}
-      <div className="flex items-center gap-3">
+      {/* Right side: user avatar + logout */}
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* User avatar */}
+        <div className="hidden sm:flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md">
+            <span className="text-sm font-bold text-white">C</span>
+          </div>
+          <div className="hidden lg:block">
+            <p className="text-sm font-semibold text-secondary-900">Admin</p>
+            <p className="text-xs text-secondary-500">admin@cuadrala.com</p>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="hidden sm:block w-px h-8 bg-outline" />
+
+        {/* Logout button */}
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 rounded-md hover:bg-gray-100"
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-secondary-600 rounded-xl hover:bg-surface-container hover:text-secondary-900 transition-colors"
         >
           <svg
-            className="w-4 h-4"
+            className="w-5 h-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

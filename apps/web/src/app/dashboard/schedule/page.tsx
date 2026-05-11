@@ -48,28 +48,32 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Horarios</h1>
+          <h1 className="page-heading">Horarios</h1>
           {currentVenue && (
-            <p className="mt-1 text-sm text-gray-500">{currentVenue.name}</p>
+            <p className="text-body mt-1">{currentVenue.name}</p>
           )}
         </div>
         <DayPicker value={selectedDate} onChange={handleDateChange} />
       </div>
 
-      <CourtTabs
-        courts={courts}
-        selectedCourtId={activeCourtId}
-        onSelect={handleCourtSelect}
-        isLoading={courtsLoading}
-      />
+      <div className="animate-fade-in stagger-1">
+        <CourtTabs
+          courts={courts}
+          selectedCourtId={activeCourtId}
+          onSelect={handleCourtSelect}
+          isLoading={courtsLoading}
+        />
+      </div>
 
-      <SlotGrid
-        slots={slots}
-        stepMinutes={30}
-        isLoading={slotsLoading}
-      />
+      <div className="animate-fade-in stagger-2">
+        <SlotGrid
+          slots={slots}
+          stepMinutes={30}
+          isLoading={slotsLoading}
+        />
+      </div>
     </div>
   );
 }

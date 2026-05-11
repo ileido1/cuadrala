@@ -3,18 +3,18 @@ import DashboardStats from './dashboard-stats';
 
 function DashboardLoading() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-24 mb-2" />
-        <div className="h-8 bg-gray-200 rounded w-16" />
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+      <div className="card p-6 animate-pulse">
+        <div className="h-4 bg-secondary-200 rounded w-28 mb-3" />
+        <div className="h-8 bg-secondary-200 rounded w-16" />
       </div>
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-24 mb-2" />
-        <div className="h-8 bg-gray-200 rounded w-16" />
+      <div className="card p-6 animate-pulse">
+        <div className="h-4 bg-secondary-200 rounded w-28 mb-3" />
+        <div className="h-8 bg-secondary-200 rounded w-16" />
       </div>
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-24 mb-2" />
-        <div className="h-8 bg-gray-200 rounded w-16" />
+      <div className="card p-6 animate-pulse">
+        <div className="h-4 bg-secondary-200 rounded w-28 mb-3" />
+        <div className="h-8 bg-secondary-200 rounded w-16" />
       </div>
     </div>
   );
@@ -22,8 +22,11 @@ function DashboardLoading() {
 
 export default function DashboardPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Panel de control</h1>
+    <div className="space-y-8">
+      <div className="animate-fade-in">
+        <h1 className="page-heading">Panel de control</h1>
+        <p className="text-body mt-2">Resumen de tu actividad</p>
+      </div>
       <Suspense fallback={<DashboardLoading />}>
         <DashboardStats />
       </Suspense>

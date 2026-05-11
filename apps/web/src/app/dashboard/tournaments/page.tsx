@@ -72,25 +72,24 @@ export default function TournamentsListPage() {
   };
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Torneos</h1>
-        <p className="text-gray-500 text-sm mt-1">Gestiona los torneos del sistema</p>
+    <div className="space-y-6">
+      <div className="animate-fade-in">
+        <h1 className="page-heading">Torneos</h1>
+        <p className="text-body mt-1">Gestiona los torneos del sistema</p>
       </div>
 
       {/* Status filter tabs */}
-      <div className="mb-6 border-b border-gray-200">
-        <nav className="flex space-x-8">
+      <div className="border-b border-outline animate-fade-in stagger-1">
+        <nav className="flex gap-1 -mb-px overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.value}
               onClick={() => handleTabClick(tab.value)}
               className={`
-                pb-3 px-1 border-b-2 text-sm font-medium transition-colors
-                ${
-                  currentStatus === tab.value
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                pb-3 px-4 text-sm font-semibold transition-all duration-200 whitespace-nowrap
+                ${currentStatus === tab.value
+                  ? 'border-b-2 border-primary-500 text-primary-600'
+                  : 'text-secondary-500 hover:text-secondary-700 hover:border-b-2 hover:border-secondary-300'
                 }
               `}
             >
@@ -113,44 +112,46 @@ export default function TournamentsListPage() {
 
       {state === 'loaded' && (
         <>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nombre
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Deporte
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Categoría
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Inicio
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Jugadores
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tournaments.map((tournament) => (
-                  <TournamentListItemComponent
-                    key={tournament.id}
-                    tournament={tournament}
-                  />
-                ))}
-              </tbody>
-            </table>
+          <div className="card overflow-hidden animate-fade-in stagger-2">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-outline">
+                <thead className="bg-surface-container">
+                  <tr>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-secondary-600 uppercase tracking-wider">
+                      Nombre
+                    </th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-secondary-600 uppercase tracking-wider">
+                      Estado
+                    </th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-secondary-600 uppercase tracking-wider">
+                      Deporte
+                    </th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-secondary-600 uppercase tracking-wider">
+                      Categoría
+                    </th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-secondary-600 uppercase tracking-wider">
+                      Inicio
+                    </th>
+                    <th className="px-4 py-3.5 text-center text-xs font-semibold text-secondary-600 uppercase tracking-wider">
+                      Jugadores
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-surface divide-y divide-outline">
+                  {tournaments.map((tournament) => (
+                    <TournamentListItemComponent
+                      key={tournament.id}
+                      tournament={tournament}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-4 flex justify-center gap-2">
+            <div className="flex justify-center gap-2 animate-fade-in stagger-3">
               {Array.from({ length: totalPages }).map((_, i) => (
                 <button
                   key={i}
@@ -161,11 +162,10 @@ export default function TournamentsListPage() {
                     fetchTournaments(currentStatus === 'ALL' ? undefined : currentStatus, i + 1);
                   }}
                   className={`
-                    px-3 py-1 rounded text-sm font-medium
-                    ${
-                      currentPage === i + 1
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    w-10 h-10 rounded-xl text-sm font-semibold transition-all duration-200
+                    ${currentPage === i + 1
+                      ? 'bg-primary-500 text-white shadow-md'
+                      : 'bg-surface text-secondary-700 hover:bg-surface-container'
                     }
                   `}
                 >
