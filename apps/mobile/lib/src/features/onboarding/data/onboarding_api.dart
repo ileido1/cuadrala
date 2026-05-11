@@ -2,6 +2,7 @@ import '../../../core/network/api_client.dart';
 
 abstract interface class OnboardingApi {
   Future<Map<String, Object?>> getOnboardingStatusEnvelope();
+  Future<void> putOnboardingCompleteEnvelope();
 
   Future<Map<String, Object?>> getSportProfilesEnvelope();
   Future<Map<String, Object?>> putSportProfilesEnvelope({required Object body});
@@ -23,6 +24,11 @@ final class DioOnboardingApi implements OnboardingApi {
   @override
   Future<Map<String, Object?>> getOnboardingStatusEnvelope() {
     return _apiClient.getEnvelopeDataMap('/api/v1/users/me/onboarding-status');
+  }
+
+  @override
+  Future<void> putOnboardingCompleteEnvelope() {
+    return _apiClient.putJson('/api/v1/users/me/onboarding-status');
   }
 
   @override

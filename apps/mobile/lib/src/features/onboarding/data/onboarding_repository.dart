@@ -15,6 +15,10 @@ class OnboardingRepository {
     return OnboardingStatusDto.fromJson(data);
   }
 
+  Future<void> completeOnboarding() async {
+    await _api.putOnboardingCompleteEnvelope();
+  }
+
   Future<List<PlayerSportProfileDto>> listSportProfiles() async {
     final data = await _api.getSportProfilesEnvelope();
     final raw = data['items'];

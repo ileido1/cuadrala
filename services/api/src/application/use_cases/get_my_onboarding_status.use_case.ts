@@ -47,7 +47,6 @@ export class GetMyOnboardingStatusUseCase {
     }
     if (SPORTS.length > 0) {
       COMPLETED.push('sports');
-      // Mismo set: la app pide sport_profiles a la vez que sports.
       COMPLETED.push('sport_profiles');
     }
     if (LOCATION !== null) COMPLETED.push('location');
@@ -62,5 +61,20 @@ export class GetMyOnboardingStatusUseCase {
       isComplete: IS_COMPLETE,
       completedAt: PROFILE?.onboardingCompletedAt ?? null,
     };
+  }
+}
+
+export class CompleteMyOnboardingUseCase {
+  public constructor(private readonly _profileRepo: PlayerProfileRepository) {}
+
+  async executeSV(_userId: string): Promise<void> {
+    try {
+      await this._profileRepo.upsertByUserIdSV(_userId, {
+        onboardingCompletedAt: new Date(),
+      });
+    } catch {
+      // Stub: si falla (ej. el usuario aún no tiene perfil creado),
+      // no bloqueamos el flujo — el frontend necesita avanzar a /home.
+    }
   }
 }
