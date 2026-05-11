@@ -229,3 +229,49 @@ export interface TournamentDetailResponse {
   tournament: TournamentDetail;
   registrations: Registration[];
 }
+
+// Chat types
+export interface ChatMessage {
+  id: string;
+  threadId: string;
+  senderUserId: string;
+  displayName?: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface ChatMessagesPage {
+  items: ChatMessage[];
+  nextCursorCreatedAt: string | null;
+}
+
+// Profile types
+export interface ProfileUser {
+  id: string;
+  name: string;
+  email: string;
+  subscriptionType?: string;
+}
+
+export interface PlayerProfile {
+  id: string;
+  userId: string;
+  birthDate?: string;
+  dominantHand?: 'LEFT' | 'RIGHT' | 'AMBIDEXTROUS';
+  sidePreference?: 'LEFT' | 'RIGHT';
+  birthYear?: number;
+}
+
+export interface UserStats {
+  userId: string;
+  matchesPlayed: number;
+  matchesWon: number;
+  matchesLost: number;
+  winRate: number;
+}
+
+export interface UserRating {
+  categoryId: string;
+  categoryName: string;
+  rating: number;
+}

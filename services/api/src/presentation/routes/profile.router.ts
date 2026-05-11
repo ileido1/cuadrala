@@ -30,6 +30,7 @@ import {
   putMyAvailabilityCON,
   putMyLocationCON,
   putMySportProfilesCON,
+  putOnboardingCompleteCON,
 } from '../controllers/onboarding.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
@@ -75,6 +76,7 @@ PROFILE_ROUTER.get('/me/profile', requireAuth, asyncHandler(getMyPlayerProfileCO
 PROFILE_ROUTER.patch('/me/profile', requireAuth, asyncHandler(patchMyPlayerProfileCON));
 
 PROFILE_ROUTER.get('/me/onboarding-status', requireAuth, asyncHandler(getMyOnboardingStatusCON));
+PROFILE_ROUTER.put('/me/onboarding-status', requireAuth, asyncHandler(putOnboardingCompleteCON));
 PROFILE_ROUTER.get('/me/sport-profiles', requireAuth, asyncHandler(getMySportProfilesCON));
 PROFILE_ROUTER.put('/me/sport-profiles', requireAuth, asyncHandler(putMySportProfilesCON));
 PROFILE_ROUTER.get('/me/availability', requireAuth, asyncHandler(getMyAvailabilityCON));

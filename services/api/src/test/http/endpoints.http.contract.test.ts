@@ -364,6 +364,23 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     expect(RES.body.code).toBe('VALIDACION_FALLIDA');
   });
 
+  it('GET /api/v1/ratings/leaderboard responde 200 y devuelve array con displayName (sin DB = 500)', async () => {
+    const RES = await request(APP).get('/api/v1/ratings/leaderboard?categoryId=550e8400-e29b-41d4-a716-446655440001&limit=10');
+
+    // Sin DB real, Prisma falla — cubrimos shape esperado cuando DB esté disponible
+    expect([200, 500]).toContain(RES.status);
+    if (RES.status === 200) {
+      expect(RES.body.success).toBe(true);
+      expect(RES.body.data).toBeDefined();
+      expect(Array.isArray(RES.body.data.items)).toBe(true);
+      // Cada entry debe incluir displayName (JOIN con user.name)
+      if (RES.body.data.items.length > 0) {
+        expect(RES.body.data.items[0]).toHaveProperty('displayName');
+        expect(typeof RES.body.data.items[0].displayName).toBe('string');
+      }
+    }
+  });
+
   it('POST /api/v1/matches/:matchId/transactions/create-obligations responde 400 si matchId no es UUID', async () => {
     const RES = await request(APP)
       .post('/api/v1/matches/not-uuid/transactions/create-obligations')

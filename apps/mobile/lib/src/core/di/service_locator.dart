@@ -16,6 +16,8 @@ import '../../features/auth/data/secure_token_storage.dart';
 import '../../features/auth/presentation/cubit/login_cubit.dart';
 import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/session_cubit.dart';
+import '../../features/availability/data/availability_repository.dart';
+import '../../features/availability/presentation/cubit/availability_cubit.dart';
 import '../../features/catalog/data/catalog_api.dart';
 import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/home/presentation/cubit/home_cubit.dart';
@@ -175,6 +177,9 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton<OnboardingRepository>(
     () => OnboardingRepository(api: getIt<OnboardingApi>()),
   );
+  getIt.registerLazySingleton<AvailabilityRepository>(
+    () => AvailabilityRepository(onboarding: getIt<OnboardingRepository>()),
+  );
   getIt.registerFactory<OnboardingCubit>(
     () => OnboardingCubit(
       repository: getIt<OnboardingRepository>(),
@@ -255,6 +260,10 @@ Future<void> setupDependencies() async {
 
   getIt.registerFactory<NotificationPrefsCubit>(
     () => NotificationPrefsCubit(repository: getIt<NotificationsRepository>()),
+  );
+
+  getIt.registerFactory<AvailabilityCubit>(
+    () => AvailabilityCubit(repository: getIt<AvailabilityRepository>()),
   );
 }
 

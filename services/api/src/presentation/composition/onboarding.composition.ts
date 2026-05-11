@@ -1,5 +1,5 @@
 import { GetMyLocationUseCase } from '../../application/use_cases/get_my_location.use_case.js';
-import { GetMyOnboardingStatusUseCase } from '../../application/use_cases/get_my_onboarding_status.use_case.js';
+import { GetMyOnboardingStatusUseCase, CompleteMyOnboardingUseCase } from '../../application/use_cases/get_my_onboarding_status.use_case.js';
 import { ListMyAvailabilityUseCase } from '../../application/use_cases/list_my_availability.use_case.js';
 import { ListMySportProfilesUseCase } from '../../application/use_cases/list_my_sport_profiles.use_case.js';
 import { ReplaceMyAvailabilityUseCase } from '../../application/use_cases/replace_my_availability.use_case.js';
@@ -32,3 +32,5 @@ export const GET_MY_ONBOARDING_STATUS_UC = new GetMyOnboardingStatusUseCase(
   USER_LOCATION_REPOSITORY,
   USER_AVAILABILITY_REPOSITORY,
 );
+
+export const COMPLETE_MY_ONBOARDING_UC = new CompleteMyOnboardingUseCase(PLAYER_PROFILE_REPOSITORY);

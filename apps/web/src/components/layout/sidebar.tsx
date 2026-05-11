@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: '/dashboard/matches', label: 'Partidos' },
   { href: '/dashboard/tournaments', label: 'Torneos' },
   { href: '/dashboard/payments', label: 'Pagos' },
+  { href: '/dashboard/profile', label: 'Mi Perfil' },
   { href: '/dashboard/settings', label: 'Configuración' },
 ];
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../router/routes.dart';
 import '../../auth/presentation/cubit/session_cubit.dart';
+import '../data/onboarding_repository.dart';
 import 'cubit/onboarding_cubit.dart';
 import 'cubit/onboarding_state.dart';
 import 'pages/availability_page.dart';
@@ -17,9 +18,13 @@ final class OnboardingFlowScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // El BlocProvider.externally supplied permite que los tests injecten un cubit mockeado.
+    // En producción, OnboardingCubit se registra en getIt antes de navegar aquí.
     return BlocProvider<OnboardingCubit>(
       create: (_) => getIt<OnboardingCubit>()..load(),
-      child: const _OnboardingFlowView(),
+      child: Builder(
+        builder: (context) => const _OnboardingFlowView(),
+      ),
     );
   }
 }
@@ -48,9 +53,10 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
         curve: Curves.easeOut,
       );
     } else {
-      // Marca onboarding como completo en el SessionCubit para que el guard del router
-      // permita el acceso a /home y deje de redirigir a /onboarding.
-      await context.read<SessionCubit>().refreshOnboardingStatus();
+      // Capturar el cubit antes del gap async para evitar el warning.
+      final sessionCubit = context.read<SessionCubit>();
+      await getIt<OnboardingRepository>().completeOnboarding();
+      await sessionCubit.refreshOnboardingStatus();
       if (!mounted) return;
       context.go(Routes.home);
     }

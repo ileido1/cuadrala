@@ -81,6 +81,10 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     emit(state.copyWith(savingStep: OnboardingStep.availability, clearError: true));
     try {
       await _repository.putAvailability(items);
+      // Si es el último paso pendiente, marcar onboarding como completo.
+      if (state.status != null && !state.status!.isComplete) {
+        await _repository.completeOnboarding();
+      }
       await _refreshStatus();
       return true;
     } on AppFailure catch (f) {

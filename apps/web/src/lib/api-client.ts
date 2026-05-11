@@ -125,12 +125,27 @@ class ApiClient {
     list: (params?: { status?: string; sportId?: string; categoryId?: string; page?: number; limit?: number }) =>
       this.client.get('/tournaments', { params }),
     get: (id: string) => this.client.get(`/tournaments/${id}`),
+    chat: {
+      messages: (tournamentId: string, params?: { limit?: number; cursorCreatedAt?: string }) =>
+        this.client.get(`/tournaments/${tournamentId}/chat/messages`, { params }),
+    },
   };
 
   readonly matches = {
     list: (params?: { courtId?: string; date?: string; status?: string; page?: number; limit?: number }) =>
       this.client.get('/matches', { params }),
     get: (matchId: string) => this.client.get(`/matches/${matchId}`),
+    chat: {
+      messages: (matchId: string, params?: { limit?: number; cursorCreatedAt?: string }) =>
+        this.client.get(`/matches/${matchId}/chat/messages`, { params }),
+    },
+  };
+
+  readonly profile = {
+    getMe: () => this.client.get('/profile/me'),
+    getPlayerProfile: () => this.client.get('/profile/me/profile'),
+    getStats: (userId: string) => this.client.get(`/profile/${userId}/stats`),
+    getRatings: (userId: string) => this.client.get(`/profile/${userId}/ratings`),
   };
 
   get instance(): AxiosInstance {

@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 
 import { AppError } from '../../domain/errors/app_error.js';
 import {
+  COMPLETE_MY_ONBOARDING_UC,
   GET_MY_LOCATION_UC,
   GET_MY_ONBOARDING_STATUS_UC,
   LIST_MY_AVAILABILITY_UC,
@@ -105,5 +106,14 @@ export async function getMyOnboardingStatusCON(_req: Request, _res: Response): P
     success: true,
     message: 'Estado de onboarding obtenido correctamente.',
     data: STATUS,
+  });
+}
+
+export async function putOnboardingCompleteCON(_req: Request, _res: Response): Promise<void> {
+  const USER_ID = ensureUserId(_req);
+  await COMPLETE_MY_ONBOARDING_UC.executeSV(USER_ID);
+  _res.status(200).json({
+    success: true,
+    message: 'Onboarding completado correctamente.',
   });
 }

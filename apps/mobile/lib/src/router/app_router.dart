@@ -9,12 +9,17 @@ import '../features/auth/presentation/cubit/session_cubit.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
+import '../features/availability/presentation/availability_screen.dart';
+import '../features/availability/presentation/cubit/availability_cubit.dart';
+import '../features/availability/data/availability_repository.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
 import '../features/matches/presentation/create_match_screen.dart';
 import '../features/matches/presentation/match_lifecycle_screen.dart';
 import '../features/matches/presentation/result_draft_screen.dart';
 import '../features/chat/presentation/match_chat_screen.dart';
+import '../features/chat/presentation/match_chat_read_only_screen.dart';
 import '../features/chat/presentation/tournament_chat_screen.dart';
+import '../features/chat/presentation/tournament_chat_read_only_screen.dart';
 import '../features/matchmaking/presentation/matchmaking_screen.dart';
 import '../features/monetization/presentation/pay_method_screen.dart';
 import '../features/monetization/presentation/upload_receipt_screen.dart';
@@ -101,6 +106,13 @@ final class AppRouter {
               },
             ),
             GoRoute(
+              path: '/matches/:matchId/chat/readonly',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                return MatchChatReadOnlyScreen(matchId: matchId);
+              },
+            ),
+            GoRoute(
               path: '/matches/:matchId/pay/method',
               builder: (context, state) {
                 final matchId = state.pathParameters['matchId'] ?? '';
@@ -172,6 +184,13 @@ final class AppRouter {
               builder: (context, state) => const NotificationPrefsScreen(),
             ),
             GoRoute(
+              path: Routes.availability,
+              builder: (context, state) => BlocProvider<AvailabilityCubit>(
+                create: (_) => getIt<AvailabilityCubit>(),
+                child: AvailabilityScreen(repository: getIt<AvailabilityRepository>()),
+              ),
+            ),
+            GoRoute(
               path: '/matches/:matchId/suggestions',
               builder: (context, state) {
                 final matchId = state.pathParameters['matchId'] ?? '';
@@ -183,6 +202,13 @@ final class AppRouter {
               builder: (context, state) {
                 final tournamentId = state.pathParameters['tournamentId'] ?? '';
                 return TournamentChatScreen(tournamentId: tournamentId);
+              },
+            ),
+            GoRoute(
+              path: '/tournaments/:tournamentId/chat/readonly',
+              builder: (context, state) {
+                final tournamentId = state.pathParameters['tournamentId'] ?? '';
+                return TournamentChatReadOnlyScreen(tournamentId: tournamentId);
               },
             ),
             GoRoute(
