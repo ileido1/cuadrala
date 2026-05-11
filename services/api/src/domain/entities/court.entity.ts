@@ -25,6 +25,9 @@ export interface Court {
   readonly lighting: boolean;
   readonly surfaceType: string | null;
   readonly status: CourtStatus;
+  readonly pricePerHourCents: number | null;
+  readonly capacity: string | null;
+  readonly durationMinutes: number;
   readonly createdAt: Date;
 }
 
@@ -36,6 +39,9 @@ export interface CreateCourtInput {
   readonly indoor?: boolean;
   readonly lighting?: boolean;
   readonly surfaceType?: string | null;
+  readonly pricePerHourCents?: number | null;
+  readonly capacity?: string | null;
+  readonly durationMinutes?: number;
 }
 
 /** Input para actualizar una cancha existente (todos opcionales). */
@@ -45,4 +51,7 @@ export interface UpdateCourtInput {
   readonly indoor?: boolean;
   readonly lighting?: boolean;
   readonly surfaceType?: string | null;
+  readonly pricePerHourCents?: number | null;
+  readonly capacity?: string | null;
+  readonly durationMinutes?: number;
 }

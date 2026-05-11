@@ -29,6 +29,9 @@ export function prismaToCourtEntity(model: CourtModel | null | undefined): Court
     lighting: model.lighting,
     surfaceType: model.surfaceType,
     status,
+    pricePerHourCents: model.pricePerHourCents,
+    capacity: model.capacity,
+    durationMinutes: model.durationMinutes,
     createdAt: model.createdAt,
   };
 }

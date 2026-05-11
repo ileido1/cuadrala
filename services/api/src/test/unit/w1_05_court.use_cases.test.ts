@@ -51,6 +51,9 @@ function activeCourt(overrides: Partial<Court> = {}): Court {
     lighting: false,
     surfaceType: null,
     status: CourtStatus.ACTIVE,
+    pricePerHourCents: null,
+    capacity: null,
+    durationMinutes: 60,
     createdAt: new Date('2025-01-01'),
     ...overrides,
   };

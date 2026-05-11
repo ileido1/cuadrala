@@ -403,6 +403,10 @@ model Venue {
   /// Usuario propietario de la sede (nullable para compatibilidad hacia atrás).
   ownerUserId       String?   @unique
   owner             User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  phone             String?
+  email             String?
+  description       String?
+  openingHours      Json?     // { monday: { open: "08:00", close: "23:00" }, ... }
   createdAt         DateTime  @default(now())
 
   courts      Court[]
@@ -426,16 +430,19 @@ model VenueStaff {
 }
 
 model Court {
-  id          String      @id @default(uuid())
-  venueId     String
-  venue       Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  name        String
-  sportType   SportType   @default(PADEL)
-  indoor      Boolean     @default(false)
-  lighting    Boolean     @default(false)
-  surfaceType String?
-  status      CourtStatus @default(ACTIVE)
-  createdAt   DateTime    @default(now())
+  id              String      @id @default(uuid())
+  venueId         String
+  venue           Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name            String
+  sportType       SportType   @default(PADEL)
+  indoor          Boolean     @default(false)
+  lighting        Boolean     @default(false)
+  surfaceType     String?
+  status          CourtStatus @default(ACTIVE)
+  pricePerHourCents Int?      // Precio por hora en centavos
+  capacity        String?     // ej. "4v4"
+  durationMinutes Int         @default(60)
+  createdAt       DateTime    @default(now())
 
   matches     Match[]
   vacantHours VacantHour[]
