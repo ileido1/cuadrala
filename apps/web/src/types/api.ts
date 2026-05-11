@@ -340,3 +340,96 @@ export interface UserRating {
   categoryName: string;
   rating: number;
 }
+
+// Reservation types
+export type ReservationType = 'DIRECT' | 'BLOCKED';
+export type ReservationStatus = 'CONFIRMED' | 'CANCELLED';
+
+export interface Reservation {
+  id: string;
+  venueId: string;
+  courtId: string;
+  sportId: string;
+  categoryId: string;
+  type: ReservationType;
+  status: ReservationStatus;
+  scheduledAt: string;
+  durationMinutes: number;
+  notes: string | null;
+  createdByUserId: string;
+}
+
+export interface ReservationListItem {
+  id: string;
+  venueId: string;
+  courtId: string;
+  courtName: string | null;
+  type: ReservationType;
+  status: ReservationStatus;
+  scheduledAt: string;
+  durationMinutes: number;
+  notes: string | null;
+}
+
+export interface CreateReservationRequest {
+  courtId: string;
+  sportId?: string;
+  categoryId?: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  notes?: string;
+}
+
+export interface BlockSlotRequest {
+  courtId: string;
+  date: string;
+  startTime: string;
+  durationMinutes: number;
+  notes?: string;
+}
+
+export interface ReservationListResponse {
+  items: ReservationListItem[];
+  pageInfo: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+// Bracket types (Phase 3: Web Types)
+export interface PlayerBracketSlot {
+  userId: string;
+  displayName: string;
+  seedPosition: number;
+}
+
+export interface BracketMatch {
+  matchNumber: number;
+  roundNumber: number;
+  playerA: PlayerBracketSlot | null;
+  playerB: PlayerBracketSlot | null;
+  winnerId: string | null;
+  score: { userId: string; points: number }[] | null;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'BYE';
+  matchId: string | null;
+}
+
+export interface BracketRound {
+  roundNumber: number;
+  name: string;
+  matches: BracketMatch[];
+}
+
+export interface TournamentBracket {
+  tournamentId: string;
+  tournamentName: string;
+  totalRounds: number;
+  bracketSize: number;
+  rounds: BracketRound[];
+}
+
+export interface ScoreEntry {
+  userId: string;
+  points: number;
+}
