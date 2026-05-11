@@ -274,3 +274,67 @@ export async function deleteCourtCON(_req: Request, _res: Response): Promise<voi
   });
 }
 
+// ---------------------------------------------------------------------------
+// GET /venues/:venueId
+// ---------------------------------------------------------------------------
+
+export async function getVenueCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
+
+  const VENUE = await PRISMA.venue.findUnique({
+    where: { id: PARAMS.venueId },
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      phone: true,
+      email: true,
+      description: true,
+      openingHours: true,
+      latitude: true,
+      longitude: true,
+      paymentHolder: true,
+      paymentBank: true,
+      paymentCvu: true,
+      paymentAlias: true,
+      paymentNotes: true,
+      _count: { select: { courts: true } },
+    },
+  });
+
+  if (VENUE === null) {
+    throw new AppError('NO_ENCONTRADO', 'Sede no encontrada.', 404);
+  }
+
+  const OPENING_HOURS = VENUE.openingHours as Record<string, { open: string; close: string }> | null;
+
+  _res.status(200).json({
+    success: true,
+    message: 'Sede obtenida correctamente.',
+    data: {
+      id: VENUE.id,
+      name: VENUE.name,
+      address: VENUE.address,
+      phone: VENUE.phone,
+      email: VENUE.email,
+      description: VENUE.description,
+      openingTime: OPENING_HOURS?.monday?.open ?? '08:00',
+      closingTime: OPENING_HOURS?.monday?.close ?? '23:00',
+      activeDays: OPENING_HOURS ? Object.keys(OPENING_HOURS).map((d) => d.slice(0, 3).toLowerCase()) : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
+      courtsCount: VENUE._count.courts,
+      latitude: VENUE.latitude,
+      longitude: VENUE.longitude,
+      paymentHolder: VENUE.paymentHolder,
+      paymentBank: VENUE.paymentBank,
+      paymentCvu: VENUE.paymentCvu,
+      paymentAlias: VENUE.paymentAlias,
+      paymentNotes: VENUE.paymentNotes,
+    },
+  });
+}
+

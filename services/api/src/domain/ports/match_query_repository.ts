@@ -8,7 +8,9 @@ export type ListMatchesFiltersDTO = {
 
 export type ListVenueMatchesFiltersDTO = {
   courtId?: string;
-  date?: string; // YYYY-MM-DD
+  from?: string; // YYYY-MM-DD (inicio del rango)
+  to?: string;   // YYYY-MM-DD (fin del rango)
+  date?: string; // YYYY-MM-DD (fecha puntual, se mantiene por compat)
   status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
 };
 

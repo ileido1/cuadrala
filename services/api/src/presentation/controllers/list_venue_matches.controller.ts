@@ -21,7 +21,11 @@ export async function listVenueMatchesCON(_req: Request, _res: Response): Promis
   const RESULT = await _useCase.executeSV(
     {
       venueId: PARAMS.venueId,
-      ...QUERY,
+      ...(QUERY.courtId !== undefined ? { courtId: QUERY.courtId } : {}),
+      ...(QUERY.date !== undefined ? { date: QUERY.date } : {}),
+      ...(QUERY.status !== undefined ? { status: QUERY.status } : {}),
+      page: QUERY.page,
+      limit: QUERY.limit,
     },
     ACTOR_USER_ID,
   );
