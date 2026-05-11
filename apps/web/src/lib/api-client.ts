@@ -117,6 +117,38 @@ class ApiClient {
       ) =>
         this.client.get(`/venues/${venueId}/matches`, { params }),
     },
+    reservations: {
+      list: (
+        venueId: string,
+        params?: { courtId?: string; date?: string; from?: string; to?: string; page?: number; limit?: number }
+      ) =>
+        this.client.get(`/venues/${venueId}/reservations`, { params }),
+      create: (venueId: string, data: {
+        courtId: string;
+        sportId?: string;
+        categoryId?: string;
+        scheduledAt: string;
+        durationMinutes: number;
+        notes?: string;
+      }) =>
+        this.client.post(`/venues/${venueId}/reservations`, data),
+      cancel: (venueId: string, reservationId: string) =>
+        this.client.delete(`/venues/${venueId}/reservations/${reservationId}`),
+    },
+    slots: {
+      block: (venueId: string, courtId: string, data: {
+        date: string;
+        startTime: string;
+        durationMinutes: number;
+        notes?: string;
+      }) =>
+        this.client.post(`/venues/${venueId}/courts/${courtId}/slots/block`, data),
+      unblock: (venueId: string, courtId: string, data: {
+        date: string;
+        startTime: string;
+      }) =>
+        this.client.delete(`/venues/${venueId}/courts/${courtId}/slots/block`, { data }),
+    },
     courts: {
       list: (venueId: string, params?: { status?: 'ACTIVE' | 'INACTIVE' }) =>
         this.client.get(`/venues/${venueId}/courts`, { params }),
@@ -135,6 +167,13 @@ class ApiClient {
     list: (params?: { status?: string; sportId?: string; categoryId?: string; page?: number; limit?: number }) =>
       this.client.get('/tournaments', { params }),
     get: (id: string) => this.client.get(`/tournaments/${id}`),
+    byVenue: (venueId: string, params?: { status?: string; sportId?: string; categoryId?: string; page?: number; limit?: number }) =>
+      this.client.get(`/tournaments/venue/${venueId}`, { params }),
+    bracket: (tournamentId: string) => this.client.get(`/tournaments/${tournamentId}/bracket`),
+    submitMatchResult: (tournamentId: string, matchId: string, scores: { userId: string; points: number }[]) =>
+      this.client.post(`/tournaments/${tournamentId}/matches/${matchId}/results`, { scores }),
+    updateStatus: (tournamentId: string, status: string) =>
+      this.client.patch(`/tournaments/${tournamentId}/status`, { status }),
     chat: {
       messages: (tournamentId: string, params?: { limit?: number; cursorCreatedAt?: string }) =>
         this.client.get(`/tournaments/${tournamentId}/chat/messages`, { params }),
