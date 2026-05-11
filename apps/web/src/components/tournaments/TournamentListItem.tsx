@@ -6,9 +6,10 @@ import { TournamentStatusBadge } from './TournamentStatusBadge';
 
 interface TournamentListItemProps {
   tournament: TournamentListItem;
+  showBracketLink?: boolean;
 }
 
-export function TournamentListItemComponent({ tournament }: TournamentListItemProps) {
+export function TournamentListItemComponent({ tournament, showBracketLink }: TournamentListItemProps) {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '—';
     return new Intl.DateTimeFormat('es-AR', {
@@ -43,6 +44,16 @@ export function TournamentListItemComponent({ tournament }: TournamentListItemPr
       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
         {tournament.registrationCount} / {tournament.maxParticipants}
       </td>
+      {showBracketLink && (
+        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+          <Link
+            href={`/dashboard/tournaments/${tournament.id}/bracket`}
+            className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+          >
+            Ver bracket
+          </Link>
+        </td>
+      )}
     </tr>
   );
 }

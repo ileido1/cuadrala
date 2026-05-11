@@ -51,6 +51,8 @@ import '../../features/matchmaking/data/matchmaking_api.dart';
 import '../../features/matchmaking/data/matchmaking_repository.dart';
 import '../../features/matchmaking/presentation/cubit/matchmaking_cubit.dart';
 import '../../features/notifications/presentation/cubit/notification_prefs_cubit.dart';
+import '../../features/backoffice_reservations/data/backoffice_reservations_api.dart';
+import '../../features/backoffice_reservations/data/backoffice_reservations_repository.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -264,6 +266,14 @@ Future<void> setupDependencies() async {
 
   getIt.registerFactory<AvailabilityCubit>(
     () => AvailabilityCubit(repository: getIt<AvailabilityRepository>()),
+  );
+
+  // Backoffice Reservations
+  getIt.registerLazySingleton<BackofficeReservationsApi>(
+    () => DioBackofficeReservationsApi(apiClient: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<BackofficeReservationsRepository>(
+    () => BackofficeReservationsRepository(api: getIt<BackofficeReservationsApi>()),
   );
 }
 

@@ -30,6 +30,7 @@ import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
 import '../features/venues/presentation/venues_screen.dart';
 import '../features/venues/presentation/venue_detail_screen.dart';
+import '../features/backoffice_reservations/presentation/backoffice_schedule_screen.dart';
 import '../features/tournaments/presentation/create_tournament_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
 import 'auth_redirect.dart';
@@ -221,6 +222,14 @@ final class AppRouter {
                 final venueId = state.pathParameters['venueId'] ?? '';
                 final venueName = state.uri.queryParameters['name'] ?? 'Sede';
                 return VenueDetailScreen(venueId: venueId, venueName: venueName);
+              },
+            ),
+            GoRoute(
+              path: '/venues/:venueId/schedule',
+              builder: (context, state) {
+                final venueId = state.pathParameters['venueId'] ?? '';
+                final venueName = state.uri.queryParameters['name'] ?? 'Sede';
+                return BackofficeScheduleScreen(venueId: venueId, venueName: venueName);
               },
             ),
           ],

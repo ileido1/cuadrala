@@ -134,6 +134,16 @@ enum CourtStatus {
   INACTIVE
 }
 
+enum ReservationType {
+  DIRECT
+  BLOCKED
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+}
+
 enum SportType {
   PADEL
   TENNIS
@@ -153,6 +163,7 @@ model Sport {
   tournaments         Tournament[]
   vacantHours         VacantHour[]
   playerSportProfiles PlayerSportProfile[]
+  reservations        Reservation[]
 }
 
 /// Preset de formato de torneo por deporte (Americano, Round Robin, etc.).
@@ -344,6 +355,7 @@ model Category {
   notificationSubscriptions NotificationSubscription[]
   notificationEvents        NotificationEvent[]
   vacantHours               VacantHour[]
+  reservations              Reservation[]
 }
 
 model UserRating {
@@ -412,6 +424,7 @@ model Venue {
   courts      Court[]
   vacantHours VacantHour[]
   staff       VenueStaff[]
+  reservations Reservation[]
 
   @@index([latitude, longitude])
 }
@@ -446,6 +459,7 @@ model Court {
 
   matches     Match[]
   vacantHours VacantHour[]
+  reservations Reservation[]
 }
 
 model Tournament {
@@ -583,6 +597,33 @@ model VacantHour {
 
   matchId String? @unique
   match   Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courtId, scheduledAt])
+  @@index([courtId, scheduledAt])
+  @@index([venueId])
+  @@index([status])
+}
+
+model Reservation {
+  id         String           @id @default(uuid())
+  venueId    String
+  venue      Venue            @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  courtId    String
+  court      Court            @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  sportId    String
+  sport      Sport            @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  type             ReservationType @default(DIRECT)
+  status           ReservationStatus @default(CONFIRMED)
+  scheduledAt      DateTime
+  durationMinutes  Int              @default(60)
+  notes            String?
+  createdByUserId  String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

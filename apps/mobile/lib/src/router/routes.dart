@@ -20,6 +20,7 @@ final class Routes {
   static const availability = '/availability';
   static const venues = '/venues';
   static String venueDetail(String venueId) => '/venues/$venueId';
+  static String backofficeSchedule(String venueId) => '/venues/$venueId/schedule';
 
   static String matchDetail(String matchId) => '/matches/$matchId';
   static String tournamentDetail(String tournamentId) => '/tournaments/$tournamentId';
