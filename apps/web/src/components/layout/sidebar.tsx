@@ -3,15 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useVenue } from '~/contexts/venue-context';
 
 const NAV_LINKS = [
-  { href: '/dashboard', label: 'Inicio', icon: 'home' },
-  { href: '/dashboard/courts', label: 'Canchas', icon: 'court' },
-  { href: '/dashboard/schedule', label: 'Horario', icon: 'calendar' },
-  { href: '/dashboard/matches', label: 'Partidos', icon: 'match' },
-  { href: '/dashboard/tournaments', label: 'Torneos', icon: 'trophy' },
+  { href: '/dashboard', label: 'Dashboard', icon: 'home' },
+  { href: '/dashboard/courts', label: 'Mis Canchas', icon: 'court' },
+  { href: '/dashboard/schedule', label: 'Reservas', icon: 'calendar' },
   { href: '/dashboard/payments', label: 'Pagos', icon: 'payment' },
-  { href: '/dashboard/profile', label: 'Mi Perfil', icon: 'user' },
   { href: '/dashboard/settings', label: 'Configuración', icon: 'settings' },
 ];
 
@@ -31,24 +29,9 @@ const icons: Record<string, JSX.Element> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   ),
-  match: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  ),
-  trophy: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 6l5.714 2.143L13 3z" />
-    </svg>
-  ),
   payment: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </svg>
-  ),
-  user: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   ),
   settings: (
@@ -66,6 +49,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { currentVenue } = useVenue();
 
   // Close drawer on route change (mobile)
   useEffect(() => {
@@ -74,6 +58,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  const clubName = currentVenue?.name ?? 'Club Palermo';
+  const clubInitial = clubName.charAt(0).toUpperCase();
 
   return (
     <>
@@ -89,41 +76,45 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-secondary-900
+          fixed top-0 left-0 z-50 h-full w-[260px] bg-secondary-900
           transform transition-transform duration-300 ease-out
           lg:relative lg:translate-x-0 lg:z-0 lg:block lg:h-screen lg:sticky lg:top-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <div className="flex flex-col h-full">
-          {/* Logo / Brand */}
-          <div className="flex items-center h-20 px-6 border-b border-secondary-700/50">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-primary-500 rounded-xl shadow-lg">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="font-display text-xl font-bold text-white tracking-tight">Cuadrala</span>
+          {/* Club Header */}
+          <div className="flex items-center gap-3 px-5 py-5 border-b border-secondary-700/50">
+            {/* Club Avatar */}
+            <div className="flex items-center justify-center w-10 h-10 bg-primary-500 rounded-full shadow-lg">
+              <span className="text-sm font-bold text-white">{clubInitial}</span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-semibold text-white truncate">
+                {clubName}
+              </span>
+              <span className="text-xs text-secondary-400 truncate">
+                Administrador
+              </span>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1">
-            {NAV_LINKS.map((link, index) => {
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            {NAV_LINKS.map((link) => {
               const isActive = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href));
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={`
-                    flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
+                    flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium
+                    transition-all duration-200 ease-out
                     ${isActive
-                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/25'
+                      ? 'bg-primary-500/15 text-primary-400'
                       : 'text-secondary-300 hover:bg-secondary-800 hover:text-white'
                     }
                   `}
-                  style={!isActive ? { animationDelay: `${index * 30}ms` } : undefined}
                 >
                   {icons[link.icon]}
                   {link.label}
@@ -134,9 +125,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* Footer */}
           <div className="px-4 py-5 border-t border-secondary-700/50">
-            <div className="px-4 py-3 bg-secondary-800 rounded-xl">
-              <p className="text-xs text-secondary-400 font-medium">Versión 1.0.0</p>
-            </div>
+            <p className="text-xs text-secondary-500 font-medium px-4">v1.0.0</p>
           </div>
         </div>
       </aside>
