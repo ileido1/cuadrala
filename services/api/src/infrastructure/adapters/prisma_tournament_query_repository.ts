@@ -19,7 +19,6 @@ function toListItemDTO(_row: {
   category: { name: string };
   startsAt: Date | null;
   _count: { registrations: number };
-  maxParticipants: number;
 }): TournamentListItemDTO {
   return {
     id: _row.id,
@@ -31,7 +30,6 @@ function toListItemDTO(_row: {
     categoryName: _row.category.name,
     startsAt: _row.startsAt != null ? _row.startsAt.toISOString() : null,
     registrationCount: _row._count.registrations,
-    maxParticipants: _row.maxParticipants,
   };
 }
 
@@ -65,7 +63,6 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           categoryId: true,
           category: { select: { name: true } },
           startsAt: true,
-          maxParticipants: true,
           _count: { select: { registrations: true } },
         },
       }),
@@ -86,7 +83,6 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
         categoryId: true,
         category: { select: { name: true } },
         startsAt: true,
-        maxParticipants: true,
         formatPresetId: true,
         formatPreset: { select: { name: true } },
         presetSchemaVersion: true,
@@ -131,5 +127,55 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
       status: _r.status,
       createdAt: _r.createdAt.toISOString(),
     }));
+  }
+
+  async listTournamentsByVenueSV(
+    _venueId: string,
+    _filters: ListTournamentsFiltersDTO,
+    _page: PageDTO,
+  ): Promise<{ items: TournamentListItemDTO[]; total: number }> {
+    const WHERE: {
+      status?: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+      sportId?: string;
+      categoryId?: string;
+      matches: { tournament: { court: { venueId: string } } };
+    } = {
+      matches: {
+        some: {
+          court: {
+            venueId: _venueId,
+          },
+        },
+      },
+      ...(_filters.status !== undefined ? { status: _filters.status } : {}),
+      ...(_filters.sportId !== undefined ? { sportId: _filters.sportId } : {}),
+      ...(_filters.categoryId !== undefined ? { categoryId: _filters.categoryId } : {}),
+    };
+
+    const SKIP = (_page.page - 1) * _page.limit;
+    const TAKE = _page.limit;
+
+    const [TOTAL, ROWS] = await PRISMA.$transaction([
+      PRISMA.tournament.count({ where: WHERE }),
+      PRISMA.tournament.findMany({
+        where: WHERE,
+        orderBy: [{ startsAt: 'asc' }, { createdAt: 'desc' }],
+        skip: SKIP,
+        take: TAKE,
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          sportId: true,
+          sport: { select: { name: true } },
+          categoryId: true,
+          category: { select: { name: true } },
+          startsAt: true,
+          _count: { select: { registrations: true } },
+        },
+      }),
+    ]);
+
+    return { items: ROWS.map(toListItemDTO), total: TOTAL };
   }
 }

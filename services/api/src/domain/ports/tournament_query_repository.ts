@@ -15,7 +15,6 @@ export type TournamentListItemDTO = {
   categoryName: string;
   startsAt: string | null;
   registrationCount: number;
-  maxParticipants: number;
 };
 
 export type TournamentDetailDTO = TournamentListItemDTO & {
@@ -57,4 +56,10 @@ export interface TournamentQueryRepository {
   listTournamentRegistrationsSV(
     _tournamentId: string,
   ): Promise<RegistrationDTO[]>;
+
+  listTournamentsByVenueSV(
+    _venueId: string,
+    _filters: ListTournamentsFiltersDTO,
+    _page: PageDTO,
+  ): Promise<{ items: TournamentListItemDTO[]; total: number }>;
 }
