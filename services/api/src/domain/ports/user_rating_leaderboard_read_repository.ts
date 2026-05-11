@@ -2,6 +2,7 @@ export type UserRatingLeaderboardItemDTO = {
   userId: string;
   rating: number;
   updatedAt: Date;
+  displayName: string;
 };
 
 export type UserRatingLeaderboardDTO = {
