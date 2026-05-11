@@ -141,3 +141,91 @@ export interface MatchListResponse {
     total: number;
   };
 }
+
+// Match detail types
+export interface MatchParticipantDto {
+  userId: string;
+  displayName?: string;
+  joinedAt: string;
+}
+
+export interface MatchDetailDto {
+  id: string;
+  sportId: string;
+  categoryId: string;
+  categoryName?: string;
+  type: MatchType;
+  status: MatchStatus;
+  scheduledAt: string | null;
+  pricePerPlayerCents: number;
+  maxParticipants: number;
+  participantCount: number;
+  openSpots: number;
+  courtId: string | null;
+  courtName: string | null;
+  participants: MatchParticipantDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MatchDetailResponse {
+  data: MatchDetailDto;
+}
+
+// Tournament types
+
+// Tournament types
+export type TournamentStatus = 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type RegistrationStatus = 'PENDING' | 'CONFIRMED' | 'WITHDRAWN';
+
+export interface TournamentListItem {
+  id: string;
+  name: string;
+  status: TournamentStatus;
+  sportId: string;
+  sportName: string;
+  categoryId: string;
+  categoryName: string;
+  startsAt: string | null;
+  registrationCount: number;
+  maxParticipants: number;
+}
+
+export interface TournamentDetail extends TournamentListItem {
+  formatPresetId: string;
+  formatPresetName: string;
+  presetSchemaVersion: number;
+  formatParameters: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Registration {
+  id: string;
+  userId: string;
+  userName: string;
+  status: RegistrationStatus;
+  createdAt: string;
+}
+
+export interface TournamentListFilters {
+  status?: TournamentStatus;
+  sportId?: string;
+  categoryId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TournamentListResponse {
+  items: TournamentListItem[];
+  pageInfo: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+export interface TournamentDetailResponse {
+  tournament: TournamentDetail;
+  registrations: Registration[];
+}

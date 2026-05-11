@@ -22,6 +22,7 @@ import { GEO_ROUTER } from './geo.router.js';
 import { VACANT_HOURS_ROUTER } from './vacant_hours.router.js';
 import { RATINGS_ROUTER } from './ratings.router.js';
 import { ADMIN_ROUTER } from './admin.router.js';
+import { TOURNAMENTS_ROUTER } from './tournaments.router.js';
 
 export const API_V1_ROUTER = Router();
 
@@ -44,6 +45,7 @@ API_V1_ROUTER.use(VACANT_HOURS_ROUTER);
 API_V1_ROUTER.use(NOTIFICATIONS_ROUTER);
 API_V1_ROUTER.use(RATINGS_ROUTER);
 API_V1_ROUTER.use(ADMIN_ROUTER);
+API_V1_ROUTER.use(TOURNAMENTS_ROUTER);
 API_V1_ROUTER.use('/auth', AUTH_ROUTER);
 API_V1_ROUTER.use('/users', PROFILE_ROUTER);
 API_V1_ROUTER.use(MONETIZATION_ROUTER);

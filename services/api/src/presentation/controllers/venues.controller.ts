@@ -12,6 +12,7 @@ import {
   VENUE_ID_PARAM_SCHEMA,
 } from '../validation/venues.validation.js';
 import { CreateCourtUseCase, ListCourtsUseCase, UpdateCourtUseCase, CancelCourtUseCase } from '../../application/use_cases/court.use_cases.js';
+import type { CreateCourtInputDTO, ListCourtsInputDTO, UpdateCourtInputDTO, CancelCourtInputDTO } from '../../application/use_cases/court.use_cases.js';
 import { courtRepositoryFactory, createCourtRepo, getCourtByIdRepo, listCourtsByVenueRepo, updateCourtRepo, cancelCourtRepo } from '../../infrastructure/repositories/court_repository_factory.js';
 
 function parseNearSV(_near: string): { lat: number; lng: number } {
@@ -165,7 +166,7 @@ export async function postCourtCON(_req: Request, _res: Response): Promise<void>
     ...(BODY.surfaceType !== undefined ? { surfaceType: BODY.surfaceType } : {}),
   };
   const useCase = new CreateCourtUseCase({ create: createCourtRepo, findById: getCourtByIdRepo, findByVenue: listCourtsByVenueRepo, update: updateCourtRepo, cancel: cancelCourtRepo } as any);
-  const result = await useCase.executeSV(INPUT as any);
+  const result = await useCase.executeSV(INPUT as CreateCourtInputDTO);
 
   _res.status(201).json({
     success: true,
@@ -184,8 +185,8 @@ export async function getVenueCourtsCON(_req: Request, _res: Response): Promise<
     throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
   }
 
-  const useCase = new ListCourtsUseCase(courtRepositoryFactory() as any);
-  const result = await useCase.executeSV({ venueId: PARAMS.venueId, status: QUERY.status } as any);
+  const useCase = new ListCourtsUseCase(courtRepositoryFactory());
+  const result = await useCase.executeSV({ venueId: PARAMS.venueId, status: QUERY.status } as ListCourtsInputDTO);
 
   _res.status(200).json({
     success: true,
@@ -240,8 +241,8 @@ export async function putCourtCON(_req: Request, _res: Response): Promise<void> 
     throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
   }
 
-  const useCase = new UpdateCourtUseCase(courtRepositoryFactory() as any);
-  const result = await useCase.executeSV({ courtId: PARAMS.courtId, ...BODY } as any);
+  const useCase = new UpdateCourtUseCase(courtRepositoryFactory());
+  const result = await useCase.executeSV({ courtId: PARAMS.courtId, ...BODY } as UpdateCourtInputDTO);
 
   _res.status(200).json({
     success: true,
@@ -263,8 +264,8 @@ export async function deleteCourtCON(_req: Request, _res: Response): Promise<voi
     throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
   }
 
-  const useCase = new CancelCourtUseCase(courtRepositoryFactory() as any);
-  const result = await useCase.executeSV({ courtId: PARAMS.courtId } as any);
+  const useCase = new CancelCourtUseCase(courtRepositoryFactory());
+  const result = await useCase.executeSV({ courtId: PARAMS.courtId } as CancelCourtInputDTO);
 
   _res.status(200).json({
     success: true,
