@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { apiClient } from '~/lib/api-client';
 import type { TournamentDetail, Registration } from '~/types/api';
 import { TournamentStatusBadge } from '~/components/tournaments/TournamentStatusBadge';
+import { StatusTransitionControls } from '~/components/tournaments/StatusTransitionControls';
 import { RegistrationListItemComponent } from '~/components/tournaments/RegistrationListItem';
 import { LoadingSkeleton } from '~/components/shared/LoadingSkeleton';
 import { ErrorState } from '~/components/shared/ErrorState';
@@ -91,6 +92,15 @@ export default function TournamentDetailPage() {
                 {tournament.sportName} · {tournament.categoryName}
               </span>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/dashboard/tournaments/${tournamentId}/bracket`}
+              className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+            >
+              Ver bracket
+            </Link>
+            <StatusTransitionControls tournamentId={tournamentId} currentStatus={tournament.status} />
           </div>
         </div>
 
