@@ -23,11 +23,13 @@ export type CreateReservationInput = {
   venueId: string;
   courtId: string;
   sportId: string;
-  categoryId: string;
+  categoryId?: string;
   type?: 'DIRECT' | 'BLOCKED';
   scheduledAt: Date;
   durationMinutes?: number;
   notes?: string | null;
+  responsibleName?: string | null;
+  responsiblePhone?: string | null;
 };
 
 export type CreateReservationOutput = {
@@ -73,7 +75,7 @@ export class CreateReservationUseCase {
       venueId: _input.venueId,
       courtId: _input.courtId,
       sportId: _input.sportId,
-      categoryId: _input.categoryId,
+      ...(_input.categoryId !== undefined ? { categoryId: _input.categoryId } : {}),
       scheduledAt: _input.scheduledAt,
       ...(_input.type !== undefined
         ? {
@@ -86,6 +88,8 @@ export class CreateReservationUseCase {
       ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
       ...(_input.notes !== undefined ? { notes: _input.notes } : {}),
       createdByUserId: _actorUserId,
+      ...(_input.responsibleName != null ? { responsibleName: _input.responsibleName as string | null } : {}),
+      ...(_input.responsiblePhone != null ? { responsiblePhone: _input.responsiblePhone as string | null } : {}),
     };
 
     const RESERVATION = await this._reservationRepository.createReservationSV(INPUT_DTO);

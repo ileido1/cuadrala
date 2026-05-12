@@ -3,10 +3,13 @@ import multer from 'multer';
 
 import {
   getMatchTransactionsSummaryCON,
+  getReservationPaymentSummaryCON,
   getUserTransactionsCON,
   patchConfirmTransactionManualCON,
+  patchRejectTransactionManualCON,
   patchUserSubscriptionCON,
   postCreateMatchObligationsCON,
+  postCreateReservationObligationsCON,
 } from '../controllers/monetization.controller.js';
 import {
   getTransactionReceiptCON,
@@ -57,3 +60,18 @@ MONETIZATION_ROUTER.get(
 );
 MONETIZATION_ROUTER.get('/users/:userId/transactions', asyncHandler(getUserTransactionsCON));
 MONETIZATION_ROUTER.patch('/users/:userId/subscription', asyncHandler(patchUserSubscriptionCON));
+
+// Reservation payment obligations
+MONETIZATION_ROUTER.post(
+  '/reservations/:reservationId/transactions/create-obligations',
+  asyncHandler(postCreateReservationObligationsCON),
+);
+MONETIZATION_ROUTER.get(
+  '/reservations/:reservationId/transactions/summary',
+  asyncHandler(getReservationPaymentSummaryCON),
+);
+MONETIZATION_ROUTER.patch(
+  '/transactions/:transactionId/reject-manual',
+  requireAuth,
+  asyncHandler(patchRejectTransactionManualCON),
+);

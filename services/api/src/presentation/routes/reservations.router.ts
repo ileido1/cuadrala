@@ -20,6 +20,7 @@ export const RESERVATIONS_ROUTER = Router();
 // POST /venues/:venueId/reservations — crear reserva directa
 RESERVATIONS_ROUTER.post(
   '/venues/:venueId/reservations',
+  requireAuth,
   asyncHandler(postReservationCON),
 );
 
@@ -33,6 +34,7 @@ RESERVATIONS_ROUTER.get(
 // DELETE /venues/:venueId/reservations/:reservationId — cancelar reserva
 RESERVATIONS_ROUTER.delete(
   '/venues/:venueId/reservations/:reservationId',
+  requireAuth,
   asyncHandler(deleteReservationCON),
 );
 

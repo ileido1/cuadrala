@@ -164,6 +164,10 @@ export async function patchVenueCON(_req: Request, _res: Response): Promise<void
 
   // Zod incluye undefined en optionals; excluimos campos undefined para enviar solo los presentes
   const BODY_FOR_USE_CASE = {
+    name: BODY.name,
+    address: BODY.address,
+    latitude: BODY.latitude,
+    longitude: BODY.longitude,
     phone: BODY.phone,
     email: BODY.email,
     description: BODY.description,

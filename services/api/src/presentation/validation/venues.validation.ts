@@ -30,8 +30,7 @@ export const CREATE_VENUE_BODY_SCHEMA = z
 export const VENUE_ID_PARAM_SCHEMA = z
   .object({
     venueId: z.string().uuid('venueId debe ser un UUID valido.'),
-  })
-  .strict();
+  });
 
 export const CREATE_COURT_BODY_SCHEMA = z
   .object({
@@ -62,8 +61,7 @@ export const UPDATE_COURT_BODY_SCHEMA = z
 export const COURT_ID_PARAM_SCHEMA = z
   .object({
     courtId: z.string().uuid('courtId debe ser un UUID válido.'),
-  })
-  .strict();
+  });
 
 export const LIST_COURTS_QUERY_SCHEMA = z
   .object({
@@ -109,6 +107,10 @@ export const TRANSACTIONS_HISTORY_QUERY_SCHEMA = z
 // Schema para PATCH /venues/:venueId
 export const UPDATE_VENUE_BODY_SCHEMA = z
   .object({
+    name: z.string().min(1).max(120).optional(),
+    address: z.string().min(1).max(200).nullable().optional(),
+    latitude: z.coerce.number().min(-90).max(90).nullable().optional(),
+    longitude: z.coerce.number().min(-180).max(180).nullable().optional(),
     phone: z.string().max(30).nullable().optional(),
     email: z.string().email('Email inválido.').max(120).nullable().optional(),
     description: z.string().max(500).nullable().optional(),

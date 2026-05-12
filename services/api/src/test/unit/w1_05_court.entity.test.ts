@@ -28,6 +28,7 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
         capacity: '4v4',
         durationMinutes: 60,
         createdAt: new Date('2025-01-01'),
+        pricingTiers: [],
       };
       expect(court.status).toBe(CourtStatus.ACTIVE);
     });
@@ -53,6 +54,7 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
         capacity: null,
         durationMinutes: 60,
         createdAt: new Date('2025-01-01'),
+        pricingTiers: [],
       };
       expect(court.sportType).toBe(SportType.TENNIS);
     });
@@ -73,6 +75,7 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
         capacity: null,
         durationMinutes: 60,
         createdAt: new Date(),
+        pricingTiers: [],
       };
       expect(court.id).toBeDefined();
       expect(court.venueId).toBeDefined();
@@ -93,6 +96,7 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
         capacity: null,
         durationMinutes: 60,
         createdAt: new Date(),
+        pricingTiers: [],
       };
       expect(court.surfaceType).toBeNull();
     });

@@ -4,6 +4,10 @@ export const MATCH_ID_PARAM_SCHEMA = z.object({
   matchId: z.string().uuid('matchId debe ser un UUID valido.'),
 });
 
+export const RESERVATION_ID_PARAM_SCHEMA = z.object({
+  reservationId: z.string().uuid('reservationId debe ser un UUID valido.'),
+});
+
 export const TRANSACTION_ID_PARAM_SCHEMA = z.object({
   transactionId: z.string().uuid('transactionId debe ser un UUID valido.'),
 });
@@ -18,6 +22,12 @@ export const CREATE_OBLIGATIONS_BODY_SCHEMA = z
     participantUserIds: z
       .array(z.string().uuid('Cada participante debe ser un UUID valido.'))
       .optional(),
+  })
+  .strict();
+
+export const REJECT_TRANSACTION_BODY_SCHEMA = z
+  .object({
+    reason: z.string().min(1, 'reason es requerido para rechazar.').max(500),
   })
   .strict();
 

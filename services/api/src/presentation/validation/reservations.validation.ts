@@ -13,7 +13,7 @@ export const RESERVATION_ID_PARAM_SCHEMA = z
   .object({
     reservationId: z.string().uuid('reservationId debe ser un UUID valido.'),
   })
-  .strict();
+  .passthrough();
 
 export const VENUE_ID_PARAM_SCHEMA = z
   .object({
@@ -25,15 +25,21 @@ export const VENUE_ID_PARAM_SCHEMA = z
 // Body: Crear reserva
 // ---------------------------------------------------------------------------
 
+const RESPONSIBLE_SCHEMA = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('PLAYER'), playerId: z.string().uuid('playerId debe ser un UUID.') }),
+  z.object({ type: z.literal('GUEST'), name: z.string().min(1, 'Nombre requerido'), phone: z.string().optional() }),
+]);
+
 export const CREATE_RESERVATION_BODY_SCHEMA = z
   .object({
     courtId: z.string().uuid('courtId debe ser un UUID valido.'),
-    sportId: z.string().uuid('sportId debe ser un UUID valido.'),
-    categoryId: z.string().uuid('categoryId debe ser un UUID valido.'),
+    sportId: z.string().uuid('sportId debe ser un UUID valido.').optional(),
+    categoryId: z.string().uuid('categoryId debe ser un UUID valido.').optional(),
     type: z.enum(['DIRECT', 'BLOCKED']).optional().default('DIRECT'),
-    scheduledAt: z.string().datetime({ offset: true }),
+    scheduledAt: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/, 'scheduledAt debe ser ISO datetime')),
     durationMinutes: z.coerce.number().int().positive().optional(),
     notes: z.string().max(500).nullable().optional(),
+    responsible: RESPONSIBLE_SCHEMA.optional(),
   })
   .strict();
 

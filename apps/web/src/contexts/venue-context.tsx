@@ -39,8 +39,8 @@ export function VenueProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await apiClient.venues.list();
-        const venuesData = response.data.data as Venue[];
+        const response = await apiClient.venues.mine();
+        const venuesData = (response.data.data?.items ?? response.data.data ?? []) as Venue[];
         setVenues(venuesData);
 
         // Restore from sessionStorage or default to first venue

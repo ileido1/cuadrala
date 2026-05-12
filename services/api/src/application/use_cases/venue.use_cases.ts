@@ -8,6 +8,10 @@ import { AppError } from '../../domain/errors/app_error.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 export interface UpdateVenueInputDTO {
+  name?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   phone?: string | null;
   email?: string | null;
   description?: string | null;
@@ -22,6 +26,8 @@ export interface VenueOutputDTO {
   description: string | null;
   openingHours: unknown | null;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export class UpdateVenueUseCase {
@@ -39,6 +45,10 @@ export class UpdateVenueUseCase {
     const updated = await PRISMA.venue.update({
       where: { id: _venueId },
       data: {
+        ...(_input.name !== undefined ? { name: _input.name } : {}),
+        ...(_input.address !== undefined ? { address: _input.address } : {}),
+        ...(_input.latitude !== undefined ? { latitude: _input.latitude } : {}),
+        ...(_input.longitude !== undefined ? { longitude: _input.longitude } : {}),
         ...(_input.phone !== undefined ? { phone: _input.phone } : {}),
         ...(_input.email !== undefined ? { email: _input.email } : {}),
         ...(_input.description !== undefined ? { description: _input.description } : {}),
@@ -52,6 +62,8 @@ export class UpdateVenueUseCase {
         description: true,
         openingHours: true,
         address: true,
+        latitude: true,
+        longitude: true,
       },
     });
 
@@ -63,6 +75,8 @@ export class UpdateVenueUseCase {
       description: updated.description,
       openingHours: updated.openingHours as VenueOutputDTO['openingHours'],
       address: updated.address,
+      latitude: updated.latitude,
+      longitude: updated.longitude,
     };
   }
 }

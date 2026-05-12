@@ -22,9 +22,11 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
   final _phoneController = PhoneController();
   DateTime? _birthDate;
   final _cityController = TextEditingController();
+  final _documentController = TextEditingController();
   String? _nameError;
   String? _phoneError;
   String? _birthError;
+  String? _documentError;
   bool _loading = true;
 
   @override
@@ -50,6 +52,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
     _nameController.dispose();
     _phoneController.dispose();
     _cityController.dispose();
+    _documentController.dispose();
     super.dispose();
   }
 
@@ -59,12 +62,15 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
     final phone = _phoneController.value;
     final phoneValid = phone.isValid();
     final birthValid = _birthDate != null && _birthDate!.year >= 1920;
+    final document = _documentController.text.trim();
+    final documentValid = document.isEmpty || document.length >= 6;
     setState(() {
       _nameError = nameValid ? null : 'Ingresa tu nombre completo.';
       _phoneError = phoneValid ? null : 'Teléfono inválido.';
       _birthError = birthValid ? null : 'Selecciona tu fecha de nacimiento.';
+      _documentError = documentValid ? null : 'Mínimo 6 caracteres.';
     });
-    return nameValid && phoneValid && birthValid;
+    return nameValid && phoneValid && birthValid && documentValid;
   }
 
   Future<void> _submit() async {
@@ -77,6 +83,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
           birthYear: birthYear,
           birthDate: _birthDate,
           city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+          documentNumber: _documentController.text.trim().isEmpty ? null : _documentController.text.trim(),
         );
     if (!mounted) return;
     if (ok) widget.onContinue();
@@ -175,6 +182,20 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           isCountrySelectionEnabled: true,
                           isCountryButtonPersistent: true,
                           autovalidateMode: AutovalidateMode.disabled,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _documentController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: 'Número de documento (DNI)',
+                            hintText: 'Ej: 12345678',
+                            prefixIcon: const Icon(Icons.badge_outlined),
+                            errorText: _documentError,
+                            helperText: 'Opcional. Solo números sin puntos ni guiones.',
+                          ),
                         ),
                         const SizedBox(height: 14),
                         InkWell(

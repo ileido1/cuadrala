@@ -31,6 +31,7 @@ export class CourtRepository implements ICourtRepository {
     const models = await PRISMA.court.findMany({
       where,
       orderBy: { name: 'asc' },
+      include: { pricingTiers: true },
     });
     return models.map(prismaToCourtEntity).filter((c): c is Court => c !== null);
   }

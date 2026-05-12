@@ -136,10 +136,15 @@ async function seedMatchLifecycle(): Promise<void> {
   );
 
   await Promise.all(
-    USERS.map(async (_u) =>
+    USERS.map(async (_u, _idx) =>
       PRISMA.playerProfile.upsert({
         where: { userId: _u.id },
-        create: { userId: _u.id, dominantHand: 'RIGHT', sidePreference: 'ANY' },
+        create: {
+          userId: _u.id,
+          dominantHand: 'RIGHT',
+          sidePreference: 'ANY',
+          documentNumber: `DOC${String(_idx + 1).padStart(6, '0')}`,
+        },
         update: {},
       }),
     ),

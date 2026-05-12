@@ -55,17 +55,61 @@ export async function postReservationCON(_req: Request, _res: Response): Promise
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = CREATE_RESERVATION_BODY_SCHEMA.parse(_req.body);
 
+  // Obtener sportId desde el sportType del court
+  const COURT = await PRISMA.court.findUnique({
+    where: { id: BODY.courtId },
+    select: { sportType: true },
+  });
+  if (!COURT) {
+    throw new AppError('CANCHA_NO_ENCONTRADA', 'La cancha no existe.', 404);
+  }
+
+  // Buscar el Sport por código (PADEL o TENNIS)
+  const SPORT = await PRISMA.sport.findFirst({
+    where: { code: COURT.sportType },
+    select: { id: true },
+  });
+  if (!SPORT) {
+    throw new AppError('ERROR_INTERNO', 'No se encontró el deporte de la cancha.', 500);
+  }
+
+  // Si no se provee categoryId, buscar cualquier categoría como default
+  let categoryId = BODY.categoryId;
+  if (!categoryId) {
+    const DEFAULT_CATEGORY = await PRISMA.category.findFirst({
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!DEFAULT_CATEGORY) {
+      throw new AppError('ERROR_INTERNO', 'No se encontró una categoría en el sistema.', 500);
+    }
+    categoryId = DEFAULT_CATEGORY.id;
+  }
+
+  // Extraer responsibleName y responsiblePhone del body
+  let responsibleName: string | undefined;
+  let responsiblePhone: string | undefined;
+  if (BODY.responsible !== undefined) {
+    if (BODY.responsible.type === 'GUEST') {
+      responsibleName = BODY.responsible.name;
+      responsiblePhone = BODY.responsible.phone;
+    }
+    // Para PLAYER por ahora solo guardamos el reference (podría расширяse)
+  }
+
   const useCase = new CreateReservationUseCase(getReservationRepo(), getVenueStaffRepo());
   const result = await useCase.executeSV(
     {
       venueId: PARAMS.venueId,
       courtId: BODY.courtId,
-      sportId: BODY.sportId,
-      categoryId: BODY.categoryId,
+      sportId: SPORT.id,
+      categoryId,
       type: BODY.type,
       scheduledAt: new Date(BODY.scheduledAt),
       ...(BODY.durationMinutes !== undefined ? { durationMinutes: BODY.durationMinutes } : {}),
       ...(BODY.notes !== undefined ? { notes: BODY.notes } : {}),
+      ...(responsibleName !== undefined ? { responsibleName } : {}),
+      ...(responsiblePhone !== undefined ? { responsiblePhone } : {}),
     },
     ACTOR_USER_ID,
   );

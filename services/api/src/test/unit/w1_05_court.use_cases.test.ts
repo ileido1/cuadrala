@@ -55,6 +55,7 @@ function activeCourt(overrides: Partial<Court> = {}): Court {
     capacity: null,
     durationMinutes: 60,
     createdAt: new Date('2025-01-01'),
+    pricingTiers: [],
     ...overrides,
   };
 }

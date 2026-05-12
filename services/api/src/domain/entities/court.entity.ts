@@ -15,6 +15,19 @@ export enum SportType {
   TENNIS = 'TENNIS',
 }
 
+/**
+ * Entidad CourtPricingTier — representación pura de dominio de franja horaria con precio.
+ * US-W1-05 — CRUD Courts — PR2
+ */
+export interface CourtPricingTier {
+  readonly id: string;
+  readonly courtId: string;
+  readonly label: string;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly pricePerHourCents: number;
+}
+
 /** Entidad Court — representación pura de dominio, sin dependencias externas. */
 export interface Court {
   readonly id: string;
@@ -29,6 +42,7 @@ export interface Court {
   readonly capacity: string | null;
   readonly durationMinutes: number;
   readonly createdAt: Date;
+  readonly pricingTiers: CourtPricingTier[];
 }
 
 /** Input para crear una nueva cancha (sin id ni createdAt — los genera el repo). */

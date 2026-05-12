@@ -20,9 +20,33 @@ import {
   GENERATE_TOURNAMENT_AMERICANO_SCHEDULE_BODY_SCHEMA,
   TOURNAMENT_ID_PARAM_SCHEMA,
 } from './tournament_americano_schedule.validation.js';
+import {
+  COURT_ID_PARAM_SCHEMA as VENUE_COURT_ID_PARAM_SCHEMA,
+  VENUE_ID_PARAM_SCHEMA as VENUE_PARAM_SCHEMA,
+} from './venues.validation.js';
+import { PRICING_TIER_ID_PARAM_SCHEMA } from './court_pricing.validation.js';
 
 const SAMPLE_UUID = '550e8400-e29b-41d4-a716-446655440000';
 const OTHER_UUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+
+describe('venue court route params', () => {
+  it('acepta params anidados de sede y cancha', () => {
+    const PARAMS = { venueId: SAMPLE_UUID, courtId: OTHER_UUID };
+
+    expect(VENUE_PARAM_SCHEMA.safeParse(PARAMS).success).toBe(true);
+    expect(VENUE_COURT_ID_PARAM_SCHEMA.safeParse(PARAMS).success).toBe(true);
+  });
+
+  it('acepta params anidados de tarifas de cancha', () => {
+    const PARAMS = {
+      venueId: SAMPLE_UUID,
+      courtId: OTHER_UUID,
+      tierId: '550e8400-e29b-41d4-a716-446655440001',
+    };
+
+    expect(PRICING_TIER_ID_PARAM_SCHEMA.safeParse(PARAMS).success).toBe(true);
+  });
+});
 
 describe('CREATE_AMERICANO_BODY_SCHEMA', () => {
   it('rechaza menos de dos participantes', () => {

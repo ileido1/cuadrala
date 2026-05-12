@@ -12,10 +12,13 @@ export class ListVenuePendingTransactionsUseCase {
     from?: string;
     to?: string;
     matchId?: string;
+    reservationId?: string;
+    type?: 'MATCH' | 'RESERVATION';
   }): Promise<{
     items: Array<{
       id: string;
-      matchId: string;
+      matchId: string | null;
+      reservationId: string | null;
       userId: string;
       amountTotal: string;
       status: string;
@@ -40,12 +43,15 @@ export class ListVenuePendingTransactionsUseCase {
       ...(_input.from !== undefined ? { from: _input.from } : {}),
       ...(_input.to !== undefined ? { to: _input.to } : {}),
       ...(_input.matchId !== undefined ? { matchId: _input.matchId } : {}),
+      ...(_input.reservationId !== undefined ? { reservationId: _input.reservationId } : {}),
+      ...(_input.type !== undefined ? { type: _input.type } : {}),
     });
 
     return {
       items: ROWS.map((tx) => ({
         id: tx.id,
         matchId: tx.matchId,
+        reservationId: tx.reservationId,
         userId: tx.userId,
         amountTotal: tx.amountTotal.toString(),
         status: tx.status,

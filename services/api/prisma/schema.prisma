@@ -45,6 +45,7 @@ enum SubscriptionType {
 
 enum FeeScope {
   MATCH
+  RESERVATION
 }
 
 enum FeeType {
@@ -60,6 +61,12 @@ enum TransactionStatus {
 
 enum PaymentMethod {
   MANUAL
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
 }
 
 enum VenueStaffRole {
@@ -268,6 +275,8 @@ model PlayerProfile {
   birthDate             DateTime?
   /// E.164 (+5491145454545). Validado por backend con regex laxa.
   phone                 String?
+  /// Número de documento (DNI, CI, etc.). Único por usuario.
+  documentNumber        String?                 @unique
   avatarUrl             String?
   city                  String?
   /// Marca el momento en que el usuario completó todos los pasos requeridos del onboarding.
@@ -460,6 +469,23 @@ model Court {
   matches     Match[]
   vacantHours VacantHour[]
   reservations Reservation[]
+  pricingTiers CourtPricingTier[]
+}
+
+// --- Court Pricing Tiers ---
+
+model CourtPricingTier {
+  id                String   @id @default(uuid())
+  courtId           String
+  court             Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  label             String   // ej. "Mañana", "Tarde", "Noche"
+  startTime         String   // "08:00" (24h)
+  endTime           String   // "12:00" (24h)
+  pricePerHourCents Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([courtId])
 }
 
 model Tournament {
@@ -624,6 +650,18 @@ model Reservation {
   durationMinutes  Int              @default(60)
   notes            String?
   createdByUserId  String
+  /// Nombre del responsable (para reservas directas de guests o referencia).
+  responsibleName  String?
+  /// Teléfono del responsable (para reservas directas de guests o referencia).
+  responsiblePhone String?
+  /// Monto total de la reserva en centavos (ej: 9000 = $90.00).
+  totalAmountCents Int?
+  /// Suma de montos de transactions confirmadas en centavos.
+  paidAmountCents  Int             @default(0)
+  /// Estado de pago: UNPAID (nada), PARTIAL (algo), PAID (cubierto o más).
+  paymentStatus     PaymentStatus   @default(UNPAID)
+
+  transactions Transaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -730,11 +768,13 @@ model FeeRule {
   @@index([scope, isActive])
 }
 
-/// Obligación de pago no custodial asociada a un partido y usuario.
+/// Obligación de pago no custodial asociada a un match o reservation y usuario.
 model Transaction {
   id            String            @id @default(uuid())
-  matchId       String
-  match         Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId       String?
+  match         Match?            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  reservationId String?
+  reservation   Reservation?      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   userId        String
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   amountBase    Decimal           @db.Decimal(14, 4)
@@ -751,6 +791,8 @@ model Transaction {
   @@index([matchId])
   @@index([userId])
   @@index([matchId, status])
+  @@index([reservationId])
+  @@index([reservationId, status])
 }
 
 /// Comprobante (imagen) adjunto a una transacción.

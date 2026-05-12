@@ -32,6 +32,8 @@ export interface Reservation {
   readonly durationMinutes: number;
   readonly notes: string | null;
   readonly createdByUserId: string;
+  readonly responsibleName: string | null;
+  readonly responsiblePhone: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -41,12 +43,14 @@ export interface CreateReservationInput {
   readonly venueId: string;
   readonly courtId: string;
   readonly sportId: string;
-  readonly categoryId: string;
+  readonly categoryId?: string;
   readonly type?: ReservationType;
   readonly scheduledAt: Date;
   readonly durationMinutes?: number;
   readonly notes?: string | null;
   readonly createdByUserId: string;
+  readonly responsibleName?: string | null;
+  readonly responsiblePhone?: string | null;
 }
 
 /** Input para listar reservas con filtros. */
@@ -69,6 +73,7 @@ export type ReservationDTO = {
   readonly id: string;
   readonly venueId: string;
   readonly courtId: string;
+  readonly courtName: string | null;
   readonly sportId: string;
   readonly categoryId: string;
   readonly type: ReservationType;
@@ -77,6 +82,11 @@ export type ReservationDTO = {
   readonly durationMinutes: number;
   readonly notes: string | null;
   readonly createdByUserId: string;
+  readonly responsibleName: string | null;
+  readonly responsiblePhone: string | null;
+  readonly totalAmountCents: number | null;
+  readonly paidAmountCents: number;
+  readonly paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
   readonly createdAt: Date;
   readonly updatedAt: Date;
 };
@@ -86,10 +96,12 @@ export type CreateReservationInputDTO = {
   readonly venueId: string;
   readonly courtId: string;
   readonly sportId: string;
-  readonly categoryId: string;
+  readonly categoryId?: string;
   readonly type?: ReservationType;
   readonly scheduledAt: Date;
   readonly durationMinutes?: number;
   readonly notes?: string | null;
   readonly createdByUserId: string;
+  readonly responsibleName?: string | null;
+  readonly responsiblePhone?: string | null;
 };

@@ -4,13 +4,17 @@ import { AppError } from '../domain/errors/app_error.js';
 import { computeFeeAmountSV } from '../domain/monetization/fee_calculation.js';
 import { findActiveFeeRuleForScopeRepo } from '../infrastructure/repositories/fee_rule.repository.js';
 import { findMatchByIdRepo, findMatchWithParticipantsRepo } from '../infrastructure/repositories/match.repository.js';
+import { findReservationByIdRepo } from '../infrastructure/repositories/reservation.repository.js';
 import {
   confirmTransactionManualRepo,
   createTransactionRepo,
   findPendingOrConfirmedForMatchUserRepo,
+  findPendingOrConfirmedForReservationUserRepo,
   findTransactionByIdRepo,
   listTransactionsByMatchRepo,
+  listTransactionsByReservationRepo,
   listTransactionsByUserRepo,
+  updateReservationPaymentFromTransactionRepo,
 } from '../infrastructure/repositories/transaction.repository.js';
 import { findUserByIdRepo, updateUserSubscriptionRepo } from '../infrastructure/repositories/user.repository.js';
 
@@ -134,6 +138,12 @@ export async function confirmTransactionManualSV(_transactionId: string): Promis
   if (CONFIRMED_AT === null) {
     throw new AppError('ESTADO_INCONSISTENTE', 'No se pudo registrar la fecha de confirmacion.', 500);
   }
+
+  // Si la transacción es de una reserva, actualizar paidAmountCents y paymentStatus
+  if (TX.reservationId !== null) {
+    await updateReservationPaymentFromTransactionRepo(TX.reservationId);
+  }
+
   return {
     id: UPDATED.id,
     status: UPDATED.status,
@@ -216,7 +226,8 @@ export async function listUserTransactionsSV(
     userId: _userId,
     transactions: ROWS.map((_r) => ({
       id: _r.id,
-      matchId: _r.matchId,
+      matchId: _r.matchId ?? '',
+      reservationId: _r.reservationId ?? '',
       userId: _r.userId,
       amountBase: _r.amountBase.toString(),
       feeAmount: _r.feeAmount.toString(),
@@ -226,6 +237,109 @@ export async function listUserTransactionsSV(
       confirmedAt: _r.confirmedAt?.toISOString() ?? null,
       createdAt: _r.createdAt.toISOString(),
     })),
+  };
+}
+
+/** Genera obligaciones de cobro por participante para una reserva directa. */
+export async function createReservationObligationsSV(
+  _input: { reservationId: string; amountBasePerPerson: number; participantUserIds?: string[] },
+): Promise<{ created: ObligationCreated[]; skipped: ObligationSkipped[] }> {
+  if (!Number.isFinite(_input.amountBasePerPerson) || _input.amountBasePerPerson <= 0) {
+    throw new AppError('MONTO_INVALIDO', 'El monto base por persona debe ser mayor que cero.', 400);
+  }
+
+  const RESERVATION = await findReservationByIdRepo(_input.reservationId);
+  if (!RESERVATION) {
+    throw new AppError('RESERVA_NO_ENCONTRADA', 'La reserva indicada no existe.', 404);
+  }
+
+  const RULE = await findActiveFeeRuleForScopeRepo('RESERVATION');
+  const RULE_FOR_FEE =
+    RULE === null
+      ? null
+      : { type: RULE.type as 'FIXED' | 'PERCENTAGE', value: Number(RULE.value.toString()) };
+
+  const AMOUNT_BASE = new Prisma.Decimal(String(_input.amountBasePerPerson));
+  const AMOUNT_BASE_NUMBER = Number(AMOUNT_BASE.toString());
+  const CREATED: ObligationCreated[] = [];
+  const SKIPPED: ObligationSkipped[] = [];
+
+  const TARGET_IDS = _input.participantUserIds ?? [];
+
+  for (const _userId of TARGET_IDS) {
+    const EXISTING = await findPendingOrConfirmedForReservationUserRepo(_input.reservationId, _userId);
+    if (EXISTING !== null) {
+      SKIPPED.push({ userId: _userId, reason: 'ALREADY_HAS_ACTIVE_OBLIGATION' });
+      continue;
+    }
+
+    const FEE_NUMBER = computeFeeAmountSV(AMOUNT_BASE_NUMBER, RULE_FOR_FEE);
+    const FEE = new Prisma.Decimal(String(FEE_NUMBER));
+    const TOTAL = AMOUNT_BASE.add(FEE);
+
+    const ROW = await createTransactionRepo({
+      reservationId: _input.reservationId,
+      userId: _userId,
+      amountBase: AMOUNT_BASE,
+      feeAmount: FEE,
+      amountTotal: TOTAL,
+    });
+
+    CREATED.push({
+      id: ROW.id,
+      userId: ROW.userId,
+      amountBase: ROW.amountBase.toString(),
+      feeAmount: ROW.feeAmount.toString(),
+      amountTotal: ROW.amountTotal.toString(),
+      status: ROW.status,
+    });
+  }
+
+  return { created: CREATED, skipped: SKIPPED };
+}
+
+/** Resumen de pagos de una reserva directa. */
+export async function getReservationPaymentSummarySV(_reservationId: string): Promise<{
+  reservationId: string;
+  transactionCount: number;
+  totalAmountBase: string;
+  totalFeeAmount: string;
+  totalAmount: string;
+  pendingCount: number;
+  confirmedCount: number;
+  cancelledCount: number;
+}> {
+  const RESERVATION = await findReservationByIdRepo(_reservationId);
+  if (!RESERVATION) {
+    throw new AppError('RESERVA_NO_ENCONTRADA', 'La reserva indicada no existe.', 404);
+  }
+
+  const ROWS = await listTransactionsByReservationRepo(_reservationId);
+  let totalBase = new Prisma.Decimal(0);
+  let totalFee = new Prisma.Decimal(0);
+  let totalAll = new Prisma.Decimal(0);
+  let pending = 0;
+  let confirmed = 0;
+  let cancelled = 0;
+
+  for (const _r of ROWS) {
+    totalBase = totalBase.add(_r.amountBase);
+    totalFee = totalFee.add(_r.feeAmount);
+    totalAll = totalAll.add(_r.amountTotal);
+    if (_r.status === 'PENDING') pending += 1;
+    else if (_r.status === 'CONFIRMED') confirmed += 1;
+    else if (_r.status === 'CANCELLED') cancelled += 1;
+  }
+
+  return {
+    reservationId: _reservationId,
+    transactionCount: ROWS.length,
+    totalAmountBase: totalBase.toString(),
+    totalFeeAmount: totalFee.toString(),
+    totalAmount: totalAll.toString(),
+    pendingCount: pending,
+    confirmedCount: confirmed,
+    cancelledCount: cancelled,
   };
 }
 
