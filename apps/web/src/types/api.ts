@@ -10,11 +10,21 @@ export interface Venue {
   longitude?: number | null;
   openingHours?: Record<string, { open: string; close: string }> | null;
   courtsCount?: number;
+  displayCurrency?: string;
 }
 
 export interface VenueSummary {
   id: string;
   name: string;
+}
+
+export interface ExchangeRate {
+  id: string;
+  countryCode: string;
+  currency: string; // 'USD' | 'EUR'
+  rateToBs: number;
+  source: string | null;
+  updatedAt: string;
 }
 
 // Dashboard stats (API response shape)
@@ -423,6 +433,47 @@ export interface ReservationListResponse {
   };
 }
 
+// ─── Unified Booking types ───────────────────────────────────────────────────
+
+/** Tipo unificado de booking: DIRECT, BLOCKED o MATCH */
+export type UnifiedBookingType = 'MATCH' | 'DIRECT' | 'BLOCKED';
+
+/** Item returned by GET /venues/:id/bookings — unified booking shape */
+export interface BookingItem {
+  id: string;
+  type: UnifiedBookingType;
+  courtId: string;
+  courtName: string | null;
+  sportId: string;
+  categoryId: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  status: 'CONFIRMED' | 'CANCELLED';
+  visibility?: 'PUBLISHED' | 'DRAFT' | 'PRIVATE' | null;
+  // MATCH-specific:
+  matchStatus?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | null;
+  participantCount?: number;
+  maxParticipants?: number;
+  organizerUserId?: string | null;
+  // Payment:
+  paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID';
+  totalAmountCents?: number | null;
+  paidAmountCents?: number;
+  // Common:
+  notes?: string | null;
+  responsibleName?: string | null;
+  responsiblePhone?: string | null;
+}
+
+export interface BookingListResponse {
+  items: BookingItem[];
+  pageInfo: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
 // Court Pricing Tier types
 export interface CourtPricingTier {
   id: string;
@@ -485,3 +536,27 @@ export interface ScoreEntry {
   userId: string;
   points: number;
 }
+
+// ─── Payment Method types ──────────────────────────────────────────────────────
+
+export type PaymentMethodType = 'CASH' | 'BANK_TRANSFER' | 'PAGO_MOVIL' | 'POS' | 'OTHER';
+
+/** Tipos de identificación venezolanos. */
+export type IdType = 'V' | 'E' | 'P' | 'J' | 'G' | 'R';
+
+export interface VenuePaymentMethod {
+  id: string;
+  venueId: string;
+  type: PaymentMethodType;
+  name: string;
+  config: PaymentMethodConfig | null;
+  isActive: boolean;
+  position: number;
+}
+
+export type PaymentMethodConfig =
+  | { type: 'CASH' }
+  | { type: 'BANK_TRANSFER'; accountNumber: string; bank: string; idType: IdType; idNumber: string }
+  | { type: 'PAGO_MOVIL'; phoneNumber: string; idType: IdType; idNumber: string; bank: string }
+  | { type: 'POS'; reference: string }
+  | { type: 'OTHER'; reference: string };

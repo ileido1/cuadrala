@@ -4,7 +4,8 @@ import { AppError } from '../domain/errors/app_error.js';
 import { computeFeeAmountSV } from '../domain/monetization/fee_calculation.js';
 import { findActiveFeeRuleForScopeRepo } from '../infrastructure/repositories/fee_rule.repository.js';
 import { findMatchByIdRepo, findMatchWithParticipantsRepo } from '../infrastructure/repositories/match.repository.js';
-import { findReservationByIdRepo } from '../infrastructure/repositories/reservation.repository.js';
+import { findReservationByIdRepo, updateReservationTotalAmountCentsRepo } from '../infrastructure/repositories/reservation.repository.js';
+import { findByCountryAndCurrencySV } from '../infrastructure/repositories/exchange_rate.repository.js';
 import {
   confirmTransactionManualRepo,
   createTransactionRepo,
@@ -17,6 +18,18 @@ import {
   updateReservationPaymentFromTransactionRepo,
 } from '../infrastructure/repositories/transaction.repository.js';
 import { findUserByIdRepo, updateUserSubscriptionRepo } from '../infrastructure/repositories/user.repository.js';
+
+/**
+ * Convierte un monto en una moneda dada a centavos de Bolívares (BS).
+ * Si la moneda ya es BS, solo convierte multiplicando por 100.
+ * Para otras monedas, aplica la tasa de cambio.
+ */
+export function convertAmountToBsSV(_amount: number, _currency: string, _rateToBs: number): number {
+  if (_currency === 'BS') {
+    return Math.round(_amount * 100);
+  }
+  return Math.round(_amount * _rateToBs * 100);
+}
 
 export type CreateMatchObligationsInput = {
   matchId: string;
@@ -116,7 +129,15 @@ export async function createMatchObligationsSV(
 }
 
 /** Confirma pago manual de una obligación pendiente. */
-export async function confirmTransactionManualSV(_transactionId: string): Promise<{
+export async function confirmTransactionManualSV(
+  _transactionId: string,
+  _actorUserId: string,
+  _data?: {
+    venuePaymentMethodId?: string;
+    referenceNumber?: string;
+    paymentData?: object;
+  },
+): Promise<{
   id: string;
   status: string;
   confirmedAt: string;
@@ -133,7 +154,17 @@ export async function confirmTransactionManualSV(_transactionId: string): Promis
     );
   }
 
-  const UPDATED = await confirmTransactionManualRepo(_transactionId);
+  const CONFIRM_DATA: {
+    venuePaymentMethodId?: string;
+    referenceNumber?: string;
+    paymentData?: object;
+    confirmedBy: string;
+  } = { confirmedBy: _actorUserId };
+  if (_data?.venuePaymentMethodId) CONFIRM_DATA.venuePaymentMethodId = _data.venuePaymentMethodId;
+  if (_data?.referenceNumber) CONFIRM_DATA.referenceNumber = _data.referenceNumber;
+  if (_data?.paymentData) CONFIRM_DATA.paymentData = _data.paymentData;
+
+  const UPDATED = await confirmTransactionManualRepo(_transactionId, CONFIRM_DATA);
   const CONFIRMED_AT = UPDATED.confirmedAt;
   if (CONFIRMED_AT === null) {
     throw new AppError('ESTADO_INCONSISTENTE', 'No se pudo registrar la fecha de confirmacion.', 500);
@@ -293,6 +324,45 @@ export async function createReservationObligationsSV(
       amountTotal: ROW.amountTotal.toString(),
       status: ROW.status,
     });
+  }
+
+  // Calcular y actualizar totalAmountCents de la reserva
+  if (CREATED.length > 0) {
+    try {
+      // Sumar todos los amountTotal de las transacciones creadas
+      let sumAmountTotal = new Prisma.Decimal(0);
+      for (const _c of CREATED) {
+        sumAmountTotal = sumAmountTotal.add(new Prisma.Decimal(_c.amountTotal));
+      }
+
+      const DISPLAY_CURRENCY = RESERVATION.venue?.displayCurrency ?? 'BS';
+
+      if (DISPLAY_CURRENCY === 'BS') {
+        // Conversión directa a centavos
+        const TOTAL_CENTS = convertAmountToBsSV(Number(sumAmountTotal.toString()), 'BS', 1);
+        await updateReservationTotalAmountCentsRepo(_input.reservationId, TOTAL_CENTS);
+      } else {
+        // Buscar tasa de cambio para convertir a BS
+        const COUNTRY_CODE = RESERVATION.venue?.addressCountry ?? 'VE';
+        const RATE = await findByCountryAndCurrencySV(COUNTRY_CODE, DISPLAY_CURRENCY);
+        if (RATE !== null) {
+          const TOTAL_CENTS = convertAmountToBsSV(Number(sumAmountTotal.toString()), DISPLAY_CURRENCY, RATE.rateToBs);
+          await updateReservationTotalAmountCentsRepo(_input.reservationId, TOTAL_CENTS);
+        } else {
+          // Graceful degradation: tasa no disponible — no se bloquea la creación de obligaciones
+          console.warn(
+            `[createReservationObligationsSV] Tasa de cambio no encontrada para ${COUNTRY_CODE}/${DISPLAY_CURRENCY}. ` +
+            `totalAmountCents no será actualizado para la reserva ${_input.reservationId}.`,
+          );
+        }
+      }
+    } catch (_err) {
+      // Error en actualización no debe revertir la creación de obligaciones
+      console.error(
+        `[createReservationObligationsSV] Error al actualizar totalAmountCents para reserva ${_input.reservationId}:`,
+        _err,
+      );
+    }
   }
 
   return { created: CREATED, skipped: SKIPPED };

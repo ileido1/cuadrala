@@ -43,3 +43,12 @@ export const UPDATE_SUBSCRIPTION_BODY_SCHEMA = z
 export const USER_TRANSACTIONS_QUERY_SCHEMA = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
+
+/** Body para confirmar una transacción manualmente con datos de pago. */
+export const CONFIRM_TRANSACTION_BODY_SCHEMA = z
+  .object({
+    venuePaymentMethodId: z.string().uuid('venuePaymentMethodId debe ser un UUID valido.').optional(),
+    referenceNumber: z.string().max(200).optional(),
+    paymentData: z.record(z.unknown()).optional(),
+  })
+  .strict();

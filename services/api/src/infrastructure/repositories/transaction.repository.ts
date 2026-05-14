@@ -63,13 +63,27 @@ export async function findTransactionWithVenueRepo(_id: string) {
   });
 }
 
-export async function confirmTransactionManualRepo(_id: string) {
+export async function confirmTransactionManualRepo(
+  _id: string,
+  _data?: {
+    venuePaymentMethodId?: string;
+    referenceNumber?: string;
+    paymentData?: object;
+    confirmedBy?: string;
+  },
+) {
+  const UPDATE_DATA: Record<string, unknown> = {
+    status: 'CONFIRMED',
+    confirmedAt: new Date(),
+  };
+  if (_data?.venuePaymentMethodId) UPDATE_DATA.venuePaymentMethodId = _data.venuePaymentMethodId;
+  if (_data?.referenceNumber) UPDATE_DATA.referenceNumber = _data.referenceNumber;
+  if (_data?.paymentData) UPDATE_DATA.paymentData = _data.paymentData;
+  if (_data?.confirmedBy) UPDATE_DATA.confirmedBy = _data.confirmedBy;
+
   return PRISMA.transaction.update({
     where: { id: _id },
-    data: {
-      status: 'CONFIRMED',
-      confirmedAt: new Date(),
-    },
+    data: UPDATE_DATA,
   });
 }
 

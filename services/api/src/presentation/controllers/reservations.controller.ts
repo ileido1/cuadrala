@@ -14,6 +14,7 @@ import {
 } from '../../application/use_cases/reservation.use_cases.js';
 import { PrismaReservationRepository } from '../../infrastructure/adapters/prisma_reservation_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+import { CourtRepository } from '../../infrastructure/repositories/court.repository.js';
 import {
   CREATE_RESERVATION_BODY_SCHEMA,
   LIST_RESERVATIONS_QUERY_SCHEMA,
@@ -27,6 +28,7 @@ import { ReservationStatus, ReservationType } from '../../domain/entities/reserv
 // Instancias compartidas de repositorio ( lazily initialized )
 let _reservationRepo: PrismaReservationRepository | null = null;
 let _venueStaffRepo: PrismaVenueStaffRepository | null = null;
+let _courtRepo: CourtRepository | null = null;
 
 function getReservationRepo(): PrismaReservationRepository {
   if (_reservationRepo === null) {
@@ -40,6 +42,13 @@ function getVenueStaffRepo(): PrismaVenueStaffRepository {
     _venueStaffRepo = new PrismaVenueStaffRepository();
   }
   return _venueStaffRepo;
+}
+
+function getCourtRepo(): CourtRepository {
+  if (_courtRepo === null) {
+    _courtRepo = new CourtRepository();
+  }
+  return _courtRepo;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +106,7 @@ export async function postReservationCON(_req: Request, _res: Response): Promise
     // Para PLAYER por ahora solo guardamos el reference (podría расширяse)
   }
 
-  const useCase = new CreateReservationUseCase(getReservationRepo(), getVenueStaffRepo());
+  const useCase = new CreateReservationUseCase(getReservationRepo(), getVenueStaffRepo(), getCourtRepo());
   const result = await useCase.executeSV(
     {
       venueId: PARAMS.venueId,
@@ -213,7 +222,7 @@ export async function postBlockSlotCON(_req: Request, _res: Response): Promise<v
     orderBy: { createdAt: 'asc' },
   }).then((c) => c?.id ?? '');
 
-  const useCase = new CreateReservationUseCase(getReservationRepo(), getVenueStaffRepo());
+  const useCase = new CreateReservationUseCase(getReservationRepo(), getVenueStaffRepo(), getCourtRepo());
   const result = await useCase.executeSV(
     {
       venueId: PARAMS.venueId,

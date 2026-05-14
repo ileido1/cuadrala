@@ -97,6 +97,7 @@ export class PrismaReservationRepository implements ReservationRepository {
         createdByUserId: _input.createdByUserId,
         responsibleName: _input.responsibleName ?? null,
         responsiblePhone: _input.responsiblePhone ?? null,
+        totalAmountCents: _input.totalAmountCents ?? null,
       },
       select: RESERVATION_SELECT,
     });
@@ -168,5 +169,12 @@ export class PrismaReservationRepository implements ReservationRepository {
       select: RESERVATION_SELECT,
     });
     return mapReservation(ROW);
+  }
+
+  async updateTotalAmountCentsSV(_id: string, _totalAmountCents: number): Promise<void> {
+    await PRISMA.reservation.update({
+      where: { id: _id },
+      data: { totalAmountCents: _totalAmountCents },
+    });
   }
 }

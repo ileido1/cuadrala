@@ -12,6 +12,7 @@ import {
 } from '../../application/monetization.service.js';
 import { CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC } from '../composition/venue_staff.composition.js';
 import {
+  CONFIRM_TRANSACTION_BODY_SCHEMA,
   CREATE_OBLIGATIONS_BODY_SCHEMA,
   MATCH_ID_PARAM_SCHEMA,
   REJECT_TRANSACTION_BODY_SCHEMA,
@@ -53,10 +54,14 @@ export async function patchConfirmTransactionManualCON(
   }
 
   const PARAMS = TRANSACTION_ID_PARAM_SCHEMA.parse(_req.params);
+  const BODY = CONFIRM_TRANSACTION_BODY_SCHEMA.parse(_req.body ?? {});
 
   const RESULT = await CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC.executeSV({
     transactionId: PARAMS.transactionId,
     userId: ACTOR_USER_ID,
+    venuePaymentMethodId: BODY.venuePaymentMethodId,
+    referenceNumber: BODY.referenceNumber,
+    paymentData: BODY.paymentData,
   });
 
   _res.status(200).json({

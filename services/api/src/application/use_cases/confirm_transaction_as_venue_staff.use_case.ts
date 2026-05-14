@@ -1,4 +1,5 @@
 import type { PrismaClient } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 import { AppError } from '../../domain/errors/app_error.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
@@ -17,6 +18,9 @@ export class ConfirmTransactionAsVenueStaffUseCase {
   async executeSV(_input: {
     transactionId: string;
     userId: string;
+    venuePaymentMethodId?: string;
+    referenceNumber?: string;
+    paymentData?: object;
   }): Promise<{ id: string; status: string; confirmedAt: string }> {
     // Support both match and reservation transactions
     const TX_WITH_MATCH = await findTransactionWithVenueRepo(_input.transactionId);
@@ -78,6 +82,10 @@ export class ConfirmTransactionAsVenueStaffUseCase {
       data: {
         status: 'CONFIRMED',
         confirmedAt: new Date(),
+        venuePaymentMethodId: _input.venuePaymentMethodId ?? null,
+        referenceNumber: _input.referenceNumber ?? null,
+        paymentData: (_input.paymentData as object) ?? Prisma.JsonNull,
+        confirmedBy: _input.userId,
       },
     });
 

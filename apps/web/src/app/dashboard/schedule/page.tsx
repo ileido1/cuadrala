@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
-import type { MatchListItem, ReservationListItem, Court } from '~/types/api';
+import type { BookingItem, Court } from '~/types/api';
 import { ReservationModal } from '~/components/schedule/ReservationModal';
 import { BlockSlotModal } from '~/components/schedule/BlockSlotModal';
 import { ReservationDetailModal } from '~/components/schedule/ReservationDetailModal';
@@ -11,7 +11,7 @@ import { DayPicker } from '~/components/schedule/DayPicker';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type BookingStatus = 'confirmed' | 'pending' | 'cancelled';
+type BookingStatus = 'confirmed' | 'cancelled';
 type BookingKind = 'match' | 'direct' | 'blocked';
 
 interface Booking {
@@ -22,9 +22,10 @@ interface Booking {
   status: BookingStatus;
   courtName?: string;
   kind: BookingKind;
-  match?: MatchListItem;
-  reservation?: ReservationListItem;
+  matchStatus?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
   paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID';
+  // Original booking item reference
+  _booking?: BookingItem;
 }
 
 interface DayColumn {
@@ -225,8 +226,7 @@ function WeeklyCalendar({ weekColumns, cellHeight, onSlotClick, hourLabels }: We
 export default function SchedulePage() {
   const { currentVenue } = useVenue();
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
-  const [matches, setMatches] = useState<MatchListItem[]>([]);
-  const [reservations, setReservations] = useState<ReservationListItem[]>([]);
+  const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [courts, setCourts] = useState<Court[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -260,24 +260,20 @@ export default function SchedulePage() {
 
   const hourLabels = useMemo(() => buildHourLabels(maxDurationMinutes), [maxDurationMinutes]);
 
-  // Fetch matches + reservations + courts
+  // Fetch unified bookings + courts
   useEffect(() => {
     if (!currentVenue) return;
 
     Promise.all([
-      apiClient.venues.matches.list(currentVenue.id, { from: weekFrom, to: weekTo }),
-      apiClient.venues.reservations.list(currentVenue.id, { from: weekFrom, to: weekTo }),
+      apiClient.venues.bookings.list(currentVenue.id, { from: weekFrom, to: weekTo }),
       apiClient.venues.courts.list(currentVenue.id, { status: 'ACTIVE' }),
     ])
-      .then(([matchesRes, reservationsRes, courtsRes]) => {
-        const matchesData = matchesRes.data.data as { items: MatchListItem[] };
-        const reservationsData = reservationsRes.data.data as { items: ReservationListItem[] };
+      .then(([bookingsRes, courtsRes]) => {
+        const bookingsData = bookingsRes.data.data as { items: BookingItem[] };
         const courtsData = (courtsRes.data.data as { items: Court[] }).items ?? [];
-        console.debug('[Schedule] matches response:', matchesRes.data);
-        console.debug('[Schedule] reservations response:', reservationsRes.data);
+        console.debug('[Schedule] bookings response:', bookingsRes.data);
         console.debug('[Schedule] courts response:', courtsRes.data);
-        setMatches(matchesData.items);
-        setReservations(reservationsData.items);
+        setBookings(bookingsData.items);
         setCourts(courtsData);
       })
       .catch((err) => {
@@ -287,65 +283,55 @@ export default function SchedulePage() {
       .finally(() => setLoading(false));
   }, [currentVenue, weekFrom, weekTo]);
 
-  // Build week columns from matches + reservations
+  // Build week columns from unified bookings
   const weekColumns = useMemo(() => {
     const columns = buildWeekColumns(weekFrom);
 
     return columns.map((col) => {
-      const dayMatches = matches.filter((match) => {
-        if (!match.scheduledAt) return false;
-        const matchDate = new Date(match.scheduledAt).toISOString().split('T')[0];
-        return matchDate === col.dateStr;
+      const dayBookings = bookings.filter((booking) => {
+        if (!booking.scheduledAt) return false;
+        const bookingDate = new Date(booking.scheduledAt).toISOString().split('T')[0];
+        return bookingDate === col.dateStr;
       });
 
-      const dayReservations = reservations.filter((res) => {
-        const resDate = new Date(res.scheduledAt).toISOString().split('T')[0];
-        return resDate === col.dateStr;
+      const bookingsAsCalendar: Booking[] = dayBookings.map((booking): Booking => {
+        const scheduledDate = new Date(booking.scheduledAt);
+        const hours = scheduledDate.getHours();
+        const minutes = scheduledDate.getMinutes();
+        const startHour = String(hours).padStart(2, '0');
+        const startMin = String(minutes).padStart(2, '0');
+        const totalMins = minutes + (booking.durationMinutes ?? 60);
+        const endMin = totalMins % 60;
+        const endHour = String(hours + Math.floor(totalMins / 60)).padStart(2, '0');
+
+        const status: BookingStatus =
+          booking.status === 'CONFIRMED' ? 'confirmed' : 'cancelled';
+
+        const playerName =
+          booking.type === 'MATCH'
+            ? `Match ${booking.participantCount ?? 0}/${booking.maxParticipants ?? 4}`
+            : booking.type === 'BLOCKED'
+              ? 'Bloqueado'
+              : booking.courtName ?? booking.notes ?? 'Reserva';
+
+        return {
+          id: booking.id,
+          playerName,
+          timeStart: `${startHour}:${startMin}`,
+          timeEnd: `${endHour}:${String(endMin).padStart(2, '0')}`,
+          status,
+          courtName: booking.courtName ?? undefined,
+          kind:
+            booking.type === 'MATCH' ? 'match' : booking.type === 'BLOCKED' ? 'blocked' : 'direct',
+          matchStatus: booking.matchStatus ?? undefined,
+          paymentStatus: booking.paymentStatus,
+          _booking: booking,
+        };
       });
 
-      const bookings: Booking[] = [
-        ...dayMatches.map((match): Booking => {
-          const scheduledDate = new Date(match.scheduledAt!);
-          const hour = scheduledDate.getHours();
-          const startHour = String(hour).padStart(2, '0');
-          const endHour = String(hour + 1).padStart(2, '0');
-          const matchStatus: BookingStatus = match.status === 'SCHEDULED' ? 'confirmed' : match.status === 'IN_PROGRESS' ? 'pending' : 'cancelled';
-          return {
-            id: match.id,
-            playerName: `Match ${match.participantCount}/${match.maxParticipants}`,
-            timeStart: `${startHour}:00`,
-            timeEnd: `${endHour}:00`,
-            status: matchStatus,
-            courtName: match.courtName ?? undefined,
-            kind: 'match' as BookingKind,
-            match,
-          };
-        }),
-        ...dayReservations.map((res): Booking => {
-          const scheduledDate = new Date(res.scheduledAt);
-          const startHour = scheduledDate.getHours().toString().padStart(2, '0');
-          const startMin = scheduledDate.getMinutes().toString().padStart(2, '0');
-          const totalMinutes = scheduledDate.getMinutes() + res.durationMinutes;
-          const endMin = totalMinutes % 60;
-          const endHour = (scheduledDate.getHours() + Math.floor(totalMinutes / 60)).toString().padStart(2, '0');
-          const resStatus: BookingStatus = res.status === 'CONFIRMED' ? 'confirmed' : 'cancelled';
-          return {
-            id: res.id,
-            playerName: res.courtName ?? res.notes ?? (res.type === 'BLOCKED' ? 'Bloqueado' : 'Reserva'),
-            timeStart: `${startHour}:${startMin}`,
-            timeEnd: `${endHour}:${String(endMin).padStart(2, '0')}`,
-            status: resStatus,
-            courtName: res.courtName ?? undefined,
-            kind: (res.type === 'BLOCKED' ? 'blocked' : 'direct') as BookingKind,
-            reservation: res,
-            paymentStatus: res.paymentStatus,
-          };
-        }),
-      ];
-
-      return { ...col, bookings };
+      return { ...col, bookings: bookingsAsCalendar };
     });
-  }, [matches, reservations]);
+  }, [bookings, weekFrom]);
 
   const handleSlotClick = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -360,14 +346,12 @@ export default function SchedulePage() {
   const handleSuccess = async () => {
     if (!currentVenue) return;
     try {
-      const [reservationsRes, matchesRes] = await Promise.all([
-        apiClient.venues.reservations.list(currentVenue.id, { from: weekFrom, to: weekTo }),
-        apiClient.venues.matches.list(currentVenue.id, { from: weekFrom, to: weekTo }),
-      ]);
-      const reservationsData = reservationsRes.data.data as { items: ReservationListItem[] };
-      const matchesData = matchesRes.data.data as { items: MatchListItem[] };
-      setReservations(reservationsData.items);
-      setMatches(matchesData.items);
+      const bookingsRes = await apiClient.venues.bookings.list(currentVenue.id, {
+        from: weekFrom,
+        to: weekTo,
+      });
+      const bookingsData = bookingsRes.data.data as { items: BookingItem[] };
+      setBookings(bookingsData.items);
     } catch { /* silently fail on refresh */ }
   };
 
@@ -536,9 +520,9 @@ export default function SchedulePage() {
         />
       )}
 
-      {selectedBooking?.reservation && currentVenue && (
+      {selectedBooking?._booking && currentVenue && (
         <ReservationDetailModal
-          reservation={selectedBooking.reservation}
+          reservation={selectedBooking._booking}
           venueId={currentVenue.id}
           onClose={() => setSelectedBooking(null)}
           onCancel={handleSuccess}

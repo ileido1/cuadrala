@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
+import { PaymentMethodsSettings } from '~/components/settings/PaymentMethodsSettings';
 import type { Court, CourtPricingTier, CreateCourtPricingTierRequest, UpdateCourtPricingTierRequest, Venue, VenueUpdateData } from '~/types/api';
 import dynamic from 'next/dynamic';
 
@@ -796,6 +797,9 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Payment Methods */}
+      <PaymentMethodsSettings />
 
       {/* Save Button */}
       <div className="flex justify-end gap-4">

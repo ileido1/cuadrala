@@ -100,6 +100,101 @@ async function seedFeeRule(): Promise<void> {
   console.log('[seed] FeeRule por defecto creada: MATCH, 5% (porcentaje).');
 }
 
+async function seedVenueOwner(): Promise<void> {
+  const bcryptModule = await import('bcryptjs');
+  const bcrypt = bcryptModule.default ?? bcryptModule;
+  const PASSWORD_HASH = bcrypt.hashSync('password123', 10);
+
+  console.log('[seed] Hash generado:', PASSWORD_HASH.substring(0, 30) + '...');
+
+  const OWNER = await PRISMA.user.upsert({
+    where: { email: 'owner@cuadrala.dev' },
+    create: {
+      email: 'owner@cuadrala.dev',
+      name: 'Owner Cuádrala',
+      passwordHash: PASSWORD_HASH,
+    },
+    update: {
+      name: 'Owner Cuádrala',
+      passwordHash: PASSWORD_HASH, // Actualizar passwordHash siempre
+    },
+  });
+
+  // Obtener primer venue
+  const VENUE = await PRISMA.venue.findFirst({
+    where: { placeId: 'seed:venue:club-cuadrala' },
+    select: { id: true, name: true },
+  });
+
+  if (VENUE === null) {
+    console.log('[seed] No se encontró el venue Club Cuádrala para asignar owner.');
+    return;
+  }
+
+  // Asignar owner al venue y settear displayCurrency
+  await PRISMA.venue.update({
+    where: { id: VENUE.id },
+    data: { ownerUserId: OWNER.id, displayCurrency: 'USD' },
+  });
+
+  // Crear VenueStaff con rol OWNER
+  await PRISMA.venueStaff.upsert({
+    where: { venueId_userId: { venueId: VENUE.id, userId: OWNER.id } },
+    create: { venueId: VENUE.id, userId: OWNER.id, role: 'OWNER' },
+    update: { role: 'OWNER' },
+  });
+
+  console.log(`[seed] Owner creado: ${OWNER.email} / password123 (hash generado con bcrypt)`);
+  console.log(`[seed] Asignado al venue: ${VENUE.name} (${VENUE.id})`);
+
+  // Crear payment methods para el venue
+  const PAYMENT_METHODS = [
+    { type: 'CASH', name: 'Efectivo' },
+    { type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Banesco', accountNumber: '01234567890123456789', idType: 'V', idNumber: 'V12345678' } },
+    { type: 'PAGO_MOVIL', name: 'Pago Móvil Banesco', config: { bank: 'Banesco', phoneNumber: '+58-412-1234567', idType: 'V', idNumber: 'V12345678' } },
+  ];
+
+  for (let i = 0; i < PAYMENT_METHODS.length; i++) {
+    const pm = PAYMENT_METHODS[i]!;
+    await PRISMA.venuePaymentMethod.upsert({
+      where: { id: `seed-payment-method-${i}` },
+      create: {
+        id: `seed-payment-method-${i}`,
+        venueId: VENUE.id,
+        type: pm.type,
+        name: pm.name,
+        config: pm.config as Prisma.InputJsonValue ?? Prisma.JsonNull,
+        position: i,
+      },
+      update: {
+        venueId: VENUE.id,
+        type: pm.type,
+        name: pm.name,
+        config: pm.config as Prisma.InputJsonValue ?? Prisma.JsonNull,
+        position: i,
+      },
+    });
+  }
+
+  console.log(`[seed] Payment methods creados para ${VENUE.name}`);
+
+  // Crear exchange rates para Venezuela
+  const EXCHANGE_RATES = [
+    { countryCode: 'VE', currency: 'USD', rateToBs: 50.0000, source: 'dolarapi.com' },
+    { countryCode: 'VE', currency: 'EUR', rateToBs: 55.0000, source: 'dolarapi.com' },
+  ];
+
+  for (const rate of EXCHANGE_RATES) {
+    await PRISMA.exchangeRate.upsert({
+      where: { countryCode_currency: { countryCode: rate.countryCode, currency: rate.currency } },
+      create: { countryCode: rate.countryCode, currency: rate.currency, rateToBs: new Prisma.Decimal(rate.rateToBs.toString()), source: rate.source },
+      update: { rateToBs: new Prisma.Decimal(rate.rateToBs.toString()), source: rate.source },
+    });
+  }
+
+  console.log('[seed] Exchange rates creados: VE/USD @ 50 BS, VE/EUR @ 55 BS');
+}
+
 async function seedMatchLifecycle(): Promise<void> {
   const SPORT = await PRISMA.sport.findUnique({ where: { code: 'PADEL' } });
   if (SPORT === null) {
@@ -455,6 +550,7 @@ async function seedMatchLifecycle(): Promise<void> {
 async function main(): Promise<void> {
   await seedCatalog();
   await seedFeeRule();
+  await seedVenueOwner();
   await seedMatchLifecycle();
 }
 
