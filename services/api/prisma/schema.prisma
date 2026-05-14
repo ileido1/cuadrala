@@ -63,6 +63,35 @@ enum PaymentMethod {
   MANUAL
 }
 
+/// Medios de pago configurables por venue (efectivo, transferencia, pago móvil, POS, etc.)
+model VenuePaymentMethod {
+  id        String   @id @default(uuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  type      String   // 'CASH' | 'BANK_TRANSFER' | 'PAGO_MOVIL' | 'POS' | 'OTHER'
+  name      String
+  config    Json?    // { accountNumber?, bank?, phoneNumber?, idType?, idNumber?, reference? }
+  isActive  Boolean  @default(true)
+  position  Int      @default(0)
+
+  confirmedTransactions Transaction[]
+
+  @@index([venueId])
+  @@index([venueId, isActive])
+}
+
+/// Tasas de cambio por país y moneda. Referencia para convertir a BS.
+model ExchangeRate {
+  id         String   @id @default(uuid())
+  countryCode String
+  currency   String
+  rateToBs   Decimal  @db.Decimal(14, 4)
+  source     String?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([countryCode, currency])
+}
+
 enum PaymentStatus {
   UNPAID
   PARTIAL
@@ -144,6 +173,13 @@ enum CourtStatus {
 enum ReservationType {
   DIRECT
   BLOCKED
+  MATCH
+}
+
+enum Visibility {
+  PUBLISHED
+  DRAFT
+  PRIVATE
 }
 
 enum ReservationStatus {
@@ -421,6 +457,8 @@ model Venue {
   paymentCvu        String?
   paymentAlias      String?
   paymentNotes      String?
+  /// Moneda de visualización del venue: BS (bolívares), USD (dólares), EUR (euros).
+  displayCurrency   String     @default("BS")
   /// Usuario propietario de la sede (nullable para compatibilidad hacia atrás).
   ownerUserId       String?   @unique
   owner             User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
@@ -434,6 +472,7 @@ model Venue {
   vacantHours VacantHour[]
   staff       VenueStaff[]
   reservations Reservation[]
+  venuePaymentMethods VenuePaymentMethod[]
 
   @@index([latitude, longitude])
 }
@@ -593,6 +632,8 @@ model Match {
   notificationEvents NotificationEvent[]
   vacantHour         VacantHour?
   chatThread         ChatThread?
+  // Relación 1:1 con Reservation (companion para type=MATCH)
+  reservation        Reservation? @relation("ReservationMatch")
 
   @@index([categoryId])
   @@index([status])
@@ -644,7 +685,17 @@ model Reservation {
   categoryId String
   category   Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  type             ReservationType @default(DIRECT)
+  type             ReservationType   @default(DIRECT)
+  // MATCH-specific fields (nullable for DIRECT/BLOCKED)
+  matchId            String?          @unique  // 1:1 link a Match (companion, no FK)
+  organizerUserId     String?
+  formatPresetId      String?
+  formatParameters   Json?
+  maxParticipants     Int             @default(4)
+  pricePerPlayerCents Int             @default(0)
+  visibility          Visibility?     // null for DIRECT/BLOCKED
+  matchStatus         MatchStatus?    // solo cuando type=MATCH
+
   status           ReservationStatus @default(CONFIRMED)
   scheduledAt      DateTime
   durationMinutes  Int              @default(60)
@@ -663,6 +714,9 @@ model Reservation {
 
   transactions Transaction[]
 
+  // Relación 1:1 con Match (companion table para type=MATCH)
+  match       Match?     @relation("ReservationMatch", fields: [matchId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -670,6 +724,9 @@ model Reservation {
   @@index([courtId, scheduledAt])
   @@index([venueId])
   @@index([status])
+  @@index([type])
+  @@index([visibility])
+  @@index([matchId])
 }
 
 model MatchResultDraft {
@@ -782,9 +839,14 @@ model Transaction {
   amountTotal   Decimal           @db.Decimal(14, 4)
   status        TransactionStatus @default(PENDING)
   paymentMethod PaymentMethod     @default(MANUAL)
-  confirmedAt   DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  venuePaymentMethodId String?
+  venuePaymentMethod   VenuePaymentMethod? @relation(fields: [venuePaymentMethodId], references: [id])
+  referenceNumber      String?    // referencia/comprobante
+  paymentData         Json?      // copia de config del medio en el momento de confirmar
+  confirmedAt         DateTime?
+  confirmedBy         String?     // userId de quien confirmó
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   receipts TransactionReceipt[]
 
@@ -793,6 +855,7 @@ model Transaction {
   @@index([matchId, status])
   @@index([reservationId])
   @@index([reservationId, status])
+  @@index([venuePaymentMethodId])
 }
 
 /// Comprobante (imagen) adjunto a una transacción.

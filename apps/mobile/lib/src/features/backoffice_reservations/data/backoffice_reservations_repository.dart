@@ -1,6 +1,7 @@
 import '../../../core/failures/app_failure.dart';
 import 'backoffice_reservations_api.dart';
 import 'backoffice_reservations_repository_interface.dart';
+import 'models/booking_item.dart';
 import 'models/reservation_dto.dart';
 
 class BackofficeReservationsRepository implements IBackofficeReservationsRepository {
@@ -12,6 +13,42 @@ class BackofficeReservationsRepository implements IBackofficeReservationsReposit
   String _dateToString(DateTime date) =>
       '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
+  @override
+  Future<List<BookingItem>> listBookings({
+    required String venueId,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final data = await _api.listBookingsEnvelope(
+      venueId: venueId,
+      from: _dateToString(from),
+      to: _dateToString(to),
+    );
+
+    // El API devuelve { success, message, data: { items, pageInfo } }
+    final envelopeData = data['data'];
+    if (envelopeData is! Map<String, Object?>) {
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
+    }
+
+    final items = envelopeData['items'];
+    if (items is! List) {
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
+    }
+
+    return items
+        .whereType<Map<String, Object?>>()
+        .map(BookingItem.fromJson)
+        .toList();
+  }
+
+  @override
   Future<List<ReservationDto>> listReservations({
     required String venueId,
     required DateTime from,

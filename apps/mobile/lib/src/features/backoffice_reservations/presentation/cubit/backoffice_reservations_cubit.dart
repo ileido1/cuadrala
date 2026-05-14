@@ -1,7 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
-import '../../data/backoffice_reservations_repository.dart';
 import '../../data/backoffice_reservations_repository_interface.dart';
 import '../../data/models/reservation_dto.dart';
 import 'backoffice_reservations_state.dart';
@@ -29,17 +28,19 @@ final class BackofficeReservationsCubit extends Cubit<BackofficeReservationsStat
     );
   }
 
+  /// Carga bookings desde el endpoint unificado /venues/:venueId/bookings
+  /// que devuelve tanto DIRECT/BLOCKED como MATCH bookings.
   Future<void> load() async {
     emit(state.copyWith(status: BackofficeReservationsStatus.loading, clearError: true));
     try {
-      final reservations = await _repository.listReservations(
+      final bookings = await _repository.listBookings(
         venueId: _venueId,
         from: state.weekStart,
         to: state.weekEnd,
       );
       emit(state.copyWith(
         status: BackofficeReservationsStatus.loaded,
-        reservations: reservations,
+        bookings: bookings,
       ));
     } on AppFailure catch (e) {
       emit(state.copyWith(
@@ -49,7 +50,7 @@ final class BackofficeReservationsCubit extends Cubit<BackofficeReservationsStat
     } on Object {
       emit(state.copyWith(
         status: BackofficeReservationsStatus.failure,
-        error: 'No se pudieron cargar las reservas.',
+        error: 'No se pudieron cargar los bookings.',
       ));
     }
   }

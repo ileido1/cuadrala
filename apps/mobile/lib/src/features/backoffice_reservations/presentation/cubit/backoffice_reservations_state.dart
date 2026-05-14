@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import '../../data/models/reservation_dto.dart';
+import '../../data/models/booking_item.dart';
 
 enum BackofficeReservationsStatus {
   initial,
@@ -12,7 +12,7 @@ enum BackofficeReservationsStatus {
 final class BackofficeReservationsState extends Equatable {
   const BackofficeReservationsState({
     this.status = BackofficeReservationsStatus.initial,
-    this.reservations = const [],
+    this.bookings = const [],
     this.error,
     this.saving = false,
     required this.weekStart,
@@ -20,7 +20,7 @@ final class BackofficeReservationsState extends Equatable {
   });
 
   final BackofficeReservationsStatus status;
-  final List<ReservationDto> reservations;
+  final List<BookingItem> bookings;
   final String? error;
   final bool saving;
   final DateTime weekStart;
@@ -28,7 +28,7 @@ final class BackofficeReservationsState extends Equatable {
 
   BackofficeReservationsState copyWith({
     BackofficeReservationsStatus? status,
-    List<ReservationDto>? reservations,
+    List<BookingItem>? bookings,
     String? error,
     bool? saving,
     DateTime? weekStart,
@@ -37,7 +37,7 @@ final class BackofficeReservationsState extends Equatable {
   }) {
     return BackofficeReservationsState(
       status: status ?? this.status,
-      reservations: reservations ?? this.reservations,
+      bookings: bookings ?? this.bookings,
       error: clearError ? null : (error ?? this.error),
       saving: saving ?? this.saving,
       weekStart: weekStart ?? this.weekStart,
@@ -46,5 +46,5 @@ final class BackofficeReservationsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, reservations, error, saving, weekStart, weekEnd];
+  List<Object?> get props => [status, bookings, error, saving, weekStart, weekEnd];
 }

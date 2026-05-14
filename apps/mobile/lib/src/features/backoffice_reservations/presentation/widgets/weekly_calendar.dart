@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/reservation_dto.dart';
+import '../../data/models/booking_item.dart';
 import '../cubit/backoffice_reservations_state.dart';
 
 final class WeeklyCalendar extends StatelessWidget {
@@ -17,7 +17,7 @@ final class WeeklyCalendar extends StatelessWidget {
   final VoidCallback onPreviousWeek;
   final VoidCallback onNextWeek;
   final void Function(String? courtId, DateTime date, String startTime) onSlotTap;
-  final void Function(ReservationDto reservation) onReservationTap;
+  final void Function(BookingItem booking) onReservationTap;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ final class WeeklyCalendar extends StatelessWidget {
         Expanded(
           child: _CalendarGrid(
             weekStart: state.weekStart,
-            reservations: state.reservations,
+            bookings: state.bookings,
             onSlotTap: onSlotTap,
             onReservationTap: onReservationTap,
           ),
@@ -114,17 +114,16 @@ final class _CalendarNavigation extends StatelessWidget {
 final class _CalendarGrid extends StatelessWidget {
   const _CalendarGrid({
     required this.weekStart,
-    required this.reservations,
+    required this.bookings,
     required this.onSlotTap,
     required this.onReservationTap,
   });
 
   final DateTime weekStart;
-  final List<ReservationDto> reservations;
+  final List<BookingItem> bookings;
   final void Function(String? courtId, DateTime date, String startTime) onSlotTap;
-  final void Function(ReservationDto reservation) onReservationTap;
+  final void Function(BookingItem booking) onReservationTap;
 
-  static const _dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   static const _timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00',
     '13:00', '14:00', '15:00', '16:00', '17:00',
@@ -172,7 +171,7 @@ final class _CalendarGrid extends StatelessWidget {
               child: _DayColumn(
                 date: date,
                 isToday: isToday,
-                reservations: _reservationsForDay(date),
+                bookings: _bookingsForDay(date),
                 timeSlots: _timeSlots,
                 onSlotTap: onSlotTap,
                 onReservationTap: onReservationTap,
@@ -184,9 +183,9 @@ final class _CalendarGrid extends StatelessWidget {
     );
   }
 
-  List<ReservationDto> _reservationsForDay(DateTime date) {
+  List<BookingItem> _bookingsForDay(DateTime date) {
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    return reservations.where((r) => r.date == dateStr).toList();
+    return bookings.where((b) => b.date == dateStr).toList();
   }
 }
 
@@ -194,7 +193,7 @@ final class _DayColumn extends StatelessWidget {
   const _DayColumn({
     required this.date,
     required this.isToday,
-    required this.reservations,
+    required this.bookings,
     required this.timeSlots,
     required this.onSlotTap,
     required this.onReservationTap,
@@ -202,10 +201,10 @@ final class _DayColumn extends StatelessWidget {
 
   final DateTime date;
   final bool isToday;
-  final List<ReservationDto> reservations;
+  final List<BookingItem> bookings;
   final List<String> timeSlots;
   final void Function(String? courtId, DateTime date, String startTime) onSlotTap;
-  final void Function(ReservationDto reservation) onReservationTap;
+  final void Function(BookingItem booking) onReservationTap;
 
   static const _dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
@@ -253,10 +252,10 @@ final class _DayColumn extends StatelessWidget {
           ),
         ),
         // Time slots
-        ...timeSlots.map((time) => _TimeSlotCell(
+         ...timeSlots.map((time) => _TimeSlotCell(
           date: date,
           time: time,
-          reservation: _reservationAt(time),
+          booking: _bookingAt(time),
           onTap: () => onSlotTap(null, date, time),
           onReservationTap: onReservationTap,
         )),
@@ -264,10 +263,10 @@ final class _DayColumn extends StatelessWidget {
     );
   }
 
-  ReservationDto? _reservationAt(String time) {
-    for (final res in reservations) {
-      if (res.startTime == time) {
-        return res;
+  BookingItem? _bookingAt(String time) {
+    for (final booking in bookings) {
+      if (booking.startTime == time) {
+        return booking;
       }
     }
     return null;
@@ -278,37 +277,37 @@ final class _TimeSlotCell extends StatelessWidget {
   const _TimeSlotCell({
     required this.date,
     required this.time,
-    required this.reservation,
+    required this.booking,
     required this.onTap,
     required this.onReservationTap,
   });
 
   final DateTime date;
   final String time;
-  final ReservationDto? reservation;
+  final BookingItem? booking;
   final VoidCallback onTap;
-  final void Function(ReservationDto) onReservationTap;
+  final void Function(BookingItem) onReservationTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: reservation != null ? () => onReservationTap(reservation!) : onTap,
+      onTap: booking != null ? () => onReservationTap(booking!) : onTap,
       child: Container(
         height: 60,
         decoration: BoxDecoration(
-          color: reservation != null ? _colorForType(reservation!.type) : null,
+          color: booking != null ? booking!.color : null,
           border: Border.all(
             color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
             width: 0.5,
           ),
         ),
-        child: reservation != null
+        child: booking != null
             ? Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      reservation!.courtName,
+                      booking!.courtName,
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -317,7 +316,7 @@ final class _TimeSlotCell extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${reservation!.startTime}–${reservation!.endTime}',
+                      '${booking!.startTime}–${booking!.endTime}',
                       style: const TextStyle(
                         fontSize: 9,
                         color: Colors.white70,
@@ -329,13 +328,5 @@ final class _TimeSlotCell extends StatelessWidget {
             : null,
       ),
     );
-  }
-
-  Color _colorForType(ReservationType type) {
-    return switch (type) {
-      ReservationType.reservation => Colors.blue,
-      ReservationType.blocked => Colors.grey,
-      ReservationType.tournament => Colors.green,
-    };
   }
 }
