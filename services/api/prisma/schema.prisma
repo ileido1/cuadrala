@@ -144,11 +144,6 @@ enum DevicePushTokenProvider {
   FCM
 }
 
-enum VacantHourStatus {
-  PUBLISHED
-  CANCELLED
-}
-
 enum DayOfWeek {
   MONDAY
   TUESDAY
@@ -204,7 +199,6 @@ model Sport {
   formatPresets       TournamentFormatPreset[]
   matches             Match[]
   tournaments         Tournament[]
-  vacantHours         VacantHour[]
   playerSportProfiles PlayerSportProfile[]
   reservations        Reservation[]
 }
@@ -399,7 +393,6 @@ model Category {
   ratingHistory             UserRatingHistory[]
   notificationSubscriptions NotificationSubscription[]
   notificationEvents        NotificationEvent[]
-  vacantHours               VacantHour[]
   reservations              Reservation[]
 }
 
@@ -469,7 +462,6 @@ model Venue {
   createdAt         DateTime  @default(now())
 
   courts      Court[]
-  vacantHours VacantHour[]
   staff       VenueStaff[]
   reservations Reservation[]
   venuePaymentMethods VenuePaymentMethod[]
@@ -506,7 +498,6 @@ model Court {
   createdAt       DateTime    @default(now())
 
   matches     Match[]
-  vacantHours VacantHour[]
   reservations Reservation[]
   pricingTiers CourtPricingTier[]
 }
@@ -630,7 +621,6 @@ model Match {
   resultDrafts       MatchResultDraft[]
   transactions       Transaction[]
   notificationEvents NotificationEvent[]
-  vacantHour         VacantHour?
   chatThread         ChatThread?
   // Relación 1:1 con Reservation (companion para type=MATCH)
   reservation        Reservation? @relation("ReservationMatch")
@@ -641,37 +631,6 @@ model Match {
   @@index([scheduledAt])
   @@index([pricePerPlayerCents])
   @@index([organizerUserId])
-}
-
-model VacantHour {
-  id         String   @id @default(uuid())
-  venueId    String
-  venue      Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  courtId    String
-  court      Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
-  sportId    String
-  sport      Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  scheduledAt     DateTime
-  durationMinutes Int?
-
-  pricePerPlayerCents Int @default(0)
-  maxParticipants     Int @default(4)
-
-  status VacantHourStatus @default(PUBLISHED)
-
-  matchId String? @unique
-  match   Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([courtId, scheduledAt])
-  @@index([courtId, scheduledAt])
-  @@index([venueId])
-  @@index([status])
 }
 
 model Reservation {

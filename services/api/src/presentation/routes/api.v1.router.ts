@@ -18,12 +18,14 @@ import { TOURNAMENT_SCOREBOARD_ROUTER } from './tournament_scoreboard.router.js'
 import { TOURNAMENT_REGISTRATION_ROUTER } from './tournament_registration.router.js';
 import { VENUES_ROUTER } from './venues.router.js';
 import { VENUE_STAFF_ROUTER } from './venue_staff.router.js';
+import { VENUE_PAYMENT_METHOD_ROUTER } from './venue_payment_method.router.js';
 import { GEO_ROUTER } from './geo.router.js';
-import { VACANT_HOURS_ROUTER } from './vacant_hours.router.js';
 import { RESERVATIONS_ROUTER } from './reservations.router.js';
+import { BOOKINGS_ROUTER } from './bookings.router.js';
 import { RATINGS_ROUTER } from './ratings.router.js';
 import { ADMIN_ROUTER } from './admin.router.js';
 import { TOURNAMENTS_ROUTER } from './tournaments.router.js';
+import { EXCHANGE_RATE_ROUTER } from './exchange_rate.router.js';
 
 export const API_V1_ROUTER = Router();
 
@@ -42,8 +44,8 @@ API_V1_ROUTER.use(RANKING_ROUTER);
 API_V1_ROUTER.use(VENUES_ROUTER);
 API_V1_ROUTER.use(VENUE_STAFF_ROUTER);
 API_V1_ROUTER.use(GEO_ROUTER);
-API_V1_ROUTER.use(VACANT_HOURS_ROUTER);
 API_V1_ROUTER.use(RESERVATIONS_ROUTER);
+API_V1_ROUTER.use(BOOKINGS_ROUTER);
 API_V1_ROUTER.use(NOTIFICATIONS_ROUTER);
 API_V1_ROUTER.use(RATINGS_ROUTER);
 API_V1_ROUTER.use(ADMIN_ROUTER);
@@ -51,3 +53,5 @@ API_V1_ROUTER.use(TOURNAMENTS_ROUTER);
 API_V1_ROUTER.use('/auth', AUTH_ROUTER);
 API_V1_ROUTER.use('/users', PROFILE_ROUTER);
 API_V1_ROUTER.use(MONETIZATION_ROUTER);
+API_V1_ROUTER.use(VENUE_PAYMENT_METHOD_ROUTER);
+API_V1_ROUTER.use(EXCHANGE_RATE_ROUTER);

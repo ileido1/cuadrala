@@ -45,11 +45,17 @@ export class PrismaMatchCourtAvailabilityRepository implements MatchCourtAvailab
     _courtId: string,
     _scheduledAt: Date,
   ): Promise<PublishedVacantSlotInfoDTO | null> {
-    const ROW = await PRISMA.vacantHour.findUnique({
-      where: { courtId_scheduledAt: { courtId: _courtId, scheduledAt: _scheduledAt } },
-      select: { sportId: true, categoryId: true, status: true },
+    // Busca Reservation tipo MATCH publicada (reemplaza VacantHour)
+    const ROW = await PRISMA.reservation.findFirst({
+      where: {
+        courtId: _courtId,
+        scheduledAt: _scheduledAt,
+        type: 'MATCH',
+        visibility: 'PUBLISHED',
+      },
+      select: { sportId: true, categoryId: true },
     });
-    if (ROW === null || ROW.status !== 'PUBLISHED') return null;
+    if (ROW === null) return null;
     return { sportId: ROW.sportId, categoryId: ROW.categoryId };
   }
 
