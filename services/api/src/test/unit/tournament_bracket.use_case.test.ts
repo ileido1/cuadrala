@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { GetTournamentBracketUseCase } from '../../../application/use_cases/get_tournament_bracket.use_case.js';
-import { generateSingleEliminationScheduleSV } from '../../../domain/single_elimination/bracket_generator.js';
+import { GetTournamentBracketUseCase } from '../../../application/use_cases/get_tournament_bracket.use_case';
+import { generateSingleEliminationScheduleSV } from '../../../domain/single_elimination/bracket_generator';
 
 // Mock tournament query repository
 const mockTournamentQueryRepository = {

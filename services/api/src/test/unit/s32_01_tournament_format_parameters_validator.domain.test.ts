@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { AppError } from '../../domain/errors/app_error.js';
-import { validateTournamentFormatParametersDVAL } from '../../application/validation/tournament_format_parameters.data_validate.js';
+import { AppError } from '../../domain/errors/app_error';
+import { validateTournamentFormatParametersDVAL } from '../../application/validation/tournament_format_parameters.data_validate';
 
 describe('Sprint 32 — E0-02: Validador de formatParameters (application)', () => {
   it('permite formatParameters undefined', () => {

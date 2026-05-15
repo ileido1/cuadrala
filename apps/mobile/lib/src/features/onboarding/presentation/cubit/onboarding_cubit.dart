@@ -37,6 +37,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     required int birthYear,
     DateTime? birthDate,
     String? city,
+    String? documentNumber,
   }) async {
     emit(state.copyWith(savingStep: OnboardingStep.identity, clearError: true));
     try {
@@ -48,6 +49,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
         birthYear: birthYear,
         birthDate: birthDate,
         city: city,
+        documentNumber: documentNumber,
       );
       await _refreshStatus();
       return true;

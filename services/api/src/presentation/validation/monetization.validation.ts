@@ -4,6 +4,10 @@ export const MATCH_ID_PARAM_SCHEMA = z.object({
   matchId: z.string().uuid('matchId debe ser un UUID valido.'),
 });
 
+export const RESERVATION_ID_PARAM_SCHEMA = z.object({
+  reservationId: z.string().uuid('reservationId debe ser un UUID valido.'),
+});
+
 export const TRANSACTION_ID_PARAM_SCHEMA = z.object({
   transactionId: z.string().uuid('transactionId debe ser un UUID valido.'),
 });
@@ -21,6 +25,12 @@ export const CREATE_OBLIGATIONS_BODY_SCHEMA = z
   })
   .strict();
 
+export const REJECT_TRANSACTION_BODY_SCHEMA = z
+  .object({
+    reason: z.string().min(1, 'reason es requerido para rechazar.').max(500),
+  })
+  .strict();
+
 export const UPDATE_SUBSCRIPTION_BODY_SCHEMA = z
   .object({
     subscriptionType: z.enum(['FREE', 'PRO'], {
@@ -33,3 +43,12 @@ export const UPDATE_SUBSCRIPTION_BODY_SCHEMA = z
 export const USER_TRANSACTIONS_QUERY_SCHEMA = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
+
+/** Body para confirmar una transacción manualmente con datos de pago. */
+export const CONFIRM_TRANSACTION_BODY_SCHEMA = z
+  .object({
+    venuePaymentMethodId: z.string().uuid('venuePaymentMethodId debe ser un UUID valido.').optional(),
+    referenceNumber: z.string().max(200).optional(),
+    paymentData: z.record(z.unknown()).optional(),
+  })
+  .strict();

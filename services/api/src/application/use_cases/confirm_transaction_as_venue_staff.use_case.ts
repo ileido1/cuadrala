@@ -1,8 +1,13 @@
 import type { PrismaClient } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 import { AppError } from '../../domain/errors/app_error.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
-import { findTransactionWithVenueRepo } from '../../infrastructure/repositories/transaction.repository.js';
+import {
+  findTransactionWithVenueRepo,
+  findTransactionWithReservationVenueRepo,
+  updateReservationPaymentFromTransactionRepo,
+} from '../../infrastructure/repositories/transaction.repository.js';
 
 export class ConfirmTransactionAsVenueStaffUseCase {
   constructor(
@@ -13,8 +18,15 @@ export class ConfirmTransactionAsVenueStaffUseCase {
   async executeSV(_input: {
     transactionId: string;
     userId: string;
+    venuePaymentMethodId?: string;
+    referenceNumber?: string;
+    paymentData?: object;
   }): Promise<{ id: string; status: string; confirmedAt: string }> {
-    const TX = await findTransactionWithVenueRepo(_input.transactionId);
+    // Support both match and reservation transactions
+    const TX_WITH_MATCH = await findTransactionWithVenueRepo(_input.transactionId);
+    const TX_WITH_RESERVATION = await findTransactionWithReservationVenueRepo(_input.transactionId);
+    const TX = TX_WITH_MATCH ?? TX_WITH_RESERVATION;
+
     if (!TX) {
       throw new AppError('TRANSACCION_NO_ENCONTRADA', 'La transacción indicada no existe.', 404);
     }
@@ -33,12 +45,20 @@ export class ConfirmTransactionAsVenueStaffUseCase {
       );
     }
 
-    // Verificar que el partido tenga cancha asignada
-    const VENUE_ID = TX.match?.court?.venueId;
-    if (VENUE_ID === undefined || VENUE_ID === null) {
+    // Determinar venueId desde match o reservation
+    let VENUE_ID: string | null = null;
+    if (TX.matchId !== null) {
+      const MATCH_TX = TX as typeof TX & { match: { court: { venueId: string } } };
+      VENUE_ID = MATCH_TX.match?.court?.venueId ?? null;
+    } else if (TX.reservationId !== null) {
+      const RES_TX = TX as typeof TX & { reservation: { court: { venueId: string } } };
+      VENUE_ID = RES_TX.reservation?.court?.venueId ?? null;
+    }
+
+    if (VENUE_ID === null) {
       throw new AppError(
-        'PARTIDO_SIN_SEDE',
-        'El partido no tiene una sede asignada. No se puede confirmar el pago.',
+        'ENTIDAD_SIN_SEDE',
+        'La transacción no tiene una sede asignada. No se puede confirmar el pago.',
         400,
       );
     }
@@ -51,7 +71,7 @@ export class ConfirmTransactionAsVenueStaffUseCase {
     if (!IS_STAFF) {
       throw new AppError(
         'NO_AUTORIZADO',
-        'Solo el staff de la sede puede confirmar pagos de esta partida.',
+        'Solo el staff de la sede puede confirmar pagos.',
         403,
       );
     }
@@ -62,12 +82,21 @@ export class ConfirmTransactionAsVenueStaffUseCase {
       data: {
         status: 'CONFIRMED',
         confirmedAt: new Date(),
+        venuePaymentMethodId: _input.venuePaymentMethodId ?? null,
+        referenceNumber: _input.referenceNumber ?? null,
+        paymentData: (_input.paymentData as object) ?? Prisma.JsonNull,
+        confirmedBy: _input.userId,
       },
     });
 
     const CONFIRMED_AT = UPDATED.confirmedAt;
     if (CONFIRMED_AT === null) {
       throw new AppError('ESTADO_INCONSISTENTE', 'No se pudo registrar la fecha de confirmacion.', 500);
+    }
+
+    // Si la transacción es de una reserva, actualizar paidAmountCents y paymentStatus
+    if (TX.reservationId !== null) {
+      await updateReservationPaymentFromTransactionRepo(TX.reservationId, this._prisma);
     }
 
     return {

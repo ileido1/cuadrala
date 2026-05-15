@@ -56,11 +56,11 @@ const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      if (account && user) {
-        token.accessToken = (account as { accessToken?: string }).accessToken ?? '';
-        token.refreshToken = (account as { refreshToken?: string }).refreshToken ?? '';
-        token.expiresIn = (account as { expiresIn?: number }).expiresIn ?? 900;
+    async jwt({ token, user }) {
+      if (user) {
+        token.accessToken = (user as { accessToken?: string }).accessToken ?? '';
+        token.refreshToken = (user as { refreshToken?: string }).refreshToken ?? '';
+        token.expiresIn = (user as { expiresIn?: number }).expiresIn ?? 900;
         token.id = user.id;
         token.email = user.email ?? '';
         token.name = user.name ?? '';
@@ -93,4 +93,7 @@ const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET ?? 'development-secret-change-in-production',
 };
 
-export default NextAuth(authConfig);
+const authResult = NextAuth(authConfig);
+
+export default authResult;
+export const { handlers, auth, signIn, signOut } = authResult;

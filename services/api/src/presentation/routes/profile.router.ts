@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { getProfileCON, patchProfileCON } from '../controllers/profile.controller.js';
+import { searchUsersByDocumentCON } from '../controllers/user_search.controller.js';
 import {
   deleteMyNotificationSubscriptionCON,
   getMyNotificationSubscriptionsCON,
@@ -87,3 +88,5 @@ PROFILE_ROUTER.put('/me/location', requireAuth, asyncHandler(putMyLocationCON));
 PROFILE_ROUTER.get('/:userId/stats', asyncHandler(getUserStatsCON));
 PROFILE_ROUTER.get('/:userId/ratings', asyncHandler(getUserRatingsCON));
 PROFILE_ROUTER.get('/:userId/ratings/history', asyncHandler(getUserRatingHistoryCON));
+
+PROFILE_ROUTER.get('/search/by-document', asyncHandler(searchUsersByDocumentCON));

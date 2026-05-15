@@ -2,19 +2,29 @@
 export interface Venue {
   id: string;
   name: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  description?: string;
-  openingTime?: string;
-  closingTime?: string;
-  activeDays?: string[];
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  openingHours?: Record<string, { open: string; close: string }> | null;
   courtsCount?: number;
+  displayCurrency?: string;
 }
 
 export interface VenueSummary {
   id: string;
   name: string;
+}
+
+export interface ExchangeRate {
+  id: string;
+  countryCode: string;
+  currency: string; // 'USD' | 'EUR'
+  rateToBs: number;
+  source: string | null;
+  updatedAt: string;
 }
 
 // Dashboard stats (API response shape)
@@ -62,13 +72,13 @@ export interface TransactionHistoryResponse {
 // Venue update
 export interface VenueUpdateData {
   name?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  description?: string;
-  openingTime?: string;
-  closingTime?: string;
-  activeDays?: string[];
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  openingHours?: Record<string, { open: string; close: string }> | null;
 }
 
 export interface PendingTransaction {
@@ -108,6 +118,15 @@ export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'refunded';
 export type CourtStatus = 'ACTIVE' | 'INACTIVE';
 export type SportType = 'PADEL' | 'TENNIS';
 
+export interface CourtPricingTier {
+  id: string;
+  courtId: string;
+  label: string;
+  startTime: string;
+  endTime: string;
+  pricePerHourCents: number;
+}
+
 export interface Court {
   id: string;
   venueId: string;
@@ -117,10 +136,11 @@ export interface Court {
   lighting: boolean;
   surfaceType: string | null;
   status: CourtStatus;
-  pricePerHour?: number;
-  capacity?: number;
-  duration?: number;
+  pricePerHourCents?: number | null;
+  capacity?: string | null;
+  durationMinutes?: number;
   createdAt: string;
+  pricingTiers?: CourtPricingTier[];
 }
 
 export interface CreateCourtRequest {
@@ -321,10 +341,18 @@ export interface ProfileUser {
 export interface PlayerProfile {
   id: string;
   userId: string;
+  documentNumber?: string | null;
   birthDate?: string;
   dominantHand?: 'LEFT' | 'RIGHT' | 'AMBIDEXTROUS';
   sidePreference?: 'LEFT' | 'RIGHT';
   birthYear?: number;
+}
+
+export interface UserSearchResult {
+  id: string;
+  name: string;
+  email: string;
+  documentNumber: string | null;
 }
 
 export interface UserStats {
@@ -369,6 +397,9 @@ export interface ReservationListItem {
   scheduledAt: string;
   durationMinutes: number;
   notes: string | null;
+  totalAmountCents?: number;
+  paidAmountCents?: number;
+  paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID';
 }
 
 export interface CreateReservationRequest {
@@ -378,7 +409,12 @@ export interface CreateReservationRequest {
   scheduledAt: string;
   durationMinutes: number;
   notes?: string;
+  responsible?: ReservationResponsible;
 }
+
+export type ReservationResponsible =
+  | { type: 'PLAYER'; playerId: string }
+  | { type: 'GUEST'; name: string; phone?: string };
 
 export interface BlockSlotRequest {
   courtId: string;
@@ -395,6 +431,73 @@ export interface ReservationListResponse {
     limit: number;
     total: number;
   };
+}
+
+// ─── Unified Booking types ───────────────────────────────────────────────────
+
+/** Tipo unificado de booking: DIRECT, BLOCKED o MATCH */
+export type UnifiedBookingType = 'MATCH' | 'DIRECT' | 'BLOCKED';
+
+/** Item returned by GET /venues/:id/bookings — unified booking shape */
+export interface BookingItem {
+  id: string;
+  type: UnifiedBookingType;
+  courtId: string;
+  courtName: string | null;
+  sportId: string;
+  categoryId: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  status: 'CONFIRMED' | 'CANCELLED';
+  visibility?: 'PUBLISHED' | 'DRAFT' | 'PRIVATE' | null;
+  // MATCH-specific:
+  matchStatus?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | null;
+  participantCount?: number;
+  maxParticipants?: number;
+  organizerUserId?: string | null;
+  // Payment:
+  paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID';
+  totalAmountCents?: number | null;
+  paidAmountCents?: number;
+  // Common:
+  notes?: string | null;
+  responsibleName?: string | null;
+  responsiblePhone?: string | null;
+}
+
+export interface BookingListResponse {
+  items: BookingItem[];
+  pageInfo: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+// Court Pricing Tier types
+export interface CourtPricingTier {
+  id: string;
+  courtId: string;
+  label: string;
+  startTime: string;
+  endTime: string;
+  pricePerHourCents: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCourtPricingTierRequest {
+  label: string;
+  startTime: string;
+  endTime: string;
+  pricePerHourCents: number;
+}
+
+export interface UpdateCourtPricingTierRequest {
+  label?: string;
+  startTime?: string;
+  endTime?: string;
+  pricePerHourCents?: number;
 }
 
 // Bracket types (Phase 3: Web Types)
@@ -433,3 +536,27 @@ export interface ScoreEntry {
   userId: string;
   points: number;
 }
+
+// ─── Payment Method types ──────────────────────────────────────────────────────
+
+export type PaymentMethodType = 'CASH' | 'BANK_TRANSFER' | 'PAGO_MOVIL' | 'POS' | 'OTHER';
+
+/** Tipos de identificación venezolanos. */
+export type IdType = 'V' | 'E' | 'P' | 'J' | 'G' | 'R';
+
+export interface VenuePaymentMethod {
+  id: string;
+  venueId: string;
+  type: PaymentMethodType;
+  name: string;
+  config: PaymentMethodConfig | null;
+  isActive: boolean;
+  position: number;
+}
+
+export type PaymentMethodConfig =
+  | { type: 'CASH' }
+  | { type: 'BANK_TRANSFER'; accountNumber: string; bank: string; idType: IdType; idNumber: string }
+  | { type: 'PAGO_MOVIL'; phoneNumber: string; idType: IdType; idNumber: string; bank: string }
+  | { type: 'POS'; reference: string }
+  | { type: 'OTHER'; reference: string };

@@ -15,6 +15,7 @@ export const UPDATE_PLAYER_PROFILE_BODY_SCHEMA = z
       .optional()
       .nullable(),
     phone: z.string().regex(PHONE_REGEX, 'phone debe tener formato E.164 (8 a 15 dígitos).').optional().nullable(),
+    documentNumber: z.string().max(20).optional().nullable(),
     avatarUrl: z.string().url('avatarUrl debe ser una URL válida.').optional().nullable(),
     city: z.string().min(1).max(120).optional().nullable(),
   })

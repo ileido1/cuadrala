@@ -6,6 +6,7 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { ReservationRepository } from '../../domain/ports/reservation_repository.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
+import type { ICourtRepository } from '../../domain/ports/court_repository.js';
 import type {
   CreateReservationInputDTO,
   ListReservationsFiltersDTO,
@@ -23,11 +24,13 @@ export type CreateReservationInput = {
   venueId: string;
   courtId: string;
   sportId: string;
-  categoryId: string;
+  categoryId?: string;
   type?: 'DIRECT' | 'BLOCKED';
   scheduledAt: Date;
   durationMinutes?: number;
   notes?: string | null;
+  responsibleName?: string | null;
+  responsiblePhone?: string | null;
 };
 
 export type CreateReservationOutput = {
@@ -38,6 +41,7 @@ export class CreateReservationUseCase {
   constructor(
     private readonly _reservationRepository: ReservationRepository,
     private readonly _venueStaffRepository: VenueStaffRepository,
+    private readonly _courtRepository: ICourtRepository,
   ) {}
 
   async executeSV(_input: CreateReservationInput, _actorUserId: string): Promise<CreateReservationOutput> {
@@ -69,12 +73,21 @@ export class CreateReservationUseCase {
       );
     }
 
+    // Obtener el court para calcular el monto total desde pricePerHourCents
+    const COURT = await this._courtRepository.findById(_input.courtId);
+    const DURATION = _input.durationMinutes ?? COURT?.durationMinutes ?? 60;
+    let totalAmountCents: number | null = null;
+
+    if (COURT?.pricePerHourCents != null) {
+      // Calcular: pricePerHourCents * (durationMinutes / 60)
+      totalAmountCents = Math.round((COURT.pricePerHourCents * DURATION) / 60);
+    }
+
     const INPUT_DTO: CreateReservationInputDTO = {
       venueId: _input.venueId,
       courtId: _input.courtId,
       sportId: _input.sportId,
-      categoryId: _input.categoryId,
-      scheduledAt: _input.scheduledAt,
+      ...(_input.categoryId !== undefined ? { categoryId: _input.categoryId } : {}),
       ...(_input.type !== undefined
         ? {
             type:
@@ -83,9 +96,13 @@ export class CreateReservationUseCase {
                 : ReservationType.BLOCKED,
           }
         : {}),
-      ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
+      scheduledAt: _input.scheduledAt,
+      durationMinutes: DURATION,
       ...(_input.notes !== undefined ? { notes: _input.notes } : {}),
       createdByUserId: _actorUserId,
+      ...(_input.responsibleName != null ? { responsibleName: _input.responsibleName as string | null } : {}),
+      ...(_input.responsiblePhone != null ? { responsiblePhone: _input.responsiblePhone as string | null } : {}),
+      totalAmountCents,
     };
 
     const RESERVATION = await this._reservationRepository.createReservationSV(INPUT_DTO);

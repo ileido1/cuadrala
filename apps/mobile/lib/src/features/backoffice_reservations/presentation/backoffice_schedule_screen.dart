@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../data/backoffice_reservations_repository.dart';
-import '../data/backoffice_reservations_repository_interface.dart';
 import 'cubit/backoffice_reservations_cubit.dart';
 import 'cubit/backoffice_reservations_state.dart';
 import 'widgets/weekly_calendar.dart';
@@ -56,12 +55,12 @@ final class _BackofficeScheduleView extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          if (state.status == BackofficeReservationsStatus.loading &&
-              state.reservations.isEmpty) {
+           if (state.status == BackofficeReservationsStatus.loading &&
+              state.bookings.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
           if (state.status == BackofficeReservationsStatus.failure &&
-              state.reservations.isEmpty) {
+              state.bookings.isEmpty) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

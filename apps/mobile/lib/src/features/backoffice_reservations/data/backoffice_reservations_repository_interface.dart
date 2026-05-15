@@ -1,6 +1,14 @@
+import 'models/booking_item.dart';
 import 'models/reservation_dto.dart';
 
 abstract class IBackofficeReservationsRepository {
+  /// Listado unificado de bookings (todos los tipos: DIRECT, BLOCKED, MATCH).
+  Future<List<BookingItem>> listBookings({
+    required String venueId,
+    required DateTime from,
+    required DateTime to,
+  });
+
   Future<List<ReservationDto>> listReservations({
     required String venueId,
     required DateTime from,

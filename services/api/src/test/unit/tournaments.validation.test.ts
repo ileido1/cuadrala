@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   LIST_TOURNAMENTS_QUERY_SCHEMA,
   TOURNAMENT_ID_PARAM_SCHEMA,
-} from '../../../presentation/validation/tournaments.validation.js';
+} from '../../../presentation/validation/tournaments.validation';
 
 describe('LIST_TOURNAMENTS_QUERY_SCHEMA', () => {
   it('should parse valid query params with all fields', () => {

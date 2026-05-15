@@ -5,6 +5,7 @@ export type PlayerProfileDTO = {
   birthYear: number | null;
   birthDate: Date | null;
   phone: string | null;
+  documentNumber: string | null;
   avatarUrl: string | null;
   city: string | null;
   onboardingCompletedAt: Date | null;
@@ -18,6 +19,7 @@ export type UpsertPlayerProfileDTO = {
   birthYear?: number | null;
   birthDate?: Date | null;
   phone?: string | null;
+  documentNumber?: string | null;
   avatarUrl?: string | null;
   city?: string | null;
   onboardingCompletedAt?: Date | null;

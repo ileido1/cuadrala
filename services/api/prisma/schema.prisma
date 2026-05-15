@@ -45,6 +45,7 @@ enum SubscriptionType {
 
 enum FeeScope {
   MATCH
+  RESERVATION
 }
 
 enum FeeType {
@@ -60,6 +61,41 @@ enum TransactionStatus {
 
 enum PaymentMethod {
   MANUAL
+}
+
+/// Medios de pago configurables por venue (efectivo, transferencia, pago móvil, POS, etc.)
+model VenuePaymentMethod {
+  id        String   @id @default(uuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  type      String   // 'CASH' | 'BANK_TRANSFER' | 'PAGO_MOVIL' | 'POS' | 'OTHER'
+  name      String
+  config    Json?    // { accountNumber?, bank?, phoneNumber?, idType?, idNumber?, reference? }
+  isActive  Boolean  @default(true)
+  position  Int      @default(0)
+
+  confirmedTransactions Transaction[]
+
+  @@index([venueId])
+  @@index([venueId, isActive])
+}
+
+/// Tasas de cambio por país y moneda. Referencia para convertir a BS.
+model ExchangeRate {
+  id         String   @id @default(uuid())
+  countryCode String
+  currency   String
+  rateToBs   Decimal  @db.Decimal(14, 4)
+  source     String?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([countryCode, currency])
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
 }
 
 enum VenueStaffRole {
@@ -108,11 +144,6 @@ enum DevicePushTokenProvider {
   FCM
 }
 
-enum VacantHourStatus {
-  PUBLISHED
-  CANCELLED
-}
-
 enum DayOfWeek {
   MONDAY
   TUESDAY
@@ -137,6 +168,13 @@ enum CourtStatus {
 enum ReservationType {
   DIRECT
   BLOCKED
+  MATCH
+}
+
+enum Visibility {
+  PUBLISHED
+  DRAFT
+  PRIVATE
 }
 
 enum ReservationStatus {
@@ -161,7 +199,6 @@ model Sport {
   formatPresets       TournamentFormatPreset[]
   matches             Match[]
   tournaments         Tournament[]
-  vacantHours         VacantHour[]
   playerSportProfiles PlayerSportProfile[]
   reservations        Reservation[]
 }
@@ -268,6 +305,8 @@ model PlayerProfile {
   birthDate             DateTime?
   /// E.164 (+5491145454545). Validado por backend con regex laxa.
   phone                 String?
+  /// Número de documento (DNI, CI, etc.). Único por usuario.
+  documentNumber        String?                 @unique
   avatarUrl             String?
   city                  String?
   /// Marca el momento en que el usuario completó todos los pasos requeridos del onboarding.
@@ -354,7 +393,6 @@ model Category {
   ratingHistory             UserRatingHistory[]
   notificationSubscriptions NotificationSubscription[]
   notificationEvents        NotificationEvent[]
-  vacantHours               VacantHour[]
   reservations              Reservation[]
 }
 
@@ -412,6 +450,8 @@ model Venue {
   paymentCvu        String?
   paymentAlias      String?
   paymentNotes      String?
+  /// Moneda de visualización del venue: BS (bolívares), USD (dólares), EUR (euros).
+  displayCurrency   String     @default("BS")
   /// Usuario propietario de la sede (nullable para compatibilidad hacia atrás).
   ownerUserId       String?   @unique
   owner             User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
@@ -422,9 +462,9 @@ model Venue {
   createdAt         DateTime  @default(now())
 
   courts      Court[]
-  vacantHours VacantHour[]
   staff       VenueStaff[]
   reservations Reservation[]
+  venuePaymentMethods VenuePaymentMethod[]
 
   @@index([latitude, longitude])
 }
@@ -458,8 +498,24 @@ model Court {
   createdAt       DateTime    @default(now())
 
   matches     Match[]
-  vacantHours VacantHour[]
   reservations Reservation[]
+  pricingTiers CourtPricingTier[]
+}
+
+// --- Court Pricing Tiers ---
+
+model CourtPricingTier {
+  id                String   @id @default(uuid())
+  courtId           String
+  court             Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  label             String   // ej. "Mañana", "Tarde", "Noche"
+  startTime         String   // "08:00" (24h)
+  endTime           String   // "12:00" (24h)
+  pricePerHourCents Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([courtId])
 }
 
 model Tournament {
@@ -565,8 +621,9 @@ model Match {
   resultDrafts       MatchResultDraft[]
   transactions       Transaction[]
   notificationEvents NotificationEvent[]
-  vacantHour         VacantHour?
   chatThread         ChatThread?
+  // Relación 1:1 con Reservation (companion para type=MATCH)
+  reservation        Reservation? @relation("ReservationMatch")
 
   @@index([categoryId])
   @@index([status])
@@ -574,37 +631,6 @@ model Match {
   @@index([scheduledAt])
   @@index([pricePerPlayerCents])
   @@index([organizerUserId])
-}
-
-model VacantHour {
-  id         String   @id @default(uuid())
-  venueId    String
-  venue      Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  courtId    String
-  court      Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
-  sportId    String
-  sport      Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  scheduledAt     DateTime
-  durationMinutes Int?
-
-  pricePerPlayerCents Int @default(0)
-  maxParticipants     Int @default(4)
-
-  status VacantHourStatus @default(PUBLISHED)
-
-  matchId String? @unique
-  match   Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([courtId, scheduledAt])
-  @@index([courtId, scheduledAt])
-  @@index([venueId])
-  @@index([status])
 }
 
 model Reservation {
@@ -618,12 +644,37 @@ model Reservation {
   categoryId String
   category   Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  type             ReservationType @default(DIRECT)
+  type             ReservationType   @default(DIRECT)
+  // MATCH-specific fields (nullable for DIRECT/BLOCKED)
+  matchId            String?          @unique  // 1:1 link a Match (companion, no FK)
+  organizerUserId     String?
+  formatPresetId      String?
+  formatParameters   Json?
+  maxParticipants     Int             @default(4)
+  pricePerPlayerCents Int             @default(0)
+  visibility          Visibility?     // null for DIRECT/BLOCKED
+  matchStatus         MatchStatus?    // solo cuando type=MATCH
+
   status           ReservationStatus @default(CONFIRMED)
   scheduledAt      DateTime
   durationMinutes  Int              @default(60)
   notes            String?
   createdByUserId  String
+  /// Nombre del responsable (para reservas directas de guests o referencia).
+  responsibleName  String?
+  /// Teléfono del responsable (para reservas directas de guests o referencia).
+  responsiblePhone String?
+  /// Monto total de la reserva en centavos (ej: 9000 = $90.00).
+  totalAmountCents Int?
+  /// Suma de montos de transactions confirmadas en centavos.
+  paidAmountCents  Int             @default(0)
+  /// Estado de pago: UNPAID (nada), PARTIAL (algo), PAID (cubierto o más).
+  paymentStatus     PaymentStatus   @default(UNPAID)
+
+  transactions Transaction[]
+
+  // Relación 1:1 con Match (companion table para type=MATCH)
+  match       Match?     @relation("ReservationMatch", fields: [matchId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -632,6 +683,9 @@ model Reservation {
   @@index([courtId, scheduledAt])
   @@index([venueId])
   @@index([status])
+  @@index([type])
+  @@index([visibility])
+  @@index([matchId])
 }
 
 model MatchResultDraft {
@@ -730,11 +784,13 @@ model FeeRule {
   @@index([scope, isActive])
 }
 
-/// Obligación de pago no custodial asociada a un partido y usuario.
+/// Obligación de pago no custodial asociada a un match o reservation y usuario.
 model Transaction {
   id            String            @id @default(uuid())
-  matchId       String
-  match         Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId       String?
+  match         Match?            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  reservationId String?
+  reservation   Reservation?      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   userId        String
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   amountBase    Decimal           @db.Decimal(14, 4)
@@ -742,15 +798,23 @@ model Transaction {
   amountTotal   Decimal           @db.Decimal(14, 4)
   status        TransactionStatus @default(PENDING)
   paymentMethod PaymentMethod     @default(MANUAL)
-  confirmedAt   DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  venuePaymentMethodId String?
+  venuePaymentMethod   VenuePaymentMethod? @relation(fields: [venuePaymentMethodId], references: [id])
+  referenceNumber      String?    // referencia/comprobante
+  paymentData         Json?      // copia de config del medio en el momento de confirmar
+  confirmedAt         DateTime?
+  confirmedBy         String?     // userId de quien confirmó
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   receipts TransactionReceipt[]
 
   @@index([matchId])
   @@index([userId])
   @@index([matchId, status])
+  @@index([reservationId])
+  @@index([reservationId, status])
+  @@index([venuePaymentMethodId])
 }
 
 /// Comprobante (imagen) adjunto a una transacción.

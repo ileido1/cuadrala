@@ -1,6 +1,13 @@
 import '../../../core/network/api_client.dart';
 
 abstract class BackofficeReservationsApi {
+  /// Endpoint unificado de bookings (reemplaza listReservationsEnvelope).
+  Future<Map<String, Object?>> listBookingsEnvelope({
+    required String venueId,
+    required String from,
+    required String to,
+  });
+
   Future<Map<String, Object?>> listReservationsEnvelope({
     required String venueId,
     required String from,
@@ -43,6 +50,19 @@ final class DioBackofficeReservationsApi implements BackofficeReservationsApi {
   DioBackofficeReservationsApi({required ApiClient apiClient}) : _apiClient = apiClient;
 
   final ApiClient _apiClient;
+
+  @override
+  Future<Map<String, Object?>> listBookingsEnvelope({
+    required String venueId,
+    required String from,
+    required String to,
+  }) {
+    // Endpoint unificado de bookings (GET /venues/:venueId/bookings)
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/venues/$venueId/bookings',
+      queryParameters: {'from': from, 'to': to, 'limit': '100'},
+    );
+  }
 
   @override
   Future<Map<String, Object?>> listReservationsEnvelope({

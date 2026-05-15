@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/features/backoffice_reservations/data/backoffice_reservations_repository_interface.dart';
+import 'package:cuadrala_mobile/src/features/backoffice_reservations/data/models/booking_item.dart';
 import 'package:cuadrala_mobile/src/features/backoffice_reservations/data/models/reservation_dto.dart';
 import 'package:cuadrala_mobile/src/features/backoffice_reservations/presentation/cubit/backoffice_reservations_cubit.dart';
 import 'package:cuadrala_mobile/src/features/backoffice_reservations/presentation/cubit/backoffice_reservations_state.dart';
@@ -17,6 +18,34 @@ void main() {
     setUp(() {
       repo = _MockBackofficeReservationsRepository();
     });
+
+    BookingItem booking({
+      String id = 'booking-1',
+      BookingType type = BookingType.direct,
+    }) {
+      return BookingItem(
+        id: id,
+        venueId: 'venue-1',
+        courtId: 'court-1',
+        courtName: 'Cancha 1',
+        type: type,
+        date: '2026-05-15',
+        startTime: '10:00',
+        endTime: '11:00',
+        status: 'CONFIRMED',
+        notes: null,
+        matchId: null,
+        organizerUserId: null,
+        formatPresetId: null,
+        maxParticipants: null,
+        pricePerPlayerCents: null,
+        visibility: null,
+        matchStatus: null,
+        totalAmountCents: null,
+        paidAmountCents: 0,
+        paymentStatus: null,
+      );
+    }
 
     ReservationDto reservation({
       String id = 'res-1',
@@ -37,15 +66,15 @@ void main() {
     }
 
     blocTest<BackofficeReservationsCubit, BackofficeReservationsState>(
-      'load: loading → loaded with reservations',
+      'load: loading → loaded with bookings',
       build: () {
-        when(() => repo.listReservations(
+        when(() => repo.listBookings(
           venueId: 'venue-1',
           from: any(named: 'from'),
           to: any(named: 'to'),
         )).thenAnswer((_) async => [
-          reservation(),
-          reservation(id: 'res-2', type: ReservationType.blocked),
+          booking(),
+          booking(id: 'booking-2', type: BookingType.blocked),
         ]);
         return BackofficeReservationsCubit(
           repository: repo,
@@ -58,14 +87,14 @@ void main() {
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loading),
         isA<BackofficeReservationsState>()
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loaded)
-            .having((s) => s.reservations.length, 'reservations.length', 2),
+            .having((s) => s.bookings.length, 'bookings.length', 2),
       ],
     );
 
     blocTest<BackofficeReservationsCubit, BackofficeReservationsState>(
       'load: loading → failure on error',
       build: () {
-        when(() => repo.listReservations(
+        when(() => repo.listBookings(
           venueId: 'venue-1',
           from: any(named: 'from'),
           to: any(named: 'to'),
@@ -97,11 +126,11 @@ void main() {
           type: ReservationType.reservation,
           notes: any(named: 'notes'),
         )).thenAnswer((_) async => reservation(id: 'res-new'));
-        when(() => repo.listReservations(
+        when(() => repo.listBookings(
           venueId: 'venue-1',
           from: any(named: 'from'),
           to: any(named: 'to'),
-        )).thenAnswer((_) async => [reservation(id: 'res-new')]);
+        )).thenAnswer((_) async => [booking(id: 'res-new')]);
         return BackofficeReservationsCubit(
           repository: repo,
           venueId: 'venue-1',
@@ -125,7 +154,7 @@ void main() {
         // Step 3: load() completes with new data
         isA<BackofficeReservationsState>()
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loaded)
-            .having((s) => s.reservations.length, 'reservations.length', 1),
+            .having((s) => s.bookings.length, 'reservations.length', 1),
       ],
     );
 
@@ -136,7 +165,7 @@ void main() {
           venueId: 'venue-1',
           reservationId: 'res-1',
         )).thenAnswer((_) async {});
-        when(() => repo.listReservations(
+        when(() => repo.listBookings(
           venueId: 'venue-1',
           from: any(named: 'from'),
           to: any(named: 'to'),
@@ -154,25 +183,25 @@ void main() {
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loading),
         isA<BackofficeReservationsState>()
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loaded)
-            .having((s) => s.reservations, 'reservations', isEmpty),
+            .having((s) => s.bookings, 'reservations', isEmpty),
       ],
     );
 
     blocTest<BackofficeReservationsCubit, BackofficeReservationsState>(
       'blockSlot: saving → loading → loaded on success',
       build: () {
-        when(() => repo.blockSlot(
+         when(() => repo.blockSlot(
           venueId: 'venue-1',
           courtId: 'court-1',
           date: any(named: 'date'),
           startTime: '14:00',
           endTime: '15:00',
         )).thenAnswer((_) async => reservation(id: 'block-1', type: ReservationType.blocked));
-        when(() => repo.listReservations(
+        when(() => repo.listBookings(
           venueId: 'venue-1',
           from: any(named: 'from'),
           to: any(named: 'to'),
-        )).thenAnswer((_) async => [reservation(id: 'block-1', type: ReservationType.blocked)]);
+        )).thenAnswer((_) async => [booking(id: 'block-1', type: BookingType.blocked)]);
         return BackofficeReservationsCubit(
           repository: repo,
           venueId: 'venue-1',
@@ -191,7 +220,7 @@ void main() {
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loading),
         isA<BackofficeReservationsState>()
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loaded)
-            .having((s) => s.reservations.length, 'reservations.length', 1),
+            .having((s) => s.bookings.length, 'reservations.length', 1),
       ],
     );
 
@@ -205,7 +234,7 @@ void main() {
           startTime: '14:00',
           endTime: '15:00',
         )).thenAnswer((_) async {});
-        when(() => repo.listReservations(
+        when(() => repo.listBookings(
           venueId: 'venue-1',
           from: any(named: 'from'),
           to: any(named: 'to'),
@@ -228,7 +257,7 @@ void main() {
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loading),
         isA<BackofficeReservationsState>()
             .having((s) => s.status, 'status', BackofficeReservationsStatus.loaded)
-            .having((s) => s.reservations, 'reservations', isEmpty),
+            .having((s) => s.bookings, 'reservations', isEmpty),
       ],
     );
 

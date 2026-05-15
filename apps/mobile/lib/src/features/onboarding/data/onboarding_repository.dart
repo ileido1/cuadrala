@@ -118,6 +118,7 @@ class OnboardingRepository {
     DateTime? birthDate,
     String? city,
     String? avatarUrl,
+    String? documentNumber,
   }) async {
     final body = <String, Object?>{};
     if (phone != null) body['phone'] = phone;
@@ -128,6 +129,7 @@ class OnboardingRepository {
     }
     if (city != null) body['city'] = city;
     if (avatarUrl != null) body['avatarUrl'] = avatarUrl;
+    if (documentNumber != null) body['documentNumber'] = documentNumber;
     if (body.isEmpty) return;
     await _api.patchPlayerProfileEnvelope(body: body);
   }

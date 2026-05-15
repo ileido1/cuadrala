@@ -28,6 +28,12 @@ function mapReservation(_row: {
   durationMinutes: number;
   notes: string | null;
   createdByUserId: string;
+  responsibleName: string | null;
+  responsiblePhone: string | null;
+  totalAmountCents: number | null;
+  paidAmountCents: number;
+  paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+  court: { name: string } | null;
   createdAt: Date;
   updatedAt: Date;
 }): ReservationDTO {
@@ -43,6 +49,12 @@ function mapReservation(_row: {
     durationMinutes: _row.durationMinutes,
     notes: _row.notes,
     createdByUserId: _row.createdByUserId,
+    responsibleName: _row.responsibleName,
+    responsiblePhone: _row.responsiblePhone,
+    totalAmountCents: _row.totalAmountCents,
+    paidAmountCents: _row.paidAmountCents,
+    paymentStatus: _row.paymentStatus,
+    courtName: _row.court?.name ?? null,
     createdAt: _row.createdAt,
     updatedAt: _row.updatedAt,
   };
@@ -60,6 +72,12 @@ const RESERVATION_SELECT = {
   durationMinutes: true,
   notes: true,
   createdByUserId: true,
+  responsibleName: true,
+  responsiblePhone: true,
+  totalAmountCents: true,
+  paidAmountCents: true,
+  paymentStatus: true,
+  court: { select: { name: true } },
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -71,12 +89,15 @@ export class PrismaReservationRepository implements ReservationRepository {
         venueId: _input.venueId,
         courtId: _input.courtId,
         sportId: _input.sportId,
-        categoryId: _input.categoryId,
+        categoryId: _input.categoryId ?? '',
         type: _input.type ?? 'DIRECT',
         scheduledAt: _input.scheduledAt,
         durationMinutes: _input.durationMinutes ?? 60,
         notes: _input.notes ?? null,
         createdByUserId: _input.createdByUserId,
+        responsibleName: _input.responsibleName ?? null,
+        responsiblePhone: _input.responsiblePhone ?? null,
+        totalAmountCents: _input.totalAmountCents ?? null,
       },
       select: RESERVATION_SELECT,
     });
@@ -148,5 +169,12 @@ export class PrismaReservationRepository implements ReservationRepository {
       select: RESERVATION_SELECT,
     });
     return mapReservation(ROW);
+  }
+
+  async updateTotalAmountCentsSV(_id: string, _totalAmountCents: number): Promise<void> {
+    await PRISMA.reservation.update({
+      where: { id: _id },
+      data: { totalAmountCents: _totalAmountCents },
+    });
   }
 }

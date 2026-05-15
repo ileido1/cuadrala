@@ -7,6 +7,19 @@ import type { Court, SportType } from '~/types/api';
 
 type TabValue = 'all' | 'active' | 'maintenance';
 
+interface CourtFormData {
+  name: string;
+  sportType: string;
+  surface: string;
+  durationMinutes: number;
+}
+
+interface Sport {
+  id: string;
+  code: string;
+  name: string;
+}
+
 // Court display status mapping for UI demo
 const COURT_DISPLAY_STATUS: Record<string, 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'> = {
   '1': 'ACTIVE',
@@ -53,7 +66,7 @@ function ClockIcon({ className = 'w-5 h-5' }: { className?: string }) {
 }
 
 // Court card component
-function CourtCard({ court, index }: { court: Court; index: number }) {
+function CourtCard({ court, index, onEdit, onDelete }: { court: Court; index: number; onEdit: (court: Court) => void; onDelete: (court: Court) => void }) {
   const displayStatus = court.status === 'ACTIVE' ? 'ACTIVE' : court.status === 'INACTIVE' ? 'INACTIVE' : 'MAINTENANCE';
 
   const getStatusBadge = (status: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE') => {
@@ -110,34 +123,63 @@ function CourtCard({ court, index }: { court: Court; index: number }) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-200">
         <div className="text-center">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Precio</p>
-          <p className="text-lg font-bold text-slate-800">
-            ${(court.pricePerHour ?? 0).toLocaleString('es-CL')}
-          </p>
-          <p className="text-xs text-slate-400">hora</p>
-        </div>
-        <div className="text-center">
           <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Capacidad</p>
           <p className="text-lg font-bold text-slate-800 flex items-center justify-center gap-1">
-            <span>{court.capacity}</span>
-            <span className="text-xs text-slate-500">v4</span>
+            <span>{court.capacity || '-'}</span>
           </p>
         </div>
         <div className="text-center">
           <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Duración</p>
           <p className="text-lg font-bold text-slate-800 flex items-center justify-center gap-1">
-            <span>{(court.duration ?? 60) / 60}</span>
-            <p className="text-xs text-slate-400">hora</p>
+            <span>
+              {(() => {
+                const mins = court.durationMinutes ?? 60;
+                const hours = Math.floor(mins / 60);
+                const minutes = mins % 60;
+                return `${hours}:${minutes.toString().padStart(2, '0')}h`;
+              })()}
+            </span>
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Iluminación</p>
+          <p className="text-lg font-bold text-slate-800 flex items-center justify-center gap-1">
+            <span>{court.lighting ? 'Sí' : 'No'}</span>
           </p>
         </div>
       </div>
 
+      {/* Pricing Tiers */}
+      {court.pricingTiers && court.pricingTiers.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Tarifas por franja</p>
+          <div className="flex flex-wrap gap-2">
+            {court.pricingTiers.map((tier) => (
+              <div
+                key={tier.id}
+                className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg text-xs"
+              >
+                <span className="font-medium text-slate-700">{tier.label}</span>
+                <span className="text-slate-400">
+                  {tier.startTime}-{tier.endTime}
+                </span>
+                <span className="font-bold text-green-600">
+                  ${(tier.pricePerHourCents / 100).toLocaleString('es-AR')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400 italic">Sin tarifas configuradas</p>
+      )}
+
       {/* Actions */}
       <div className="flex gap-3 pt-2">
-        <button className="btn btn-outline flex-1 text-sm py-2.5">
+        <button onClick={() => onEdit(court)} className="btn btn-outline flex-1 text-sm py-2.5">
           Editar
         </button>
-        <button className="btn btn-outline text-red-600 border-red-200 hover:bg-red-50 flex-1 text-sm py-2.5">
+        <button onClick={() => onDelete(court)} className="btn btn-outline text-red-600 border-red-200 hover:bg-red-50 flex-1 text-sm py-2.5">
           Eliminar
         </button>
       </div>
@@ -152,12 +194,42 @@ export default function CourtsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Form state
+  const [showForm, setShowForm] = useState(false);
+  const [editingCourt, setEditingCourt] = useState<Court | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [form, setForm] = useState<CourtFormData>({
+    name: '',
+    sportType: '',
+    surface: '',
+    durationMinutes: 60,
+  });
+
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [courtToDelete, setCourtToDelete] = useState<Court | null>(null);
+
+  // Toast notification
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   useEffect(() => {
     if (!currentVenue) return;
 
-    apiClient.venues.courts.list(currentVenue.id)
-      .then((res) => {
-        setCourts(res.data.data as Court[]);
+    setLoading(true);
+    Promise.all([
+      apiClient.venues.courts.list(currentVenue.id),
+      apiClient.sports.list(),
+    ])
+      .then(([courtsRes, sportsRes]) => {
+        const sportsData = sportsRes.data.data?.sports ?? [];
+        setSports(sportsData as Sport[]);
+        setCourts((courtsRes.data.data?.items ?? courtsRes.data.data ?? []) as Court[]);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -171,6 +243,68 @@ export default function CourtsPage() {
     return true;
   });
 
+  const handleSave = async () => {
+    if (!currentVenue || !form.name.trim()) return;
+    setSaving(true);
+    setFormError(null);
+
+    try {
+      const data: { name: string; sportType?: string; surfaceType?: string | null; durationMinutes?: number } = {
+        name: form.name.trim(),
+        sportType: form.sportType || undefined,
+        surfaceType: form.surface.trim() || null,
+        durationMinutes: form.durationMinutes,
+      };
+
+      if (editingCourt) {
+        const res = await apiClient.venues.courts.update(currentVenue.id, editingCourt.id, data);
+        setCourts(courts.map((c) => (c.id === editingCourt.id ? { ...c, ...res.data.data } : c)));
+      } else {
+        const res = await apiClient.venues.courts.create(currentVenue.id, data);
+        setCourts([...courts, res.data.data as Court]);
+      }
+
+      setShowForm(false);
+      setForm({ name: '', sportType: '', surface: '', durationMinutes: 60 });
+      setEditingCourt(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar la cancha';
+      setFormError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEdit = (court: Court) => {
+    setEditingCourt(court);
+    setForm({
+      name: court.name,
+      sportType: court.sportType,
+      surface: court.surfaceType || '',
+      durationMinutes: court.durationMinutes ?? 60,
+    });
+    setFormError(null);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (court: Court) => {
+    setCourtToDelete(court);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!courtToDelete || !currentVenue) return;
+    try {
+      await apiClient.venues.courts.cancel(currentVenue.id, courtToDelete.id);
+      setCourts(courts.filter((c) => c.id !== courtToDelete.id));
+      setShowDeleteModal(false);
+      setCourtToDelete(null);
+      showToast('Cancha eliminada correctamente.', 'success');
+    } catch {
+      showToast('Error al eliminar la cancha.', 'error');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -179,13 +313,109 @@ export default function CourtsPage() {
           <h1 className="page-heading">Mis Canchas</h1>
           <p className="text-body mt-1">Gestiona las canchas de tu club</p>
         </div>
-        <button className="btn btn-primary self-start">
+        <button onClick={() => {
+          setEditingCourt(null);
+          setForm({ name: '', sportType: sports[0]?.code || '', surface: '', durationMinutes: 60 });
+          setFormError(null);
+          setShowForm(true);
+        }} className="btn btn-primary self-start">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Nueva Cancha
         </button>
       </div>
+
+      {/* Modal Form */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scale-in">
+            <h2 className="text-xl font-bold text-slate-800 mb-6">
+              {editingCourt ? 'Editar Cancha' : 'Nueva Cancha'}
+            </h2>
+
+            <div className="space-y-4">
+              {/* Nombre */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="input w-full"
+                  placeholder="Cancha 1"
+                />
+              </div>
+
+              {/* Tipo de deporte */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de deporte</label>
+                <select
+                  value={form.sportType}
+                  onChange={(e) => setForm({ ...form, sportType: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="">Seleccionar deporte</option>
+                  {sports.map((sport) => (
+                    <option key={sport.id} value={sport.code}>
+                      {sport.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Superficie */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Superficie</label>
+                <input
+                  type="text"
+                  value={form.surface}
+                  onChange={(e) => setForm({ ...form, surface: e.target.value })}
+                  className="input w-full"
+                  placeholder="Césped artificial"
+                />
+              </div>
+
+              {/* Duración del bloque */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Duración del bloque (minutos)</label>
+                <select
+                  value={form.durationMinutes}
+                  onChange={(e) => setForm({ ...form, durationMinutes: Number(e.target.value) })}
+                  className="input w-full"
+                >
+                  <option value={60}>60 min (1 hora)</option>
+                  <option value={90}>90 min (1:30 horas)</option>
+                  <option value={120}>120 min (2 horas)</option>
+                  <option value={150}>150 min (2:30 horas)</option>
+                </select>
+                <p className="text-xs text-slate-400 mt-1">Duración de cada reserva para esta cancha.</p>
+              </div>
+
+              {formError && (
+                <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{formError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowForm(false)}
+                className="btn btn-outline flex-1"
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                className="btn btn-primary flex-1"
+                disabled={saving || !form.name.trim()}
+              >
+                {saving ? 'Guardando...' : editingCourt ? 'Actualizar' : 'Crear'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab Filter */}
       <div className="border-b border-slate-200 animate-fade-in stagger-1">
@@ -255,8 +485,41 @@ export default function CourtsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourts.map((court, index) => (
-            <CourtCard key={court.id} court={court} index={index} />
+            <CourtCard key={court.id} court={court} index={index} onEdit={handleEdit} onDelete={handleDelete} />
           ))}
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2 animate-slide-up ${
+          toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        }`}>
+          {toast.type === 'success' ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          )}
+          {toast.message}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && courtToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[90] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-scale-in">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 text-center mb-2">Eliminar cancha</h2>
+            <p className="text-slate-500 text-sm text-center mb-6">¿Estás seguro de eliminar "{courtToDelete.name}"? Esta acción no se puede deshacer.</p>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowDeleteModal(false); setCourtToDelete(null); }} className="btn btn-outline flex-1">Cancelar</button>
+              <button onClick={confirmDelete} className="btn flex-1 bg-red-600 hover:bg-red-700 text-white">Eliminar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

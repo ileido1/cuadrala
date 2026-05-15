@@ -31,3 +31,31 @@ export async function listUsersNotInRepo(
     select: { id: true, name: true, email: true },
   });
 }
+
+export const userRepository = {
+  async findByDocumentNumberSV(
+    _documentNumber: string,
+  ): Promise<{ id: string; name: string; email: string; documentNumber: string | null }[]> {
+    const users = await PRISMA.user.findMany({
+      where: {
+        playerProfile: {
+          documentNumber: { equals: _documentNumber },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        playerProfile: {
+          select: { documentNumber: true },
+        },
+      },
+    });
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      documentNumber: u.playerProfile?.documentNumber ?? null,
+    }));
+  },
+};

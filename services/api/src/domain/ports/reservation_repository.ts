@@ -28,4 +28,7 @@ export interface ReservationRepository {
 
   /** Cancela una reserva (soft-delete). */
   cancelReservationSV(_id: string): Promise<ReservationDTO>;
+
+  /** Actualiza el monto total (totalAmountCents) de una reserva. */
+  updateTotalAmountCentsSV(_id: string, _totalAmountCents: number): Promise<void>;
 }
