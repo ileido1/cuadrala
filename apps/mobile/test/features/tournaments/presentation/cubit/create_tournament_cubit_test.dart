@@ -11,6 +11,13 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/crea
 
 class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
 
+const _validRequest = CreateTournamentRequest(
+  sportId: 'padel',
+  categoryId: 'cat-1',
+  name: 'Torneo Apertura',
+  formatPresetId: 'preset-1',
+);
+
 void main() {
   group('CreateTournamentCubit', () {
     late _MockTournamentsRepository tournamentsRepository;
@@ -25,8 +32,9 @@ void main() {
       act: (cubit) => cubit.submit(
         const CreateTournamentRequest(
           sportId: 'padel',
+          categoryId: 'cat-1',
           name: '',
-          bracketSize: 16,
+          formatPresetId: 'preset-1',
         ),
       ),
       expect: () => [
@@ -50,17 +58,11 @@ void main() {
             request: any(named: 'request'),
           ),
         ).thenAnswer(
-          (_) async => const CreateTournamentResponse(id: 't-1'),
+          (_) async => const CreateTournamentResponse(tournamentId: 't-1'),
         );
         return CreateTournamentCubit(tournamentsRepository: tournamentsRepository);
       },
-      act: (cubit) => cubit.submit(
-        const CreateTournamentRequest(
-          sportId: 'padel',
-          name: 'Torneo Apertura',
-          bracketSize: 16,
-        ),
-      ),
+      act: (cubit) => cubit.submit(_validRequest),
       expect: () => [
         const CreateTournamentSubmitting(),
         isA<CreateTournamentSuccess>()
@@ -83,8 +85,9 @@ void main() {
       act: (cubit) => cubit.submit(
         const CreateTournamentRequest(
           sportId: 'padel',
+          categoryId: 'cat-1',
           name: 'X',
-          bracketSize: 16,
+          formatPresetId: 'preset-1',
         ),
       ),
       expect: () => [
@@ -95,4 +98,3 @@ void main() {
     );
   });
 }
-

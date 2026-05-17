@@ -65,12 +65,6 @@ function createMockCatalogRepository() {
   };
 }
 
-/** Fixture Reservation confirmada. */
-function confirmedReservation(overrides: Partial<ReturnType<typeof createReservation>> = {}) {
-  const reservation = createReservation({ status: ReservationStatus.CONFIRMED, ...overrides });
-  return reservation;
-}
-
 function createReservation(overrides: Partial<{
   id: string;
   venueId: string;

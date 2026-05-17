@@ -20,9 +20,13 @@ void main() {
 
     TournamentPresetDto preset({required String sportId, required String name}) {
       return TournamentPresetDto(
+        id: 'preset-1',
         sportId: sportId,
+        code: 'SINGLE_ELIM',
+        version: 1,
         name: name,
-        suggestedBracketSize: 16,
+        schemaVersion: 1,
+        defaultParameters: const <String, Object?>{'bracketSize': 16},
       );
     }
 

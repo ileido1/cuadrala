@@ -11,14 +11,11 @@ import {
   CourtStatus,
   SportType,
   type Court,
-  type CreateCourtInput,
-  type UpdateCourtInput,
 } from '../../domain/entities/booking/court.entity.js';
 import {
   CreateCourtUseCase,
   type CreateCourtInputDTO,
   ListCourtsUseCase,
-  type ListCourtsInputDTO,
   UpdateCourtUseCase,
   type UpdateCourtInputDTO,
   CancelCourtUseCase,

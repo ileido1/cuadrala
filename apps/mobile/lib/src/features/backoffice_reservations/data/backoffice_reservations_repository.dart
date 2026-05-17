@@ -74,6 +74,7 @@ class BackofficeReservationsRepository implements IBackofficeReservationsReposit
         .toList();
   }
 
+  @override
   Future<ReservationDto> createReservation({
     required String venueId,
     required String courtId,
@@ -96,6 +97,7 @@ class BackofficeReservationsRepository implements IBackofficeReservationsReposit
     return ReservationDto.fromJson(data);
   }
 
+  @override
   Future<void> cancelReservation({
     required String venueId,
     required String reservationId,
@@ -106,6 +108,7 @@ class BackofficeReservationsRepository implements IBackofficeReservationsReposit
     );
   }
 
+  @override
   Future<ReservationDto> blockSlot({
     required String venueId,
     required String courtId,
@@ -124,6 +127,7 @@ class BackofficeReservationsRepository implements IBackofficeReservationsReposit
     return ReservationDto.fromJson(data);
   }
 
+  @override
   Future<void> unblockSlot({
     required String venueId,
     required String courtId,

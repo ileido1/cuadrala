@@ -120,12 +120,10 @@ final class AppRouter {
                 final amountCents =
                     int.tryParse(state.uri.queryParameters['amountCents'] ?? '') ?? 0;
                 final title = state.uri.queryParameters['title'] ?? 'Partida';
-                final venueId = state.uri.queryParameters['venueId'];
                 return PayMethodScreen(
                   matchId: matchId,
                   amountPerPersonCents: amountCents,
                   matchTitle: title,
-                  venueId: venueId,
                 );
               },
             ),

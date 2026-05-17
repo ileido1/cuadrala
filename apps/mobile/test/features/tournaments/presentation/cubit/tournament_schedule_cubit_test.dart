@@ -76,8 +76,12 @@ void main() {
     blocTest<TournamentScheduleCubit, TournamentScheduleState>(
       'generate (501) emite generating→unsupported',
       build: () {
-        when(() => tournamentsRepository.generateTournamentSchedule(tournamentId: tournamentId))
-            .thenThrow(
+        when(
+          () => tournamentsRepository.generateTournamentSchedule(
+            tournamentId: tournamentId,
+            participantUserIds: any(named: 'participantUserIds'),
+          ),
+        ).thenThrow(
           const AppFailure(code: 'HTTP_501', message: 'No soportado.'),
         );
         return TournamentScheduleCubit(
@@ -85,7 +89,7 @@ void main() {
           tournamentId: tournamentId,
         );
       },
-      act: (cubit) => cubit.generate(),
+      act: (cubit) => cubit.generate(participantUserIds: const []),
       expect: () => [
         const TournamentScheduleGenerating(),
         const TournamentScheduleUnsupported(),
@@ -95,8 +99,12 @@ void main() {
     blocTest<TournamentScheduleCubit, TournamentScheduleState>(
       'generate (409) emite generating→conflict',
       build: () {
-        when(() => tournamentsRepository.generateTournamentSchedule(tournamentId: tournamentId))
-            .thenThrow(
+        when(
+          () => tournamentsRepository.generateTournamentSchedule(
+            tournamentId: tournamentId,
+            participantUserIds: any(named: 'participantUserIds'),
+          ),
+        ).thenThrow(
           const AppFailure(code: 'HTTP_409', message: 'Conflicto.'),
         );
         return TournamentScheduleCubit(
@@ -104,7 +112,7 @@ void main() {
           tournamentId: tournamentId,
         );
       },
-      act: (cubit) => cubit.generate(),
+      act: (cubit) => cubit.generate(participantUserIds: const []),
       expect: () => [
         const TournamentScheduleGenerating(),
         const TournamentScheduleConflict(),

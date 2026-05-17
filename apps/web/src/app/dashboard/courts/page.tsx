@@ -514,7 +514,9 @@ export default function CourtsPage() {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-slate-800 text-center mb-2">Eliminar cancha</h2>
-            <p className="text-slate-500 text-sm text-center mb-6">¿Estás seguro de eliminar "{courtToDelete.name}"? Esta acción no se puede deshacer.</p>
+            <p className="text-slate-500 text-sm text-center mb-6">
+              ¿Estás seguro de eliminar «{courtToDelete.name}»? Esta acción no se puede deshacer.
+            </p>
             <div className="flex gap-3">
               <button onClick={() => { setShowDeleteModal(false); setCourtToDelete(null); }} className="btn btn-outline flex-1">Cancelar</button>
               <button onClick={confirmDelete} className="btn flex-1 bg-red-600 hover:bg-red-700 text-white">Eliminar</button>

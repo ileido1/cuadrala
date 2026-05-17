@@ -75,7 +75,7 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
         ? Math.round((confirmedTransactions.length / totalTxsForConversion) * 100)
         : 0;
 
-    const thisWeekTotal = thisWeekTxs.length + pendingTransactions;
+    const _thisWeekTotal = thisWeekTxs.length + pendingTransactions;
     const lastWeekTotal = lastWeekTxs.length + pendingTransactions;
     const conversionTrend =
       lastWeekTotal > 0

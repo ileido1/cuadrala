@@ -18,7 +18,6 @@ import {
   patchVenueCON,
   getVenueMatchesCON,
 } from '../controllers/venue_dashboard.controller.js';
-import { listVenueMatchesCON } from '../controllers/list_venue_matches.controller.js';
 import { getVenueCourtAvailabilityCON } from '../controllers/court_availability.controller.js';
 import { getCourtSlotsCON } from '../controllers/court_slots.controller.js';
 import { postVenueGeocodeCON } from '../controllers/venue_geocoding.controller.js';

@@ -26,13 +26,20 @@ void main() {
       final api = _MockTournamentsApi();
       final repo = TournamentsRepository(tournamentsApi: api);
 
-      when(() => api.generateTournamentScheduleEnvelope(tournamentId: any(named: 'tournamentId')))
-          .thenThrow(
+      when(
+        () => api.generateTournamentScheduleEnvelope(
+          tournamentId: any(named: 'tournamentId'),
+          body: any(named: 'body'),
+        ),
+      ).thenThrow(
         const AppFailure(code: 'HTTP_501', message: 'No soportado.'),
       );
 
       expect(
-        () => repo.generateTournamentSchedule(tournamentId: 't-1'),
+        () => repo.generateTournamentSchedule(
+          tournamentId: 't-1',
+          participantUserIds: const [],
+        ),
         throwsA(
           predicate(
             (e) => e is AppFailure && e.code == 'SCHEDULE_UNSUPPORTED',
@@ -45,13 +52,20 @@ void main() {
       final api = _MockTournamentsApi();
       final repo = TournamentsRepository(tournamentsApi: api);
 
-      when(() => api.generateTournamentScheduleEnvelope(tournamentId: any(named: 'tournamentId')))
-          .thenThrow(
+      when(
+        () => api.generateTournamentScheduleEnvelope(
+          tournamentId: any(named: 'tournamentId'),
+          body: any(named: 'body'),
+        ),
+      ).thenThrow(
         const AppFailure(code: 'HTTP_409', message: 'Conflicto.'),
       );
 
       expect(
-        () => repo.generateTournamentSchedule(tournamentId: 't-1'),
+        () => repo.generateTournamentSchedule(
+          tournamentId: 't-1',
+          participantUserIds: const [],
+        ),
         throwsA(
           predicate(
             (e) => e is AppFailure && e.code == 'SCHEDULE_CONFLICT',

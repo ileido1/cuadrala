@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/models/reservation_dto.dart';
 import '../cubit/backoffice_reservations_cubit.dart';
-import '../cubit/backoffice_reservations_state.dart';
 
 final class ReservationModal extends StatefulWidget {
   const ReservationModal({

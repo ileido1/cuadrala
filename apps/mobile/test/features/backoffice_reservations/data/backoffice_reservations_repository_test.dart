@@ -17,21 +17,6 @@ void main() {
       repository = BackofficeReservationsRepository(api: api);
     });
 
-    ReservationDto sampleReservation() {
-      return const ReservationDto(
-        id: 'res-1',
-        venueId: 'venue-1',
-        courtId: 'court-1',
-        courtName: 'Cancha 1',
-        type: ReservationType.reservation,
-        date: '2026-05-15',
-        startTime: '10:00',
-        endTime: '11:00',
-        notes: 'Partido privado',
-        matchId: null,
-      );
-    }
-
     test('listReservations returns list of reservations from API', () async {
       when(() => api.listReservationsEnvelope(
         venueId: 'venue-1',

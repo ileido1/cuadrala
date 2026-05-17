@@ -295,7 +295,7 @@ final class _TimeSlotCell extends StatelessWidget {
       child: Container(
         height: 60,
         decoration: BoxDecoration(
-          color: booking != null ? booking!.color : null,
+          color: booking?.color,
           border: Border.all(
             color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
             width: 0.5,

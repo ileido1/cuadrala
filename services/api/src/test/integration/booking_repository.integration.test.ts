@@ -7,6 +7,11 @@
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import {
+  MatchStatus,
+  ReservationType,
+  Visibility,
+} from '../../domain/entities/booking/reservation.entity.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { PrismaBookingRepository } from '../../infrastructure/adapters/prisma_booking_repository.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
@@ -78,7 +83,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         courtId,
         sportId: sportPadelId,
         categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: SCHEDULED_AT,
         durationMinutes: 60,
         notes: 'Test DIRECT',
@@ -116,7 +121,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         courtId,
         sportId: sportPadelId,
         categoryId,
-        type: 'BLOCKED' as any,
+        type: ReservationType.BLOCKED,
         scheduledAt: SCHEDULED_AT,
         durationMinutes: 90,
         createdByUserId: staffUserId,
@@ -137,14 +142,14 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         courtId,
         sportId: sportPadelId,
         categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: SCHEDULED_AT,
         durationMinutes: 90,
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
         maxParticipants: 4,
         pricePerPlayerCents: 2500,
-        visibility: 'DRAFT' as any,
+        visibility: Visibility.DRAFT,
       });
 
       expect(BOOKING.type).toBe('MATCH');
@@ -164,14 +169,14 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         courtId,
         sportId: sportPadelId,
         categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: SCHEDULED_AT,
         durationMinutes: 90,
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
         maxParticipants: 4,
         pricePerPlayerCents: 3000,
-        visibility: 'PUBLISHED' as any,
+        visibility: Visibility.PUBLISHED,
       });
 
       expect(BOOKING.type).toBe('MATCH');
@@ -188,23 +193,23 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       // Crear 3 bookings de distinto tipo
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: new Date(NOW + 7 * 60 * 60 * 1000),
         createdByUserId: staffUserId,
       });
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'BLOCKED' as any,
+        type: ReservationType.BLOCKED,
         scheduledAt: new Date(NOW + 8 * 60 * 60 * 1000),
         createdByUserId: staffUserId,
       });
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: new Date(NOW + 9 * 60 * 60 * 1000),
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
-        visibility: 'PUBLISHED' as any,
+        visibility: Visibility.PUBLISHED,
       });
 
       const RESULT = await BOOKING_REPO.listBookingsSV({ venueId }, { page: 1, limit: 10 });
@@ -217,21 +222,21 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const NOW = Date.now();
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: new Date(NOW + 10 * 60 * 60 * 1000),
         createdByUserId: staffUserId,
       });
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: new Date(NOW + 11 * 60 * 60 * 1000),
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
-        visibility: 'PUBLISHED' as any,
+        visibility: Visibility.PUBLISHED,
       });
 
       const RESULT = await BOOKING_REPO.listBookingsSV(
-        { venueId, type: 'MATCH' as any },
+        { venueId, type: ReservationType.MATCH },
         { page: 1, limit: 10 },
       );
 
@@ -243,23 +248,23 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const NOW = Date.now();
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: new Date(NOW + 12 * 60 * 60 * 1000),
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
-        visibility: 'DRAFT' as any,
+        visibility: Visibility.DRAFT,
       });
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: new Date(NOW + 13 * 60 * 60 * 1000),
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
-        visibility: 'PUBLISHED' as any,
+        visibility: Visibility.PUBLISHED,
       });
 
       const RESULT = await BOOKING_REPO.listBookingsSV(
-        { venueId, visibility: 'PUBLISHED' as any },
+        { venueId, visibility: Visibility.PUBLISHED },
         { page: 1, limit: 10 },
       );
 
@@ -272,19 +277,19 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: new Date(BASE + 0 * 60 * 60 * 1000),
         createdByUserId: staffUserId,
       });
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: new Date(BASE + 48 * 60 * 60 * 1000), // +2 días
         createdByUserId: staffUserId,
       });
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: new Date(BASE + 96 * 60 * 60 * 1000), // +4 días
         createdByUserId: staffUserId,
       });
@@ -303,7 +308,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       for (let i = 0; i < 5; i++) {
         await BOOKING_REPO.createBookingSV({
           venueId, courtId, sportId: sportPadelId, categoryId,
-          type: 'DIRECT' as any,
+          type: ReservationType.DIRECT,
           scheduledAt: new Date(NOW + (14 + i) * 60 * 60 * 1000),
           createdByUserId: staffUserId,
         });
@@ -326,7 +331,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const SCHEDULED_AT = new Date(Date.now() + 15 * 60 * 60 * 1000);
       const CREATED = await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
       });
@@ -352,7 +357,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
       });
@@ -367,7 +372,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       const BOOKING = await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
       });
@@ -384,11 +389,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       // Crear match DRAFT
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
-        visibility: 'DRAFT' as any,
+        visibility: Visibility.DRAFT,
       });
 
       // DRAFT no bloquea disponibilidad pública (visibilidad != DRAFT es la condición en assertAvailableSV)
@@ -402,11 +407,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
-        visibility: 'PUBLISHED' as any,
+        visibility: Visibility.PUBLISHED,
       });
 
       await expect(
@@ -423,16 +428,16 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       const BOOKING = await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
-        visibility: 'DRAFT' as any,
+        visibility: Visibility.DRAFT,
       });
 
       const UPDATED = await BOOKING_REPO.updateBookingSV(BOOKING.id, {
-        visibility: 'PUBLISHED' as any,
-        matchStatus: 'IN_PROGRESS' as any,
+        visibility: Visibility.PUBLISHED,
+        matchStatus: MatchStatus.IN_PROGRESS,
       });
 
       expect(UPDATED.visibility).toBe('PUBLISHED');
@@ -444,7 +449,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       const BOOKING = await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
         notes: 'Notas originales',
@@ -466,7 +471,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       const BOOKING = await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'DIRECT' as any,
+        type: ReservationType.DIRECT,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
       });
@@ -482,11 +487,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       const BOOKING = await BOOKING_REPO.createBookingSV({
         venueId, courtId, sportId: sportPadelId, categoryId,
-        type: 'MATCH' as any,
+        type: ReservationType.MATCH,
         scheduledAt: SCHEDULED_AT,
         createdByUserId: staffUserId,
         organizerUserId: staffUserId,
-        visibility: 'PUBLISHED' as any,
+        visibility: Visibility.PUBLISHED,
       });
 
       const CANCELLED = await BOOKING_REPO.cancelBookingSV(BOOKING.id);
