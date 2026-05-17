@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 
-import { checkDatabaseReadySV } from '../../infrastructure/db/database_health.js';
+import { CHECK_DATABASE_READY_UC } from '../composition/health.composition.js';
 
 export function getHealthCON(_req: Request, _res: Response): void {
   _res.status(200).json({
@@ -12,7 +12,7 @@ export function getHealthCON(_req: Request, _res: Response): void {
 
 export async function getReadyCON(_req: Request, _res: Response): Promise<void> {
   try {
-    await checkDatabaseReadySV();
+    await CHECK_DATABASE_READY_UC.executeSV();
     _res.status(200).json({
       status: 'ready',
       service: 'api',

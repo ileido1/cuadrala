@@ -1,4 +1,8 @@
-import type { UserDTO, UserRepository } from '../../domain/ports/user_repository.js';
+import type {
+  UserDocumentSearchResultDTO,
+  UserDTO,
+  UserRepository,
+} from '../../domain/ports/user_repository.js';
 
 import { PRISMA } from '../prisma_client.js';
 
@@ -58,6 +62,31 @@ export class PrismaUserRepository implements UserRepository {
 
   async countByIdsSV(_ids: string[]): Promise<number> {
     return PRISMA.user.count({ where: { id: { in: _ids } } });
+  }
+
+  async findByDocumentNumberSV(_documentNumber: string): Promise<UserDocumentSearchResultDTO[]> {
+    const USERS = await PRISMA.user.findMany({
+      where: {
+        playerProfile: {
+          documentNumber: { equals: _documentNumber },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        playerProfile: {
+          select: { documentNumber: true },
+        },
+      },
+    });
+
+    return USERS.map((_user) => ({
+      id: _user.id,
+      name: _user.name,
+      email: _user.email,
+      documentNumber: _user.playerProfile?.documentNumber ?? null,
+    }));
   }
 }
 

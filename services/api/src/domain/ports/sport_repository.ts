@@ -7,5 +7,6 @@ export type SportDTO = {
 export interface SportRepository {
   listSportsSV(): Promise<SportDTO[]>;
   findByIdSV(_id: string): Promise<SportDTO | null>;
+  findByCodeSV(_code: string): Promise<SportDTO | null>;
 }
 

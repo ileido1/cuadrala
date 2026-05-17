@@ -148,8 +148,14 @@ class ApiClient {
       cancel: (venueId: string, reservationId: string) =>
         this.client.delete(`/venues/${venueId}/reservations/${reservationId}`),
       transactions: {
-        createObligations: (reservationId: string) =>
-          this.client.post(`/reservations/${reservationId}/transactions/create-obligations`),
+        createObligations: (
+          reservationId: string,
+          data: { amountBasePerPerson: number; participantUserIds?: string[] },
+        ) =>
+          this.client.post(
+            `/reservations/${reservationId}/transactions/create-obligations`,
+            data,
+          ),
         getSummary: (reservationId: string) =>
           this.client.get(`/reservations/${reservationId}/transactions/summary`),
       },

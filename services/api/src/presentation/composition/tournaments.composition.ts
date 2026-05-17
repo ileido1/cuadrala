@@ -2,6 +2,7 @@ import { ListTournamentsUseCase } from '../../application/use_cases/list_tournam
 import { ListTournamentsByVenueUseCase } from '../../application/use_cases/list_tournaments_by_venue.use_case.js';
 import { GetTournamentUseCase } from '../../application/use_cases/get_tournament.use_case.js';
 import { CreateParametrizedTournamentUseCase } from '../../application/use_cases/create_parametrized_tournament.use_case.js';
+import { UpdateTournamentStatusUseCase } from '../../application/use_cases/update_tournament_status.use_case.js';
 import { PrismaTournamentQueryRepository } from '../../infrastructure/adapters/prisma_tournament_query_repository.js';
 import { PrismaCategoryRepository } from '../../infrastructure/adapters/prisma_category_repository.js';
 import { PrismaSportRepository } from '../../infrastructure/adapters/prisma_sport_repository.js';
@@ -25,4 +26,7 @@ export const CREATE_PARAMETRIZED_TOURNAMENT_UC = new CreateParametrizedTournamen
   FORMAT_PRESET_REPOSITORY,
   TOURNAMENT_REPOSITORY,
   FORMAT_VALIDATOR,
+);
+export const UPDATE_TOURNAMENT_STATUS_UC = new UpdateTournamentStatusUseCase(
+  TOURNAMENT_REPOSITORY,
 );

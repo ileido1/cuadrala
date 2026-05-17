@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { PaymentMethodType, BookingItem, VenuePaymentMethod } from '~/types/api';
 import { apiClient } from '~/lib/api-client';
 
@@ -19,6 +19,79 @@ interface PaymentSummary {
   pendingAmount: number;
 }
 
+/** Resumen de pago desde GET /reservations/:id/transactions/summary */
+interface ReservationPaymentSummaryResponse {
+  totalAmount: string;
+  totalAmountCents?: number | null;
+  paidAmountCents?: number;
+  paymentStatus?: BookingItem['paymentStatus'];
+  pendingCount: number;
+  transactionCount: number;
+  items?: Array<{ id: string; status: string; amountTotal?: string }>;
+}
+
+function buildPaymentSummaryFromReservation(_reservation: BookingItem): PaymentSummary {
+  const total = _reservation.totalAmountCents ?? 0;
+  const paid = _reservation.paidAmountCents ?? 0;
+  return {
+    totalAmount: total,
+    paidAmount: paid,
+    pendingAmount: Math.max(0, total - paid),
+  };
+}
+
+function formatPesosFromCents(_cents: number): string {
+  return (_cents / 100).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function parsePesosInputToCents(_value: string): number | null {
+  const trimmed = _value.trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/\./g, '').replace(',', '.');
+  const amount = Number.parseFloat(normalized);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return Math.round(amount * 100);
+}
+
+function resolveObligationUserId(_reservation: BookingItem): string | null {
+  return _reservation.organizerUserId ?? _reservation.createdByUserId ?? null;
+}
+
+function parsePaymentMethodsResponse(_data: unknown): VenuePaymentMethod[] {
+  if (Array.isArray(_data)) return _data as VenuePaymentMethod[];
+  if (
+    _data !== null
+    && typeof _data === 'object'
+    && Array.isArray((_data as { items?: unknown }).items)
+  ) {
+    return (_data as { items: VenuePaymentMethod[] }).items;
+  }
+  return [];
+}
+
+function resolvePaymentMethodId(
+  _methods: VenuePaymentMethod[],
+  _selectedId: string,
+  _selectedType: string,
+): string | null {
+  if (_selectedId) {
+    const match = _methods.find((pm) => pm.id === _selectedId);
+    if (match?.id) return match.id;
+  }
+
+  if (_selectedType) {
+    const ofType = _methods.filter((pm) => pm.type === _selectedType);
+    if (ofType.length === 1 && ofType[0]!.id) return ofType[0]!.id;
+  }
+
+  if (_methods.length === 1 && _methods[0]!.id) return _methods[0]!.id;
+
+  return null;
+}
+
 export function ReservationDetailModal({ reservation, venueId, onClose, onCancel }: ReservationDetailModalProps) {
   const [loading, setLoading] = useState(false);
   const [stepLoading, setStepLoading] = useState(false);
@@ -32,14 +105,78 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
   const [paymentReference, setPaymentReference] = useState('');
   const [paymentStep, setPaymentStep] = useState<PaymentStep>('summary');
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
+  const [syncedPayment, setSyncedPayment] = useState<{
+    totalAmountCents: number | null;
+    paidAmountCents: number;
+    paymentStatus: BookingItem['paymentStatus'];
+  } | null>(null);
+  const [paymentAmountInput, setPaymentAmountInput] = useState('');
   const [confirmedPayment, setConfirmedPayment] = useState(false);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
 
-  // Fetch payment methods when modal opens
+  const loadPaymentMethods = () => {
+    if (!venueId) return;
+    setPaymentMethodsLoading(true);
+    // Misma fuente que Ajustes: listAll (requiere auth) y solo activos en el flujo de cobro
+    apiClient.venues.paymentMethods
+      .listAll(venueId)
+      .then((r) => {
+        const items = parsePaymentMethodsResponse(r.data?.data);
+        setPaymentMethods(items.filter((pm) => pm.isActive !== false && Boolean(pm.id)));
+      })
+      .catch(() => {
+        // Fallback sin auth: solo métodos activos públicos
+        return apiClient.venues.paymentMethods.list(venueId).then((r) => {
+          const items = parsePaymentMethodsResponse(r.data?.data);
+          setPaymentMethods(items.filter((pm) => Boolean(pm.id)));
+        });
+      })
+      .catch(() => setPaymentMethods([]))
+      .finally(() => setPaymentMethodsLoading(false));
+  };
+
   useEffect(() => {
-    apiClient.venues.paymentMethods.list(venueId)
-      .then(r => setPaymentMethods(r.data.data.items))
-      .catch(() => {});
+    loadPaymentMethods();
   }, [venueId]);
+
+  // Sincroniza total (cancha) y pagado (transacciones) al abrir el detalle
+  useEffect(() => {
+    if (!reservation.id) return;
+    apiClient.venues.reservations.transactions
+      .getSummary(reservation.id)
+      .then((res) => {
+        const data = res.data.data as ReservationPaymentSummaryResponse & {
+          paymentStatus?: BookingItem['paymentStatus'];
+        };
+        setSyncedPayment({
+          totalAmountCents: data.totalAmountCents ?? reservation.totalAmountCents ?? null,
+          paidAmountCents: data.paidAmountCents ?? reservation.paidAmountCents ?? 0,
+          paymentStatus: data.paymentStatus ?? reservation.paymentStatus,
+        });
+      })
+      .catch(() => setSyncedPayment(null));
+  }, [reservation.id, reservation.totalAmountCents, reservation.paidAmountCents, reservation.paymentStatus]);
+
+  useEffect(() => {
+    if (showPaymentConfirm) loadPaymentMethods();
+  }, [showPaymentConfirm, venueId]);
+
+  // Preselección: un solo medio en la sede, o un solo medio del tipo elegido
+  useEffect(() => {
+    if (paymentStep !== 'method' || paymentMethods.length === 0) return;
+
+    if (paymentMethods.length === 1) {
+      const only = paymentMethods[0]!;
+      setSelectedPaymentMethodType(only.type);
+      setSelectedPaymentMethodId(only.id);
+      return;
+    }
+
+    if (selectedPaymentMethodType) {
+      const ofType = paymentMethods.filter((pm) => pm.type === selectedPaymentMethodType);
+      if (ofType.length === 1) setSelectedPaymentMethodId(ofType[0]!.id);
+    }
+  }, [paymentStep, paymentMethods, selectedPaymentMethodType]);
 
   // Fetch payment summary when opening payment flow
   useEffect(() => {
@@ -50,32 +187,34 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
 
   const fetchPaymentSummary = async () => {
     setStepLoading(true);
+    const baseSummary = buildPaymentSummaryFromReservation(reservation);
+    setPaymentSummary(baseSummary);
+    setPaymentAmountInput(formatPesosFromCents(baseSummary.pendingAmount));
+
     try {
       const res = await apiClient.venues.reservations.transactions.getSummary(reservation.id);
-      const data = res.data.data as { items: Array<{ id: string; status: string; amountTotal?: string }> };
+      const data = res.data.data as ReservationPaymentSummaryResponse;
 
-      let totalPending = 0;
-      for (const item of data.items) {
-        if (item.status !== 'CONFIRMED' && item.amountTotal) {
-          totalPending += Number(item.amountTotal);
-        }
+      const totalCents =
+        data.totalAmountCents
+        ?? reservation.totalAmountCents
+        ?? baseSummary.totalAmount;
+      const paidCents =
+        data.paidAmountCents
+        ?? reservation.paidAmountCents
+        ?? baseSummary.paidAmount;
+
+      if (totalCents > 0) {
+        const summary: PaymentSummary = {
+          totalAmount: totalCents,
+          paidAmount: paidCents,
+          pendingAmount: Math.max(0, totalCents - paidCents),
+        };
+        setPaymentSummary(summary);
+        setPaymentAmountInput(formatPesosFromCents(summary.pendingAmount));
       }
-
-      const pending = reservation.totalAmountCents != null
-        ? reservation.totalAmountCents - (reservation.paidAmountCents ?? 0)
-        : totalPending * 100;
-
-      setPaymentSummary({
-        totalAmount: reservation.totalAmountCents ?? totalPending * 100,
-        paidAmount: reservation.paidAmountCents ?? 0,
-        pendingAmount: pending,
-      });
     } catch {
-      setPaymentSummary({
-        totalAmount: reservation.totalAmountCents ?? 0,
-        paidAmount: reservation.paidAmountCents ?? 0,
-        pendingAmount: 0,
-      });
+      // Mantener totales de la reserva; no forzar pendiente a 0
     } finally {
       setStepLoading(false);
     }
@@ -117,53 +256,124 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
     setSelectedPaymentMethodType('');
     setSelectedPaymentMethodId('');
     setPaymentReference('');
+    setPaymentAmountInput('');
     setConfirmedPayment(false);
   };
 
+  const paymentAmountCents = parsePesosInputToCents(paymentAmountInput);
+  const maxPayableCents = paymentSummary?.pendingAmount ?? 0;
+
+  const displayTotalCents =
+    syncedPayment?.totalAmountCents ?? reservation.totalAmountCents ?? null;
+  const displayPaidCents =
+    syncedPayment?.paidAmountCents ?? reservation.paidAmountCents ?? 0;
+  const displayPaymentStatus =
+    syncedPayment?.paymentStatus ?? reservation.paymentStatus;
+
   const handlePaymentNext = () => {
     if (paymentStep === 'summary') {
+      if (paymentAmountCents === null) {
+        setError('Ingresa un monto válido mayor a cero.');
+        return;
+      }
+      if (paymentAmountCents > maxPayableCents) {
+        setError(`El monto no puede superar $${formatPesosFromCents(maxPayableCents)}.`);
+        return;
+      }
+      setError(null);
       setPaymentStep('method');
     }
   };
 
   const handleMethodSelect = () => {
-    if (selectedPaymentMethodId) {
-      setPaymentStep('confirm');
+    const methodId = resolvePaymentMethodId(
+      paymentMethods,
+      selectedPaymentMethodId,
+      selectedPaymentMethodType,
+    );
+    if (!methodId) {
+      setError('Selecciona un medio de pago de la lista.');
+      return;
     }
+    setSelectedPaymentMethodId(methodId);
+    setError(null);
+    setPaymentStep('confirm');
   };
 
   const handleConfirmPaymentSubmit = async () => {
-    if (!selectedPaymentMethodId) {
-      setError('Selecciona un medio de pago.');
+    const methodId = resolvePaymentMethodId(
+      paymentMethods,
+      selectedPaymentMethodId,
+      selectedPaymentMethodType,
+    );
+    if (!methodId) {
+      setError('Selecciona un medio de pago de la lista.');
       return;
     }
+    if (paymentAmountCents === null) {
+      setError('Ingresa un monto válido mayor a cero.');
+      return;
+    }
+    if (paymentAmountCents > maxPayableCents) {
+      setError(`El monto no puede superar $${formatPesosFromCents(maxPayableCents)}.`);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethodId);
-      const summaryRes = await apiClient.venues.reservations.transactions.getSummary(reservation.id);
-      const summary = summaryRes.data.data as { items: Array<{ id: string; status: string }> };
-
+      const selectedMethod = paymentMethods.find((m) => m.id === methodId);
       let transactionId: string | null = null;
 
-      if (summary.items.length > 0) {
-        const unpaid = summary.items.find(t => t.status !== 'CONFIRMED');
-        if (unpaid) transactionId = unpaid.id;
-      } else {
-        await apiClient.venues.reservations.transactions.createObligations(reservation.id);
-        const newSummary = await apiClient.venues.reservations.transactions.getSummary(reservation.id);
-        const newData = newSummary.data.data as { items: Array<{ id: string; status: string }> };
-        if (newData.items.length > 0) transactionId = newData.items[0].id;
+      const summaryRes = await apiClient.venues.reservations.transactions.getSummary(reservation.id);
+      let summaryData = summaryRes.data.data as ReservationPaymentSummaryResponse;
+
+      const findPendingTransactionId = (
+        items?: ReservationPaymentSummaryResponse['items'],
+      ): string | null => {
+        const pending = items?.find((t) => t.status === 'PENDING');
+        return pending?.id ?? null;
+      };
+
+      transactionId = findPendingTransactionId(summaryData.items);
+
+      if (!transactionId) {
+        const payerUserId = resolveObligationUserId(reservation);
+        if (!payerUserId) {
+          throw new Error('No se pudo determinar el usuario asociado al pago.');
+        }
+
+        const created = await apiClient.venues.reservations.transactions.createObligations(
+          reservation.id,
+          {
+            amountBasePerPerson: paymentAmountCents / 100,
+            participantUserIds: [payerUserId],
+          },
+        );
+        const createdData = created.data.data as {
+          created?: Array<{ id: string }>;
+        };
+        if (createdData.created && createdData.created.length > 0) {
+          transactionId = createdData.created[0]!.id;
+        } else {
+          const summaryAgain = await apiClient.venues.reservations.transactions.getSummary(
+            reservation.id,
+          );
+          summaryData = summaryAgain.data.data as ReservationPaymentSummaryResponse;
+          transactionId = findPendingTransactionId(summaryData.items);
+        }
       }
 
       if (!transactionId) {
-        throw new Error('No se encontró ninguna transacción para confirmar.');
+        throw new Error(
+          'No hay una obligación pendiente para este monto. Si ya pagaste antes, intenta de nuevo o revisa el resumen de pagos.',
+        );
       }
 
       await apiClient.instance.patch(
         `/transactions/${transactionId}/confirm-manual`,
         {
-          venuePaymentMethodId: selectedPaymentMethodId,
+          venuePaymentMethodId: methodId,
           referenceNumber: paymentReference || undefined,
           paymentData: selectedMethod?.config ?? undefined,
         },
@@ -176,9 +386,14 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
         onClose();
       }, 1500);
     } catch (err: unknown) {
-      const message = err instanceof Error && 'response' in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'No se pudo confirmar el pago.'
-        : 'No se pudo confirmar el pago.';
+      let message = 'No se pudo confirmar el pago.';
+      if (err instanceof Error && 'response' in err) {
+        message =
+          (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          ?? message;
+      } else if (err instanceof Error && err.message) {
+        message = err.message;
+      }
       setError(message);
       showToast(message, 'error');
     } finally {
@@ -213,7 +428,16 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
     minute: '2-digit',
   });
 
-  const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethodId);
+  const resolvedPaymentMethodId = useMemo(
+    () => resolvePaymentMethodId(
+      paymentMethods,
+      selectedPaymentMethodId,
+      selectedPaymentMethodType,
+    ),
+    [paymentMethods, selectedPaymentMethodId, selectedPaymentMethodType],
+  );
+
+  const selectedMethod = paymentMethods.find((m) => m.id === resolvedPaymentMethodId);
   const config = selectedMethod?.config as Record<string, string> | undefined;
 
   const TYPE_LABELS: Record<string, string> = {
@@ -318,21 +542,21 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
             <p className="mt-1 text-sm">
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  reservation.paymentStatus === 'PAID'
+                  displayPaymentStatus === 'PAID'
                     ? 'bg-green-100 text-green-700'
-                    : reservation.paymentStatus === 'PARTIAL'
+                    : displayPaymentStatus === 'PARTIAL'
                     ? 'bg-yellow-100 text-yellow-700'
                     : 'bg-red-100 text-red-700'
                 }`}
               >
-                {reservation.paymentStatus === 'PAID' ? 'Pagado' :
-                 reservation.paymentStatus === 'PARTIAL' ? 'Pago parcial' : 'Sin pagar'}
+                {displayPaymentStatus === 'PAID' ? 'Pagado' :
+                 displayPaymentStatus === 'PARTIAL' ? 'Pago parcial' : 'Sin pagar'}
               </span>
             </p>
-            {reservation.totalAmountCents != null && (
+            {displayTotalCents != null && (
               <div className="mt-1 flex gap-2 text-sm text-gray-600">
-                <span>Total: <strong>${(reservation.totalAmountCents / 100).toLocaleString('es-AR')}</strong></span>
-                <span>Pagado: <strong>${((reservation.paidAmountCents ?? 0) / 100).toLocaleString('es-AR')}</strong></span>
+                <span>Total: <strong>${(displayTotalCents / 100).toLocaleString('es-AR')}</strong></span>
+                <span>Pagado: <strong>${(displayPaidCents / 100).toLocaleString('es-AR')}</strong></span>
               </div>
             )}
           </div>
@@ -452,15 +676,33 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                   ) : (
                     <>
                       <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
-                        <p className="text-sm text-green-600 font-medium mb-2">Monto a pagar</p>
-                        <p className="text-3xl font-bold text-green-700">
-                          {paymentSummary
-                            ? `$${(paymentSummary.pendingAmount / 100).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
-                            : '--'}
-                        </p>
+                        <label
+                          htmlFor="payment-amount-input"
+                          className="text-sm text-green-600 font-medium mb-2 block"
+                        >
+                          Monto a pagar
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-700">
+                            $
+                          </span>
+                          <input
+                            id="payment-amount-input"
+                            type="text"
+                            inputMode="decimal"
+                            value={paymentAmountInput}
+                            onChange={(e) => {
+                              setPaymentAmountInput(e.target.value);
+                              setError(null);
+                            }}
+                            placeholder="0,00"
+                            className="w-full pl-8 pr-3 py-2 text-3xl font-bold text-green-700 bg-white/80 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            aria-label="Monto a pagar en pesos"
+                          />
+                        </div>
                         {paymentSummary && paymentSummary.paidAmount > 0 && (
                           <p className="text-xs text-green-600 mt-1">
-                            Ya pagaste: ${(paymentSummary.paidAmount / 100).toLocaleString('es-AR')}
+                            Ya pagado: ${(paymentSummary.paidAmount / 100).toLocaleString('es-AR')}
                           </p>
                         )}
                       </div>
@@ -499,8 +741,14 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
               {/* Step 2: Método de pago */}
               {paymentStep === 'method' && (
                 <div className="space-y-4 mb-6">
-                  {availableTypes.length === 0 ? (
-                    <p className="text-sm text-center text-muted py-4">No hay medios de pago configurados.</p>
+                  {paymentMethodsLoading ? (
+                    <div className="flex justify-center py-6">
+                      <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-green-600" />
+                    </div>
+                  ) : availableTypes.length === 0 ? (
+                    <p className="text-sm text-center text-muted py-4">
+                      No hay medios de pago activos. Configúralos en Ajustes → Medios de pago.
+                    </p>
                   ) : (
                     <div>
                       <label className="block text-sm font-medium text-secondary-700 mb-2">Selecciona el tipo de pago</label>
@@ -508,7 +756,13 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                         {availableTypes.map(type => (
                           <button
                             key={type}
-                            onClick={() => { setSelectedPaymentMethodType(type); setSelectedPaymentMethodId(''); }}
+                            onClick={() => {
+                              const ofType = paymentMethods.filter((pm) => pm.type === type);
+                              setSelectedPaymentMethodType(type);
+                              setSelectedPaymentMethodId(
+                                ofType.length === 1 ? ofType[0]!.id : '',
+                              );
+                            }}
                             className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
                               selectedPaymentMethodType === type
                                 ? 'border-green-500 bg-green-50'
@@ -600,8 +854,8 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                   <div className="bg-green-50 rounded-lg p-3 text-center">
                     <p className="text-sm text-green-600">Monto a confirmar</p>
                     <p className="text-2xl font-bold text-green-700">
-                      {paymentSummary
-                        ? `$${(paymentSummary.pendingAmount / 100).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+                      {paymentAmountCents !== null
+                        ? `$${formatPesosFromCents(paymentAmountCents)}`
                         : '--'}
                     </p>
                   </div>
@@ -635,7 +889,12 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                 {paymentStep === 'summary' ? (
                   <button
                     onClick={handlePaymentNext}
-                    disabled={stepLoading}
+                    disabled={
+                      stepLoading
+                      || paymentAmountCents === null
+                      || paymentAmountCents <= 0
+                      || maxPayableCents <= 0
+                    }
                     className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
                     Continuar
@@ -643,7 +902,7 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                 ) : paymentStep === 'method' ? (
                   <button
                     onClick={handleMethodSelect}
-                    disabled={!selectedPaymentMethodId}
+                    disabled={paymentMethodsLoading || !resolvedPaymentMethodId}
                     className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:bg-gray-300"
                   >
                     Continuar
@@ -651,7 +910,7 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                 ) : (
                   <button
                     onClick={handleConfirmPaymentSubmit}
-                    disabled={loading || !selectedPaymentMethodId}
+                    disabled={loading || !resolvedPaymentMethodId}
                     className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
                     {loading ? (
@@ -680,8 +939,8 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
               <p className="text-slate-500 mb-6">
                 El pago de{' '}
                 <span className="font-semibold text-green-600">
-                  {paymentSummary
-                    ? `$${(paymentSummary.pendingAmount / 100).toLocaleString('es-AR')}`
+                  {paymentAmountCents !== null
+                    ? `$${formatPesosFromCents(paymentAmountCents)}`
                     : ''}
                 </span>{' '}
                 fue registrado correctamente.

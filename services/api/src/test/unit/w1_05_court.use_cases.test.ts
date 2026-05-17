@@ -6,14 +6,14 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { AppError } from '../../domain/errors/app_error';
+import { AppError } from '../../domain/errors/app_error.js';
 import {
   CourtStatus,
   SportType,
   type Court,
   type CreateCourtInput,
   type UpdateCourtInput,
-} from '../../domain/entities/court.entity';
+} from '../../domain/entities/booking/court.entity.js';
 import {
   CreateCourtUseCase,
   type CreateCourtInputDTO,
@@ -23,7 +23,7 @@ import {
   type UpdateCourtInputDTO,
   CancelCourtUseCase,
   type CancelCourtInputDTO,
-} from '../../application/use_cases/court.use_cases';
+} from '../../application/use_cases/court.use_cases.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,6 +37,20 @@ function createMockRepository() {
     create: vi.fn<() => Promise<Court>>(),
     update: vi.fn<() => Promise<Court>>(),
     cancel: vi.fn<() => Promise<Court>>(),
+  };
+}
+
+function createMockVenueRepository() {
+  return {
+    findByIdSV: vi.fn().mockResolvedValue({ id: 'venue-1', name: 'Venue' }),
+    updateSV: vi.fn(),
+    getPaymentInfoSV: vi.fn(),
+    listVenuesSV: vi.fn(),
+    listVenuesNearSV: vi.fn(),
+    listVenuesForUserSV: vi.fn(),
+    createVenueSV: vi.fn(),
+    getVenueDetailSV: vi.fn(),
+    getPaymentInfoWithNameSV: vi.fn(),
   };
 }
 
@@ -66,11 +80,13 @@ function activeCourt(overrides: Partial<Court> = {}): Court {
 
 describe('CreateCourtUseCase', () => {
   let repo: ReturnType<typeof createMockRepository>;
+  let venueRepo: ReturnType<typeof createMockVenueRepository>;
   let useCase: CreateCourtUseCase;
 
   beforeEach(() => {
     repo = createMockRepository();
-    useCase = new CreateCourtUseCase(repo);
+    venueRepo = createMockVenueRepository();
+    useCase = new CreateCourtUseCase(repo, venueRepo);
   });
 
   it('should create court with defaults (sportType=PADEL, indoor=false, lighting=false, status=ACTIVE) when only name provided', async () => {
@@ -139,11 +155,13 @@ describe('CreateCourtUseCase', () => {
 
 describe('ListCourtsUseCase', () => {
   let repo: ReturnType<typeof createMockRepository>;
+  let venueRepo: ReturnType<typeof createMockVenueRepository>;
   let useCase: ListCourtsUseCase;
 
   beforeEach(() => {
     repo = createMockRepository();
-    useCase = new ListCourtsUseCase(repo);
+    venueRepo = createMockVenueRepository();
+    useCase = new ListCourtsUseCase(repo, venueRepo);
   });
 
   it('should list all courts for a venue when no status filter provided', async () => {

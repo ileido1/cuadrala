@@ -6,6 +6,7 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { seedPublishedMatchReservationSV } from '../helpers/published-match-reservation.seed.js';
 
 const APP = createApp();
 
@@ -17,6 +18,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let categoryPadelId: string;
     let categoryOtherId: string;
     let token: string;
+    let actorUserId: string;
     let venueAId: string;
     let courtA1Id: string;
 
@@ -44,6 +46,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         .set('Content-Type', 'application/json');
       expect(REG.status).toBe(201);
       token = REG.body.data.accessToken as string;
+      actorUserId = REG.body.data.user.id as string;
 
       const VENUE_A = await PRISMA.venue.create({
         data: { name: `Club A ${TS}` },
@@ -128,17 +131,15 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(SLOTS[1]).toMatchObject({ scheduledAt: '2026-06-11T10:30:00.000Z', isAvailable: false, reason: 'OCCUPIED_MATCH' });
     });
 
-    it('marca incompatible si hay VacantHour PUBLISHED con sport/category distintos', async () => {
+    it('marca incompatible si hay MATCH PUBLISHED con sport/category distintos', async () => {
       const T_SLOT = new Date('2026-06-12T14:00:00.000Z');
-      await PRISMA.vacantHour.create({
-        data: {
-          venueId: venueAId,
-          courtId: courtA1Id,
-          sportId: sportTennisId,
-          categoryId: categoryOtherId,
-          scheduledAt: T_SLOT,
-          status: 'PUBLISHED',
-        },
+      await seedPublishedMatchReservationSV(PRISMA, {
+        venueId: venueAId,
+        courtId: courtA1Id,
+        sportId: sportTennisId,
+        categoryId: categoryOtherId,
+        scheduledAt: T_SLOT,
+        organizerUserId: actorUserId,
       });
 
       const RES = await request(APP)

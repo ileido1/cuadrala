@@ -29,5 +29,10 @@ export interface TournamentRepository {
     presetSchemaVersion: number;
     startsAt?: Date;
   }): Promise<TournamentCreatedDTO>;
+
+  updateStatusSV(
+    _id: string,
+    _status: string,
+  ): Promise<{ id: string; name: string; status: string } | null>;
 }
 

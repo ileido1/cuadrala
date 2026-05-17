@@ -6,6 +6,7 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { ReservationRepository } from '../../domain/ports/reservation_repository.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
+import type { BookingCatalogReadRepository } from '../../domain/ports/booking_catalog_read_repository.js';
 import type { ICourtRepository } from '../../domain/ports/court_repository.js';
 import type {
   CreateReservationInputDTO,
@@ -13,8 +14,8 @@ import type {
   PageDTO,
   ReservationDTO,
   ReservationStatus,
-} from '../../domain/entities/reservation.entity.js';
-import { ReservationType } from '../../domain/entities/reservation.entity.js';
+} from '../../domain/entities/booking/reservation.entity.js';
+import { ReservationType } from '../../domain/entities/booking/reservation.entity.js';
 
 // ---------------------------------------------------------------------------
 // CreateReservationUseCase
@@ -23,7 +24,7 @@ import { ReservationType } from '../../domain/entities/reservation.entity.js';
 export type CreateReservationInput = {
   venueId: string;
   courtId: string;
-  sportId: string;
+  sportId?: string;
   categoryId?: string;
   type?: 'DIRECT' | 'BLOCKED';
   scheduledAt: Date;
@@ -42,9 +43,17 @@ export class CreateReservationUseCase {
     private readonly _reservationRepository: ReservationRepository,
     private readonly _venueStaffRepository: VenueStaffRepository,
     private readonly _courtRepository: ICourtRepository,
+    private readonly _catalogReadRepository: BookingCatalogReadRepository,
   ) {}
 
   async executeSV(_input: CreateReservationInput, _actorUserId: string): Promise<CreateReservationOutput> {
+    const SPORT_ID =
+      _input.sportId
+      ?? await this._catalogReadRepository.resolveSportIdForCourtSV(_input.courtId);
+    const CATEGORY_ID =
+      _input.categoryId
+      ?? await this._catalogReadRepository.resolveDefaultCategoryIdSV();
+
     // Validaciones de entrada
     if (_input.durationMinutes !== undefined && _input.durationMinutes <= 0) {
       throw new AppError('VALIDACION_FALLIDA', 'durationMinutes debe ser mayor a 0.', 400);
@@ -86,8 +95,8 @@ export class CreateReservationUseCase {
     const INPUT_DTO: CreateReservationInputDTO = {
       venueId: _input.venueId,
       courtId: _input.courtId,
-      sportId: _input.sportId,
-      ...(_input.categoryId !== undefined ? { categoryId: _input.categoryId } : {}),
+      sportId: SPORT_ID,
+      categoryId: CATEGORY_ID,
       ...(_input.type !== undefined
         ? {
             type:
@@ -220,6 +229,56 @@ export class CancelReservationUseCase {
     // Cancelar la reserva
     const CANCELLED = await this._reservationRepository.cancelReservationSV(_input.reservationId);
 
+    return { reservation: CANCELLED };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// UnblockCourtSlotUseCase — cancelar bloqueo por court + horario
+// ---------------------------------------------------------------------------
+
+export type UnblockCourtSlotInput = {
+  venueId: string;
+  courtId: string;
+  scheduledAt: Date;
+};
+
+export class UnblockCourtSlotUseCase {
+  constructor(
+    private readonly _reservationRepository: ReservationRepository,
+    private readonly _venueStaffRepository: VenueStaffRepository,
+  ) {}
+
+  async executeSV(
+    _input: UnblockCourtSlotInput,
+    _actorUserId: string,
+  ): Promise<CancelReservationOutput> {
+    const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
+      _actorUserId,
+      _input.venueId,
+    );
+    if (!IS_STAFF) {
+      throw new AppError(
+        'NO_AUTORIZADO',
+        'No tienes permisos para desbloquear horarios en esta sede.',
+        403,
+      );
+    }
+
+    const RESERVATION = await this._reservationRepository.findByCourtAndScheduledAtSV(
+      _input.courtId,
+      _input.scheduledAt,
+    );
+    if (
+      RESERVATION === null
+      || RESERVATION.venueId !== _input.venueId
+      || RESERVATION.type !== ReservationType.BLOCKED
+      || RESERVATION.status !== 'CONFIRMED'
+    ) {
+      throw new AppError('BLOQUEO_NO_ENCONTRADO', 'No existe bloqueo para este horario.', 404);
+    }
+
+    const CANCELLED = await this._reservationRepository.cancelReservationSV(RESERVATION.id);
     return { reservation: CANCELLED };
   }
 }

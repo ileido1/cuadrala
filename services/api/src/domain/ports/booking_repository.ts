@@ -7,14 +7,12 @@
  */
 
 import type {
-  CreateReservationInputDTO,
-  ListReservationsFiltersDTO,
   PageDTO,
   ReservationDTO,
   ReservationType,
   Visibility,
   ReservationStatus,
-} from '../entities/reservation.entity.js';
+} from '../entities/booking/reservation.entity.js';
 
 // -----------------------------------------------------------------------------
 // Filtros para listar bookings (unificados)
@@ -64,7 +62,7 @@ export interface CreateBookingInputDTO {
 export interface UpdateBookingInputDTO {
   readonly status?: ReservationStatus;
   readonly visibility?: Visibility;
-  readonly matchStatus?: import('../entities/reservation.entity.js').MatchStatus;
+  readonly matchStatus?: import('../entities/booking/reservation.entity.js').MatchStatus;
   readonly notes?: string | null;
   readonly maxParticipants?: number;
   readonly pricePerPlayerCents?: number;

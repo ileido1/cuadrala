@@ -5,9 +5,7 @@
 --           para unificar Match y VacantHour en Reservation
 -- ============================================================
 
--- Paso 1: Agregar valor MATCH al enum ReservationType
--- PostgreSQL requiere que redefinamos el enum para agregar valores
-ALTER TYPE "ReservationType" ADD VALUE IF NOT EXISTS 'MATCH';
+-- Paso 1: valor MATCH en ReservationType (migración 20260514114032)
 
 -- Paso 2: Crear enum Visibility (no existe previamente)
 CREATE TYPE "Visibility" AS ENUM ('PUBLISHED', 'DRAFT', 'PRIVATE');

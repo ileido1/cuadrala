@@ -1,9 +1,11 @@
+import { AppError } from '../../domain/errors/app_error.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
-import { listPendingTransactionsByVenueRepo } from '../../infrastructure/repositories/transaction.repository.js';
+import type { PaymentTransactionRepository } from '../../domain/ports/payment_transaction_repository.js';
 
 export class ListVenuePendingTransactionsUseCase {
   constructor(
     private readonly _venueStaffRepository: VenueStaffRepository,
+    private readonly _transactionRepository: PaymentTransactionRepository,
   ) {}
 
   async executeSV(_input: {
@@ -25,13 +27,11 @@ export class ListVenuePendingTransactionsUseCase {
       createdAt: string;
     }>;
   }> {
-    // Verificar que el usuario sea staff del venue
     const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
       _input.userId,
       _input.venueId,
     );
     if (!IS_STAFF) {
-      const { AppError } = await import('../../domain/errors/app_error.js');
       throw new AppError(
         'NO_AUTORIZADO',
         'Solo el staff de la sede puede ver las transacciones pendientes.',
@@ -39,13 +39,16 @@ export class ListVenuePendingTransactionsUseCase {
       );
     }
 
-    const ROWS = await listPendingTransactionsByVenueRepo(_input.venueId, {
-      ...(_input.from !== undefined ? { from: _input.from } : {}),
-      ...(_input.to !== undefined ? { to: _input.to } : {}),
-      ...(_input.matchId !== undefined ? { matchId: _input.matchId } : {}),
-      ...(_input.reservationId !== undefined ? { reservationId: _input.reservationId } : {}),
-      ...(_input.type !== undefined ? { type: _input.type } : {}),
-    });
+    const ROWS = await this._transactionRepository.listPendingByVenueSV(
+      _input.venueId,
+      {
+        ...(_input.from !== undefined ? { from: _input.from } : {}),
+        ...(_input.to !== undefined ? { to: _input.to } : {}),
+        ...(_input.matchId !== undefined ? { matchId: _input.matchId } : {}),
+        ...(_input.reservationId !== undefined ? { reservationId: _input.reservationId } : {}),
+        ...(_input.type !== undefined ? { type: _input.type } : {}),
+      },
+    );
 
     return {
       items: ROWS.map((tx) => ({

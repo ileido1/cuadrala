@@ -463,6 +463,7 @@ export interface BookingItem {
   notes?: string | null;
   responsibleName?: string | null;
   responsiblePhone?: string | null;
+  createdByUserId?: string;
 }
 
 export interface BookingListResponse {

@@ -44,7 +44,9 @@ Dev environment: **Ubuntu**.
 
 ### API — Clean Architecture (layered, dependency inversion)
 
-```
+**Canonical guide:** [`services/api/ARCHITECTURE.md`](services/api/ARCHITECTURE.md) — layer rules, domain tree, composition root, gold/anti patterns, migration waves, controller debt manifest.
+
+si```
 src/domain/          → Entities, Value Objects, Repository/Service interfaces (zero external deps)
 src/application/     → Use Cases, DTOs (only imports domain)
 src/infrastructure/  → Prisma repos, external APIs, bcrypt/JWT (implements domain interfaces)
@@ -55,6 +57,8 @@ src/generated/prisma → Auto-generated Prisma client (DO NOT edit)
 **Inviolable rule:** `domain` and `application` must NEVER import from `infrastructure` or `presentation`. Infrastructure implements domain interfaces; presentation wires everything together.
 
 Prisma client output is configured to `src/generated/prisma` (not the default `node_modules`).
+
+**Active refactor:** `openspec/changes/api-architecture-refactor/` (Wave 0–6). Do not add `application/*.service.ts` or `infrastructure/repositories/` for new code.
 
 ### Mobile — Feature-first with BLoC
 
@@ -129,5 +133,7 @@ Exception: skip for trivial changes (typos, comments) or when user explicitly sa
 | `.cursor/rules/naming-conventions.mdc` | Naming conventions (API) |
 | `.cursor/rules/code-comments.mdc` | Comment style (Spanish) |
 | `docs/SDD.md` | Product spec + user stories |
+| `services/api/ARCHITECTURE.md` | API Clean Architecture — layers, DI, patterns, migration |
 | `services/api/prisma/schema.prisma` | Full DB schema |
 | `services/api/README.md` | API endpoints + setup details |
+| `openspec/changes/api-architecture-refactor/` | API refactor program (spec, design, tasks) |

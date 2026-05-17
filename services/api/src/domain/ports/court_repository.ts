@@ -3,7 +3,7 @@
  * Define el contrato que implementa la capa de infraestructura.
  */
 // eslint-disable-next-line no-restricted-imports -- Ports puede importar entidades del mismo nivel (domain)
-import type { Court, CourtStatus, CreateCourtInput, UpdateCourtInput } from '../entities/court.entity.js';
+import type { Court, CourtStatus, CreateCourtInput, UpdateCourtInput } from '../entities/booking/court.entity.js';
 
 /** Repository interface para operaciones CRUD de Court.
  *

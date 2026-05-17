@@ -1,20 +1,17 @@
 /**
  * Controlador de Backoffice Reservations API.
- * Endpoints: POST /venues/:venueId/reservations, GET /venues/:venueId/reservations, DELETE /venues/:venueId/reservations/:reservationId
  */
 
 import type { Request, Response } from 'express';
 
 import { AppError } from '../../domain/errors/app_error.js';
-import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { ReservationStatus, ReservationType } from '../../domain/entities/booking/reservation.entity.js';
 import {
-  CreateReservationUseCase,
-  ListReservationsUseCase,
-  CancelReservationUseCase,
-} from '../../application/use_cases/reservation.use_cases.js';
-import { PrismaReservationRepository } from '../../infrastructure/adapters/prisma_reservation_repository.js';
-import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
-import { CourtRepository } from '../../infrastructure/repositories/court.repository.js';
+  CANCEL_RESERVATION_UC,
+  CREATE_RESERVATION_UC,
+  LIST_RESERVATIONS_UC,
+  UNBLOCK_COURT_SLOT_UC,
+} from '../composition/reservations.composition.js';
 import {
   CREATE_RESERVATION_BODY_SCHEMA,
   LIST_RESERVATIONS_QUERY_SCHEMA,
@@ -23,37 +20,6 @@ import {
   COURT_ID_PARAM_SCHEMA,
   BLOCK_SLOT_BODY_SCHEMA,
 } from '../validation/reservations.validation.js';
-import { ReservationStatus, ReservationType } from '../../domain/entities/reservation.entity.js';
-
-// Instancias compartidas de repositorio ( lazily initialized )
-let _reservationRepo: PrismaReservationRepository | null = null;
-let _venueStaffRepo: PrismaVenueStaffRepository | null = null;
-let _courtRepo: CourtRepository | null = null;
-
-function getReservationRepo(): PrismaReservationRepository {
-  if (_reservationRepo === null) {
-    _reservationRepo = new PrismaReservationRepository();
-  }
-  return _reservationRepo;
-}
-
-function getVenueStaffRepo(): PrismaVenueStaffRepository {
-  if (_venueStaffRepo === null) {
-    _venueStaffRepo = new PrismaVenueStaffRepository();
-  }
-  return _venueStaffRepo;
-}
-
-function getCourtRepo(): CourtRepository {
-  if (_courtRepo === null) {
-    _courtRepo = new CourtRepository();
-  }
-  return _courtRepo;
-}
-
-// ---------------------------------------------------------------------------
-// POST /venues/:venueId/reservations
-// ---------------------------------------------------------------------------
 
 export async function postReservationCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -64,38 +30,6 @@ export async function postReservationCON(_req: Request, _res: Response): Promise
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = CREATE_RESERVATION_BODY_SCHEMA.parse(_req.body);
 
-  // Obtener sportId desde el sportType del court
-  const COURT = await PRISMA.court.findUnique({
-    where: { id: BODY.courtId },
-    select: { sportType: true },
-  });
-  if (!COURT) {
-    throw new AppError('CANCHA_NO_ENCONTRADA', 'La cancha no existe.', 404);
-  }
-
-  // Buscar el Sport por código (PADEL o TENNIS)
-  const SPORT = await PRISMA.sport.findFirst({
-    where: { code: COURT.sportType },
-    select: { id: true },
-  });
-  if (!SPORT) {
-    throw new AppError('ERROR_INTERNO', 'No se encontró el deporte de la cancha.', 500);
-  }
-
-  // Si no se provee categoryId, buscar cualquier categoría como default
-  let categoryId = BODY.categoryId;
-  if (!categoryId) {
-    const DEFAULT_CATEGORY = await PRISMA.category.findFirst({
-      select: { id: true },
-      orderBy: { createdAt: 'asc' },
-    });
-    if (!DEFAULT_CATEGORY) {
-      throw new AppError('ERROR_INTERNO', 'No se encontró una categoría en el sistema.', 500);
-    }
-    categoryId = DEFAULT_CATEGORY.id;
-  }
-
-  // Extraer responsibleName y responsiblePhone del body
   let responsibleName: string | undefined;
   let responsiblePhone: string | undefined;
   if (BODY.responsible !== undefined) {
@@ -103,16 +37,13 @@ export async function postReservationCON(_req: Request, _res: Response): Promise
       responsibleName = BODY.responsible.name;
       responsiblePhone = BODY.responsible.phone;
     }
-    // Para PLAYER por ahora solo guardamos el reference (podría расширяse)
   }
 
-  const useCase = new CreateReservationUseCase(getReservationRepo(), getVenueStaffRepo(), getCourtRepo());
-  const result = await useCase.executeSV(
+  const RESULT = await CREATE_RESERVATION_UC.executeSV(
     {
       venueId: PARAMS.venueId,
       courtId: BODY.courtId,
-      sportId: SPORT.id,
-      categoryId,
+      ...(BODY.categoryId !== undefined ? { categoryId: BODY.categoryId } : {}),
       type: BODY.type,
       scheduledAt: new Date(BODY.scheduledAt),
       ...(BODY.durationMinutes !== undefined ? { durationMinutes: BODY.durationMinutes } : {}),
@@ -126,13 +57,9 @@ export async function postReservationCON(_req: Request, _res: Response): Promise
   _res.status(201).json({
     success: true,
     message: 'Reserva creada correctamente.',
-    data: result.reservation,
+    data: RESULT.reservation,
   });
 }
-
-// ---------------------------------------------------------------------------
-// GET /venues/:venueId/reservations
-// ---------------------------------------------------------------------------
 
 export async function listReservationsCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -143,8 +70,7 @@ export async function listReservationsCON(_req: Request, _res: Response): Promis
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const QUERY = LIST_RESERVATIONS_QUERY_SCHEMA.parse(_req.query);
 
-  const useCase = new ListReservationsUseCase(getReservationRepo(), getVenueStaffRepo());
-  const result = await useCase.executeSV(
+  const RESULT = await LIST_RESERVATIONS_UC.executeSV(
     {
       venueId: PARAMS.venueId,
       ...(QUERY.courtId !== undefined ? { courtId: QUERY.courtId } : {}),
@@ -167,13 +93,9 @@ export async function listReservationsCON(_req: Request, _res: Response): Promis
   _res.status(200).json({
     success: true,
     message: 'Reservas obtenidas correctamente.',
-    data: result,
+    data: RESULT,
   });
 }
-
-// ---------------------------------------------------------------------------
-// DELETE /venues/:venueId/reservations/:reservationId
-// ---------------------------------------------------------------------------
 
 export async function deleteReservationCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -182,20 +104,17 @@ export async function deleteReservationCON(_req: Request, _res: Response): Promi
   }
 
   const PARAMS = RESERVATION_ID_PARAM_SCHEMA.parse(_req.params);
-
-  const useCase = new CancelReservationUseCase(getReservationRepo(), getVenueStaffRepo());
-  const result = await useCase.executeSV({ reservationId: PARAMS.reservationId }, ACTOR_USER_ID);
+  const RESULT = await CANCEL_RESERVATION_UC.executeSV(
+    { reservationId: PARAMS.reservationId },
+    ACTOR_USER_ID,
+  );
 
   _res.status(200).json({
     success: true,
     message: 'Reserva cancelada correctamente.',
-    data: result.reservation,
+    data: RESULT.reservation,
   });
 }
-
-// ---------------------------------------------------------------------------
-// POST /venues/:venueId/courts/:courtId/slots/block — bloquear horario
-// ---------------------------------------------------------------------------
 
 export async function postBlockSlotCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -203,32 +122,16 @@ export async function postBlockSlotCON(_req: Request, _res: Response): Promise<v
     throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
   }
 
-  const PARAMS = { ...VENUE_ID_PARAM_SCHEMA.parse(_req.params), ...COURT_ID_PARAM_SCHEMA.parse(_req.params) };
+  const PARAMS = {
+    ...VENUE_ID_PARAM_SCHEMA.parse(_req.params),
+    ...COURT_ID_PARAM_SCHEMA.parse(_req.params),
+  };
   const BODY = BLOCK_SLOT_BODY_SCHEMA.parse(_req.body);
 
-  // Obtener sportId y categoryId default de la cancha
-  const COURT = await PRISMA.court.findUnique({
-    where: { id: PARAMS.courtId },
-    select: { sportId: true, venue: { select: { id: true } } },
-  });
-
-  if (COURT === null) {
-    throw new AppError('CANCHA_NO_ENCONTRADA', 'La cancha indicada no existe.', 404);
-  }
-
-  const SPORT_ID = COURT.sportId;
-  const CATEGORY_ID = await PRISMA.category.findFirst({
-    select: { id: true },
-    orderBy: { createdAt: 'asc' },
-  }).then((c) => c?.id ?? '');
-
-  const useCase = new CreateReservationUseCase(getReservationRepo(), getVenueStaffRepo(), getCourtRepo());
-  const result = await useCase.executeSV(
+  const RESULT = await CREATE_RESERVATION_UC.executeSV(
     {
       venueId: PARAMS.venueId,
       courtId: PARAMS.courtId,
-      sportId: SPORT_ID,
-      categoryId: CATEGORY_ID,
       type: ReservationType.BLOCKED,
       scheduledAt: new Date(BODY.scheduledAt),
       durationMinutes: BODY.durationMinutes,
@@ -240,13 +143,9 @@ export async function postBlockSlotCON(_req: Request, _res: Response): Promise<v
   _res.status(201).json({
     success: true,
     message: 'Horario bloqueado correctamente.',
-    data: result.reservation,
+    data: RESULT.reservation,
   });
 }
-
-// ---------------------------------------------------------------------------
-// DELETE /venues/:venueId/courts/:courtId/slots/block — desbloquear horario
-// ---------------------------------------------------------------------------
 
 export async function deleteBlockSlotCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -254,31 +153,24 @@ export async function deleteBlockSlotCON(_req: Request, _res: Response): Promise
     throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
   }
 
-  const PARAMS = { ...VENUE_ID_PARAM_SCHEMA.parse(_req.params), ...COURT_ID_PARAM_SCHEMA.parse(_req.params) };
+  const PARAMS = {
+    ...VENUE_ID_PARAM_SCHEMA.parse(_req.params),
+    ...COURT_ID_PARAM_SCHEMA.parse(_req.params),
+  };
   const BODY = BLOCK_SLOT_BODY_SCHEMA.parse(_req.body);
 
-  // Buscar la reservation BLOCKED para este court + scheduledAt
-  const RESERVATION = await PRISMA.reservation.findFirst({
-    where: {
-      courtId: PARAMS.courtId,
+  const RESULT = await UNBLOCK_COURT_SLOT_UC.executeSV(
+    {
       venueId: PARAMS.venueId,
-      type: 'BLOCKED',
-      status: 'CONFIRMED',
+      courtId: PARAMS.courtId,
       scheduledAt: new Date(BODY.scheduledAt),
     },
-    select: { id: true },
-  });
-
-  if (RESERVATION === null) {
-    throw new AppError('BLOQUEO_NO_ENCONTRADO', 'No existe bloqueo para este horario.', 404);
-  }
-
-  const useCase = new CancelReservationUseCase(getReservationRepo(), getVenueStaffRepo());
-  const result = await useCase.executeSV({ reservationId: RESERVATION.id }, ACTOR_USER_ID);
+    ACTOR_USER_ID,
+  );
 
   _res.status(200).json({
     success: true,
     message: 'Horario desbloqueado correctamente.',
-    data: result.reservation,
+    data: RESULT.reservation,
   });
 }

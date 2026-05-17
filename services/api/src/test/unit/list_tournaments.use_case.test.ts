@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ListTournamentsUseCase } from '../../../application/use_cases/list_tournaments.use_case';
+import { ListTournamentsUseCase } from '../../application/use_cases/list_tournaments.use_case.js';
 
 // Mock repository
 const mockRepository = {

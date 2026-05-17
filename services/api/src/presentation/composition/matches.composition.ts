@@ -10,8 +10,8 @@ import { GetMatchPaymentInfoUseCase } from '../../application/use_cases/get_matc
 import { ListMatchesUseCase } from '../../application/use_cases/list_matches.use_case.js';
 import { UpdateMatchUseCase } from '../../application/use_cases/update_match.use_case.js';
 import { PrismaMatchNotificationContextReadRepository } from '../../infrastructure/adapters/prisma_match_notification_context_read_repository.js';
-import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { PrismaMatchRepository } from '../../infrastructure/adapters/prisma_match_repository.js';
+import { PrismaVenueRepository } from '../../infrastructure/adapters/prisma_venue_repository.js';
 import { PrismaMatchCourtAvailabilityRepository } from '../../infrastructure/adapters/prisma_match_court_availability_repository.js';
 import { PrismaMatchCrudRepository } from '../../infrastructure/adapters/prisma_match_crud_repository.js';
 import { PrismaMatchOrganizerRepository } from '../../infrastructure/adapters/prisma_match_organizer_repository.js';
@@ -33,6 +33,7 @@ const MATCH_STATUS_REPOSITORY = new PrismaMatchStatusRepository();
 const USER_CATEGORY_REPOSITORY = new PrismaUserCategoryRepository();
 const MATCH_NOTIFICATION_CONTEXT_READ_REPOSITORY = new PrismaMatchNotificationContextReadRepository();
 const NOTIFICATION_EVENT_REPOSITORY = new PrismaNotificationEventRepository();
+const VENUE_REPOSITORY = new PrismaVenueRepository();
 
 export const LIST_OPEN_MATCHES_UC = new ListOpenMatchesUseCase(MATCH_REPOSITORY);
 export const JOIN_MATCH_UC = new JoinMatchUseCase(
@@ -80,6 +81,6 @@ export const CANCEL_MATCH_UC = new CancelMatchUseCase(
 export const GET_MATCH_PAYMENT_INFO_UC = new GetMatchPaymentInfoUseCase(
   MATCH_QUERY_REPOSITORY,
   MATCH_PARTICIPATION_REPOSITORY,
-  PRISMA,
+  VENUE_REPOSITORY,
 );
 

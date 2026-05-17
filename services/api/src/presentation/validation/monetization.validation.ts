@@ -44,11 +44,23 @@ export const USER_TRANSACTIONS_QUERY_SCHEMA = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
+/** ID de medio de pago opcional (acepta UUID y ids legacy del seed). */
+function optionalPaymentMethodIdField() {
+  return z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z
+      .string()
+      .min(1, 'venuePaymentMethodId no puede estar vacio.')
+      .max(64)
+      .optional(),
+  );
+}
+
 /** Body para confirmar una transacción manualmente con datos de pago. */
 export const CONFIRM_TRANSACTION_BODY_SCHEMA = z
   .object({
-    venuePaymentMethodId: z.string().uuid('venuePaymentMethodId debe ser un UUID valido.').optional(),
+    venuePaymentMethodId: optionalPaymentMethodIdField(),
     referenceNumber: z.string().max(200).optional(),
-    paymentData: z.record(z.unknown()).optional(),
+    paymentData: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();

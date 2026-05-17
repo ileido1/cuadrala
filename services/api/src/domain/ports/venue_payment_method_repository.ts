@@ -1,7 +1,7 @@
 import type {
   VenuePaymentMethodDTO,
   VenuePaymentMethodType,
-} from '../entities/venue_payment_method.entity.js';
+} from '../entities/payments/venue_payment_method.entity.js';
 
 export interface VenuePaymentMethodRepository {
   /** Lista todos los métodos activos de un venue, ordenados por position. */

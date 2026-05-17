@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { convertAmountToBsSV } from '../../../application/monetization.service.js';
+import { convertAmountToBsSV } from '../../../domain/services/payments/convert_amount_to_bs.js';
 
 describe('convertAmountToBsSV', () => {
   it('should convert BS currency directly to cents', () => {

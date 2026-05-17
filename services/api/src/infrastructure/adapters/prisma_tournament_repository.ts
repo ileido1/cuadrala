@@ -63,5 +63,21 @@ export class PrismaTournamentRepository implements TournamentRepository {
       status: CREATED.status,
     };
   }
+
+  async updateStatusSV(_id: string, _status: string) {
+    const EXISTS = await PRISMA.tournament.findUnique({
+      where: { id: _id },
+      select: { id: true },
+    });
+    if (EXISTS === null) {
+      return null;
+    }
+
+    return PRISMA.tournament.update({
+      where: { id: _id },
+      data: { status: _status as never },
+      select: { id: true, name: true, status: true },
+    });
+  }
 }
 

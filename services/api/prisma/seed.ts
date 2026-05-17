@@ -147,30 +147,62 @@ async function seedVenueOwner(): Promise<void> {
   console.log(`[seed] Owner creado: ${OWNER.email} / password123 (hash generado con bcrypt)`);
   console.log(`[seed] Asignado al venue: ${VENUE.name} (${VENUE.id})`);
 
-  // Crear payment methods para el venue
+  // Crear payment methods para el venue (ids UUID fijos para desarrollo)
   const PAYMENT_METHODS = [
-    { type: 'CASH', name: 'Efectivo' },
-    { type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Banesco', accountNumber: '01234567890123456789', idType: 'V', idNumber: 'V12345678' } },
-    { type: 'PAGO_MOVIL', name: 'Pago Móvil Banesco', config: { bank: 'Banesco', phoneNumber: '+58-412-1234567', idType: 'V', idNumber: 'V12345678' } },
-  ];
+    {
+      id: 'a1000001-0001-4001-8001-000000000001',
+      type: 'CASH',
+      name: 'Efectivo',
+    },
+    {
+      id: 'a1000001-0001-4001-8001-000000000002',
+      type: 'BANK_TRANSFER',
+      name: 'Transferencia Bancaria',
+      config: {
+        bank: 'Banesco',
+        accountNumber: '01234567890123456789',
+        idType: 'V',
+        idNumber: 'V12345678',
+      },
+    },
+    {
+      id: 'a1000001-0001-4001-8001-000000000003',
+      type: 'PAGO_MOVIL',
+      name: 'Pago Móvil Banesco',
+      config: {
+        bank: 'Banesco',
+        phoneNumber: '+58-412-1234567',
+        idType: 'V',
+        idNumber: 'V12345678',
+      },
+    },
+  ] as const;
+
+  // Limpiar ids legacy del seed anterior (no eran UUID)
+  await PRISMA.venuePaymentMethod.deleteMany({
+    where: {
+      venueId: VENUE.id,
+      id: { startsWith: 'seed-payment-method-' },
+    },
+  });
 
   for (let i = 0; i < PAYMENT_METHODS.length; i++) {
     const pm = PAYMENT_METHODS[i]!;
     await PRISMA.venuePaymentMethod.upsert({
-      where: { id: `seed-payment-method-${i}` },
+      where: { id: pm.id },
       create: {
-        id: `seed-payment-method-${i}`,
+        id: pm.id,
         venueId: VENUE.id,
         type: pm.type,
         name: pm.name,
-        config: pm.config as Prisma.InputJsonValue ?? Prisma.JsonNull,
+        config: (pm.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
         position: i,
       },
       update: {
         venueId: VENUE.id,
         type: pm.type,
         name: pm.name,
-        config: pm.config as Prisma.InputJsonValue ?? Prisma.JsonNull,
+        config: (pm.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
         position: i,
       },
     });

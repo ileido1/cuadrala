@@ -8,6 +8,13 @@ export type UserDTO = {
   updatedAt: Date;
 };
 
+export type UserDocumentSearchResultDTO = {
+  id: string;
+  name: string;
+  email: string;
+  documentNumber: string | null;
+};
+
 export interface UserRepository {
   findByIdSV(_id: string): Promise<UserDTO | null>;
   findByEmailSV(_emailLower: string): Promise<UserDTO | null>;
@@ -20,5 +27,7 @@ export interface UserRepository {
 
   /** Conteo de usuarios existentes por IDs (validación de input). */
   countByIdsSV(_ids: string[]): Promise<number>;
+
+  findByDocumentNumberSV(_documentNumber: string): Promise<UserDocumentSearchResultDTO[]>;
 }
 

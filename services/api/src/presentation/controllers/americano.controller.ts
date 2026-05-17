@@ -1,12 +1,12 @@
 import type { Request, Response } from 'express';
 
-import { createAmericanoSV } from '../../application/americano.service.js';
+import { CREATE_AMERICANO_UC } from '../composition/americano.composition.js';
 import { CREATE_AMERICANO_BODY_SCHEMA } from '../validation/americano.validation.js';
 
 export async function postAmericanoCON(_req: Request, _res: Response): Promise<void> {
   const BODY = CREATE_AMERICANO_BODY_SCHEMA.parse(_req.body);
 
-  const INPUT: Parameters<typeof createAmericanoSV>[0] = {
+  const INPUT: Parameters<typeof CREATE_AMERICANO_UC.executeSV>[0] = {
     categoryId: BODY.categoryId,
     participantUserIds: BODY.participantUserIds,
   };
@@ -23,7 +23,7 @@ export async function postAmericanoCON(_req: Request, _res: Response): Promise<v
     INPUT.scheduledAt = new Date(BODY.scheduledAt);
   }
 
-  const RESULT = await createAmericanoSV(INPUT);
+  const RESULT = await CREATE_AMERICANO_UC.executeSV(INPUT);
 
   _res.status(201).json({
     success: true,

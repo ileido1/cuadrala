@@ -11,7 +11,7 @@ import type {
   ReservationDTO,
   ReservationType,
   ReservationStatus,
-} from '../../domain/entities/reservation.entity.js';
+} from '../../domain/entities/booking/reservation.entity.js';
 import type { ReservationType as PrismaReservationType, ReservationStatus as PrismaReservationStatus } from '../../generated/prisma/client.js';
 
 import { PRISMA } from '../prisma_client.js';

@@ -648,24 +648,26 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     expect(RES.body.code).toBe('NO_IMPLEMENTADO');
   });
 
-  it('POST /api/v1/vacant-hours/publish responde 401 si falta x-admin-secret', async () => {
+  it('POST /api/v1/venues/:venueId/bookings responde 401 sin token', async () => {
     const RES = await request(APP)
-      .post('/api/v1/vacant-hours/publish')
-      .send({})
+      .post('/api/v1/venues/550e8400-e29b-41d4-a716-446655440001/bookings')
+      .send({ type: 'DIRECT', courtId: '550e8400-e29b-41d4-a716-446655440002', scheduledAt: '2026-06-01T10:00:00Z' })
       .set('Content-Type', 'application/json');
 
     expect(RES.status).toBe(401);
     expect(RES.body.code).toBe('NO_AUTORIZADO');
   });
 
-  it('GET /api/v1/vacant-hours responde 401 si falta x-admin-secret', async () => {
-    const RES = await request(APP).get('/api/v1/vacant-hours');
+  it('GET /api/v1/venues/:venueId/bookings responde 401 sin token', async () => {
+    const RES = await request(APP).get('/api/v1/venues/550e8400-e29b-41d4-a716-446655440001/bookings');
     expect(RES.status).toBe(401);
     expect(RES.body.code).toBe('NO_AUTORIZADO');
   });
 
-  it('PATCH /api/v1/vacant-hours/:id/cancel responde 401 si falta x-admin-secret', async () => {
-    const RES = await request(APP).patch('/api/v1/vacant-hours/550e8400-e29b-41d4-a716-446655440000/cancel');
+  it('DELETE /api/v1/venues/:venueId/bookings/:bookingId responde 401 sin token', async () => {
+    const RES = await request(APP).delete(
+      '/api/v1/venues/550e8400-e29b-41d4-a716-446655440001/bookings/550e8400-e29b-41d4-a716-446655440003',
+    );
     expect(RES.status).toBe(401);
     expect(RES.body.code).toBe('NO_AUTORIZADO');
   });

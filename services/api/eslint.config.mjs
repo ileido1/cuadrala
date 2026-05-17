@@ -4,6 +4,36 @@ import tsParser from '@typescript-eslint/parser';
 import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
+/** Wave 0 cerrado en error; excepciones documentadas → Wave 1–2. */
+const LAYER_BOUNDARY_SEVERITY = 'error';
+
+const LAYER_BOUNDARY_PATTERNS = {
+  infrastructure: {
+    group: ['**/infrastructure/**'],
+    message:
+      'Clean Architecture: no importar infrastructure fuera de presentation/composition. Usa ports en domain y adapters vía DI.',
+  },
+  prismaGenerated: {
+    group: ['**/generated/prisma', '**/generated/prisma/**'],
+    message:
+      'Clean Architecture: no importar Prisma generado fuera de infrastructure/composition.',
+  },
+  presentation: {
+    group: ['**/presentation/**'],
+    message:
+      'Clean Architecture: application/domain no deben importar presentation.',
+  },
+  application: {
+    group: ['**/application/**'],
+    message: 'Clean Architecture: domain no debe importar application.',
+  },
+  godServices: {
+    group: ['**/application/**/*.service', '**/application/**/*.service.js'],
+    message:
+      'Clean Architecture: routes no deben importar application/*.service — usar use_cases vía composition.',
+  },
+};
+
 export default [
   {
     ignores: [
@@ -46,41 +76,65 @@ export default [
     files: ['src/domain/**/*.ts'],
     rules: {
       'no-restricted-imports': [
-        'error',
+        LAYER_BOUNDARY_SEVERITY,
         {
           patterns: [
-            {
-              group: ['../**', '../../**'],
-              message:
-                'Clean Architecture: domain no debe importar otras capas ni generated. Define puertos/VOs propios y mapea en infrastructure.',
-            },
+            LAYER_BOUNDARY_PATTERNS.infrastructure,
+            LAYER_BOUNDARY_PATTERNS.prismaGenerated,
+            LAYER_BOUNDARY_PATTERNS.presentation,
+            LAYER_BOUNDARY_PATTERNS.application,
           ],
         },
       ],
     },
   },
   {
-    files: ['src/application/use_cases/**/*.ts'],
+    files: ['src/application/**/*.ts'],
     rules: {
       'no-restricted-imports': [
-        'error',
+        LAYER_BOUNDARY_SEVERITY,
         {
           patterns: [
-            {
-              group: ['../infrastructure/**', '../../infrastructure/**'],
-              message:
-                'Clean Architecture: application/use_cases no debe importar infrastructure. Usa puertos (interfaces) e inyección de dependencias.',
-            },
-            {
-              group: ['../presentation/**', '../../presentation/**'],
-              message:
-                'Clean Architecture: application/use_cases no debe importar presentation. Mantén Express/Zod fuera de use cases.',
-            },
-            {
-              group: ['../generated/**', '../../generated/**'],
-              message:
-                'Clean Architecture: application/use_cases no debe depender de Prisma generado. Mapea en infrastructure y usa entidades/DTOs propios.',
-            },
+            LAYER_BOUNDARY_PATTERNS.infrastructure,
+            LAYER_BOUNDARY_PATTERNS.prismaGenerated,
+            LAYER_BOUNDARY_PATTERNS.presentation,
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        LAYER_BOUNDARY_SEVERITY,
+        {
+          selector:
+            'ImportDeclaration[source.value=/\\/application\\/[a-z0-9_]+\\.service\\.js$/]',
+          message:
+            'Prohibido importar application/*.service.ts en raíz — usar use_cases + composition.',
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/presentation/controllers/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        LAYER_BOUNDARY_SEVERITY,
+        {
+          patterns: [
+            LAYER_BOUNDARY_PATTERNS.infrastructure,
+            LAYER_BOUNDARY_PATTERNS.prismaGenerated,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/presentation/routes/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        LAYER_BOUNDARY_SEVERITY,
+        {
+          patterns: [
+            LAYER_BOUNDARY_PATTERNS.infrastructure,
+            LAYER_BOUNDARY_PATTERNS.godServices,
           ],
         },
       ],

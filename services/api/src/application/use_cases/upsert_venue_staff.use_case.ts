@@ -1,4 +1,3 @@
-import { AppError } from '../../domain/errors/app_error.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 
 export class UpsertVenueStaffUseCase {

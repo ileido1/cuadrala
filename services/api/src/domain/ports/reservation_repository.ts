@@ -8,7 +8,7 @@ import type {
   ListReservationsFiltersDTO,
   PageDTO,
   ReservationDTO,
-} from '../entities/reservation.entity.js';
+} from '../entities/booking/reservation.entity.js';
 
 export interface ReservationRepository {
   /** Crea una reserva directa o bloqueada. */

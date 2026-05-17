@@ -1,4 +1,4 @@
-import type { ExchangeRateDTO } from '../entities/exchange_rate.entity.js';
+import type { ExchangeRateDTO } from '../entities/payments/exchange_rate.entity.js';
 
 export interface ExchangeRateRepository {
   /** Lista todas las tasas de un país. */

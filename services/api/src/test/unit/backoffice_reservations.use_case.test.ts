@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { AppError } from '../../domain/errors/app_error';
+import { AppError } from '../../domain/errors/app_error.js';
 import {
   CreateReservationUseCase,
   type CreateReservationInput,
@@ -12,8 +12,8 @@ import {
   type ListReservationsInput,
   CancelReservationUseCase,
   type CancelReservationInput,
-} from '../../../application/use_cases/reservation.use_cases';
-import { ReservationType, ReservationStatus } from '../../../domain/entities/reservation.entity';
+} from '../../application/use_cases/reservation.use_cases.js';
+import { ReservationType, ReservationStatus } from '../../domain/entities/booking/reservation.entity.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -36,6 +36,32 @@ function createMockVenueStaffRepository() {
     isUserStaffOfVenueSV: vi.fn(),
     findByIdSV: vi.fn(),
     listByVenueSV: vi.fn(),
+    upsertSV: vi.fn(),
+    findByVenueAndUserSV: vi.fn(),
+    listByVenueIdSV: vi.fn(),
+    listByUserIdSV: vi.fn(),
+    removeByVenueAndUserSV: vi.fn(),
+  };
+}
+
+function createMockCourtRepository() {
+  return {
+    findById: vi.fn().mockResolvedValue({
+      id: COURT_ID,
+      durationMinutes: 60,
+      pricePerHourCents: null,
+    }),
+    findByVenue: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    cancel: vi.fn(),
+  };
+}
+
+function createMockCatalogRepository() {
+  return {
+    resolveSportIdForCourtSV: vi.fn().mockResolvedValue(SPORT_ID),
+    resolveDefaultCategoryIdSV: vi.fn().mockResolvedValue(CATEGORY_ID),
   };
 }
 
@@ -89,12 +115,16 @@ const CATEGORY_ID = 'category-1';
 describe('CreateReservationUseCase', () => {
   let repo: ReturnType<typeof createMockReservationRepository>;
   let venueStaffRepo: ReturnType<typeof createMockVenueStaffRepository>;
+  let courtRepo: ReturnType<typeof createMockCourtRepository>;
+  let catalogRepo: ReturnType<typeof createMockCatalogRepository>;
   let useCase: CreateReservationUseCase;
 
   beforeEach(() => {
     repo = createMockReservationRepository();
     venueStaffRepo = createMockVenueStaffRepository();
-    useCase = new CreateReservationUseCase(repo, venueStaffRepo);
+    courtRepo = createMockCourtRepository();
+    catalogRepo = createMockCatalogRepository();
+    useCase = new CreateReservationUseCase(repo, venueStaffRepo, courtRepo, catalogRepo);
   });
 
   it('should create a DIRECT reservation when valid input provided', async () => {

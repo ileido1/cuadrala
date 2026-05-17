@@ -8,6 +8,7 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { BookingRepository } from '../../domain/ports/booking_repository.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
+import type { BookingCatalogReadRepository } from '../../domain/ports/booking_catalog_read_repository.js';
 import type { ICourtRepository } from '../../domain/ports/court_repository.js';
 import type {
   BookingFilters,
@@ -18,14 +19,12 @@ import type {
   PageDTO,
   ReservationDTO,
   ReservationStatus,
-  Visibility,
-} from '../../domain/entities/reservation.entity.js';
+} from '../../domain/entities/booking/reservation.entity.js';
 import {
   ReservationType,
-  ReservationStatus as RS,
   Visibility as Vis,
   MatchStatus,
-} from '../../domain/entities/reservation.entity.js';
+} from '../../domain/entities/booking/reservation.entity.js';
 
 // ---------------------------------------------------------------------------
 // CreateBookingUseCase — maneja DIRECT, BLOCKED, MATCH
@@ -34,7 +33,7 @@ import {
 export type CreateBookingInput = {
   venueId: string;
   courtId: string;
-  sportId: string;
+  sportId?: string;
   categoryId?: string;
   type: 'DIRECT' | 'BLOCKED' | 'MATCH';
   scheduledAt: Date;
@@ -60,9 +59,17 @@ export class CreateBookingUseCase {
     private readonly _bookingRepository: BookingRepository,
     private readonly _venueStaffRepository: VenueStaffRepository,
     private readonly _courtRepository: ICourtRepository,
+    private readonly _catalogReadRepository: BookingCatalogReadRepository,
   ) {}
 
   async executeSV(_input: CreateBookingInput, _actorUserId: string): Promise<CreateBookingOutput> {
+    const SPORT_ID =
+      _input.sportId
+      ?? await this._catalogReadRepository.resolveSportIdForCourtSV(_input.courtId);
+    const CATEGORY_ID =
+      _input.categoryId
+      ?? await this._catalogReadRepository.resolveDefaultCategoryIdSV();
+
     // Validaciones de entrada
     if (_input.durationMinutes !== undefined && _input.durationMinutes <= 0) {
       throw new AppError('VALIDACION_FALLIDA', 'durationMinutes debe ser mayor a 0.', 400);
@@ -123,8 +130,8 @@ export class CreateBookingUseCase {
     const INPUT_DTO: CreateBookingInputDTO = {
       venueId: _input.venueId,
       courtId: _input.courtId,
-      sportId: _input.sportId,
-      ...(_input.categoryId !== undefined ? { categoryId: _input.categoryId } : {}),
+      sportId: SPORT_ID,
+      categoryId: CATEGORY_ID,
       type: _input.type === 'DIRECT'
         ? ReservationType.DIRECT
         : _input.type === 'BLOCKED'
@@ -393,5 +400,41 @@ export class UpdateBookingUseCase {
     const UPDATED = await this._bookingRepository.updateBookingSV(_input.bookingId, PATCH);
 
     return { booking: UPDATED };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GetBookingUseCase — detalle con autorización staff
+// ---------------------------------------------------------------------------
+
+export type GetBookingInput = {
+  bookingId: string;
+};
+
+export class GetBookingUseCase {
+  constructor(
+    private readonly _bookingRepository: BookingRepository,
+    private readonly _venueStaffRepository: VenueStaffRepository,
+  ) {}
+
+  async executeSV(_input: GetBookingInput, _actorUserId: string): Promise<ReservationDTO> {
+    const BOOKING = await this._bookingRepository.findByIdSV(_input.bookingId);
+    if (BOOKING === null) {
+      throw new AppError('BOOKING_NO_ENCONTRADO', 'Booking no encontrado.', 404);
+    }
+
+    const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
+      _actorUserId,
+      BOOKING.venueId,
+    );
+    if (!IS_STAFF) {
+      throw new AppError(
+        'NO_AUTORIZADO',
+        'No tienes permisos para ver este booking.',
+        403,
+      );
+    }
+
+    return BOOKING;
   }
 }

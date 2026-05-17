@@ -1,8 +1,12 @@
 import type { Request, Response } from 'express';
 
 import { AppError } from '../../domain/errors/app_error.js';
-import { PRISMA } from '../../infrastructure/prisma_client.js';
-import { GET_TOURNAMENT_UC, LIST_TOURNAMENTS_UC, LIST_TOURNAMENTS_BY_VENUE_UC } from '../composition/tournaments.composition.js';
+import {
+  GET_TOURNAMENT_UC,
+  LIST_TOURNAMENTS_UC,
+  LIST_TOURNAMENTS_BY_VENUE_UC,
+  UPDATE_TOURNAMENT_STATUS_UC,
+} from '../composition/tournaments.composition.js';
 import {
   LIST_TOURNAMENTS_QUERY_SCHEMA,
   TOURNAMENT_ID_PARAM_SCHEMA,
@@ -70,19 +74,9 @@ export async function patchTournamentStatusCON(_req: Request, _res: Response): P
   const PARAMS = TOURNAMENT_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = UPDATE_TOURNAMENT_STATUS_BODY_SCHEMA.parse(_req.body);
 
-  const TOURNAMENT = await PRISMA.tournament.findUnique({
-    where: { id: PARAMS.tournamentId },
-    select: { id: true, status: true },
-  });
-
-  if (TOURNAMENT === null) {
-    throw new AppError('NO_ENCONTRADO', 'Torneo no encontrado.', 404);
-  }
-
-  const UPDATED = await PRISMA.tournament.update({
-    where: { id: PARAMS.tournamentId },
-    data: { status: BODY.status },
-    select: { id: true, name: true, status: true },
+  const UPDATED = await UPDATE_TOURNAMENT_STATUS_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    status: BODY.status,
   });
 
   _res.status(200).json({

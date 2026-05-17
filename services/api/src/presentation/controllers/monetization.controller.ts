@@ -2,15 +2,15 @@ import type { Request, Response } from 'express';
 
 import { AppError } from '../../domain/errors/app_error.js';
 import {
-  createMatchObligationsSV,
-  createReservationObligationsSV,
-  getMatchTransactionsSummarySV,
-  getReservationPaymentSummarySV,
-  listUserTransactionsSV,
-  updateUserSubscriptionSV,
-  confirmTransactionManualSV,
-} from '../../application/monetization.service.js';
-import { CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC } from '../composition/venue_staff.composition.js';
+  CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC,
+  CREATE_MATCH_OBLIGATION_UC,
+  CREATE_RESERVATION_OBLIGATION_UC,
+  GET_MATCH_TRANSACTIONS_SUMMARY_UC,
+  GET_RESERVATION_PAYMENT_SUMMARY_UC,
+  LIST_USER_TRANSACTIONS_UC,
+  REJECT_TRANSACTION_AS_VENUE_STAFF_UC,
+  UPDATE_USER_SUBSCRIPTION_UC,
+} from '../composition/monetization.composition.js';
 import {
   CONFIRM_TRANSACTION_BODY_SCHEMA,
   CREATE_OBLIGATIONS_BODY_SCHEMA,
@@ -27,15 +27,13 @@ export async function postCreateMatchObligationsCON(_req: Request, _res: Respons
   const PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = CREATE_OBLIGATIONS_BODY_SCHEMA.parse(_req.body);
 
-  const INPUT: Parameters<typeof createMatchObligationsSV>[0] = {
+  const RESULT = await CREATE_MATCH_OBLIGATION_UC.executeSV({
     matchId: PARAMS.matchId,
     amountBasePerPerson: BODY.amountBasePerPerson,
-  };
-  if (BODY.participantUserIds !== undefined) {
-    INPUT.participantUserIds = BODY.participantUserIds;
-  }
-
-  const RESULT = await createMatchObligationsSV(INPUT);
+    ...(BODY.participantUserIds !== undefined
+      ? { participantUserIds: BODY.participantUserIds }
+      : {}),
+  });
 
   _res.status(201).json({
     success: true,
@@ -73,8 +71,7 @@ export async function patchConfirmTransactionManualCON(
 
 export async function getMatchTransactionsSummaryCON(_req: Request, _res: Response): Promise<void> {
   const PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
-
-  const RESULT = await getMatchTransactionsSummarySV(PARAMS.matchId);
+  const RESULT = await GET_MATCH_TRANSACTIONS_SUMMARY_UC.executeSV(PARAMS.matchId);
 
   _res.status(200).json({
     success: true,
@@ -87,7 +84,10 @@ export async function patchUserSubscriptionCON(_req: Request, _res: Response): P
   const PARAMS = USER_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = UPDATE_SUBSCRIPTION_BODY_SCHEMA.parse(_req.body);
 
-  const RESULT = await updateUserSubscriptionSV(PARAMS.userId, BODY.subscriptionType);
+  const RESULT = await UPDATE_USER_SUBSCRIPTION_UC.executeSV(
+    PARAMS.userId,
+    BODY.subscriptionType,
+  );
 
   _res.status(200).json({
     success: true,
@@ -100,7 +100,7 @@ export async function getUserTransactionsCON(_req: Request, _res: Response): Pro
   const PARAMS = USER_ID_PARAM_SCHEMA.parse(_req.params);
   const QUERY = USER_TRANSACTIONS_QUERY_SCHEMA.parse(_req.query);
 
-  const RESULT = await listUserTransactionsSV(PARAMS.userId, QUERY.limit);
+  const RESULT = await LIST_USER_TRANSACTIONS_UC.executeSV(PARAMS.userId, QUERY.limit);
 
   _res.status(200).json({
     success: true,
@@ -116,15 +116,13 @@ export async function postCreateReservationObligationsCON(
   const PARAMS = RESERVATION_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = CREATE_OBLIGATIONS_BODY_SCHEMA.parse(_req.body);
 
-  const INPUT: Parameters<typeof createReservationObligationsSV>[0] = {
+  const RESULT = await CREATE_RESERVATION_OBLIGATION_UC.executeSV({
     reservationId: PARAMS.reservationId,
     amountBasePerPerson: BODY.amountBasePerPerson,
-  };
-  if (BODY.participantUserIds !== undefined) {
-    INPUT.participantUserIds = BODY.participantUserIds;
-  }
-
-  const RESULT = await createReservationObligationsSV(INPUT);
+    ...(BODY.participantUserIds !== undefined
+      ? { participantUserIds: BODY.participantUserIds }
+      : {}),
+  });
 
   _res.status(201).json({
     success: true,
@@ -138,8 +136,7 @@ export async function getReservationPaymentSummaryCON(
   _res: Response,
 ): Promise<void> {
   const PARAMS = RESERVATION_ID_PARAM_SCHEMA.parse(_req.params);
-
-  const RESULT = await getReservationPaymentSummarySV(PARAMS.reservationId);
+  const RESULT = await GET_RESERVATION_PAYMENT_SUMMARY_UC.executeSV(PARAMS.reservationId);
 
   _res.status(200).json({
     success: true,
@@ -158,40 +155,16 @@ export async function patchRejectTransactionManualCON(
   }
 
   const PARAMS = TRANSACTION_ID_PARAM_SCHEMA.parse(_req.params);
-  const _BODY = REJECT_TRANSACTION_BODY_SCHEMA.parse(_req.body ?? {});
+  REJECT_TRANSACTION_BODY_SCHEMA.parse(_req.body ?? {});
 
-  const TX = await import('../../infrastructure/repositories/transaction.repository.js')
-    .then((m) => m.findTransactionByIdRepo(PARAMS.transactionId));
-  if (!TX) {
-    throw new AppError('TRANSACCION_NO_ENCONTRADA', 'La transaccion no existe.', 404);
-  }
-  if (TX.status !== 'PENDING') {
-    throw new AppError(
-      'TRANSACCION_NO_PENDIENTE',
-      'Solo se pueden rechazar transacciones pendientes.',
-      400,
-    );
-  }
-
-  // Verify venue staff access
-  if (TX.reservationId !== null) {
-    const { findTransactionWithReservationVenueRepo } = await import(
-      '../../infrastructure/repositories/transaction.repository.js'
-    );
-    const TX_WITH_VENUE = await findTransactionWithReservationVenueRepo(PARAMS.transactionId);
-    if (!TX_WITH_VENUE?.reservation?.court?.venue) {
-      throw new AppError('NO_AUTORIZADO', 'No se pudo verificar la sede.', 403);
-    }
-  }
-
-  const { rejectTransactionManualRepo } = await import(
-    '../../infrastructure/repositories/transaction.repository.js'
-  );
-  const REJECTED = await rejectTransactionManualRepo(PARAMS.transactionId);
+  const RESULT = await REJECT_TRANSACTION_AS_VENUE_STAFF_UC.executeSV({
+    transactionId: PARAMS.transactionId,
+    userId: ACTOR_USER_ID,
+  });
 
   _res.status(200).json({
     success: true,
     message: 'Transaccion rechazada.',
-    data: { id: REJECTED.id, status: REJECTED.status },
+    data: RESULT,
   });
 }

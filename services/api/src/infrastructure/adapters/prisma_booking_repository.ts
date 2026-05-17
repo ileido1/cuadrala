@@ -16,7 +16,7 @@ import type {
   ReservationStatus,
   Visibility,
   MatchStatus,
-} from '../../domain/entities/reservation.entity.js';
+} from '../../domain/entities/booking/reservation.entity.js';
 
 // Selector común para todas las queries sobre Reservation
 const SELECT = {
@@ -115,7 +115,7 @@ export class PrismaBookingRepository implements BookingRepository {
   constructor(private readonly _prisma: any) {}
 
   async createBookingSV(_input: CreateBookingInputDTO): Promise<ReservationDTO> {
-    const DATA: Record<string, unknown> = {
+    const BASE_DATA: Record<string, unknown> = {
       venueId: _input.venueId,
       courtId: _input.courtId,
       sportId: _input.sportId,
@@ -129,18 +129,45 @@ export class PrismaBookingRepository implements BookingRepository {
       responsibleName: _input.responsibleName ?? null,
       responsiblePhone: _input.responsiblePhone ?? null,
       totalAmountCents: _input.totalAmountCents ?? null,
-      // MATCH-specific
       ...(_input.organizerUserId !== undefined ? { organizerUserId: _input.organizerUserId } : {}),
       ...(_input.formatPresetId !== undefined ? { formatPresetId: _input.formatPresetId } : {}),
       ...(_input.formatParameters !== undefined ? { formatParameters: _input.formatParameters } : {}),
       ...(_input.maxParticipants !== undefined ? { maxParticipants: _input.maxParticipants } : {}),
       ...(_input.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: _input.pricePerPlayerCents } : {}),
       ...(_input.visibility !== undefined ? { visibility: _input.visibility } : {}),
-      // matchStatus solo aplica para type=MATCH
       ...(_input.type === 'MATCH' ? { matchStatus: 'SCHEDULED' } : {}),
     };
 
-    const ROW = await this._prisma.reservation.create({ data: DATA, select: SELECT });
+    if (_input.type !== 'MATCH') {
+      const ROW = await this._prisma.reservation.create({ data: BASE_DATA, select: SELECT });
+      return mapRow(ROW);
+    }
+
+    const ROW = await this._prisma.$transaction(async (_tx: typeof this._prisma) => {
+      const MATCH = await _tx.match.create({
+        data: {
+          categoryId: _input.categoryId ?? '',
+          sportId: _input.sportId,
+          organizerUserId: _input.organizerUserId!,
+          courtId: _input.courtId,
+          scheduledAt: _input.scheduledAt,
+          type: 'REGULAR',
+          status: 'SCHEDULED',
+          maxParticipants: _input.maxParticipants ?? 4,
+          pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
+          ...(_input.formatPresetId !== undefined ? { formatPresetId: _input.formatPresetId } : {}),
+          ...(_input.formatParameters !== undefined
+            ? { formatParameters: _input.formatParameters as never }
+            : {}),
+        },
+      });
+
+      return _tx.reservation.create({
+        data: { ...BASE_DATA, matchId: MATCH.id },
+        select: SELECT,
+      });
+    });
+
     return mapRow(ROW);
   }
 
@@ -190,16 +217,18 @@ export class PrismaBookingRepository implements BookingRepository {
   }
 
   async assertAvailableSV(_courtId: string, _scheduledAt: Date, _excludeId?: string): Promise<void> {
-    // Busca cualquier booking CONFIRMED en el mismo court+scheduledAt
-    // que no sea DRAFT (los DRAFT matches no bloquean disponibilidad pública)
+    // Bloquea DIRECT/BLOCKED y MATCH no-DRAFT; los MATCH en DRAFT no ocupan slot público.
     const WHERE: Record<string, unknown> = {
       courtId: _courtId,
       scheduledAt: _scheduledAt,
       status: 'CONFIRMED',
-      visibility: { not: 'DRAFT' },
+      NOT: {
+        type: 'MATCH',
+        visibility: 'DRAFT',
+      },
     };
     if (_excludeId !== undefined) {
-      WHERE.NOT = { id: _excludeId };
+      WHERE.id = { not: _excludeId };
     }
 
     const EXISTING = await this._prisma.reservation.findFirst({ where: WHERE });
@@ -229,10 +258,27 @@ export class PrismaBookingRepository implements BookingRepository {
   }
 
   async cancelBookingSV(_id: string): Promise<ReservationDTO> {
-    const ROW = await this._prisma.reservation.update({
-      where: { id: _id },
-      data: { status: 'CANCELLED' },
-      select: SELECT,
+    const ROW = await this._prisma.$transaction(async (_tx: typeof this._prisma) => {
+      const EXISTING = await _tx.reservation.findUnique({
+        where: { id: _id },
+        select: { matchId: true, type: true },
+      });
+
+      if (EXISTING?.matchId !== null && EXISTING?.matchId !== undefined) {
+        await _tx.match.update({
+          where: { id: EXISTING.matchId },
+          data: { status: 'CANCELLED' },
+        });
+      }
+
+      return _tx.reservation.update({
+        where: { id: _id },
+        data: {
+          status: 'CANCELLED',
+          ...(EXISTING?.type === 'MATCH' ? { matchStatus: 'CANCELLED' } : {}),
+        },
+        select: SELECT,
+      });
     });
     return mapRow(ROW);
   }

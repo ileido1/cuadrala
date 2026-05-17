@@ -16,5 +16,12 @@ export class PrismaSportRepository implements SportRepository {
       select: { id: true, code: true, name: true },
     });
   }
+
+  async findByCodeSV(_code: string) {
+    return PRISMA.sport.findUnique({
+      where: { code: _code },
+      select: { id: true, code: true, name: true },
+    });
+  }
 }
 

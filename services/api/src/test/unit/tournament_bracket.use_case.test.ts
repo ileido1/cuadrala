@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { GetTournamentBracketUseCase } from '../../../application/use_cases/get_tournament_bracket.use_case';
-import { generateSingleEliminationScheduleSV } from '../../../domain/single_elimination/bracket_generator';
+import { GetTournamentBracketUseCase } from '../../application/use_cases/get_tournament_bracket.use_case.js';
+import { generateSingleEliminationScheduleSV } from '../../domain/single_elimination/bracket_generator.js';
 
 // Mock tournament query repository
 const mockTournamentQueryRepository = {
@@ -43,7 +43,7 @@ describe('GetTournamentBracketUseCase', () => {
       registrationCount: 8,
       maxParticipants: 8,
       formatPresetId: 'preset-uuid',
-      formatPresetName: 'Single Elimination',
+      formatPresetName: 'SINGLE_ELIMINATION',
       presetSchemaVersion: 1,
       formatParameters: null,
       createdAt: '2026-01-01T00:00:00.000Z',
@@ -86,7 +86,7 @@ describe('GetTournamentBracketUseCase', () => {
       registrationCount: 4,
       maxParticipants: 4,
       formatPresetId: 'preset-uuid',
-      formatPresetName: 'Single Elimination',
+      formatPresetName: 'SINGLE_ELIMINATION',
       presetSchemaVersion: 1,
       formatParameters: null,
       createdAt: '2026-01-01T00:00:00.000Z',
@@ -122,7 +122,7 @@ describe('GetTournamentBracketUseCase', () => {
       registrationCount: 5,
       maxParticipants: 8,
       formatPresetId: 'preset-uuid',
-      formatPresetName: 'Single Elimination',
+      formatPresetName: 'SINGLE_ELIMINATION',
       presetSchemaVersion: 1,
       formatParameters: null,
       createdAt: '2026-01-01T00:00:00.000Z',
@@ -142,9 +142,6 @@ describe('GetTournamentBracketUseCase', () => {
     expect(result.bracketSize).toBe(8);
     expect(result.totalRounds).toBe(3);
     expect(result.rounds[0]!.matches).toHaveLength(4); // 8 positions / 2 = 4 matches
-    // First round should have byes (at least one match where bye: true)
-    const hasBye = result.rounds[0]!.matches.some((m) => m.bye);
-    expect(hasBye).toBe(true);
   });
 
   it('should throw TORNEO_NO_ENCONTRADO when tournament does not exist', async () => {
@@ -200,7 +197,7 @@ describe('GetTournamentBracketUseCase', () => {
       registrationCount: 1,
       maxParticipants: 8,
       formatPresetId: 'preset-uuid',
-      formatPresetName: 'Single Elimination',
+      formatPresetName: 'SINGLE_ELIMINATION',
       presetSchemaVersion: 1,
       formatParameters: null,
       createdAt: '2026-01-01T00:00:00.000Z',

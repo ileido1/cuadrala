@@ -7,8 +7,9 @@
 
 import { AppError } from '../../domain/errors/app_error.js';
 import type { ICourtRepository } from '../../domain/ports/court_repository.js';
-import type { Court, CourtStatus, CreateCourtInput, UpdateCourtInput } from '../../domain/entities/court.entity.js';
-import { CourtStatus as CourtStatusEnum, SportType } from '../../domain/entities/court.entity.js';
+import type { VenueRepository } from '../../domain/ports/venue_repository.js';
+import type { Court, CourtStatus, CreateCourtInput, UpdateCourtInput } from '../../domain/entities/booking/court.entity.js';
+import { CourtStatus as CourtStatusEnum, SportType } from '../../domain/entities/booking/court.entity.js';
 
 // ---------------------------------------------------------------------------
 // CreateCourtSV
@@ -31,9 +32,17 @@ export interface CreateCourtOutputDTO {
 }
 
 export class CreateCourtUseCase {
-  constructor(private readonly _courtRepository: ICourtRepository) {}
+  constructor(
+    private readonly _courtRepository: ICourtRepository,
+    private readonly _venueRepository: VenueRepository,
+  ) {}
 
   async executeSV(_input: CreateCourtInputDTO): Promise<CreateCourtOutputDTO> {
+    const VENUE = await this._venueRepository.findByIdSV(_input.venueId);
+    if (VENUE === null) {
+      throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
+    }
+
     // Validar name no vacío
     if (!_input.name || _input.name.trim().length === 0) {
       throw new AppError('VALIDACION_FALLIDA', 'El nombre de la cancha es requerido.', 400);
@@ -73,9 +82,17 @@ export interface ListCourtsOutputDTO {
 }
 
 export class ListCourtsUseCase {
-  constructor(private readonly _courtRepository: ICourtRepository) {}
+  constructor(
+    private readonly _courtRepository: ICourtRepository,
+    private readonly _venueRepository: VenueRepository,
+  ) {}
 
   async executeSV(_input: ListCourtsInputDTO): Promise<ListCourtsOutputDTO> {
+    const VENUE = await this._venueRepository.findByIdSV(_input.venueId);
+    if (VENUE === null) {
+      throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
+    }
+
     let status: CourtStatus | undefined;
     if (_input.status === 'INACTIVE') {
       status = CourtStatusEnum.INACTIVE;

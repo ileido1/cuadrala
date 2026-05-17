@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { RegisterTournamentMatchResultUseCase } from '../../../application/use_cases/register_tournament_match_result.use_case';
+import { RegisterTournamentMatchResultUseCase } from '../../application/use_cases/register_tournament_match_result.use_case.js';
 
-// Mock repositories
 const mockTournamentQueryRepository = {
   listTournamentsSV: vi.fn(),
   getTournamentByIdSV: vi.fn(),
@@ -11,24 +10,23 @@ const mockTournamentQueryRepository = {
 
 const mockVenueStaffRepository = {
   upsertSV: vi.fn(),
+  isUserStaffOfVenueSV: vi.fn(),
   findByVenueAndUserSV: vi.fn(),
   listByVenueIdSV: vi.fn(),
   listByUserIdSV: vi.fn(),
   removeByVenueAndUserSV: vi.fn(),
-  isUserStaffOfVenueSV: vi.fn(),
 };
 
-const mockMatchCrudRepository = {
-  findByIdSV: vi.fn(),
-  createMatchSV: vi.fn(),
-  updateMatchSV: vi.fn(),
-  cancelMatchSV: vi.fn(),
+const mockTournamentMatchResultRepository = {
+  getVenueIdForTournamentSV: vi.fn(),
+  matchBelongsToTournamentSV: vi.fn(),
+  registerResultSV: vi.fn(),
 };
 
 const useCase = new RegisterTournamentMatchResultUseCase(
   mockTournamentQueryRepository,
   mockVenueStaffRepository,
-  mockMatchCrudRepository,
+  mockTournamentMatchResultRepository,
 );
 
 describe('RegisterTournamentMatchResultUseCase', () => {
@@ -43,7 +41,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         roundNumber: 1,
         scores: [{ userId: 'user-1', points: 6 }],
         requestingUserId: 'user-staff',
-      })
+      }),
     ).rejects.toThrow('El torneo indicado no existe.');
   });
 
@@ -58,7 +56,6 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       categoryName: 'Masculino',
       startsAt: '2026-06-01T00:00:00.000Z',
       registrationCount: 4,
-      maxParticipants: 4,
       formatPresetId: 'preset-uuid',
       formatPresetName: 'Single Elimination',
       presetSchemaVersion: 1,
@@ -66,7 +63,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     });
-
+    mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
     mockVenueStaffRepository.isUserStaffOfVenueSV.mockResolvedValue(false);
 
     await expect(
@@ -77,7 +74,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         roundNumber: 1,
         scores: [{ userId: 'user-1', points: 6 }],
         requestingUserId: 'non-staff-user',
-      })
+      }),
     ).rejects.toThrow('No tienes permisos para editar este torneo.');
   });
 
@@ -92,7 +89,6 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       categoryName: 'Masculino',
       startsAt: '2026-06-01T00:00:00.000Z',
       registrationCount: 4,
-      maxParticipants: 4,
       formatPresetId: 'preset-uuid',
       formatPresetName: 'Single Elimination',
       presetSchemaVersion: 1,
@@ -100,8 +96,9 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     });
-
+    mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
     mockVenueStaffRepository.isUserStaffOfVenueSV.mockResolvedValue(true);
+    mockTournamentMatchResultRepository.matchBelongsToTournamentSV.mockResolvedValue(true);
 
     await expect(
       useCase.executeSV({
@@ -111,7 +108,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         roundNumber: 1,
         scores: [],
         requestingUserId: 'user-staff',
-      })
+      }),
     ).rejects.toThrow('Debe proporcionar al menos un resultado.');
   });
 
@@ -126,7 +123,6 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       categoryName: 'Masculino',
       startsAt: '2026-06-01T00:00:00.000Z',
       registrationCount: 4,
-      maxParticipants: 4,
       formatPresetId: 'preset-uuid',
       formatPresetName: 'Single Elimination',
       presetSchemaVersion: 1,
@@ -134,8 +130,9 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     });
-
+    mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
     mockVenueStaffRepository.isUserStaffOfVenueSV.mockResolvedValue(true);
+    mockTournamentMatchResultRepository.matchBelongsToTournamentSV.mockResolvedValue(true);
 
     await expect(
       useCase.executeSV({
@@ -145,7 +142,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         roundNumber: 1,
         scores: [{ userId: 'user-1', points: -1 }],
         requestingUserId: 'user-staff',
-      })
+      }),
     ).rejects.toThrow('Cada score debe tener userId y points (número no negativo).');
   });
 });

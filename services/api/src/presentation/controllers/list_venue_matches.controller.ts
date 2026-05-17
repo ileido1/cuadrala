@@ -1,13 +1,8 @@
 import type { Request, Response } from 'express';
-import { AppError } from '../../domain/errors/app_error.js';
-import { ListVenueMatchesUseCase } from '../../application/use_cases/list_venue_matches.use_case.js';
-import { PrismaMatchQueryRepository } from '../../infrastructure/adapters/prisma_match_query_repository.js';
-import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
-import { LIST_VENUE_MATCHES_QUERY_SCHEMA, VENUE_ID_PARAM_SCHEMA } from '../validation/venues.validation.js';
 
-const _matchQueryRepo = new PrismaMatchQueryRepository();
-const _venueStaffRepo = new PrismaVenueStaffRepository();
-const _useCase = new ListVenueMatchesUseCase(_matchQueryRepo, _venueStaffRepo);
+import { AppError } from '../../domain/errors/app_error.js';
+import { LIST_VENUE_MATCHES_UC } from '../composition/venue_dashboard.composition.js';
+import { LIST_VENUE_MATCHES_QUERY_SCHEMA, VENUE_ID_PARAM_SCHEMA } from '../validation/venues.validation.js';
 
 export async function listVenueMatchesCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -18,7 +13,7 @@ export async function listVenueMatchesCON(_req: Request, _res: Response): Promis
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const QUERY = LIST_VENUE_MATCHES_QUERY_SCHEMA.parse(_req.query);
 
-  const RESULT = await _useCase.executeSV(
+  const RESULT = await LIST_VENUE_MATCHES_UC.executeSV(
     {
       venueId: PARAMS.venueId,
       ...(QUERY.courtId !== undefined ? { courtId: QUERY.courtId } : {}),

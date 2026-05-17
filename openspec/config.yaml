@@ -1,0 +1,90 @@
+schema: spec-driven
+
+context: |
+  Monorepo Cuadrala: apps/mobile (Flutter 3.9+, BLoC/Cubit, GoRouter),
+  apps/web (Next.js 14 App Router, React 18, Tailwind, Vitest),
+  services/api (Node 20+, Express 5, Prisma 6, PostgreSQL, Clean Architecture).
+  API: domain/application must not import infrastructure/presentation.
+  Verification order (API): typecheck → lint → test.
+  Comments/messages API: Spanish for user-facing errors; code in English.
+  Orchestrator flow: .cursor/agents/orchestrator.md (Explorer → … → Verifier).
+
+strict_tdd: true
+
+testing:
+  strict_tdd: true
+  detected: "2026-05-16"
+  api:
+    runner: vitest
+    command: "cd services/api && npm test"
+    integration_command: "cd services/api && TEST_DATABASE_URL=... npm test"
+    layers:
+      unit: vitest
+      integration: vitest + supertest + PostgreSQL (TEST_DATABASE_URL)
+      e2e: false
+    coverage:
+      available: false
+    quality:
+      linter: "cd services/api && npm run lint"
+      typecheck: "cd services/api && npm run typecheck"
+      formatter: "cd services/api && npm run format:check"
+  web:
+    runner: vitest
+    command: "cd apps/web && npm test"
+    layers:
+      unit: vitest
+      integration: false
+      e2e: false
+    coverage:
+      available: false
+    quality:
+      linter: "cd apps/web && npm run lint"
+      typecheck: "tsc via next build (no dedicated script)"
+      formatter: false
+  mobile:
+    runner: flutter_test
+    command: "cd apps/mobile && flutter test"
+    layers:
+      unit: flutter_test + bloc_test + mocktail
+      integration: flutter integration_test (not configured in CI)
+      e2e: false
+    coverage:
+      available: false
+    quality:
+      linter: "cd apps/mobile && flutter analyze"
+      typecheck: dart analyzer via flutter analyze
+      formatter: dart format (manual)
+
+rules:
+  proposal:
+    - Align with docs/SDD.md and existing epics (US-E*, US-W1*)
+    - Note API vs mobile vs web impact per package
+    - Include rollback for DB migrations and breaking API changes
+  specs:
+    - Use Given/When/Then for acceptance scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Reference Prisma schema paths when data model changes
+  design:
+    - Respect Clean Architecture dependency rule for API changes
+    - Document DI wiring in presentation composition root
+    - Include sequence diagrams for multi-step payment/booking flows
+  tasks:
+    - Group by package (api, web, mobile) then by layer
+    - Order: schema/migrations → domain → application → infrastructure → presentation
+    - Keep tasks completable in one session
+  apply:
+    - Follow naming-conventions.mdc (SV, CON, DVAL, FVAL, _params)
+    - Run prisma generate after schema changes before typecheck
+    tdd: true
+    test_command: "cd services/api && npm test"
+  verify:
+    test_command: "cd services/api && npm run typecheck && npm run lint && npm test"
+  web_verify:
+    test_command: "cd apps/web && npm run lint && npm test"
+  mobile_verify:
+    test_command: "cd apps/mobile && flutter analyze && flutter test"
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive Prisma deltas
+    - Merge spec deltas into openspec/specs/{domain}/spec.md

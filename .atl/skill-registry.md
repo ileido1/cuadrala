@@ -1,102 +1,106 @@
 # Skill Registry — Cuadrala
 
-Generated: 2026-05-08
+Generated: 2026-05-16 (sdd-init)
 
-## User Skills (`~/.config/opencode/skills/`)
+## User Skills (`~/.cursor/skills/`, `~/.codex/skills/`)
 
 ### branch-pr
 - **Trigger**: creating, opening, or preparing PRs for review.
-- **Path**: `~/.config/opencode/skills/branch-pr/SKILL.md`
-- **Rules**: Check issues first before creating PR. Use conventional commits. Keep commits reviewable. Link related issues.
+- **Path**: `~/.cursor/skills/branch-pr/SKILL.md`
+- **Rules**: Issue-first checks. Conventional commits. Link related issues. Keep PRs reviewable.
 
 ### chained-pr
 - **Trigger**: PRs over 400 lines, stacked PRs, review slices.
-- **Path**: `~/.config/opencode/skills/chained-pr/SKILL.md`
-- **Rules**: Split oversized changes into chained PRs. Each chain must be independently reviewable. Label with chain order.
+- **Path**: `~/.cursor/skills/chained-pr/SKILL.md`
+- **Rules**: Split oversized changes into chained PRs. Each slice independently reviewable.
 
 ### cognitive-doc-design
-- **Trigger**: writing guides, READMEs, RFCs, onboarding, architecture, or review-facing docs.
-- **Path**: `~/.config/opencode/skills/cognitive-doc-design/SKILL.md`
-- **Rules**: Reduce cognitive load. One concept per section. Progressive disclosure. Use concrete examples before abstractions.
+- **Trigger**: guides, READMEs, RFCs, onboarding, architecture docs.
+- **Path**: `~/.cursor/skills/cognitive-doc-design/SKILL.md`
+- **Rules**: One concept per section. Progressive disclosure. Concrete examples before abstractions.
 
 ### comment-writer
-- **Trigger**: PR feedback, issue replies, reviews, Slack messages, or GitHub comments.
-- **Path**: `~/.config/opencode/skills/comment-writer/SKILL.md`
-- **Rules**: Warm and direct tone. Start with what works before critique. Be specific with examples. No vague praise.
+- **Trigger**: PR feedback, issue replies, reviews, Slack/GitHub comments.
+- **Path**: `~/.cursor/skills/comment-writer/SKILL.md`
+- **Rules**: Warm, direct tone. Specific examples. No vague praise.
 
 ### go-testing
-- **Trigger**: Go tests, go test coverage, Bubbletea teatest, golden files.
-- **Path**: `~/.config/opencode/skills/go-testing/SKILL.md`
-- **Rules**: Focused Go testing patterns. Use golden files for complex output. Prefer table-driven tests.
+- **Trigger**: Go tests, coverage, teatest, golden files.
+- **Path**: `~/.cursor/skills/go-testing/SKILL.md`
+- **Rules**: Table-driven tests. Golden files for complex output. (Not primary stack for Cuadrala.)
 
 ### issue-creation
-- **Trigger**: creating GitHub issues, bug reports, or feature requests.
-- **Path**: `~/.config/opencode/skills/issue-creation/SKILL.md`
-- **Rules**: Check for existing issues first. Reproduce before reporting. Use issue templates. Include environment context.
+- **Trigger**: GitHub issues, bug reports, feature requests.
+- **Path**: `~/.cursor/skills/issue-creation/SKILL.md`
+- **Rules**: Check duplicates. Reproduce before reporting. Include environment context.
 
 ### judgment-day
-- **Trigger**: judgment day, dual review, adversarial review, juzgar.
-- **Path**: `~/.config/opencode/skills/judgment-day/SKILL.md`
-- **Rules**: Blind dual review. Fix confirmed issues only. Re-judge after fixes. No speculative changes.
+- **Trigger**: dual review, adversarial review, juzgar.
+- **Path**: `~/.cursor/skills/judgment-day/SKILL.md`
+- **Rules**: Blind dual review. Fix confirmed issues only. Re-judge after fixes.
 
 ### skill-creator
-- **Trigger**: new skills, agent instructions, documenting AI usage patterns.
-- **Path**: `~/.config/opencode/skills/skill-creator/SKILL.md`
-- **Rules**: Create LLM-first skills with valid frontmatter. Optional license, required author metadata. Keep 180-450 body tokens.
+- **Trigger**: new skills, agent instructions.
+- **Path**: `~/.cursor/skills/skill-creator/SKILL.md`
+- **Rules**: LLM-first skills: Activation Contract, Hard Rules, Decision Gates, Output Contract. 180–450 body tokens.
 
 ### work-unit-commits
-- **Trigger**: implementation, commit splitting, chained PRs, or keeping tests and docs with code.
-- **Path**: `~/.config/opencode/skills/work-unit-commits/SKILL.md`
-- **Rules**: Plan commits as reviewable work units. Tests and docs travel with code. Each commit passes CI independently.
+- **Trigger**: commit splitting, chained PRs, tests/docs with code.
+- **Path**: `~/.cursor/skills/work-unit-commits/SKILL.md`
+- **Rules**: Commits as reviewable units. Tests travel with code. Each commit should pass CI.
 
-## Project Skills (`apps/mobile/.agents/skills/`)
+### SDD skills (sdd-init … sdd-archive)
+- **Trigger**: `/sdd-init`, `/sdd-explore`, `/sdd-propose`, `/sdd-spec`, `/sdd-design`, `/sdd-tasks`, `/sdd-apply`, `/sdd-verify`, `/sdd-archive`
+- **Path**: `~/.cursor/skills/sdd-*/SKILL.md`
+- **Rules**: Artifacts under `openspec/changes/{change}/` or Engram `sdd/{change}/{artifact}`. Never skip schema read for MCP tools. Hybrid mode: files + Engram.
 
-### accessibility
-- **Trigger**: "improve accessibility", "a11y audit", "WCAG compliance", "screen reader support", "keyboard navigation", or "make accessible".
-- **Path**: `apps/mobile/.agents/skills/accessibility/SKILL.md`
-- **Rules**: Follow WCAG 2.2 AA minimum. POUR principles (Perceivable, Operable, Understandable, Robust). Use semantic HTML. Maintain 4.5:1 contrast ratio. Support keyboard-only navigation. Test with screen readers.
+## API Skills (`services/api/.agents/skills/`)
 
-### bash-defensive-patterns
-- **Trigger**: writing robust shell scripts, CI/CD pipelines, system utilities requiring fault tolerance.
-- **Path**: `apps/mobile/.agents/skills/bash-defensive-patterns/SKILL.md`
-- **Rules**: Always `set -Eeuo pipefail`. Trap EXIT/ERR for cleanup. Validate arguments early. Quote all variable expansions. Prefer `[[ ]]` over `[ ]`. Never use `eval`. Use `errexit` consistently.
+### prisma-cli / prisma-client-api / prisma-database-setup / prisma-postgres
+- **Trigger**: Prisma CLI, queries, DB setup, Postgres provisioning.
+- **Rules**: Run `prisma generate` after schema changes. Client output at `src/generated/prisma`. Migrations via `npx prisma migrate dev`.
 
-### dart-best-practices
-- **Trigger**: writing or reviewing Dart code, idiomatic Dart usage.
-- **Path**: `apps/mobile/.agents/skills/dart-best-practices/SKILL.md`
-- **Rules**: Prefer multi-line strings (`'''`) for large blocks. Follow Effective Dart guidelines. Use `const` constructors where possible. Avoid `null` battles — use `?` and `!` intentionally.
+### nodejs-backend-patterns / nodejs-express-server / nodejs-best-practices
+- **Trigger**: Express API, middleware, routing, server architecture.
+- **Rules**: Skinny controllers. Composition root in presentation. Async error handling via middleware.
 
-### flutter-animations
-- **Trigger**: working with implicit/explicit animations, Hero transitions, staggered animations, physics-based motion, animation bugs.
-- **Path**: `apps/mobile/.agents/skills/flutter-animations/SKILL.md`
-- **Rules**: Inspect widget lifecycle and route structure before animation changes. Animate with existing state model. No hidden animation state. Verify analyzer-clean. Consider `MediaQuery.reducedMotion`.
+### vitest / zod / typescript-advanced-types
+- **Trigger**: API tests, Zod schemas, advanced TS types.
+- **Rules**: Vitest sequential (`maxWorkers: 1`). Contract tests without DB; integration needs `TEST_DATABASE_URL`. Zod in presentation validation.
 
-### flutter-expert
-- **Trigger**: Flutter 3+ cross-platform apps, widget development, Bloc/Riverpod state, GoRouter navigation, platform channels, performance.
-- **Path**: `apps/mobile/.agents/skills/flutter-expert/SKILL.md`
-- **Rules**: Match existing project patterns. Prefer composition over inheritance. Use `const` widgets for performance. Keep business logic out of widgets. Test state management independently.
+## Web Skills (`apps/web/.agents/skills/`)
 
-### flutter-testing
-- **Trigger**: unit/widget/integration tests, mocktail/mockito, golden tests, pump/pumpAndSettle issues, flaky tests, CI test commands.
-- **Path**: `apps/mobile/.agents/skills/flutter-testing/SKILL.md`
-- **Rules**: Inspect project before writing tests. Choose correct test layer. Use mocktail for Dart-only, MethodChannelMock for platform channels. Always `tearDown(() => cubit.close())`. Register fallback values for custom types.
+### next-best-practices / next-cache-components / next-upgrade
+- **Trigger**: Next.js App Router, caching, upgrades.
+- **Rules**: Respect RSC boundaries. PPR/cache components per Next 16 patterns when upgrading.
 
-### frontend-design
-- **Trigger**: building web components, pages, artifacts, posters, applications, HTML/CSS layouts, styling web UI.
-- **Path**: `apps/mobile/.agents/skills/frontend-design/SKILL.md`
-- **Rules**: Choose bold aesthetic direction before coding. Typography-first approach. Avoid generic AI aesthetics. Production-grade code with working functionality. Cohesive visual system.
+### react-best-practices / composition-patterns / react-hook-form
+- **Trigger**: React performance, component APIs, forms.
+- **Rules**: Prefer composition over boolean props. RHF for client forms; Zod resolvers.
 
-### seo
-- **Trigger**: "improve SEO", "optimize for search", "fix meta tags", "structured data", "sitemap", "search engine optimization".
-- **Path**: `apps/mobile/.agents/skills/seo/SKILL.md`
-- **Rules**: Technical SEO first (crawlability, indexability). Meta tags, structured data (JSON-LD), sitemap.xml, robots.txt. Core Web Vitals matter. Canonical URLs to avoid duplicate content.
+### vitest / tailwind-css-patterns / accessibility / seo / frontend-design
+- **Trigger**: web tests, Tailwind layout, a11y, SEO, UI polish.
+- **Rules**: Vitest + Testing Library for units. WCAG 2.2 AA. Distinctive UI, not generic AI aesthetic.
+
+## Mobile Skills (`apps/mobile/.agents/skills/`)
+
+### flutter-expert / flutter-testing / flutter-animations / dart-best-practices
+- **Trigger**: Flutter widgets, tests, animations, Dart style.
+- **Rules**: Prefer Cubit over Bloc. `tearDown(() => cubit.close())`. const widgets. Feature-first layout under `lib/src/features/`.
+
+### accessibility / frontend-design / seo / bash-defensive-patterns
+- **Trigger**: a11y, UI design, SEO, shell scripts.
+- **Rules**: Match Cuadrala design tokens. `set -Eeuo pipefail` in bash.
 
 ## Project Convention Files
 
-- `AGENTS.md` — Project overview, commands, architecture, testing conventions, orchestrator workflow, naming conventions
-- `.cursor/agents/orchestrator.md` — Full orchestrator protocol with DAG
-- `.cursor/rules/clean-architecture.mdc` — API layer rules + DI patterns
-- `.cursor/rules/flutter-bloc.mdc` — BLoC/Cubit implementation + testing guide
-- `.cursor/rules/tdd-guidelines.mdc` — TDD cycle + integration test patterns
-- `.cursor/rules/naming-conventions.mdc` — API naming conventions
-- `.cursor/rules/code-comments.mdc` — Comment style (Spanish)
+- `AGENTS.md` — Monorepo overview, commands, architecture, TDD orchestrator
+- `docs/SDD.md` — Product spec and user stories
+- `openspec/config.yaml` — SDD config, strict TDD, testing capabilities
+- `.cursor/agents/orchestrator.md` — Spec-driven + TDD DAG workflow
+- `.cursor/rules/clean-architecture.mdc` — API layer dependency rule
+- `.cursor/rules/naming-conventions.mdc` — SV/CON/DVAL/FVAL, `_params`, UPPERCASE constants
+- `.cursor/rules/tdd-guidelines.mdc` — Red-Green-Refactor, integration test patterns
+- `.cursor/rules/flutter-bloc.mdc` — Cubit/Bloc, testing
+- `.cursor/rules/code-comments.mdc` — Spanish comments (API)
+- `.cursor/rules/use-orchestrator.mdc` — Default orchestrator for features/fixes

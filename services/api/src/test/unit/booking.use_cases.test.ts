@@ -15,13 +15,13 @@ import {
   type CancelBookingInput,
   UpdateBookingUseCase,
   type UpdateBookingInput,
-} from '../../../application/use_cases/booking.use_cases';
+} from '../../application/use_cases/booking.use_cases.js';
 import {
   ReservationType,
   ReservationStatus,
   Visibility,
   MatchStatus,
-} from '../../../domain/entities/reservation.entity';
+} from '../../domain/entities/booking/reservation.entity.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,6 +56,13 @@ function createMockCourtRepository() {
     create: vi.fn(),
     update: vi.fn(),
     cancel: vi.fn(),
+  };
+}
+
+function createMockCatalogRepository() {
+  return {
+    resolveSportIdForCourtSV: vi.fn().mockResolvedValue(SPORT_ID),
+    resolveDefaultCategoryIdSV: vi.fn().mockResolvedValue(CATEGORY_ID),
   };
 }
 
@@ -140,13 +147,15 @@ describe('CreateBookingUseCase', () => {
   let bookingRepo: ReturnType<typeof createMockBookingRepository>;
   let venueStaffRepo: ReturnType<typeof createMockVenueStaffRepository>;
   let courtRepo: ReturnType<typeof createMockCourtRepository>;
+  let catalogRepo: ReturnType<typeof createMockCatalogRepository>;
   let useCase: CreateBookingUseCase;
 
   beforeEach(() => {
     bookingRepo = createMockBookingRepository();
     venueStaffRepo = createMockVenueStaffRepository();
     courtRepo = createMockCourtRepository();
-    useCase = new CreateBookingUseCase(bookingRepo, venueStaffRepo, courtRepo);
+    catalogRepo = createMockCatalogRepository();
+    useCase = new CreateBookingUseCase(bookingRepo, venueStaffRepo, courtRepo, catalogRepo);
   });
 
   it('should create a DIRECT booking when valid input provided', async () => {
