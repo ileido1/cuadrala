@@ -35,6 +35,8 @@ export type VenueListItemDTO = {
   address: string | null;
   latitude: number | null;
   longitude: number | null;
+  displayCurrency: string;
+  pricingCurrency: string;
   createdAt: Date;
   distanceKm?: number | null;
 };

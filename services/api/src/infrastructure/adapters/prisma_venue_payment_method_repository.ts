@@ -5,6 +5,7 @@ import type {
 import type { VenuePaymentMethodRepository } from '../../domain/ports/venue_payment_method_repository.js';
 
 import { PRISMA } from '../prisma_client.js';
+import { loadVenuePricingCurrencySV } from '../prisma_money_fields.js';
 
 function mapVenuePaymentMethodSV(_row: {
   id: string;
@@ -12,6 +13,7 @@ function mapVenuePaymentMethodSV(_row: {
   type: string;
   name: string;
   config: unknown;
+  settlementCurrency: string;
   isActive: boolean;
   position: number;
 }): VenuePaymentMethodDTO {
@@ -21,6 +23,7 @@ function mapVenuePaymentMethodSV(_row: {
     type: _row.type as VenuePaymentMethodType,
     name: _row.name,
     config: _row.config as VenuePaymentMethodDTO['config'],
+    settlementCurrency: _row.settlementCurrency,
     isActive: _row.isActive,
     position: _row.position,
   };
@@ -55,6 +58,7 @@ export class PrismaVenuePaymentMethodRepository implements VenuePaymentMethodRep
     config: VenuePaymentMethodDTO['config'];
     position: number;
   }): Promise<VenuePaymentMethodDTO> {
+    const SETTLEMENT_CURRENCY = await loadVenuePricingCurrencySV(PRISMA, _data.venueId);
     const ROW = await PRISMA.venuePaymentMethod.create({
       data: {
         venueId: _data.venueId,
@@ -63,6 +67,7 @@ export class PrismaVenuePaymentMethodRepository implements VenuePaymentMethodRep
         config: _data.config as object,
         position: _data.position,
         isActive: true,
+        settlementCurrency: SETTLEMENT_CURRENCY,
       },
     });
     return mapVenuePaymentMethodSV(ROW);

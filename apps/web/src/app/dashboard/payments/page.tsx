@@ -3,18 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
+import {
+  formatMoneyFromMajor,
+  resolveCurrencyCode,
+} from '~/lib/format-money';
 import type { TransactionStatsResponse, TransactionHistoryItem } from '~/types/api';
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-  }).format(amount);
-};
 
 export default function PaymentsPage() {
   const { currentVenue } = useVenue();
+  const venueCurrency = resolveCurrencyCode(
+    currentVenue?.pricingCurrency,
+    currentVenue?.displayCurrency,
+  );
+  const formatCurrency = (amount: number) =>
+    formatMoneyFromMajor(amount, venueCurrency);
   const [stats, setStats] = useState<TransactionStatsResponse | null>(null);
   const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);

@@ -63,6 +63,26 @@ enum PaymentMethod {
   MANUAL
 }
 
+enum CurrencyCode {
+  BS
+  USD
+  EUR
+}
+
+/// Tipo de asiento en libro mayor de reserva (Fase 2 MCP).
+enum LedgerEntryType {
+  OBLIGATION
+  PAYMENT
+  FEE
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
 /// Medios de pago configurables por venue (efectivo, transferencia, pago móvil, POS, etc.)
 model VenuePaymentMethod {
   id        String   @id @default(uuid())
@@ -71,6 +91,8 @@ model VenuePaymentMethod {
   type      String   // 'CASH' | 'BANK_TRANSFER' | 'PAGO_MOVIL' | 'POS' | 'OTHER'
   name      String
   config    Json?    // { accountNumber?, bank?, phoneNumber?, idType?, idNumber?, reference? }
+  /// Moneda en la que liquida este medio (Modelo C — capa liquidación).
+  settlementCurrency CurrencyCode
   isActive  Boolean  @default(true)
   position  Int      @default(0)
 
@@ -80,16 +102,20 @@ model VenuePaymentMethod {
   @@index([venueId, isActive])
 }
 
-/// Tasas de cambio por país y moneda. Referencia para convertir a BS.
+/// Tasas de cambio por país, moneda y fecha efectiva (histórico diario).
 model ExchangeRate {
-  id         String   @id @default(uuid())
-  countryCode String
-  currency   String
-  rateToBs   Decimal  @db.Decimal(14, 4)
-  source     String?
-  updatedAt  DateTime @updatedAt
+  id            String   @id @default(uuid())
+  countryCode   String
+  currency      String
+  rateToBs      Decimal  @db.Decimal(14, 4)
+  /// Día calendario (TZ sede) al que aplica la tasa.
+  effectiveDate DateTime @db.Date
+  source        String?
+  updatedAt     DateTime @updatedAt
 
-  @@unique([countryCode, currency])
+  currencyConversions CurrencyConversionRecord[]
+
+  @@unique([countryCode, currency, effectiveDate])
 }
 
 enum PaymentStatus {
@@ -450,8 +476,12 @@ model Venue {
   paymentCvu        String?
   paymentAlias      String?
   paymentNotes      String?
-  /// Moneda de visualización del venue: BS (bolívares), USD (dólares), EUR (euros).
-  displayCurrency   String     @default("BS")
+  /// Moneda de visualización del venue (legacy; preferir pricingCurrency).
+  displayCurrency   String       @default("BS")
+  /// País para tasas de cambio (ISO 3166-1 alpha-2).
+  countryCode       String       @default("VE")
+  /// Moneda de obligación / pricing (Modelo C — capa comercial).
+  pricingCurrency   CurrencyCode @default(BS)
   /// Usuario propietario de la sede (nullable para compatibilidad hacia atrás).
   ownerUserId       String?   @unique
   owner             User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
@@ -463,10 +493,23 @@ model Venue {
 
   courts      Court[]
   staff       VenueStaff[]
-  reservations Reservation[]
-  venuePaymentMethods VenuePaymentMethod[]
+  reservations         Reservation[]
+  venuePaymentMethods  VenuePaymentMethod[]
+  venueFeeRules        VenueFeeRule[]
+  monetizationSettings VenueMonetizationSettings?
 
   @@index([latitude, longitude])
+}
+
+/// Configuración monetaria por sede (timezone, tolerancia sobrepago).
+model VenueMonetizationSettings {
+  venueId                   String   @id
+  timezone                  String   @default("America/Caracas")
+  allowOverpayment          Boolean  @default(false)
+  overpaymentToleranceMinor BigInt?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  venue                     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
 }
 
 model VenueStaff {
@@ -664,14 +707,23 @@ model Reservation {
   responsibleName  String?
   /// Teléfono del responsable (para reservas directas de guests o referencia).
   responsiblePhone String?
-  /// Monto total de la reserva en centavos (ej: 9000 = $90.00).
+  /// Monto total de la reserva en centavos (legacy; dual-write con totalAmountMinor).
   totalAmountCents Int?
-  /// Suma de montos de transactions confirmadas en centavos.
+  /// Suma de montos confirmados en centavos (legacy; dual-write con paidAmountMinor).
   paidAmountCents  Int             @default(0)
+  /// Moneda de obligación de la reserva (copia de venue.pricingCurrency al crear).
+  pricingCurrency  CurrencyCode
+  /// Monto total en unidades menores (centavos/céntimos según moneda).
+  totalAmountMinor BigInt?
+  /// Suma pagada en pricingCurrency (unidades menores).
+  paidAmountMinor  BigInt          @default(0)
+  /// Suma pagada acumulada en BS (reporting platform; Fase 2).
+  paidAmountBsMinor BigInt?
   /// Estado de pago: UNPAID (nada), PARTIAL (algo), PAID (cubierto o más).
   paymentStatus     PaymentStatus   @default(UNPAID)
 
-  transactions Transaction[]
+  transactions   Transaction[]
+  ledgerEntries  ReservationPaymentLedger[]
 
   // Relación 1:1 con Match (companion table para type=MATCH)
   match       Match?     @relation("ReservationMatch", fields: [matchId], references: [id], onDelete: Cascade)
@@ -784,6 +836,22 @@ model FeeRule {
   @@index([scope, isActive])
 }
 
+/// Comisión de servicio por sede y ámbito (multi-moneda).
+model VenueFeeRule {
+  id           String       @id @default(uuid())
+  venueId      String
+  venue        Venue        @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  scope        FeeScope
+  type         FeeType
+  value        Decimal      @db.Decimal(14, 4)
+  currencyCode CurrencyCode
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([venueId, scope, isActive])
+}
+
 /// Obligación de pago no custodial asociada a un match o reservation y usuario.
 model Transaction {
   id            String            @id @default(uuid())
@@ -796,6 +864,19 @@ model Transaction {
   amountBase    Decimal           @db.Decimal(14, 4)
   feeAmount     Decimal           @db.Decimal(14, 4)
   amountTotal   Decimal           @db.Decimal(14, 4)
+  /// Obligación en moneda de pricing (capa comercial).
+  obligationCurrency       CurrencyCode?
+  obligationAmountMinor    BigInt?
+  feeAmountMinor           BigInt?
+  obligationTotalMinor     BigInt?
+  pricingCurrency          CurrencyCode?
+  /// Liquidación real según medio de pago.
+  settlementCurrency       CurrencyCode?
+  settlementAmountMinor    BigInt?
+  appliedToObligationMinor BigInt?
+  /// Equivalente en BS para reporting VE (snapshot).
+  amountBsMinor              BigInt?
+  needsReview                Boolean           @default(false)
   status        TransactionStatus @default(PENDING)
   paymentMethod PaymentMethod     @default(MANUAL)
   venuePaymentMethodId String?
@@ -807,7 +888,9 @@ model Transaction {
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 
-  receipts TransactionReceipt[]
+  receipts                 TransactionReceipt[]
+  currencyConversionRecord CurrencyConversionRecord?
+  ledgerEntries            ReservationPaymentLedger[]
 
   @@index([matchId])
   @@index([userId])
@@ -817,7 +900,44 @@ model Transaction {
   @@index([venuePaymentMethodId])
 }
 
+/// Snapshot inmutable de conversión para auditoría / reporting VE.
+model CurrencyConversionRecord {
+  id              String        @id @default(uuid())
+  transactionId   String        @unique
+  transaction     Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  fromCurrency    CurrencyCode
+  toCurrency      CurrencyCode
+  fromAmountMinor BigInt
+  toAmountMinor   BigInt
+  rateToBs        Decimal       @db.Decimal(14, 4)
+  rateDate        DateTime      @db.Date
+  exchangeRateId  String?
+  exchangeRate    ExchangeRate? @relation(fields: [exchangeRateId], references: [id], onDelete: SetNull)
+  source          String?
+  createdAt       DateTime      @default(now())
+}
+
 /// Comprobante (imagen) adjunto a una transacción.
+/// Libro mayor append-only por reserva (Fase 2 MCP).
+model ReservationPaymentLedger {
+  id            String           @id @default(uuid())
+  reservationId String
+  reservation   Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  transactionId String?
+  transaction   Transaction?     @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  entryType     LedgerEntryType
+  direction     LedgerDirection
+  amountMinor   BigInt
+  currencyCode  CurrencyCode
+  amountBsMinor BigInt?
+  actorUserId   String
+  reason        String?
+  createdAt     DateTime         @default(now())
+
+  @@index([reservationId, createdAt])
+  @@index([transactionId])
+}
+
 model TransactionReceipt {
   id             String      @id @default(uuid())
   transactionId  String

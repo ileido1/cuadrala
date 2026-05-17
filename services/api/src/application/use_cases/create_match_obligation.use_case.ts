@@ -2,7 +2,7 @@ import { AppError } from '../../domain/errors/app_error.js';
 import type { PaymentMatchReadRepository } from '../../domain/ports/payment_match_read_repository.js';
 import type { PaymentTransactionRepository } from '../../domain/ports/payment_transaction_repository.js';
 import type { VenueFeeRuleRepository } from '../../domain/ports/venue_fee_rule_repository.js';
-import { computeFeeAmountSV } from '../../domain/services/payments/fee_policy.service.js';
+import { computeObligationFeeSV } from '../../domain/services/payments/fee_policy.service.js';
 import type { CreateObligationsResultDTO } from '../dto/payment_obligation.dto.js';
 
 export type CreateMatchObligationInput = {
@@ -44,7 +44,10 @@ export class CreateMatchObligationUseCase {
       }
     }
 
-    const RULE = await this._feeRuleRepository.findActiveForScopeSV('MATCH');
+    const VENUE_ID = MATCH.venueId;
+    const RULE = VENUE_ID !== null
+      ? await this._feeRuleRepository.findActiveForVenueAndScopeSV(VENUE_ID, 'MATCH')
+      : await this._feeRuleRepository.findActiveForScopeSV('MATCH');
     const AMOUNT_BASE = String(_input.amountBasePerPerson);
     const AMOUNT_BASE_NUMBER = _input.amountBasePerPerson;
     const CREATED: CreateObligationsResultDTO['created'] = [];
@@ -60,7 +63,7 @@ export class CreateMatchObligationUseCase {
         continue;
       }
 
-      const FEE_NUMBER = computeFeeAmountSV(AMOUNT_BASE_NUMBER, RULE);
+      const FEE_NUMBER = computeObligationFeeSV(AMOUNT_BASE_NUMBER, RULE);
       const FEE = String(FEE_NUMBER);
       const TOTAL = String(AMOUNT_BASE_NUMBER + FEE_NUMBER);
 

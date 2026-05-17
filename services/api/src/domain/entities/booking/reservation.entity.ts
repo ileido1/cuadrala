@@ -106,6 +106,9 @@ export type ReservationDTO = {
   readonly responsiblePhone: string | null;
   readonly totalAmountCents: number | null;
   readonly paidAmountCents: number;
+  readonly pricingCurrency: string;
+  readonly totalAmountMinor: bigint | null;
+  readonly paidAmountMinor: bigint;
   readonly paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
   readonly createdAt: Date;
   readonly updatedAt: Date;

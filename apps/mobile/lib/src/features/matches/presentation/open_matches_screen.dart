@@ -327,7 +327,7 @@ final class _OpenMatchListTile extends StatelessWidget {
                         ),
                       const Spacer(),
                       Text(
-                        '\$ ${formatMoneyCents(match.pricePerPlayerCents)}',
+                        formatMoneyLabel(match.pricePerPlayerCents),
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           color: scheme.onSurface,

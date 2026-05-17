@@ -15,6 +15,10 @@ import type {
 import type { ReservationType as PrismaReservationType, ReservationStatus as PrismaReservationStatus } from '../../generated/prisma/client.js';
 
 import { PRISMA } from '../prisma_client.js';
+import {
+  loadVenuePricingCurrencySV,
+  reservationMoneyCreateFieldsSV,
+} from '../prisma_money_fields.js';
 
 function mapReservation(_row: {
   id: string;
@@ -84,6 +88,7 @@ const RESERVATION_SELECT = {
 
 export class PrismaReservationRepository implements ReservationRepository {
   async createReservationSV(_input: CreateReservationInputDTO): Promise<ReservationDTO> {
+    const PRICING_CURRENCY = await loadVenuePricingCurrencySV(PRISMA, _input.venueId);
     const ROW = await PRISMA.reservation.create({
       data: {
         venueId: _input.venueId,
@@ -98,6 +103,7 @@ export class PrismaReservationRepository implements ReservationRepository {
         responsibleName: _input.responsibleName ?? null,
         responsiblePhone: _input.responsiblePhone ?? null,
         totalAmountCents: _input.totalAmountCents ?? null,
+        ...reservationMoneyCreateFieldsSV(PRICING_CURRENCY, _input.totalAmountCents),
       },
       select: RESERVATION_SELECT,
     });

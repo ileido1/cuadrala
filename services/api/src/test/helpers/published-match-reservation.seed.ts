@@ -1,4 +1,8 @@
 import type { PrismaClient } from '../../generated/prisma/client.js';
+import {
+  loadVenuePricingCurrencySV,
+  reservationMoneyCreateFieldsSV,
+} from '../../infrastructure/prisma_money_fields.js';
 
 /** Seed MATCH + Reservation publicada (reemplaza VacantHour en tests de integración). */
 export async function seedPublishedMatchReservationSV(
@@ -24,6 +28,7 @@ export async function seedPublishedMatchReservationSV(
     },
   });
 
+  const PRICING_CURRENCY = await loadVenuePricingCurrencySV(_prisma, _data.venueId);
   const RESERVATION = await _prisma.reservation.create({
     data: {
       venueId: _data.venueId,
@@ -38,6 +43,7 @@ export async function seedPublishedMatchReservationSV(
       createdByUserId: _data.organizerUserId,
       organizerUserId: _data.organizerUserId,
       status: 'CONFIRMED',
+      ...reservationMoneyCreateFieldsSV(PRICING_CURRENCY),
     },
   });
 

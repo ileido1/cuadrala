@@ -44,6 +44,24 @@ abstract class BackofficeReservationsApi {
     required String startTime,
     required String endTime,
   });
+
+  Future<Map<String, Object?>> getReservationPaymentSummaryEnvelope({
+    required String reservationId,
+  });
+
+  Future<Map<String, Object?>> createReservationObligationsEnvelope({
+    required String reservationId,
+    required Map<String, Object?> body,
+  });
+
+  Future<Map<String, Object?>> listVenuePaymentMethodsEnvelope({
+    required String venueId,
+  });
+
+  Future<Map<String, Object?>> confirmTransactionManualEnvelope({
+    required String transactionId,
+    required Map<String, Object?> body,
+  });
 }
 
 final class DioBackofficeReservationsApi implements BackofficeReservationsApi {
@@ -147,5 +165,51 @@ final class DioBackofficeReservationsApi implements BackofficeReservationsApi {
         'endTime': endTime,
       },
     );
+  }
+
+  @override
+  Future<Map<String, Object?>> getReservationPaymentSummaryEnvelope({
+    required String reservationId,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/reservations/$reservationId/transactions/summary',
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> createReservationObligationsEnvelope({
+    required String reservationId,
+    required Map<String, Object?> body,
+  }) async {
+    final json = await _apiClient.postJson(
+      '/api/v1/reservations/$reservationId/transactions/create-obligations',
+      body: body,
+    );
+    final data = json['data'];
+    if (data is Map<String, Object?>) return data;
+    return json;
+  }
+
+  @override
+  Future<Map<String, Object?>> listVenuePaymentMethodsEnvelope({
+    required String venueId,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/venues/$venueId/payment-methods',
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> confirmTransactionManualEnvelope({
+    required String transactionId,
+    required Map<String, Object?> body,
+  }) async {
+    final json = await _apiClient.patchJson(
+      '/api/v1/transactions/$transactionId/confirm-manual',
+      body: body,
+    );
+    final data = json['data'];
+    if (data is Map<String, Object?>) return data;
+    return json;
   }
 }

@@ -5,6 +5,8 @@ final class VenueDto {
     required this.address,
     required this.latitude,
     required this.longitude,
+    this.pricingCurrency,
+    this.displayCurrency,
   });
 
   final String id;
@@ -12,6 +14,8 @@ final class VenueDto {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final String? pricingCurrency;
+  final String? displayCurrency;
 
   static VenueDto fromJson(Map<String, Object?> json) {
     final latRaw = json['latitude'];
@@ -22,6 +26,8 @@ final class VenueDto {
       address: json['address'] as String?,
       latitude: latRaw is num ? latRaw.toDouble() : null,
       longitude: lngRaw is num ? lngRaw.toDouble() : null,
+      pricingCurrency: json['pricingCurrency'] as String?,
+      displayCurrency: json['displayCurrency'] as String?,
     );
   }
 }

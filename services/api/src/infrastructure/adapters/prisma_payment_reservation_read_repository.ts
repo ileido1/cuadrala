@@ -18,8 +18,12 @@ export class PrismaPaymentReservationReadRepository
     }
     return {
       id: ROW.id,
+      venueId: ROW.venueId,
       durationMinutes: ROW.durationMinutes,
       totalAmountCents: ROW.totalAmountCents,
+      pricingCurrency: ROW.pricingCurrency,
+      totalAmountMinor: ROW.totalAmountMinor,
+      paidAmountMinor: ROW.paidAmountMinor,
       court: ROW.court
         ? {
             pricePerHourCents: ROW.court.pricePerHourCents,

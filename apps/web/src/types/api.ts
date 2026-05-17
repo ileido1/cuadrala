@@ -11,6 +11,7 @@ export interface Venue {
   openingHours?: Record<string, { open: string; close: string }> | null;
   courtsCount?: number;
   displayCurrency?: string;
+  pricingCurrency?: string;
 }
 
 export interface VenueSummary {
@@ -459,6 +460,9 @@ export interface BookingItem {
   paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID';
   totalAmountCents?: number | null;
   paidAmountCents?: number;
+  pricingCurrency?: string;
+  totalAmountMinor?: string | null;
+  paidAmountMinor?: string;
   // Common:
   notes?: string | null;
   responsibleName?: string | null;
@@ -551,6 +555,7 @@ export interface VenuePaymentMethod {
   type: PaymentMethodType;
   name: string;
   config: PaymentMethodConfig | null;
+  settlementCurrency?: string;
   isActive: boolean;
   position: number;
 }

@@ -19,6 +19,7 @@ export type VenuePaymentMethodDTO = {
   readonly type: VenuePaymentMethodType;
   readonly name: string;
   readonly config: VenuePaymentMethodConfig | null;
+  readonly settlementCurrency: string;
   readonly isActive: boolean;
   readonly position: number;
 };

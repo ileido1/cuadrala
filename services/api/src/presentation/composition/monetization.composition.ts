@@ -14,6 +14,12 @@ import { PrismaPaymentTransactionRepository } from '../../infrastructure/adapter
 import { PrismaUserSubscriptionRepository } from '../../infrastructure/adapters/prisma_user_subscription_repository.js';
 import { PrismaVenueFeeRuleRepository } from '../../infrastructure/adapters/prisma_venue_fee_rule_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+import { PrismaVenuePaymentMethodRepository } from '../../infrastructure/adapters/prisma_venue_payment_method_repository.js';
+import { PrismaExchangeRateRepository } from '../../infrastructure/adapters/prisma_exchange_rate_repository.js';
+import { DefaultMoneyConversionService } from '../../domain/services/money/money_conversion.service.js';
+import { GetRateForReservationDayUseCase } from '../../application/use_cases/get_rate_for_reservation_day.use_case.js';
+import { ReservationLedgerService } from '../../application/services/reservation_ledger.service.js';
+import { PrismaReservationLedgerRepository } from '../../infrastructure/adapters/prisma_reservation_ledger_repository.js';
 
 const PAYMENT_TX_REPOSITORY = new PrismaPaymentTransactionRepository();
 const FEE_RULE_REPOSITORY = new PrismaVenueFeeRuleRepository();
@@ -21,6 +27,16 @@ const MATCH_READ_REPOSITORY = new PrismaPaymentMatchReadRepository();
 const RESERVATION_READ_REPOSITORY = new PrismaPaymentReservationReadRepository();
 const USER_SUBSCRIPTION_REPOSITORY = new PrismaUserSubscriptionRepository();
 const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository();
+const VENUE_PAYMENT_METHOD_REPOSITORY = new PrismaVenuePaymentMethodRepository();
+const EXCHANGE_RATE_REPOSITORY = new PrismaExchangeRateRepository();
+const MONEY_CONVERSION_SERVICE = new DefaultMoneyConversionService();
+const GET_RATE_FOR_RESERVATION_DAY_UC = new GetRateForReservationDayUseCase(
+  EXCHANGE_RATE_REPOSITORY,
+);
+const RESERVATION_LEDGER_REPOSITORY = new PrismaReservationLedgerRepository();
+const RESERVATION_LEDGER_SERVICE = new ReservationLedgerService(
+  RESERVATION_LEDGER_REPOSITORY,
+);
 
 export const CREATE_MATCH_OBLIGATION_UC = new CreateMatchObligationUseCase(
   MATCH_READ_REPOSITORY,
@@ -56,6 +72,10 @@ export const UPDATE_USER_SUBSCRIPTION_UC = new UpdateUserSubscriptionUseCase(
 export const CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC = new ConfirmTransactionAsVenueStaffUseCase(
   VENUE_STAFF_REPOSITORY,
   PAYMENT_TX_REPOSITORY,
+  VENUE_PAYMENT_METHOD_REPOSITORY,
+  MONEY_CONVERSION_SERVICE,
+  GET_RATE_FOR_RESERVATION_DAY_UC,
+  RESERVATION_LEDGER_SERVICE,
 );
 
 export const LIST_VENUE_PENDING_TRANSACTIONS_UC = new ListVenuePendingTransactionsUseCase(

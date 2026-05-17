@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/formatting/money_format.dart';
+import '../../../../core/models/currency_code.dart';
+
 /// Tipo de booking según el spec de unificar-match-reservation.
 enum BookingType {
   direct('DIRECT'),
@@ -78,6 +81,9 @@ final class BookingItem {
     this.totalAmountCents,
     this.paidAmountCents = 0,
     this.paymentStatus,
+    this.pricingCurrency,
+    this.displayCurrency,
+    this.createdByUserId,
   });
 
   final String id;
@@ -100,6 +106,20 @@ final class BookingItem {
   final int? totalAmountCents;
   final int paidAmountCents;
   final String? paymentStatus;
+  final String? pricingCurrency;
+  final String? displayCurrency;
+  final String? createdByUserId;
+
+  String? get obligationUserId => organizerUserId ?? createdByUserId;
+
+  CurrencyCode get currencyCode =>
+      CurrencyCode.resolve(
+        pricingCurrency: pricingCurrency,
+        displayCurrency: displayCurrency,
+      );
+
+  bool get hasPaymentSummary =>
+      totalAmountCents != null && totalAmountCents! > 0;
 
   static BookingItem fromJson(Map<String, Object?> json) {
     // Parse scheduledAt: Date -> date + startTime + endTime
@@ -133,10 +153,33 @@ final class BookingItem {
       pricePerPlayerCents: json['pricePerPlayerCents'] as int?,
       visibility: BookingVisibility.fromString(json['visibility'] as String?),
       matchStatus: MatchStatus.fromString(json['matchStatus'] as String?),
-      totalAmountCents: json['totalAmountCents'] as int?,
-      paidAmountCents: json['paidAmountCents'] as int? ?? 0,
+      totalAmountCents:
+          parseMinorFromJson(json['totalAmountMinor'])
+          ?? parseMinorFromJson(json['totalAmountCents']),
+      paidAmountCents:
+          parseMinorFromJson(json['paidAmountMinor'])
+          ?? parseMinorFromJson(json['paidAmountCents'])
+          ?? 0,
       paymentStatus: json['paymentStatus'] as String?,
+      pricingCurrency: json['pricingCurrency'] as String?,
+      displayCurrency: json['displayCurrency'] as String?,
+      createdByUserId: json['createdByUserId'] as String?,
     );
+  }
+
+  String formatTotalAmount() {
+    final TOTAL = totalAmountCents;
+    if (TOTAL == null) return '—';
+    return formatMoneyFromMinor(TOTAL, currencyCode);
+  }
+
+  String formatPaidAmount() =>
+      formatMoneyFromMinor(paidAmountCents, currencyCode);
+
+  String formatPendingAmount() {
+    final TOTAL = totalAmountCents ?? 0;
+    final PENDING = (TOTAL - paidAmountCents).clamp(0, TOTAL);
+    return formatMoneyFromMinor(PENDING, currencyCode);
   }
 
   String get displayName {

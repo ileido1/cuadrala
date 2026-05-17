@@ -11,6 +11,7 @@ import {
   REJECT_TRANSACTION_AS_VENUE_STAFF_UC,
   UPDATE_USER_SUBSCRIPTION_UC,
 } from '../composition/monetization.composition.js';
+import { parseCurrencyCode } from '../../domain/money/currency_code.js';
 import {
   CONFIRM_TRANSACTION_BODY_SCHEMA,
   CREATE_OBLIGATIONS_BODY_SCHEMA,
@@ -58,6 +59,14 @@ export async function patchConfirmTransactionManualCON(
     transactionId: PARAMS.transactionId,
     userId: ACTOR_USER_ID,
     venuePaymentMethodId: BODY.venuePaymentMethodId,
+    ...(BODY.settlementAmount !== undefined
+      ? {
+          settlementAmount: {
+            amountMinor: BigInt(BODY.settlementAmount.amountMinor),
+            currencyCode: parseCurrencyCode(BODY.settlementAmount.currencyCode),
+          },
+        }
+      : {}),
     referenceNumber: BODY.referenceNumber,
     paymentData: BODY.paymentData,
   });

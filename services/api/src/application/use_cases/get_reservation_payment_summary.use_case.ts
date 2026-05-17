@@ -1,6 +1,10 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { PaymentReservationReadRepository } from '../../domain/ports/payment_reservation_read_repository.js';
 import type { PaymentTransactionRepository } from '../../domain/ports/payment_transaction_repository.js';
+import { moneyAmountDtoFromMinorSV } from '../dto/money.dto.js';
+import type { MoneyAmountDTO } from '../dto/money.dto.js';
+import { parseCurrencyCode } from '../../domain/money/currency_code.js';
+import { isReservationPaymentLedgerEnabledSV } from '../../config/feature_flags.js';
 
 export class GetReservationPaymentSummaryUseCase {
   constructor(
@@ -17,6 +21,10 @@ export class GetReservationPaymentSummaryUseCase {
     totalAmountCents: number | null;
     paidAmountCents: number;
     paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+    pricingCurrency: string;
+    reservationTotalAmount: MoneyAmountDTO | null;
+    paidAmount: MoneyAmountDTO;
+    paidAmountBs?: MoneyAmountDTO;
     pendingCount: number;
     confirmedCount: number;
     cancelledCount: number;
@@ -62,7 +70,26 @@ export class GetReservationPaymentSummaryUseCase {
       else if (_r.status === 'CANCELLED') cancelled += 1;
     }
 
-    return {
+    const PRICING = parseCurrencyCode(SYNCED.pricingCurrency);
+
+    const RESULT: {
+      reservationId: string;
+      transactionCount: number;
+      totalAmountBase: string;
+      totalFeeAmount: string;
+      totalAmount: string;
+      totalAmountCents: number | null;
+      paidAmountCents: number;
+      paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+      pricingCurrency: string;
+      reservationTotalAmount: MoneyAmountDTO | null;
+      paidAmount: MoneyAmountDTO;
+      paidAmountBs?: MoneyAmountDTO;
+      pendingCount: number;
+      confirmedCount: number;
+      cancelledCount: number;
+      items: Array<{ id: string; status: string; amountTotal: string }>;
+    } = {
       reservationId: _reservationId,
       transactionCount: ROWS.length,
       totalAmountBase: String(totalBase),
@@ -71,6 +98,12 @@ export class GetReservationPaymentSummaryUseCase {
       totalAmountCents: SYNCED.totalAmountCents,
       paidAmountCents: SYNCED.paidAmountCents,
       paymentStatus: SYNCED.paymentStatus,
+      pricingCurrency: PRICING,
+      reservationTotalAmount:
+        SYNCED.totalAmountMinor !== null
+          ? moneyAmountDtoFromMinorSV(PRICING, SYNCED.totalAmountMinor)
+          : null,
+      paidAmount: moneyAmountDtoFromMinorSV(PRICING, SYNCED.paidAmountMinor),
       pendingCount: pending,
       confirmedCount: confirmed,
       cancelledCount: cancelled,
@@ -80,5 +113,14 @@ export class GetReservationPaymentSummaryUseCase {
         amountTotal: _r.amountTotal.toString(),
       })),
     };
+
+    if (
+      isReservationPaymentLedgerEnabledSV()
+      && SYNCED.paidAmountBsMinor !== null
+    ) {
+      RESULT.paidAmountBs = moneyAmountDtoFromMinorSV('BS', SYNCED.paidAmountBsMinor);
+    }
+
+    return RESULT;
   }
 }

@@ -25,6 +25,17 @@ describe('CONFIRM_TRANSACTION_BODY_SCHEMA', () => {
     expect(result.venuePaymentMethodId).toBe('seed-payment-method-2');
   });
 
+  it('should parse optional settlementAmount', () => {
+    const result = CONFIRM_TRANSACTION_BODY_SCHEMA.parse({
+      settlementAmount: { amountMinor: '100', currencyCode: 'BS' },
+    });
+
+    expect(result.settlementAmount).toEqual({
+      amountMinor: '100',
+      currencyCode: 'BS',
+    });
+  });
+
   it('should parse body with paymentData record', () => {
     const result = CONFIRM_TRANSACTION_BODY_SCHEMA.parse({
       venuePaymentMethodId: '550e8400-e29b-41d4-a716-446655440000',

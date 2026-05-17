@@ -32,3 +32,17 @@ export class CurrencyMismatchError extends MoneyDomainError {
     this.name = 'CurrencyMismatchError';
   }
 }
+
+export class ExchangeRateNotFoundError extends MoneyDomainError {
+  public constructor(
+    _countryCode: string,
+    _currency: string,
+    _effectiveDate: string,
+  ) {
+    super(
+      'TASA_NO_DISPONIBLE',
+      `No hay tasa para ${_currency} en ${_countryCode} con fecha ${_effectiveDate}`,
+    );
+    this.name = 'ExchangeRateNotFoundError';
+  }
+}

@@ -65,15 +65,28 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         data: { venueId, userId: staffUserId, role: 'STAFF' },
       });
 
+      const EFFECTIVE_DATE = new Date(
+        new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Caracas',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date()) + 'T00:00:00.000Z',
+      );
       await PRISMA.exchangeRate.upsert({
         where: {
-          countryCode_currency: { countryCode: 'VE', currency: 'USD' },
+          countryCode_currency_effectiveDate: {
+            countryCode: 'VE',
+            currency: 'USD',
+            effectiveDate: EFFECTIVE_DATE,
+          },
         },
         create: {
           countryCode: 'VE',
           currency: 'USD',
           rateToBs: new Prisma.Decimal('50.0000'),
           source: 'seed',
+          effectiveDate: EFFECTIVE_DATE,
         },
         update: {
           rateToBs: new Prisma.Decimal('50.0000'),

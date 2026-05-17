@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import { MONEY_AMOUNT_SCHEMA } from './money.validation.js';
+
+export { CURRENCY_CODE_SCHEMA, MONEY_AMOUNT_SCHEMA } from './money.validation.js';
+
 export const MATCH_ID_PARAM_SCHEMA = z.object({
   matchId: z.string().uuid('matchId debe ser un UUID valido.'),
 });
@@ -60,6 +64,7 @@ function optionalPaymentMethodIdField() {
 export const CONFIRM_TRANSACTION_BODY_SCHEMA = z
   .object({
     venuePaymentMethodId: optionalPaymentMethodIdField(),
+    settlementAmount: MONEY_AMOUNT_SCHEMA.optional(),
     referenceNumber: z.string().max(200).optional(),
     paymentData: z.record(z.string(), z.unknown()).optional(),
   })

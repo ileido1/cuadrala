@@ -1,5 +1,6 @@
 export type PaymentMatchWithParticipantsDTO = {
   id: string;
+  venueId: string | null;
   participants: Array<{ userId: string }>;
 };
 

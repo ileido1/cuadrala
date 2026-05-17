@@ -216,11 +216,35 @@ async function seedVenueOwner(): Promise<void> {
     { countryCode: 'VE', currency: 'EUR', rateToBs: 55.0000, source: 'dolarapi.com' },
   ];
 
+  const EFFECTIVE_DATE = new Date(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Caracas',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date()) + 'T00:00:00.000Z',
+  );
+
   for (const rate of EXCHANGE_RATES) {
     await PRISMA.exchangeRate.upsert({
-      where: { countryCode_currency: { countryCode: rate.countryCode, currency: rate.currency } },
-      create: { countryCode: rate.countryCode, currency: rate.currency, rateToBs: new Prisma.Decimal(rate.rateToBs.toString()), source: rate.source },
-      update: { rateToBs: new Prisma.Decimal(rate.rateToBs.toString()), source: rate.source },
+      where: {
+        countryCode_currency_effectiveDate: {
+          countryCode: rate.countryCode,
+          currency: rate.currency,
+          effectiveDate: EFFECTIVE_DATE,
+        },
+      },
+      create: {
+        countryCode: rate.countryCode,
+        currency: rate.currency,
+        rateToBs: new Prisma.Decimal(rate.rateToBs.toString()),
+        source: rate.source,
+        effectiveDate: EFFECTIVE_DATE,
+      },
+      update: {
+        rateToBs: new Prisma.Decimal(rate.rateToBs.toString()),
+        source: rate.source,
+      },
     });
   }
 

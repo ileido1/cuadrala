@@ -6,7 +6,9 @@ import '../data/backoffice_reservations_repository.dart';
 import 'cubit/backoffice_reservations_cubit.dart';
 import 'cubit/backoffice_reservations_state.dart';
 import 'widgets/weekly_calendar.dart';
+import 'widgets/booking_detail_sheet.dart';
 import 'widgets/reservation_modal.dart';
+import '../data/models/booking_item.dart';
 
 final class BackofficeScheduleScreen extends StatelessWidget {
   const BackofficeScheduleScreen({super.key, required this.venueId, required this.venueName});
@@ -115,16 +117,16 @@ final class _BackofficeScheduleView extends StatelessWidget {
     );
   }
 
-  void _showReservationModal(BuildContext context, dynamic reservation) {
+  void _showReservationModal(BuildContext context, BookingItem booking) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => BlocProvider.value(
-        value: context.read<BackofficeReservationsCubit>(),
-        child: ReservationModal.fromReservation(
-          venueId: venueId,
-          reservation: reservation,
-        ),
+      builder: (_) => BookingDetailSheet(
+        booking: booking,
+        venueId: venueId,
+        venueName: venueName,
+        onPaymentConfirmed: () =>
+            context.read<BackofficeReservationsCubit>().load(),
       ),
     );
   }

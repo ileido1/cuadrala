@@ -5,6 +5,10 @@
  */
 
 import type { BookingRepository } from '../../domain/ports/booking_repository.js';
+import {
+  loadVenuePricingCurrencySV,
+  reservationMoneyCreateFieldsSV,
+} from '../prisma_money_fields.js';
 import type {
   BookingFilters,
   CreateBookingInputDTO,
@@ -42,6 +46,9 @@ const SELECT = {
   responsiblePhone: true,
   totalAmountCents: true,
   paidAmountCents: true,
+  pricingCurrency: true,
+  totalAmountMinor: true,
+  paidAmountMinor: true,
   paymentStatus: true,
   createdByUserId: true,
   createdAt: true,
@@ -72,6 +79,9 @@ function mapRow(_row: {
   responsiblePhone: string | null;
   totalAmountCents: number | null;
   paidAmountCents: number;
+  pricingCurrency: string;
+  totalAmountMinor: bigint | null;
+  paidAmountMinor: bigint;
   paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
   createdByUserId: string;
   createdAt: Date;
@@ -94,6 +104,9 @@ function mapRow(_row: {
     responsiblePhone: _row.responsiblePhone,
     totalAmountCents: _row.totalAmountCents,
     paidAmountCents: _row.paidAmountCents,
+    pricingCurrency: _row.pricingCurrency,
+    totalAmountMinor: _row.totalAmountMinor,
+    paidAmountMinor: _row.paidAmountMinor,
     paymentStatus: _row.paymentStatus,
     courtName: _row.court?.name ?? null,
     createdAt: _row.createdAt,
@@ -115,8 +128,10 @@ export class PrismaBookingRepository implements BookingRepository {
   constructor(private readonly _prisma: any) {}
 
   async createBookingSV(_input: CreateBookingInputDTO): Promise<ReservationDTO> {
+    const PRICING_CURRENCY = await loadVenuePricingCurrencySV(this._prisma, _input.venueId);
     const BASE_DATA: Record<string, unknown> = {
       venueId: _input.venueId,
+      ...reservationMoneyCreateFieldsSV(PRICING_CURRENCY, _input.totalAmountCents),
       courtId: _input.courtId,
       sportId: _input.sportId,
       categoryId: _input.categoryId ?? '',

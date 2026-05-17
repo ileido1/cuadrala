@@ -4,6 +4,7 @@ export type ExchangeRateDTO = {
   readonly countryCode: string;
   readonly currency: string; // 'USD' | 'EUR'
   readonly rateToBs: number;
+  readonly effectiveDate: Date;
   readonly source: string | null;
   readonly updatedAt: Date;
 };

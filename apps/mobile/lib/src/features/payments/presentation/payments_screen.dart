@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/models/currency_code.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -12,10 +13,18 @@ import 'cubit/payments_state.dart';
 import 'widgets/payment_list_tile.dart';
 
 final class PaymentsScreen extends StatefulWidget {
-  const PaymentsScreen({super.key, required this.venueId, required this.venueName});
+  const PaymentsScreen({
+    super.key,
+    required this.venueId,
+    required this.venueName,
+    this.pricingCurrency,
+    this.displayCurrency,
+  });
 
   final String venueId;
   final String venueName;
+  final String? pricingCurrency;
+  final String? displayCurrency;
 
   @override
   State<PaymentsScreen> createState() => _PaymentsScreenState();
@@ -59,8 +68,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   }
 
                   final loaded = state as PaymentsLoaded;
+                  final currency = CurrencyCode.resolve(
+                    pricingCurrency: widget.pricingCurrency,
+                    displayCurrency: widget.displayCurrency,
+                  );
                   return PaymentsTable(
                     transactions: loaded.transactions,
+                    currency: currency,
                     onTap: (id) => context.push('/dashboard/payments/$id'),
                   );
                 },
@@ -77,10 +91,12 @@ final class PaymentsTable extends StatelessWidget {
   const PaymentsTable({
     super.key,
     required this.transactions,
+    required this.currency,
     required this.onTap,
   });
 
   final List<PendingTransactionDto> transactions;
+  final CurrencyCode currency;
   final void Function(String id) onTap;
 
   @override
@@ -95,10 +111,9 @@ final class PaymentsTable extends StatelessWidget {
           final t = transactions[index];
           return PaymentListTile(
             transactionId: t.id,
-            matchLabel: t.matchLabel,
-            amountCents: t.amountCents,
-            currency: t.currency,
-            playerName: t.player.name,
+            matchLabel: t.displayLabel(),
+            amountTotalMajor: t.amountTotalMajor,
+            currency: currency,
             status: t.status,
             createdAt: t.createdAt,
             onTap: () => onTap(t.id),

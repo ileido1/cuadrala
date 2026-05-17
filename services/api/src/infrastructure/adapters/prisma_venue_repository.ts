@@ -17,6 +17,8 @@ const VENUE_LIST_SELECT = {
   address: true,
   latitude: true,
   longitude: true,
+  displayCurrency: true,
+  pricingCurrency: true,
   createdAt: true,
 } as const;
 
@@ -59,6 +61,8 @@ function mapVenueDetailSV(_venue: {
   paymentCvu: string | null;
   paymentAlias: string | null;
   paymentNotes: string | null;
+  displayCurrency: string;
+  pricingCurrency: string;
   _count: { courts: number };
 }): VenueDetailDTO {
   const OPENING_HOURS = _venue.openingHours as Record<string, { open: string; close: string }> | null;
@@ -83,6 +87,8 @@ function mapVenueDetailSV(_venue: {
     paymentCvu: _venue.paymentCvu,
     paymentAlias: _venue.paymentAlias,
     paymentNotes: _venue.paymentNotes,
+    displayCurrency: _venue.displayCurrency,
+    pricingCurrency: _venue.pricingCurrency,
   };
 }
 
@@ -260,6 +266,8 @@ export class PrismaVenueRepository implements VenueRepository {
         paymentCvu: true,
         paymentAlias: true,
         paymentNotes: true,
+        displayCurrency: true,
+        pricingCurrency: true,
         _count: { select: { courts: true } },
       },
     });

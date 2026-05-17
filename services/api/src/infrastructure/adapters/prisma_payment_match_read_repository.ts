@@ -9,6 +9,7 @@ import { PRISMA } from '../prisma_client.js';
 const MATCH_WITH_PARTICIPANTS = {
   participants: { include: { user: true } },
   category: true,
+  court: { select: { venueId: true } },
 } satisfies Prisma.MatchInclude;
 
 export class PrismaPaymentMatchReadRepository implements PaymentMatchReadRepository {
@@ -29,6 +30,7 @@ export class PrismaPaymentMatchReadRepository implements PaymentMatchReadReposit
     }
     return {
       id: MATCH.id,
+      venueId: MATCH.court?.venueId ?? null,
       participants: MATCH.participants.map((_participant) => ({
         userId: _participant.userId,
       })),

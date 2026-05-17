@@ -3,10 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { PaymentMethodType, BookingItem, VenuePaymentMethod } from '~/types/api';
 import { apiClient } from '~/lib/api-client';
+import {
+  formatCentsWithCurrency,
+  resolveCurrencyCode,
+  type CurrencyCode,
+} from '~/lib/format-money';
 
 interface ReservationDetailModalProps {
   reservation: BookingItem;
   venueId: string;
+  pricingCurrency?: string | null;
+  displayCurrency?: string | null;
   onClose: () => void;
   onCancel: () => void;
 }
@@ -40,11 +47,8 @@ function buildPaymentSummaryFromReservation(_reservation: BookingItem): PaymentS
   };
 }
 
-function formatPesosFromCents(_cents: number): string {
-  return (_cents / 100).toLocaleString('es-AR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+function formatAmountFromCents(_cents: number, _currency: CurrencyCode): string {
+  return formatCentsWithCurrency(_cents, _currency);
 }
 
 function parsePesosInputToCents(_value: string): number | null {
@@ -92,7 +96,18 @@ function resolvePaymentMethodId(
   return null;
 }
 
-export function ReservationDetailModal({ reservation, venueId, onClose, onCancel }: ReservationDetailModalProps) {
+export function ReservationDetailModal({
+  reservation,
+  venueId,
+  pricingCurrency,
+  displayCurrency,
+  onClose,
+  onCancel,
+}: ReservationDetailModalProps) {
+  const currencyCode = resolveCurrencyCode(
+    reservation.pricingCurrency ?? pricingCurrency,
+    displayCurrency,
+  );
   const [loading, setLoading] = useState(false);
   const [stepLoading, setStepLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +204,9 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
     setStepLoading(true);
     const baseSummary = buildPaymentSummaryFromReservation(reservation);
     setPaymentSummary(baseSummary);
-    setPaymentAmountInput(formatPesosFromCents(baseSummary.pendingAmount));
+    setPaymentAmountInput(
+      formatAmountFromCents(baseSummary.pendingAmount, currencyCode),
+    );
 
     try {
       const res = await apiClient.venues.reservations.transactions.getSummary(reservation.id);
@@ -211,7 +228,9 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
           pendingAmount: Math.max(0, totalCents - paidCents),
         };
         setPaymentSummary(summary);
-        setPaymentAmountInput(formatPesosFromCents(summary.pendingAmount));
+        setPaymentAmountInput(
+          formatAmountFromCents(summary.pendingAmount, currencyCode),
+        );
       }
     } catch {
       // Mantener totales de la reserva; no forzar pendiente a 0
@@ -277,7 +296,9 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
         return;
       }
       if (paymentAmountCents > maxPayableCents) {
-        setError(`El monto no puede superar $${formatPesosFromCents(maxPayableCents)}.`);
+        setError(
+          `El monto no puede superar ${formatAmountFromCents(maxPayableCents, currencyCode)}.`,
+        );
         return;
       }
       setError(null);
@@ -315,7 +336,9 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
       return;
     }
     if (paymentAmountCents > maxPayableCents) {
-      setError(`El monto no puede superar $${formatPesosFromCents(maxPayableCents)}.`);
+      setError(
+        `El monto no puede superar ${formatAmountFromCents(maxPayableCents, currencyCode)}.`,
+      );
       return;
     }
 
@@ -370,10 +393,19 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
         );
       }
 
+      const SETTLEMENT_CURRENCY = resolveCurrencyCode(
+        selectedMethod?.settlementCurrency,
+        currencyCode,
+      );
+
       await apiClient.instance.patch(
         `/transactions/${transactionId}/confirm-manual`,
         {
           venuePaymentMethodId: methodId,
+          settlementAmount: {
+            amountMinor: String(paymentAmountCents),
+            currencyCode: SETTLEMENT_CURRENCY,
+          },
           referenceNumber: paymentReference || undefined,
           paymentData: selectedMethod?.config ?? undefined,
         },
@@ -555,8 +587,8 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
             </p>
             {displayTotalCents != null && (
               <div className="mt-1 flex gap-2 text-sm text-gray-600">
-                <span>Total: <strong>${(displayTotalCents / 100).toLocaleString('es-AR')}</strong></span>
-                <span>Pagado: <strong>${(displayPaidCents / 100).toLocaleString('es-AR')}</strong></span>
+                <span>Total: <strong>{formatAmountFromCents(displayTotalCents ?? 0, currencyCode)}</strong></span>
+                <span>Pagado: <strong>{formatAmountFromCents(displayPaidCents, currencyCode)}</strong></span>
               </div>
             )}
           </div>
@@ -683,8 +715,8 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                           Monto a pagar
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-700">
-                            $
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-green-700">
+                            {currencyCode === 'USD' ? 'US$' : currencyCode === 'EUR' ? '€' : 'Bs.'}
                           </span>
                           <input
                             id="payment-amount-input"
@@ -702,7 +734,7 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                         </div>
                         {paymentSummary && paymentSummary.paidAmount > 0 && (
                           <p className="text-xs text-green-600 mt-1">
-                            Ya pagado: ${(paymentSummary.paidAmount / 100).toLocaleString('es-AR')}
+                            Ya pagado: {formatAmountFromCents(paymentSummary.paidAmount, currencyCode)}
                           </p>
                         )}
                       </div>
@@ -711,24 +743,24 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                         <div className="flex justify-between">
                           <span className="text-gray-500">Total reserva</span>
                           <span className="font-medium">
-                            ${paymentSummary
-                              ? (paymentSummary.totalAmount / 100).toLocaleString('es-AR')
+                            {paymentSummary
+                              ? formatAmountFromCents(paymentSummary.totalAmount, currencyCode)
                               : '--'}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Ya pagado</span>
                           <span className="font-medium text-green-600">
-                            ${paymentSummary
-                              ? (paymentSummary.paidAmount / 100).toLocaleString('es-AR')
+                            {paymentSummary
+                              ? formatAmountFromCents(paymentSummary.paidAmount, currencyCode)
                               : '--'}
                           </span>
                         </div>
                         <div className="flex justify-between border-t pt-2">
                           <span className="text-gray-700 font-medium">Pendiente</span>
                           <span className="font-bold text-orange-600">
-                            ${paymentSummary
-                              ? (paymentSummary.pendingAmount / 100).toLocaleString('es-AR')
+                            {paymentSummary
+                              ? formatAmountFromCents(paymentSummary.pendingAmount, currencyCode)
                               : '--'}
                           </span>
                         </div>
@@ -855,7 +887,7 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                     <p className="text-sm text-green-600">Monto a confirmar</p>
                     <p className="text-2xl font-bold text-green-700">
                       {paymentAmountCents !== null
-                        ? `$${formatPesosFromCents(paymentAmountCents)}`
+                        ? formatAmountFromCents(paymentAmountCents, currencyCode)
                         : '--'}
                     </p>
                   </div>
@@ -940,7 +972,7 @@ export function ReservationDetailModal({ reservation, venueId, onClose, onCancel
                 El pago de{' '}
                 <span className="font-semibold text-green-600">
                   {paymentAmountCents !== null
-                    ? `$${formatPesosFromCents(paymentAmountCents)}`
+                    ? formatAmountFromCents(paymentAmountCents, currencyCode)
                     : ''}
                 </span>{' '}
                 fue registrado correctamente.

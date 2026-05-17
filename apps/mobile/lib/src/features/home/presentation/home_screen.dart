@@ -653,7 +653,7 @@ final class _OpenMatchPreviewTile extends StatelessWidget {
                     ],
                     const SizedBox(height: 4),
                     Text(
-                      '\$ ${formatMoneyCents(match.pricePerPlayerCents)} p/p',
+                      '${formatMoneyLabel(match.pricePerPlayerCents)} p/p',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.primary,
                             fontWeight: FontWeight.w900,

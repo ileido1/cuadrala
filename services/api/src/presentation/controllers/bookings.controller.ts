@@ -20,6 +20,10 @@ import {
   UPDATE_BOOKING_BODY_SCHEMA,
   VENUE_ID_PARAM_SCHEMA,
 } from '../validation/bookings.validation.js';
+import {
+  mapBookingToResponseSV,
+  mapBookingsListToResponseSV,
+} from '../mappers/booking_response.mapper.js';
 
 export async function listBookingsCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -55,7 +59,10 @@ export async function listBookingsCON(_req: Request, _res: Response): Promise<vo
   _res.status(200).json({
     success: true,
     message: 'Bookings obtenidos correctamente.',
-    data: RESULT,
+    data: {
+      items: mapBookingsListToResponseSV(RESULT.items),
+      pageInfo: RESULT.pageInfo,
+    },
   });
 }
 
@@ -93,7 +100,7 @@ export async function createBookingCON(_req: Request, _res: Response): Promise<v
   _res.status(201).json({
     success: true,
     message: 'Booking creado correctamente.',
-    data: RESULT.booking,
+    data: mapBookingToResponseSV(RESULT.booking),
   });
 }
 
@@ -111,7 +118,7 @@ export async function getBookingCON(_req: Request, _res: Response): Promise<void
 
   _res.status(200).json({
     success: true,
-    data: BOOKING,
+    data: mapBookingToResponseSV(BOOKING),
   });
 }
 
@@ -141,7 +148,7 @@ export async function updateBookingCON(_req: Request, _res: Response): Promise<v
   _res.status(200).json({
     success: true,
     message: 'Booking actualizado correctamente.',
-    data: RESULT.booking,
+    data: mapBookingToResponseSV(RESULT.booking),
   });
 }
 
@@ -161,6 +168,6 @@ export async function cancelBookingCON(_req: Request, _res: Response): Promise<v
   _res.status(200).json({
     success: true,
     message: 'Booking cancelado correctamente.',
-    data: RESULT.booking,
+    data: mapBookingToResponseSV(RESULT.booking),
   });
 }

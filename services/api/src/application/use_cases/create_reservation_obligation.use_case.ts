@@ -2,7 +2,7 @@ import { AppError } from '../../domain/errors/app_error.js';
 import type { PaymentReservationReadRepository } from '../../domain/ports/payment_reservation_read_repository.js';
 import type { PaymentTransactionRepository } from '../../domain/ports/payment_transaction_repository.js';
 import type { VenueFeeRuleRepository } from '../../domain/ports/venue_fee_rule_repository.js';
-import { computeFeeAmountSV } from '../../domain/services/payments/fee_policy.service.js';
+import { computeObligationFeeSV } from '../../domain/services/payments/fee_policy.service.js';
 import type { CreateObligationsResultDTO } from '../dto/payment_obligation.dto.js';
 
 export type CreateReservationObligationInput = {
@@ -32,7 +32,10 @@ export class CreateReservationObligationUseCase {
       throw new AppError('RESERVA_NO_ENCONTRADA', 'La reserva indicada no existe.', 404);
     }
 
-    const RULE = await this._feeRuleRepository.findActiveForScopeSV('RESERVATION');
+    const RULE = await this._feeRuleRepository.findActiveForVenueAndScopeSV(
+      RESERVATION.venueId,
+      'RESERVATION',
+    );
     const AMOUNT_BASE = String(_input.amountBasePerPerson);
     const AMOUNT_BASE_NUMBER = _input.amountBasePerPerson;
     const CREATED: CreateObligationsResultDTO['created'] = [];
@@ -49,7 +52,7 @@ export class CreateReservationObligationUseCase {
         continue;
       }
 
-      const FEE_NUMBER = computeFeeAmountSV(AMOUNT_BASE_NUMBER, RULE);
+      const FEE_NUMBER = computeObligationFeeSV(AMOUNT_BASE_NUMBER, RULE);
       const FEE = String(FEE_NUMBER);
       const TOTAL = String(AMOUNT_BASE_NUMBER + FEE_NUMBER);
 

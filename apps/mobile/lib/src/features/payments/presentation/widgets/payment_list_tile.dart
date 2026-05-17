@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/formatting/money_format.dart';
+import '../../../../core/models/currency_code.dart';
+
 class PaymentListTile extends StatelessWidget {
   const PaymentListTile({
     super.key,
     required this.transactionId,
     required this.matchLabel,
-    required this.amountCents,
+    required this.amountTotalMajor,
     required this.currency,
-    required this.playerName,
     required this.status,
     required this.createdAt,
     required this.onTap,
@@ -15,9 +17,8 @@ class PaymentListTile extends StatelessWidget {
 
   final String transactionId;
   final String matchLabel;
-  final int amountCents;
-  final String currency;
-  final String playerName;
+  final double amountTotalMajor;
+  final CurrencyCode currency;
   final String status;
   final DateTime createdAt;
   final VoidCallback onTap;
@@ -55,7 +56,10 @@ class PaymentListTile extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
@@ -75,7 +79,7 @@ class PaymentListTile extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    playerName,
+                    transactionId.substring(0, 8),
                     style: TextStyle(
                       color: scheme.onSurfaceVariant,
                       fontWeight: FontWeight.w700,
@@ -83,7 +87,7 @@ class PaymentListTile extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '\$ ${_formatAmount(amountCents)}',
+                    formatMoneyFromMajor(amountTotalMajor, currency),
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       color: scheme.onSurface,
@@ -108,7 +112,11 @@ class PaymentListTile extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.chevron_right, size: 20, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ],
               ),
             ],
@@ -119,38 +127,29 @@ class PaymentListTile extends StatelessWidget {
   }
 
   Color _statusColor(String status) {
-    switch (status) {
-      case 'pending':
+    switch (status.toUpperCase()) {
+      case 'PENDING':
         return Colors.amber.shade700;
-      case 'confirmed':
+      case 'CONFIRMED':
         return Colors.green.shade700;
-      case 'failed':
+      case 'CANCELLED':
         return Colors.red.shade700;
-      case 'refunded':
-        return Colors.grey.shade600;
       default:
         return Colors.grey.shade600;
     }
   }
 
   String _statusLabel(String status) {
-    switch (status) {
-      case 'pending':
+    switch (status.toUpperCase()) {
+      case 'PENDING':
         return 'Pendiente';
-      case 'confirmed':
+      case 'CONFIRMED':
         return 'Confirmado';
-      case 'failed':
-        return 'Fallido';
-      case 'refunded':
-        return 'Reintegrado';
+      case 'CANCELLED':
+        return 'Cancelado';
       default:
         return status;
     }
-  }
-
-  String _formatAmount(int cents) {
-    final pesos = (cents / 100).round();
-    return pesos.toString();
   }
 
   String _formatDate(DateTime date) {

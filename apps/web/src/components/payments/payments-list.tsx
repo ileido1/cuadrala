@@ -3,16 +3,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '~/lib/api-client';
+import {
+  formatMoneyFromMajor,
+  resolveCurrencyCode,
+} from '~/lib/format-money';
 import type { PaginatedPaymentsResponse, PendingPayment, PaymentsFilters } from '~/types/api';
 import { PaymentStatusBadge } from '~/components/payments/payment-status-badge';
 
 interface PaymentsListProps {
   venueId: string;
+  pricingCurrency?: string | null;
+  displayCurrency?: string | null;
 }
 
 type PaymentsState = 'loading' | 'loaded' | 'empty' | 'error';
 
-export function PaymentsList({ venueId }: PaymentsListProps) {
+export function PaymentsList({
+  venueId,
+  pricingCurrency,
+  displayCurrency,
+}: PaymentsListProps) {
+  const venueCurrency = resolveCurrencyCode(pricingCurrency, displayCurrency);
   const router = useRouter();
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [state, setState] = useState<PaymentsState>('loading');
@@ -54,12 +65,8 @@ export function PaymentsList({ venueId }: PaymentsListProps) {
     };
   }, [venueId]);
 
-  const formatAmount = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency,
-    }).format(amount / 100);
-  };
+  const formatAmount = (amount: number) =>
+    formatMoneyFromMajor(amount, venueCurrency);
 
   const formatDate = (dateString: string) => {
     return new Intl.DateTimeFormat('es-AR', {
@@ -165,7 +172,7 @@ export function PaymentsList({ venueId }: PaymentsListProps) {
                 {payment.matchLabel}
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                {formatAmount(payment.amount, payment.currency)}
+                {formatAmount(payment.amount)}
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                 {payment.player.name}

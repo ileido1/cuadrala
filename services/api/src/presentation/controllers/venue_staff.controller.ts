@@ -13,7 +13,11 @@ import {
   UPSERT_VENUE_STAFF_BODY_SCHEMA,
   VENUE_ID_PARAMS_SCHEMA,
 } from '../validation/venue_staff.validation.js';
-import { TRANSACTION_ID_PARAM_SCHEMA } from '../validation/monetization.validation.js';
+import {
+  CONFIRM_TRANSACTION_BODY_SCHEMA,
+  TRANSACTION_ID_PARAM_SCHEMA,
+} from '../validation/monetization.validation.js';
+import { parseCurrencyCode } from '../../domain/money/currency_code.js';
 
 export async function postUpsertVenueStaffCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -90,9 +94,22 @@ export async function patchConfirmVenueTransactionCON(_req: Request, _res: Respo
     transactionId: TRANSACTION_ID_PARAM_SCHEMA.shape.transactionId.parse(PARAMS.transactionId),
   };
 
+  const BODY = CONFIRM_TRANSACTION_BODY_SCHEMA.parse(_req.body ?? {});
+
   const RESULT = await CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC.executeSV({
     transactionId: VALIDATED.transactionId,
     userId: ACTOR_USER_ID,
+    venuePaymentMethodId: BODY.venuePaymentMethodId,
+    ...(BODY.settlementAmount !== undefined
+      ? {
+          settlementAmount: {
+            amountMinor: BigInt(BODY.settlementAmount.amountMinor),
+            currencyCode: parseCurrencyCode(BODY.settlementAmount.currencyCode),
+          },
+        }
+      : {}),
+    referenceNumber: BODY.referenceNumber,
+    paymentData: BODY.paymentData,
   });
 
   _res.status(200).json({

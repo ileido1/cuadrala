@@ -10,9 +10,13 @@ import type {
   ListPendingStaffTransactionsFilters,
   PendingStaffTransactionRow,
   StaffTransactionRow,
-  VenueStaffTransactionRepository,
 } from '../../domain/ports/venue_staff_transaction_repository.js';
+import type { VenueStaffTransactionRepository } from '../../domain/ports/venue_staff_transaction_repository.js';
 
+import {
+  isMultiCurrencyPaymentsEnabledSV,
+  isReservationPaymentLedgerEnabledSV,
+} from '../../config/feature_flags.js';
 import { PRISMA } from '../prisma_client.js';
 
 export class PrismaPaymentTransactionRepository
@@ -113,9 +117,41 @@ export class PrismaPaymentTransactionRepository
       UPDATE_DATA.confirmedBy = _input.confirmedBy;
     }
 
-    const UPDATED = await PRISMA.transaction.update({
-      where: { id: _input.transactionId },
-      data: UPDATE_DATA,
+    if (_input.mcp !== undefined) {
+      UPDATE_DATA.obligationCurrency = _input.mcp.obligationCurrency;
+      UPDATE_DATA.obligationAmountMinor = _input.mcp.obligationAmountMinor;
+      UPDATE_DATA.feeAmountMinor = _input.mcp.feeAmountMinor;
+      UPDATE_DATA.obligationTotalMinor = _input.mcp.obligationTotalMinor;
+      UPDATE_DATA.pricingCurrency = _input.mcp.pricingCurrency;
+      UPDATE_DATA.settlementCurrency = _input.mcp.settlementCurrency;
+      UPDATE_DATA.settlementAmountMinor = _input.mcp.settlementAmountMinor;
+      UPDATE_DATA.appliedToObligationMinor = _input.mcp.appliedToObligationMinor;
+      UPDATE_DATA.amountBsMinor = _input.mcp.amountBsMinor;
+    }
+
+    const UPDATED = await PRISMA.$transaction(async (_tx) => {
+      const ROW = await _tx.transaction.update({
+        where: { id: _input.transactionId },
+        data: UPDATE_DATA,
+      });
+
+      if (_input.mcp?.conversionRecord !== undefined) {
+        await _tx.currencyConversionRecord.create({
+          data: {
+            transactionId: _input.transactionId,
+            fromCurrency: _input.mcp.conversionRecord.fromCurrency,
+            toCurrency: _input.mcp.conversionRecord.toCurrency,
+            fromAmountMinor: _input.mcp.conversionRecord.fromAmountMinor,
+            toAmountMinor: _input.mcp.conversionRecord.toAmountMinor,
+            rateToBs: new Prisma.Decimal(_input.mcp.conversionRecord.rateToBs),
+            rateDate: _input.mcp.conversionRecord.rateDate,
+            exchangeRateId: _input.mcp.conversionRecord.exchangeRateId,
+            source: _input.mcp.conversionRecord.source,
+          },
+        });
+      }
+
+      return ROW;
     });
     if (UPDATED.confirmedAt === null) {
       throw new Error('ESTADO_INCONSISTENTE');
@@ -139,43 +175,99 @@ export class PrismaPaymentTransactionRepository
     totalAmountCents: number | null;
     paidAmountCents: number;
     paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+    pricingCurrency: string;
+    totalAmountMinor: bigint | null;
+    paidAmountMinor: bigint;
+    paidAmountBsMinor: bigint | null;
   }> {
-    const CONFIRMED = await PRISMA.transaction.aggregate({
-      where: { reservationId: _reservationId, status: 'CONFIRMED' },
-      _sum: { amountTotal: true },
-    });
-
-    const PAID_MAJOR = Number(
-      (CONFIRMED._sum.amountTotal ?? new Prisma.Decimal(0)).toString(),
-    );
-    const PAID_CENTS = Math.round(PAID_MAJOR * 100);
-
     const RESERVATION = await PRISMA.reservation.findUnique({
       where: { id: _reservationId },
-      select: { totalAmountCents: true },
+      select: {
+        totalAmountCents: true,
+        totalAmountMinor: true,
+        pricingCurrency: true,
+        paidAmountMinor: true,
+        paidAmountCents: true,
+        paidAmountBsMinor: true,
+      },
     });
 
-    const TOTAL_CENTS = RESERVATION?.totalAmountCents ?? 0;
+    const CONFIRMED_TXS = await PRISMA.transaction.findMany({
+      where: { reservationId: _reservationId, status: 'CONFIRMED' },
+      select: {
+        amountTotal: true,
+        appliedToObligationMinor: true,
+        amountBsMinor: true,
+      },
+    });
+
+    let paidMinor = 0n;
+    if (isMultiCurrencyPaymentsEnabledSV()) {
+      for (const TX of CONFIRMED_TXS) {
+        if (TX.appliedToObligationMinor !== null) {
+          paidMinor += TX.appliedToObligationMinor;
+        } else {
+          paidMinor += BigInt(Math.round(Number(TX.amountTotal) * 100));
+        }
+      }
+    } else {
+      const PAID_MAJOR = CONFIRMED_TXS.reduce(
+        (sum, tx) => sum + Number(tx.amountTotal),
+        0,
+      );
+      paidMinor = BigInt(Math.round(PAID_MAJOR * 100));
+    }
+
+    const TOTAL_MINOR = RESERVATION?.totalAmountMinor
+      ?? BigInt(RESERVATION?.totalAmountCents ?? 0);
 
     let paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
-    if (PAID_CENTS < TOTAL_CENTS) {
-      paymentStatus = PAID_CENTS > 0 ? 'PARTIAL' : 'UNPAID';
+    if (paidMinor < TOTAL_MINOR) {
+      paymentStatus = paidMinor > 0n ? 'PARTIAL' : 'UNPAID';
     } else {
       paymentStatus = 'PAID';
     }
 
+    let paidBsMinor = 0n;
+    if (isMultiCurrencyPaymentsEnabledSV()) {
+      for (const TX of CONFIRMED_TXS) {
+        if (TX.amountBsMinor !== null) {
+          paidBsMinor += TX.amountBsMinor;
+        }
+      }
+    }
+
+    const UPDATE_DATA: Record<string, unknown> = {
+      paidAmountMinor: paidMinor,
+      paymentStatus,
+    };
+
+    if (isReservationPaymentLedgerEnabledSV()) {
+      UPDATE_DATA.paidAmountBsMinor = paidBsMinor;
+    }
+
+    if (
+      isMultiCurrencyPaymentsEnabledSV()
+      && RESERVATION?.pricingCurrency === 'BS'
+    ) {
+      UPDATE_DATA.paidAmountCents = Number(paidMinor);
+    } else if (!isMultiCurrencyPaymentsEnabledSV()) {
+      UPDATE_DATA.paidAmountCents = Number(paidMinor);
+    }
+
     const UPDATED = await PRISMA.reservation.update({
       where: { id: _reservationId },
-      data: {
-        paidAmountCents: PAID_CENTS,
-        paymentStatus,
-      },
+      data: UPDATE_DATA,
     });
 
     return {
       totalAmountCents: UPDATED.totalAmountCents,
       paidAmountCents: UPDATED.paidAmountCents,
       paymentStatus: UPDATED.paymentStatus,
+      pricingCurrency: UPDATED.pricingCurrency,
+      totalAmountMinor: UPDATED.totalAmountMinor,
+      paidAmountMinor: UPDATED.paidAmountMinor,
+      paidAmountBsMinor: UPDATED.paidAmountBsMinor,
     };
   }
 
@@ -187,7 +279,11 @@ export class PrismaPaymentTransactionRepository
       include: {
         reservation: {
           include: {
-            venue: true,
+            venue: {
+              include: {
+                monetizationSettings: true,
+              },
+            },
             court: { include: { venue: true } },
           },
         },

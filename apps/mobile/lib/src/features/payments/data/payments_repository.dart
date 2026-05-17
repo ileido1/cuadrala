@@ -20,7 +20,7 @@ class PaymentsRepository {
       matchId: matchId,
     );
 
-    final itemsRaw = data['data'];
+    final itemsRaw = data['items'];
     if (itemsRaw is! List) {
       throw const AppFailure(
         code: 'INVALID_RESPONSE',

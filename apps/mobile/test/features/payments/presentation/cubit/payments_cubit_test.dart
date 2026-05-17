@@ -19,18 +19,14 @@ void main() {
 
     PendingTransactionDto transaction({
       required String id,
-      String status = 'pending',
+      String status = 'PENDING',
     }) {
       return PendingTransactionDto(
         id: id,
         matchId: 'match_xyz',
-        matchLabel: 'Cancha 1 — 10:00',
-        amountCents: 1500,
-        currency: 'ARS',
-        player: const PlayerSummaryDto(id: 'usr_123', name: 'Juan Pérez'),
+        amountTotalMajor: 15,
         status: status,
         createdAt: DateTime(2026, 5, 9, 9, 0),
-        updatedAt: DateTime(2026, 5, 9, 9, 0),
       );
     }
 
@@ -38,7 +34,10 @@ void main() {
       'load emite loading→loaded con transacciones',
       build: () {
         when(() => paymentsRepository.getPendingTransactions(venueId: 'v1'))
-            .thenAnswer((_) async => [transaction(id: 'txn_1'), transaction(id: 'txn_2')]);
+            .thenAnswer((_) async => [
+                  transaction(id: 'txn_1'),
+                  transaction(id: 'txn_2'),
+                ]);
         return PaymentsCubit(repository: paymentsRepository, venueId: 'v1');
       },
       act: (cubit) => cubit.load(),

@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
 import { PaymentMethodsSettings } from '~/components/settings/PaymentMethodsSettings';
+import {
+  formatCentsWithCurrency,
+  pricePerHourLabel,
+  resolveCurrencyCode,
+} from '~/lib/format-money';
 import type { Court, CourtPricingTier, CreateCourtPricingTierRequest, UpdateCourtPricingTierRequest, Venue, VenueUpdateData } from '~/types/api';
 import dynamic from 'next/dynamic';
 
@@ -67,14 +72,6 @@ function buildOpeningHours(schedule: ScheduleState): Record<string, { open: stri
   return Object.keys(result).length > 0 ? result : null;
 }
 
-// Format price from cents to local currency string
-function formatPrice(cents: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(cents / 100);
-}
-
 // Parse time string "HH:MM" to minutes since midnight for sorting
 function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
@@ -102,6 +99,13 @@ const EMPTY_TIER_FORM: TierFormData = {
 
 export default function SettingsPage() {
   const { currentVenue } = useVenue();
+  const venueCurrency = resolveCurrencyCode(
+    currentVenue?.pricingCurrency,
+    currentVenue?.displayCurrency,
+  );
+  const formatPrice = (cents: number) =>
+    formatCentsWithCurrency(cents, venueCurrency);
+  const perHourLabel = pricePerHourLabel(venueCurrency);
   const [venue, setVenue] = useState<Venue | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -653,7 +657,7 @@ export default function SettingsPage() {
                                 <input
                                   type="text"
                                   className="input text-sm py-1.5"
-                                  placeholder="$/hora"
+                                  placeholder={perHourLabel}
                                   value={tierForm.pricePerHourCents}
                                   onChange={(e) => setTierForm((f) => ({ ...f, pricePerHourCents: e.target.value }))}
                                 />
@@ -759,7 +763,9 @@ export default function SettingsPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-secondary-500 mb-1">Precio/hora ($)</label>
+                          <label className="block text-xs text-secondary-500 mb-1">
+                            Precio/hora ({perHourLabel})
+                          </label>
                           <input
                             type="text"
                             className="input text-sm"

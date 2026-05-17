@@ -488,7 +488,7 @@ final class _MatchInfoSection extends StatelessWidget {
               icon: Icons.payments_outlined,
               label: 'PRECIO',
               value: hasPrice
-                  ? '\$ ${formatMoneyCents(m.pricePerPlayerCents)} p/p'
+                  ? '${formatMoneyLabel(m.pricePerPlayerCents)} p/p'
                   : 'Gratis',
               highlight: hasPrice,
             ),

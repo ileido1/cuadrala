@@ -59,6 +59,16 @@ const ENV_SCHEMA = z.object({
   ELO_PROVISIONAL_GAMES: z.coerce.number().int().nonnegative().max(10_000).default(10),
   ELO_PROVISIONAL_K_MULTIPLIER: z.coerce.number().positive().max(10).default(2),
   MATCHMAKING_DEFAULT_RADIUS_KM: z.coerce.number().positive().max(200).default(10),
+  MULTI_CURRENCY_PAYMENTS: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((_v) => _v === 'true')
+    .default(false),
+  RESERVATION_PAYMENT_LEDGER: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((_v) => _v === 'true')
+    .default(false),
 });
 
 const PARSED_ENV = ENV_SCHEMA.safeParse(process.env);

@@ -5,20 +5,55 @@ import type {
 
 import { PRISMA } from '../prisma_client.js';
 
+function mapVenueRuleSV(_row: {
+  type: string;
+  value: { toString(): string };
+}): VenueFeeRuleDTO {
+  return {
+    type: _row.type as 'FIXED' | 'PERCENTAGE',
+    value: Number(_row.value.toString()),
+    source: 'VENUE',
+  };
+}
+
+function mapGlobalRuleSV(_row: {
+  type: string;
+  value: { toString(): string };
+}): VenueFeeRuleDTO {
+  return {
+    type: _row.type as 'FIXED' | 'PERCENTAGE',
+    value: Number(_row.value.toString()),
+    source: 'GLOBAL',
+  };
+}
+
 export class PrismaVenueFeeRuleRepository implements VenueFeeRuleRepository {
-  async findActiveForScopeSV(
+  async findActiveForVenueAndScopeSV(
+    _venueId: string,
     _scope: 'MATCH' | 'RESERVATION',
   ): Promise<VenueFeeRuleDTO> {
-    const RULE = await PRISMA.feeRule.findFirst({
+    const VENUE_RULE = await PRISMA.venueFeeRule.findFirst({
+      where: { venueId: _venueId, scope: _scope, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (VENUE_RULE !== null) {
+      return mapVenueRuleSV(VENUE_RULE);
+    }
+
+    const GLOBAL_RULE = await PRISMA.feeRule.findFirst({
       where: { scope: _scope, isActive: true },
       orderBy: { createdAt: 'desc' },
     });
-    if (RULE === null) {
-      return null;
-    }
-    return {
-      type: RULE.type as 'FIXED' | 'PERCENTAGE',
-      value: Number(RULE.value.toString()),
-    };
+    return GLOBAL_RULE === null ? null : mapGlobalRuleSV(GLOBAL_RULE);
+  }
+
+  async findActiveForScopeSV(
+    _scope: 'MATCH' | 'RESERVATION',
+  ): Promise<VenueFeeRuleDTO> {
+    const GLOBAL_RULE = await PRISMA.feeRule.findFirst({
+      where: { scope: _scope, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return GLOBAL_RULE === null ? null : mapGlobalRuleSV(GLOBAL_RULE);
   }
 }

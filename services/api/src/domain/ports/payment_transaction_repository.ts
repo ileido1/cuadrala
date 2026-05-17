@@ -50,6 +50,10 @@ export interface PaymentTransactionRepository {
     totalAmountCents: number | null;
     paidAmountCents: number;
     paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+    pricingCurrency: string;
+    totalAmountMinor: bigint | null;
+    paidAmountMinor: bigint;
+    paidAmountBsMinor: bigint | null;
   }>;
   findForStaffConfirmSV(_transactionId: string): Promise<StaffTransactionRow | null>;
   listPendingByVenueSV(

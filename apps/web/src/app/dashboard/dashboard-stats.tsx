@@ -4,17 +4,18 @@ import { useEffect, useState } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
 import type { DashboardStatsResponse } from '~/types/api';
+import { formatMoneyFromMinor, resolveCurrencyCode } from '~/lib/format-money';
 
 interface StatCardProps {
   label: string;
   value: string;
   trend?: number;
   icon: React.ReactNode;
-  isMoney?: boolean;
+  moneyPrefix?: string;
   loading?: boolean;
 }
 
-function StatCard({ label, value, trend, icon, isMoney, loading }: StatCardProps) {
+function StatCard({ label, value, trend, icon, moneyPrefix, loading }: StatCardProps) {
   if (loading) {
     return (
       <div className="card p-6 animate-pulse">
@@ -41,7 +42,7 @@ function StatCard({ label, value, trend, icon, isMoney, loading }: StatCardProps
           <div>
             <p className="text-sm text-secondary-500 mb-1">{label}</p>
             <span className="text-3xl font-bold text-secondary-900">
-              {isMoney ? '$' : ''}{value}
+              {moneyPrefix ? `${moneyPrefix} ` : ''}{value}
             </span>
           </div>
         </div>
@@ -247,14 +248,22 @@ export default function DashboardStats() {
       .finally(() => setLoading(false));
   }, [currentVenue]);
 
-  // Format currency for display (en centavos → pesos)
+  const venueCurrency = resolveCurrencyCode(
+    currentVenue?.pricingCurrency,
+    currentVenue?.displayCurrency,
+  );
+
   const formatCurrency = (value: number) => {
-    const pesos = value / 100;
-    if (pesos >= 1000) {
-      return `${(pesos / 1000).toFixed(pesos % 1000 === 0 ? 0 : 1)}k`;
+    const formatted = formatMoneyFromMinor(value, venueCurrency);
+    const MAJOR = value / 100;
+    if (MAJOR >= 1000) {
+      return `${(MAJOR / 1000).toFixed(MAJOR % 1000 === 0 ? 0 : 1)}k`;
     }
-    return pesos.toString();
+    return formatted.replace(/^[^\d]+/, '').trim();
   };
+
+  const moneyPrefix =
+    venueCurrency === 'USD' ? 'US$' : venueCurrency === 'EUR' ? '€' : 'Bs.';
 
   // Default values while loading or error
   const displayStats = stats ?? {
@@ -279,7 +288,7 @@ export default function DashboardStats() {
             value={formatCurrency(displayStats.totalRevenue)}
             trend={displayStats.revenueTrend}
             icon={<MoneyIcon />}
-            isMoney
+            moneyPrefix={moneyPrefix}
             loading={loading}
           />
         </div>

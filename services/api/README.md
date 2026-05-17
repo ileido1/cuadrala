@@ -64,6 +64,29 @@ Tras cambiar `prisma/schema.prisma`, regenera el cliente:
 npx prisma generate
 ```
 
+### Multi-moneda (Modelo C, Fase 1)
+
+Tras la migración `20260516130000_multi_currency_phase1_add`:
+
+```bash
+# Migración Fase 1 + Fase 2
+npx prisma migrate deploy
+
+# Backfill transacciones legacy y tasas diarias (90 días)
+npm run backfill:multi-currency
+
+# Backfill asientos PAYMENT en ledger (idempotente, forward-only)
+npm run backfill:reservation-ledger
+
+# Activar confirmación/agregación por *Minor (staging/prod cuando corresponda)
+export MULTI_CURRENCY_PAYMENTS=true
+export RESERVATION_PAYMENT_LEDGER=true   # Fase 2: asientos append-only + paidAmountBsMinor
+```
+
+Con el flag activo, `PATCH .../transactions/:id/confirm-manual` exige `settlementAmount: { amountMinor, currencyCode }` en reservas y devuelve montos en `pricingCurrency` de la reserva.
+
+Con `RESERVATION_PAYMENT_LEDGER=true` (junto a MCP), cada confirmación de reserva inserta un asiento `PAYMENT` en `ReservationPaymentLedger` y actualiza `paidAmountBsMinor` para reporting.
+
 ## Scripts
 
 | Script                    | Descripción              |
@@ -75,6 +98,8 @@ npx prisma generate
 | `npm run lint`            | ESLint                   |
 | `npm run prisma:validate` | Valida el esquema Prisma |
 | `npm run seed`            | `prisma db seed` — catálogo PADEL + presets + FeeRule (requiere `DATABASE_URL`) |
+| `npm run backfill:multi-currency` | Backfill MCP Fase 1 (`*Minor`, tasas 90d) |
+| `npm run backfill:reservation-ledger` | Backfill asientos PAYMENT Fase 2 (idempotente) |
 | `npm test`                 | Vitest (contrato HTTP/Zod + integración opcional) |
 
 ## Tests

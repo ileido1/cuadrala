@@ -524,6 +524,8 @@ export default function SchedulePage() {
         <ReservationDetailModal
           reservation={selectedBooking._booking}
           venueId={currentVenue.id}
+          pricingCurrency={currentVenue.pricingCurrency}
+          displayCurrency={currentVenue.displayCurrency}
           onClose={() => setSelectedBooking(null)}
           onCancel={handleSuccess}
         />
