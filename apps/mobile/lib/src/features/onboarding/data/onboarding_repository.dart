@@ -30,7 +30,12 @@ class OnboardingRepository {
   }
 
   Future<List<PlayerSportProfileDto>> putSportProfiles(
-    List<({String sportId, double skillLevel, SidePreference sidePreference})> items,
+    List<({
+      String sportId,
+      double skillLevel,
+      SidePreference sidePreference,
+      String? categoryId,
+    })> items,
   ) async {
     final body = {
       'items': items
@@ -39,6 +44,8 @@ class OnboardingRepository {
               'sportId': i.sportId,
               'skillLevel': i.skillLevel,
               'sidePreference': sidePreferenceToWire(i.sidePreference),
+              if (i.categoryId != null && i.categoryId!.isNotEmpty)
+                'categoryId': i.categoryId,
             },
           )
           .toList(),
@@ -112,6 +119,10 @@ class OnboardingRepository {
     return UserLocationDto.fromJson(raw);
   }
 
+  Future<void> patchDominantHand(String dominantHand) async {
+    await _api.patchPlayerProfileEnvelope(body: {'dominantHand': dominantHand});
+  }
+
   Future<void> patchIdentity({
     String? phone,
     int? birthYear,
@@ -119,6 +130,7 @@ class OnboardingRepository {
     String? city,
     String? avatarUrl,
     String? documentNumber,
+    String? dominantHand,
   }) async {
     final body = <String, Object?>{};
     if (phone != null) body['phone'] = phone;
@@ -130,6 +142,7 @@ class OnboardingRepository {
     if (city != null) body['city'] = city;
     if (avatarUrl != null) body['avatarUrl'] = avatarUrl;
     if (documentNumber != null) body['documentNumber'] = documentNumber;
+    if (dominantHand != null) body['dominantHand'] = dominantHand;
     if (body.isEmpty) return;
     await _api.patchPlayerProfileEnvelope(body: body);
   }

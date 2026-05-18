@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../auth/presentation/cubit/session_cubit.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
+import '../../../core/sport/sport_classification.dart';
 import '../../../router/routes.dart';
 import '../../onboarding/data/models/onboarding_status_dto.dart';
 import '../../onboarding/data/models/player_sport_profile_dto.dart';
@@ -13,6 +14,7 @@ import '../../onboarding/data/models/user_location_dto.dart';
 import '../../onboarding/data/onboarding_repository.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models/sport_dto.dart';
+import '../data/models/player_profile_dto.dart';
 import '../data/models/user_me_dto.dart';
 import '../data/models/user_rating_dto.dart';
 import '../data/models/user_stats_dto.dart';
@@ -43,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       repo.getUserStats(me.id),
       repo.getUserRatings(userId: me.id),
       repo.getUserRatingHistory(userId: me.id, limit: 10),
+      repo.getPlayerProfile(),
       onboarding.getStatus(),
       onboarding.listSportProfiles(),
       onboarding.getLocation(),
@@ -54,11 +57,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       stats: results[0] as UserStatsDto,
       ratings: results[1] as List<UserRatingDto>,
       history: results[2] as List<UserRatingHistoryItemDto>,
-      onboardingStatus: results[3] as OnboardingStatusDto,
-      sportProfiles: results[4] as List<PlayerSportProfileDto>,
-      location: results[5] as UserLocationDto?,
-      availability: results[6] as List<UserAvailabilityDto>,
-      sports: results[7] as List<SportDto>,
+      playerProfile: results[3] as PlayerProfileDto,
+      onboardingStatus: results[4] as OnboardingStatusDto,
+      sportProfiles: results[5] as List<PlayerSportProfileDto>,
+      location: results[6] as UserLocationDto?,
+      availability: results[7] as List<UserAvailabilityDto>,
+      sports: results[8] as List<SportDto>,
     );
   }
 
@@ -108,6 +112,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _StatsStrip(vm: vm),
               const SizedBox(height: 18),
               _Top5Card(vm: vm),
+              if (vm.sportProfiles.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                const _SectionTitle(title: 'Mis deportes'),
+                const SizedBox(height: 10),
+                _SportProfileCards(vm: vm),
+              ],
               const SizedBox(height: 18),
               const _SectionTitle(title: 'Datos técnicos'),
               const SizedBox(height: 10),
@@ -145,6 +155,7 @@ final class _ProfileVm {
     required this.stats,
     required this.ratings,
     required this.history,
+    required this.playerProfile,
     required this.onboardingStatus,
     required this.sportProfiles,
     required this.location,
@@ -156,6 +167,7 @@ final class _ProfileVm {
   final UserStatsDto stats;
   final List<UserRatingDto> ratings;
   final List<UserRatingHistoryItemDto> history;
+  final PlayerProfileDto playerProfile;
   final OnboardingStatusDto onboardingStatus;
   final List<PlayerSportProfileDto> sportProfiles;
   final UserLocationDto? location;
@@ -195,7 +207,16 @@ final class _ProfileHeader extends StatelessWidget {
         orElse: () => const SportDto(id: '', code: '', name: ''),
       ).name;
     }();
-    final categoryShort = vm.ratings.isNotEmpty ? 'Cat ${idPreview(vm.ratings.first.categoryId)}' : null;
+    final categoryShort = () {
+      for (final profile in vm.sportProfiles) {
+        final label = profile.categoryLabel;
+        if (label != null && label.isNotEmpty) return label;
+      }
+      if (vm.ratings.isNotEmpty) {
+        return 'Cat ${idPreview(vm.ratings.first.categoryId)}';
+      }
+      return null;
+    }();
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
@@ -532,6 +553,129 @@ final class _TopRow extends StatelessWidget {
   }
 }
 
+final class _SportProfileCards extends StatelessWidget {
+  const _SportProfileCards({required this.vm});
+
+  final _ProfileVm vm;
+
+  SportDto? _sportFor(String sportId) {
+    for (final s in vm.sports) {
+      if (s.id == sportId) return s;
+    }
+    return null;
+  }
+
+  IconData _iconForSport(SportDto sport) {
+    switch (sport.code.toUpperCase()) {
+      case 'PADEL':
+      case 'TENNIS':
+      case 'PICKLEBALL':
+        return Icons.sports_tennis;
+      case 'FOOTBALL5':
+        return Icons.sports_soccer;
+      case 'BASKETBALL3X3':
+        return Icons.sports_basketball;
+      case 'VOLLEY_BEACH':
+        return Icons.sports_volleyball;
+      default:
+        return Icons.sports;
+    }
+  }
+
+  String _sideLabel(SidePreference side) => switch (side) {
+        SidePreference.right => 'Drive',
+        SidePreference.left => 'Revés',
+        SidePreference.any => 'Multi',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        for (final profile in vm.sportProfiles) ...[
+          Builder(
+            builder: (context) {
+              final sport = _sportFor(profile.sportId);
+              final sportName = sport?.name ?? 'Deporte';
+              final isRacket =
+                  sport != null && isRacketSportCode(sport.code);
+              final categoryLabel = profile.categoryLabel;
+
+              return Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        sport != null ? _iconForSport(sport) : Icons.sports,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            sportName,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w900),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            categoryLabel ??
+                                (isRacket ? 'Sin categoría' : 'Sin nivel'),
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: scheme.primary,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isRacket
+                                ? 'Lado: ${_sideLabel(profile.sidePreference)}'
+                                : 'Nivel ${profile.skillLevel.toStringAsFixed(1)}',
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 final class _TechCards extends StatelessWidget {
   const _TechCards({required this.vm});
 
@@ -553,7 +697,7 @@ final class _TechCards extends StatelessWidget {
         Expanded(
           child: _TechCard(
             title: 'BRAZO',
-            value: 'Diestro',
+            value: vm.playerProfile.dominantHandLabel,
             icon: Icons.sports_handball_outlined,
           ),
         ),

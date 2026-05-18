@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { createTestCategorySV } from '../helpers/test-category.js';
 import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 
@@ -31,9 +32,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await ensureTestCatalogSV();
 
       const SLUG = `mcp-match-${Date.now()}`;
-      const CAT = await PRISMA.category.create({
-        data: { name: 'MCP Match Cat', slug: SLUG },
-      });
+      const CAT = await createTestCategorySV(sportPadelId, SLUG, 'MCP Match Cat');
       categoryId = CAT.id;
 
       const TS = Date.now();

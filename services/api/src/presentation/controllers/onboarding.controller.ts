@@ -42,6 +42,7 @@ export async function putMySportProfilesCON(_req: Request, _res: Response): Prom
     sportId: _i.sportId,
     skillLevel: _i.skillLevel,
     ...(_i.sidePreference !== undefined ? { sidePreference: _i.sidePreference } : {}),
+    ...(_i.categoryId !== undefined ? { categoryId: _i.categoryId } : {}),
   }));
   const ITEMS = await REPLACE_MY_SPORT_PROFILES_UC.executeSV(USER_ID, NORMALIZED);
   _res.status(200).json({

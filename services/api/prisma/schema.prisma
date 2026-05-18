@@ -152,6 +152,19 @@ enum SidePreference {
   ANY
 }
 
+/// Esquema de clasificación de categoría por deporte.
+enum CategoryScheme {
+  RACKET_ORDINAL
+  TEAM_SKILL
+}
+
+/// Banda de nivel para agrupar categorías en onboarding.
+enum SkillBand {
+  BASIC
+  INTERMEDIATE
+  ADVANCED
+}
+
 enum NotificationEventType {
   MATCH_SLOT_OPENED
   MATCH_CANCELLED
@@ -228,6 +241,8 @@ model Sport {
   tournaments         Tournament[]
   playerSportProfiles PlayerSportProfile[]
   reservations        Reservation[]
+  categories          Category[]
+  userSportCategories UserSportCategory[]
 }
 
 /// Preset de formato de torneo por deporte (Americano, Round Robin, etc.).
@@ -290,6 +305,7 @@ model User {
   ownedVenue                  Venue?
 
   categories       UserCategory[]
+  sportCategories  UserSportCategory[]
   playerProfile    PlayerProfile?
   availability     UserAvailability[]
   location         UserLocation?
@@ -406,21 +422,45 @@ model UserCategory {
   @@index([categoryId])
 }
 
+/// Categoría de juego por deporte (una activa por userId + sportId).
+model UserSportCategory {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sportId    String
+  sport      Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, sportId])
+  @@index([categoryId])
+}
+
 model Category {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
+  sportId   String
+  sport     Sport          @relation(fields: [sportId], references: [id], onDelete: Cascade)
   name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
+  slug      String
+  scheme    CategoryScheme
+  skillBand SkillBand?
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
 
   matches                   Match[]
   rankingEntries            RankingEntry[]
   tournaments               Tournament[]
   userCategories            UserCategory[]
+  userSportCategories       UserSportCategory[]
   ratings                   UserRating[]
   ratingHistory             UserRatingHistory[]
   notificationSubscriptions NotificationSubscription[]
   notificationEvents        NotificationEvent[]
   reservations              Reservation[]
+
+  @@unique([sportId, slug])
+  @@index([sportId, scheme])
 }
 
 model UserRating {

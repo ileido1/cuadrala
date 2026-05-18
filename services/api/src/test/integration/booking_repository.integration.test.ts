@@ -16,6 +16,7 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { PrismaBookingRepository } from '../../infrastructure/adapters/prisma_booking_repository.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { createTestCategorySV } from '../helpers/test-category.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 
 const BOOKING_REPO = new PrismaBookingRepository(PRISMA);
@@ -35,7 +36,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       sportPadelId = CATALOG.sportPadelId;
 
       const TS = Date.now();
-      const CAT = await PRISMA.category.create({ data: { name: `Cat ${TS}`, slug: `booking-${TS}` } });
+      const CAT = await createTestCategorySV(sportPadelId, `booking-${TS}`, `Cat ${TS}`);
       categoryId = CAT.id;
 
       const VENUE = await PRISMA.venue.create({

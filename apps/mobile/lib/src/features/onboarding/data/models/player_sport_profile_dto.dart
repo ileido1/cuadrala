@@ -28,12 +28,26 @@ final class PlayerSportProfileDto {
     required this.sportId,
     required this.skillLevel,
     required this.sidePreference,
+    this.categoryId,
+    this.categoryName,
+    this.categorySlug,
   });
 
   final String id;
   final String sportId;
   final double skillLevel;
   final SidePreference sidePreference;
+  final String? categoryId;
+  final String? categoryName;
+  final String? categorySlug;
+
+  String? get categoryLabel {
+    final name = categoryName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final slug = categorySlug?.trim();
+    if (slug != null && slug.isNotEmpty) return slug;
+    return null;
+  }
 
   static PlayerSportProfileDto fromJson(Map<String, Object?> json) {
     return PlayerSportProfileDto(
@@ -41,6 +55,9 @@ final class PlayerSportProfileDto {
       sportId: json['sportId'] as String,
       skillLevel: (json['skillLevel'] as num).toDouble(),
       sidePreference: sidePreferenceFromWire(json['sidePreference'] as String?),
+      categoryId: json['categoryId'] as String?,
+      categoryName: json['categoryName'] as String?,
+      categorySlug: json['categorySlug'] as String?,
     );
   }
 }

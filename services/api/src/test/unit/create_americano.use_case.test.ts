@@ -56,6 +56,10 @@ describe('CreateAmericanoUseCase', () => {
 
   it('should throw PARTICIPANTES_DUPLICADOS when participant ids repeat', async () => {
     mockCategoryRepository.findByIdSV.mockResolvedValue({
+      sportId: 'sport-1',
+      scheme: 'RACKET_ORDINAL',
+      skillBand: 'INTERMEDIATE',
+      sortOrder: 4,
       id: 'cat-1',
       name: 'Open',
       slug: 'open',
@@ -73,6 +77,10 @@ describe('CreateAmericanoUseCase', () => {
 
   it('should create americano with PADEL default when sport is omitted', async () => {
     mockCategoryRepository.findByIdSV.mockResolvedValue({
+      sportId: 'sport-1',
+      scheme: 'RACKET_ORDINAL',
+      skillBand: 'INTERMEDIATE',
+      sortOrder: 4,
       id: 'cat-1',
       name: 'Open',
       slug: 'open',

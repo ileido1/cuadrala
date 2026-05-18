@@ -20,7 +20,11 @@ export class JoinMatchUseCase {
       throw new AppError('PARTIDO_NO_ABIERTO', 'El partido no está abierto para unirse.', 409);
     }
 
-    const HAS_CATEGORY = await this._userCategoryRepository.userHasCategorySV(_userId, MATCH.categoryId);
+    const HAS_CATEGORY = await this._userCategoryRepository.userHasCategoryForSportSV(
+      _userId,
+      MATCH.sportId,
+      MATCH.categoryId,
+    );
     if (!HAS_CATEGORY) {
       throw new AppError(
         'CATEGORIA_NO_COMPATIBLE',

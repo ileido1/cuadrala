@@ -23,8 +23,8 @@ final class CatalogRepository {
         .toList();
   }
 
-  Future<List<CategoryDto>> listCategories() async {
-    final data = await _catalogApi.listCategoriesEnvelope();
+  Future<List<CategoryDto>> listCategories({String? sportId}) async {
+    final data = await _catalogApi.listCategoriesEnvelope(sportId: sportId);
     final raw = data['categories'];
     if (raw is! List) {
       throw const AppFailure(

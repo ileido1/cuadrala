@@ -6,6 +6,7 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { createTestCategorySV } from '../helpers/test-category.js';
 
 const APP = createApp();
 
@@ -21,9 +22,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración HTTP + PostgreSQL (TEST
     const CATALOG = await ensureTestCatalogSV();
     sportPadelId = CATALOG.sportPadelId;
     const SLUG = `test-cat-${Date.now()}`;
-    const CAT = await PRISMA.category.create({
-      data: { name: 'Categoría test', slug: SLUG },
-    });
+    const CAT = await createTestCategorySV(sportPadelId, SLUG, 'Categoría test');
     categoryId = CAT.id;
 
     const TS = Date.now();

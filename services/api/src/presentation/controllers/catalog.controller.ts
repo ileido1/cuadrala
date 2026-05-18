@@ -8,12 +8,14 @@ import {
 } from '../composition/catalog.composition.js';
 import {
   FORMAT_PRESET_CODE_PARAM_SCHEMA,
+  LIST_CATEGORIES_QUERY_SCHEMA,
   PUBLISH_FORMAT_PRESET_VERSION_BODY_SCHEMA,
   SPORT_ID_PARAM_SCHEMA,
 } from '../validation/catalog.validation.js';
 
 export async function getCategoriesCON(_req: Request, _res: Response): Promise<void> {
-  const DATA = await LIST_CATEGORIES_UC.executeSV();
+  const QUERY = LIST_CATEGORIES_QUERY_SCHEMA.parse(_req.query);
+  const DATA = await LIST_CATEGORIES_UC.executeSV(QUERY.sportId);
 
   _res.status(200).json({
     success: true,

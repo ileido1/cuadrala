@@ -14,6 +14,9 @@ const USER_STATS_REPOSITORY = new PrismaUserStatsRepository();
 export const GET_PROFILE_UC = new GetProfileUseCase(USER_REPOSITORY);
 export const UPDATE_PROFILE_UC = new UpdateProfileUseCase(USER_REPOSITORY);
 export const GET_PLAYER_PROFILE_UC = new GetPlayerProfileUseCase(PLAYER_PROFILE_REPOSITORY);
-export const UPDATE_PLAYER_PROFILE_UC = new UpdatePlayerProfileUseCase(PLAYER_PROFILE_REPOSITORY);
+export const UPDATE_PLAYER_PROFILE_UC = new UpdatePlayerProfileUseCase(
+  PLAYER_PROFILE_REPOSITORY,
+  USER_REPOSITORY,
+);
 export const GET_USER_STATS_UC = new GetUserStatsUseCase(USER_STATS_REPOSITORY);
 

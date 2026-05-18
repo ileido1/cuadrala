@@ -5,6 +5,7 @@ import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { createTestCategorySV } from '../helpers/test-category.js';
 
 const APP = createApp();
 
@@ -23,9 +24,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const SPORT = await PRISMA.sport.create({
         data: { code: `S27-${Date.now()}`, name: 'Padel Test S27' },
       });
-      const CATEGORY = await PRISMA.category.create({
-        data: { name: 'Categoria S27', slug: `categoria-s27-${Date.now()}` },
-      });
+      const CATEGORY = await createTestCategorySV(SPORT.id, `categoria-s27-${Date.now()}`, 'Categoria S27');
 
       const USER_A = await PRISMA.user.create({
         data: { email: `s27-a-${Date.now()}@test.local`, name: 'Usuario A S27' },

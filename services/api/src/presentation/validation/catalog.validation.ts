@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+export const LIST_CATEGORIES_QUERY_SCHEMA = z
+  .object({
+    sportId: z.string().uuid('sportId debe ser un UUID válido.').optional(),
+  })
+  .strict();
+
 export const SPORT_ID_PARAM_SCHEMA = z.object({
   sportId: z.string().uuid('sportId debe ser un UUID valido.'),
 });

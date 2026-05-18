@@ -23,6 +23,9 @@ async function seedCatalog(): Promise<void> {
     { code: 'PADEL', name: 'Pádel' },
     { code: 'TENNIS', name: 'Tenis' },
     { code: 'PICKLEBALL', name: 'Pickleball' },
+    { code: 'FOOTBALL5', name: 'Fútbol 5' },
+    { code: 'BASKETBALL3X3', name: 'Básquet 3×3' },
+    { code: 'VOLLEY_BEACH', name: 'Vóley playa' },
   ];
 
   const PRESETS_V1: Array<{ code: string; name: string; defaultParameters: Prisma.InputJsonValue }> = [
@@ -131,10 +134,15 @@ async function seedVenueOwner(): Promise<void> {
     return;
   }
 
-  // Asignar owner al venue y settear displayCurrency
+  // Asignar owner al venue y monedas de referencia (pricing = liquidación en seed dev).
+  const SETTLEMENT_CURRENCY = 'USD' as const;
   await PRISMA.venue.update({
     where: { id: VENUE.id },
-    data: { ownerUserId: OWNER.id, displayCurrency: 'USD' },
+    data: {
+      ownerUserId: OWNER.id,
+      displayCurrency: 'USD',
+      pricingCurrency: SETTLEMENT_CURRENCY,
+    },
   });
 
   // Crear VenueStaff con rol OWNER
@@ -196,6 +204,7 @@ async function seedVenueOwner(): Promise<void> {
         type: pm.type,
         name: pm.name,
         config: (pm.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+        settlementCurrency: SETTLEMENT_CURRENCY,
         position: i,
       },
       update: {
@@ -203,6 +212,7 @@ async function seedVenueOwner(): Promise<void> {
         type: pm.type,
         name: pm.name,
         config: (pm.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+        settlementCurrency: SETTLEMENT_CURRENCY,
         position: i,
       },
     });
@@ -251,6 +261,88 @@ async function seedVenueOwner(): Promise<void> {
   console.log('[seed] Exchange rates creados: VE/USD @ 50 BS, VE/EUR @ 55 BS');
 }
 
+async function seedSportCategories(): Promise<void> {
+  const RACKET_ORDINALS: Array<{
+    slug: string;
+    name: string;
+    skillBand: 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
+    sortOrder: number;
+  }> = [
+    { slug: '8va', name: '8va', skillBand: 'BASIC', sortOrder: 8 },
+    { slug: '7ma', name: '7ma', skillBand: 'BASIC', sortOrder: 7 },
+    { slug: '6ta', name: '6ta', skillBand: 'INTERMEDIATE', sortOrder: 6 },
+    { slug: '5ta', name: '5ta', skillBand: 'INTERMEDIATE', sortOrder: 5 },
+    { slug: '4ta', name: '4ta', skillBand: 'INTERMEDIATE', sortOrder: 4 },
+    { slug: '3ra', name: '3ra', skillBand: 'ADVANCED', sortOrder: 3 },
+    { slug: '2da', name: '2da', skillBand: 'ADVANCED', sortOrder: 2 },
+    { slug: '1ra', name: '1ra', skillBand: 'ADVANCED', sortOrder: 1 },
+  ];
+
+  const TEAM_TIERS: Array<{
+    slug: string;
+    name: string;
+    skillBand: 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
+    sortOrder: number;
+  }> = [
+    { slug: 'recreativo', name: 'Recreativo', skillBand: 'BASIC', sortOrder: 1 },
+    { slug: 'intermedio', name: 'Intermedio', skillBand: 'INTERMEDIATE', sortOrder: 2 },
+    { slug: 'competitivo', name: 'Competitivo', skillBand: 'ADVANCED', sortOrder: 3 },
+  ];
+
+  const RACKET_CODES = ['PADEL', 'TENNIS', 'PICKLEBALL'];
+  const TEAM_CODES = ['FOOTBALL5', 'BASKETBALL3X3', 'VOLLEY_BEACH'];
+
+  for (const CODE of RACKET_CODES) {
+    const SPORT = await PRISMA.sport.findUnique({ where: { code: CODE } });
+    if (SPORT === null) continue;
+    for (const DEF of RACKET_ORDINALS) {
+      await PRISMA.category.upsert({
+        where: { sportId_slug: { sportId: SPORT.id, slug: DEF.slug } },
+        create: {
+          sportId: SPORT.id,
+          slug: DEF.slug,
+          name: DEF.name,
+          scheme: 'RACKET_ORDINAL',
+          skillBand: DEF.skillBand,
+          sortOrder: DEF.sortOrder,
+        },
+        update: {
+          name: DEF.name,
+          scheme: 'RACKET_ORDINAL',
+          skillBand: DEF.skillBand,
+          sortOrder: DEF.sortOrder,
+        },
+      });
+    }
+  }
+
+  for (const CODE of TEAM_CODES) {
+    const SPORT = await PRISMA.sport.findUnique({ where: { code: CODE } });
+    if (SPORT === null) continue;
+    for (const DEF of TEAM_TIERS) {
+      await PRISMA.category.upsert({
+        where: { sportId_slug: { sportId: SPORT.id, slug: DEF.slug } },
+        create: {
+          sportId: SPORT.id,
+          slug: DEF.slug,
+          name: DEF.name,
+          scheme: 'TEAM_SKILL',
+          skillBand: DEF.skillBand,
+          sortOrder: DEF.sortOrder,
+        },
+        update: {
+          name: DEF.name,
+          scheme: 'TEAM_SKILL',
+          skillBand: DEF.skillBand,
+          sortOrder: DEF.sortOrder,
+        },
+      });
+    }
+  }
+
+  console.log('[seed] Categorías por deporte: ordinales 8va–1ra (raqueta) y 3 tiers equipo.');
+}
+
 async function seedMatchLifecycle(): Promise<void> {
   const SPORT = await PRISMA.sport.findUnique({ where: { code: 'PADEL' } });
   if (SPORT === null) {
@@ -265,11 +357,12 @@ async function seedMatchLifecycle(): Promise<void> {
     throw new Error('[seed] Falta el preset AMERICANO v1 para PADEL.');
   }
 
-  const CATEGORY = await PRISMA.category.upsert({
-    where: { slug: '4ta' },
-    create: { slug: '4ta', name: '4ta' },
-    update: { name: '4ta' },
+  const CATEGORY = await PRISMA.category.findFirst({
+    where: { sportId: SPORT.id, slug: '4ta' },
   });
+  if (CATEGORY === null) {
+    throw new Error('[seed] Falta categoría 4ta para PADEL (ejecuta seedSportCategories).');
+  }
 
   const USERS = await Promise.all(
     [
@@ -302,13 +395,18 @@ async function seedMatchLifecycle(): Promise<void> {
   );
 
   await Promise.all(
-    USERS.map(async (_u) =>
-      PRISMA.userCategory.upsert({
+    USERS.map(async (_u) => {
+      await PRISMA.userCategory.upsert({
         where: { userId_categoryId: { userId: _u.id, categoryId: CATEGORY.id } },
         create: { userId: _u.id, categoryId: CATEGORY.id },
         update: {},
-      }),
-    ),
+      });
+      await PRISMA.userSportCategory.upsert({
+        where: { userId_sportId: { userId: _u.id, sportId: SPORT.id } },
+        create: { userId: _u.id, sportId: SPORT.id, categoryId: CATEGORY.id },
+        update: { categoryId: CATEGORY.id },
+      });
+    }),
   );
 
   const SEED_VENUES: Array<{
@@ -605,6 +703,7 @@ async function seedMatchLifecycle(): Promise<void> {
 
 async function main(): Promise<void> {
   await seedCatalog();
+  await seedSportCategories();
   await seedFeeRule();
   await seedVenueOwner();
   await seedMatchLifecycle();

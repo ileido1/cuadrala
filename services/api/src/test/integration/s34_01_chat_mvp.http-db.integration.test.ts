@@ -6,6 +6,7 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { createTestCategorySV } from '../helpers/test-category.js';
 
 const APP = createApp();
 
@@ -18,13 +19,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 34 — E7-01: Chat MVP (Integ
     await resetDatabaseForTestsSV();
 
     const CATALOG = await ensureTestCatalogSV();
+    const sportPadelId = CATALOG.sportPadelId;
     sportId = CATALOG.sportPadelId;
     presetId = CATALOG.presetAmericanoId;
 
-    const CAT = await PRISMA.category.create({
-      data: { name: 'Cat S34', slug: `s34-${Date.now()}` },
-      select: { id: true },
-    });
+    const CAT = await createTestCategorySV(sportPadelId, `s34-${Date.now()}`, 'Cat S34');
     categoryId = CAT.id;
   });
 

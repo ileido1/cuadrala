@@ -6,6 +6,7 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { createTestCategorySV } from '../helpers/test-category.js';
 
 const APP = createApp();
 
@@ -15,6 +16,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let categoryId: string;
     let otherCategoryId: string;
     let sportPadelId: string;
+    let sportTennisId: string;
     let matchId: string;
 
     let participantA: string;
@@ -29,11 +31,12 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await resetDatabaseForTestsSV();
       const CATALOG = await ensureTestCatalogSV();
       sportPadelId = CATALOG.sportPadelId;
+      sportTennisId = CATALOG.sportTennisId;
 
       const TS = Date.now();
-      const CAT = await PRISMA.category.create({ data: { name: 'Cat S29', slug: `cat-s29-${TS}` } });
+      const CAT = await createTestCategorySV(sportPadelId, `cat-s29-${TS}`, 'Cat S29');
       categoryId = CAT.id;
-      const CAT2 = await PRISMA.category.create({ data: { name: 'Cat S29 O', slug: `cat-s29-o-${TS}` } });
+      const CAT2 = await createTestCategorySV(sportTennisId, `cat-s29-o-${TS}`, 'Cat S29 O');
       otherCategoryId = CAT2.id;
 
       const USERS = await Promise.all(

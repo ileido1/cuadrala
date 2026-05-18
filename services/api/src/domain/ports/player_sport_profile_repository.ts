@@ -4,12 +4,16 @@ export type PlayerSportProfileDTO = {
   /// Escala 1.0 a 7.0 (autodeclarada).
   skillLevel: number;
   sidePreference: 'RIGHT' | 'LEFT' | 'ANY';
+  categoryId?: string;
+  categoryName?: string;
+  categorySlug?: string;
 };
 
 export type UpsertPlayerSportProfileDTO = {
   sportId: string;
   skillLevel: number;
   sidePreference?: PlayerSportProfileDTO['sidePreference'];
+  categoryId?: string;
 };
 
 export interface PlayerSportProfileRepository {

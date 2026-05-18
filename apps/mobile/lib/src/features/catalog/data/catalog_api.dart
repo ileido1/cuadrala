@@ -2,7 +2,7 @@ import '../../../core/network/api_client.dart';
 
 abstract interface class CatalogApi {
   Future<Map<String, Object?>> listSportsEnvelope();
-  Future<Map<String, Object?>> listCategoriesEnvelope();
+  Future<Map<String, Object?>> listCategoriesEnvelope({String? sportId});
 }
 
 final class DioCatalogApi implements CatalogApi {
@@ -16,7 +16,10 @@ final class DioCatalogApi implements CatalogApi {
   }
 
   @override
-  Future<Map<String, Object?>> listCategoriesEnvelope() {
-    return _apiClient.getEnvelopeDataMap('/api/v1/categories');
+  Future<Map<String, Object?>> listCategoriesEnvelope({String? sportId}) {
+    final query = sportId != null && sportId.isNotEmpty
+        ? '?sportId=${Uri.encodeQueryComponent(sportId)}'
+        : '';
+    return _apiClient.getEnvelopeDataMap('/api/v1/categories$query');
   }
 }

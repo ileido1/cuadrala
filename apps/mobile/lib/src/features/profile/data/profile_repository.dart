@@ -1,4 +1,5 @@
 import '../../../core/failures/app_failure.dart';
+import 'models/player_profile_dto.dart';
 import 'models/user_me_dto.dart';
 import 'models/user_rating_dto.dart';
 import 'models/user_stats_dto.dart';
@@ -23,6 +24,21 @@ class ProfileRepository {
 
   Future<void> patchMyName(String name) async {
     await _profileApi.patchMeEnvelope(body: {'name': name});
+  }
+
+  Future<PlayerProfileDto> getPlayerProfile() async {
+    final data = await _profileApi.getPlayerProfileEnvelope();
+    final raw = data['profile'];
+    if (raw is Map<String, Object?>) {
+      return PlayerProfileDto.fromJson(raw);
+    }
+    if (data['dominantHand'] is String) {
+      return PlayerProfileDto.fromJson(data);
+    }
+    throw const AppFailure(
+      code: 'INVALID_RESPONSE',
+      message: 'Respuesta inválida del servidor.',
+    );
   }
 
   Future<UserStatsDto> getUserStats(String userId) async {

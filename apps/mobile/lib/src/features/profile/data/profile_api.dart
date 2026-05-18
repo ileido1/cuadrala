@@ -2,6 +2,7 @@ import '../../../core/network/api_client.dart';
 
 abstract interface class ProfileApi {
   Future<Map<String, Object?>> getMeEnvelope();
+  Future<Map<String, Object?>> getPlayerProfileEnvelope();
   Future<Map<String, Object?>> patchMeEnvelope({required Map<String, Object?> body});
   Future<Map<String, Object?>> getUserStatsEnvelope({required String userId});
   Future<Map<String, Object?>> getUserRatingsEnvelope({
@@ -28,6 +29,11 @@ final class DioProfileApi implements ProfileApi {
   @override
   Future<Map<String, Object?>> getMeEnvelope() {
     return _apiClient.getEnvelopeDataMap('/api/v1/users/me');
+  }
+
+  @override
+  Future<Map<String, Object?>> getPlayerProfileEnvelope() {
+    return _apiClient.getEnvelopeDataMap('/api/v1/users/me/profile');
   }
 
   @override

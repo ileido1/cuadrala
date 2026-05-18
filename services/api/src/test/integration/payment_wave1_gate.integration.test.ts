@@ -8,6 +8,7 @@ import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { createTestCategorySV } from '../helpers/test-category.js';
 
 const APP = createApp();
 
@@ -27,9 +28,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await ensureTestCatalogSV();
 
       const SLUG = `gate-cat-${Date.now()}`;
-      const CAT = await PRISMA.category.create({
-        data: { name: 'Cat gate', slug: SLUG },
-      });
+      const CAT = await createTestCategorySV(sportPadelId, SLUG, 'Cat gate');
       categoryId = CAT.id;
 
       const TS = Date.now();

@@ -6,6 +6,7 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
+import { createTestCategorySV } from '../helpers/test-category.js';
 
 const APP = createApp();
 
@@ -32,10 +33,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 31 — Catálogo multi-sport 
     sport2Id = (CATALOG.sportTennisId ?? CATALOG.sportSecondId) as string;
     presetSport2Id = (CATALOG.presetTennisRoundRobinId ?? CATALOG.presetSecondRoundRobinId) as string;
 
-    const CAT = await PRISMA.category.create({
-      data: { name: 'Cat S31', slug: `s31-${Date.now()}` },
-      select: { id: true },
-    });
+    const CAT = await createTestCategorySV(CATALOG.sportPadelId, `s31-${Date.now()}`, 'Cat S31');
     categoryId = CAT.id;
   });
 

@@ -9,6 +9,7 @@ export const REPLACE_SPORT_PROFILES_BODY_SCHEMA = z
             sportId: z.string().uuid(),
             skillLevel: z.coerce.number().min(1.0).max(7.0),
             sidePreference: z.enum(['RIGHT', 'LEFT', 'ANY']).optional(),
+            categoryId: z.string().uuid().optional(),
           })
           .strict(),
       )

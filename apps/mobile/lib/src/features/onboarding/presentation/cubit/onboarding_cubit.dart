@@ -62,12 +62,21 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     }
   }
 
-  Future<bool> saveSportProfiles(
-    List<({String sportId, double skillLevel, SidePreference sidePreference})> items,
-  ) async {
+  Future<bool> saveSportProfiles({
+    required List<({
+      String sportId,
+      double skillLevel,
+      SidePreference sidePreference,
+      String? categoryId,
+    })> items,
+    String? dominantHand,
+  }) async {
     emit(state.copyWith(savingStep: OnboardingStep.sportProfiles, clearError: true));
     try {
       await _repository.putSportProfiles(items);
+      if (dominantHand != null && dominantHand.isNotEmpty) {
+        await _repository.patchDominantHand(dominantHand);
+      }
       await _refreshStatus();
       return true;
     } on AppFailure catch (f) {

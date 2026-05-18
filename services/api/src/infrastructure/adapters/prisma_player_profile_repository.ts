@@ -3,6 +3,7 @@ import type {
   PlayerProfileRepository,
   UpsertPlayerProfileDTO,
 } from '../../domain/ports/player_profile_repository.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 import { PRISMA } from '../prisma_client.js';
 
@@ -28,21 +29,25 @@ export class PrismaPlayerProfileRepository implements PlayerProfileRepository {
 
   async upsertByUserIdSV(_userId: string, _patch: UpsertPlayerProfileDTO): Promise<PlayerProfileDTO> {
     const NOW = new Date();
+    const CREATE_DATA: Prisma.PlayerProfileUncheckedCreateInput = {
+      userId: _userId,
+      dominantHand: _patch.dominantHand ?? 'RIGHT',
+      sidePreference: _patch.sidePreference ?? 'ANY',
+      birthYear: _patch.birthYear ?? null,
+      birthDate: _patch.birthDate ?? null,
+      phone: _patch.phone ?? null,
+      avatarUrl: _patch.avatarUrl ?? null,
+      city: _patch.city ?? null,
+      onboardingCompletedAt: _patch.onboardingCompletedAt ?? null,
+      updatedAt: NOW,
+    };
+    if (_patch.documentNumber !== undefined && _patch.documentNumber !== null) {
+      CREATE_DATA.documentNumber = _patch.documentNumber;
+    }
+
     return PRISMA.playerProfile.upsert({
       where: { userId: _userId },
-      create: {
-        userId: _userId,
-        dominantHand: _patch.dominantHand ?? 'RIGHT',
-        sidePreference: _patch.sidePreference ?? 'ANY',
-        birthYear: _patch.birthYear ?? null,
-        birthDate: _patch.birthDate ?? null,
-        phone: _patch.phone ?? null,
-        documentNumber: _patch.documentNumber ?? null,
-        avatarUrl: _patch.avatarUrl ?? null,
-        city: _patch.city ?? null,
-        onboardingCompletedAt: _patch.onboardingCompletedAt ?? null,
-        updatedAt: NOW,
-      },
+      create: CREATE_DATA,
       update: {
         ...(_patch.dominantHand !== undefined ? { dominantHand: _patch.dominantHand } : {}),
         ...(_patch.sidePreference !== undefined ? { sidePreference: _patch.sidePreference } : {}),
