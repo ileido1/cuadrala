@@ -7,7 +7,7 @@ import type {
   PageDTO,
 } from '../../domain/ports/match_query_repository.js';
 
-import { PRISMA } from '../prisma_client.js';
+import type { PrismaClient } from '../../generated/prisma/client.js';
 import type { MatchWhereInput } from '../../generated/prisma.js';
 
 function toListItemDTO(_row: {
@@ -40,6 +40,7 @@ function toListItemDTO(_row: {
 }
 
 export class PrismaMatchQueryRepository implements MatchQueryRepository {
+  constructor(private readonly _prisma: PrismaClient) {}
   async listMatchesSV(
     _filters: ListMatchesFiltersDTO,
     _page: PageDTO,
@@ -61,9 +62,9 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
     const SKIP = (_page.page - 1) * _page.limit;
     const TAKE = _page.limit;
 
-    const [TOTAL, ROWS] = await PRISMA.$transaction([
-      PRISMA.match.count({ where: WHERE }),
-      PRISMA.match.findMany({
+    const [TOTAL, ROWS] = await this._prisma.$transaction([
+      this._prisma.match.count({ where: WHERE }),
+      this._prisma.match.findMany({
         where: WHERE,
         orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }],
         skip: SKIP,
@@ -87,7 +88,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
   }
 
   async getMatchByIdSV(_matchId: string): Promise<MatchDetailDTO | null> {
-    const ROW = await PRISMA.match.findUnique({
+    const ROW = await this._prisma.match.findUnique({
       where: { id: _matchId },
       select: {
         id: true,
@@ -192,9 +193,9 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
     const SKIP = (_page.page - 1) * _page.limit;
     const TAKE = _page.limit;
 
-    const [TOTAL, ROWS] = await PRISMA.$transaction([
-      PRISMA.match.count({ where: WHERE }),
-      PRISMA.match.findMany({
+    const [TOTAL, ROWS] = await this._prisma.$transaction([
+      this._prisma.match.count({ where: WHERE }),
+      this._prisma.match.findMany({
         where: WHERE,
         orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }],
         skip: SKIP,

@@ -5,12 +5,12 @@ import type {
 import type { CurrencyCode } from '../../domain/money/currency_code.js';
 
 /** Única puerta de escritura al libro mayor de reserva (REQ-MCP-053). */
-export class ReservationLedgerService {
+export class RecordReservationLedgerEntryUseCase {
   constructor(
     private readonly _ledgerRepository: ReservationLedgerRepository,
   ) {}
 
-  async recordPaymentSV(_input: {
+  async executeSV(_input: {
     reservationId: string;
     transactionId: string;
     appliedToObligationMinor: bigint;

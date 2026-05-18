@@ -4,11 +4,13 @@ import type {
   TransactionReceiptRepository,
 } from '../../domain/ports/transaction_receipt_repository.js';
 
-import { PRISMA } from '../prisma_client.js';
+import type { PrismaClient } from '../../generated/prisma/client.js';
 
 export class PrismaTransactionReceiptRepository implements TransactionReceiptRepository {
+  constructor(private readonly _prisma: PrismaClient) {}
+
   async createSV(_data: TransactionReceiptCreateDTO): Promise<TransactionReceiptDTO> {
-    return PRISMA.transactionReceipt.create({
+    return this._prisma.transactionReceipt.create({
       data: {
         id: _data.id,
         transactionId: _data.transactionId,
@@ -21,7 +23,7 @@ export class PrismaTransactionReceiptRepository implements TransactionReceiptRep
   }
 
   async findByIdSV(_receiptId: string): Promise<TransactionReceiptDTO | null> {
-    return PRISMA.transactionReceipt.findUnique({ where: { id: _receiptId } });
+    return this._prisma.transactionReceipt.findUnique({ where: { id: _receiptId } });
   }
 }
 

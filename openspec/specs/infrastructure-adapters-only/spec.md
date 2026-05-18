@@ -30,13 +30,38 @@ Every persistence access from application use cases MUST go through a class (or 
 
 ### Requirement: Mappers convert Prisma to domain
 
-The system MUST provide mappers under `infrastructure/mappers/` that translate Prisma models to `domain/entities/**` and `domain/money/MoneyAmount`. Adapters MUST NOT return Prisma types to the application layer.
+Mapping logic MUST translate Prisma models to `domain/entities/**` and `domain/money/MoneyAmount` without leaking Prisma types to application. Adapters MUST NOT return Prisma types to the application layer.
+
+**Wave 7 convention (default):** mapper functions live in `infrastructure/adapters/{bc}/prisma_*_mapper.ts` (or adjacent `*_mapper.ts` next to the adapter file). **Incremental target:** `infrastructure/mappers/{bc}/` for shared mapping across multiple adapters in the same BC.
+
+(Previously: required all mappers under `infrastructure/mappers/` only.)
 
 #### Scenario: Adapter findById
 
 - GIVEN `PrismaTransactionAdapter.findById(id)`
 - WHEN the row exists
 - THEN the method MUST return a domain entity or DTO defined in application/domain, built via mapper
+
+#### Scenario: Colocated mapper file (Wave 7 default)
+
+- GIVEN a Prisma adapter under `infrastructure/adapters/`
+- WHEN mapping exceeds trivial field copy or Wave 7 pilot applies
+- THEN pure mapping functions MUST reside in `*_mapper.ts` imported by the adapter
+- AND adapter method MUST delegate mapping to those functions
+
+#### Scenario: Global mappers folder optional
+
+- GIVEN a BC with multiple adapters sharing identical mapping
+- WHEN team extracts to `infrastructure/mappers/payments/`
+- THEN adapters MAY import from that folder
+- AND Wave 7 MUST NOT require global folder for every adapter
+
+#### Scenario: Presentation mappers not for Prisma
+
+- GIVEN HTTP response shaping in presentation layer
+- WHEN mapping domain entity to JSON
+- THEN `presentation/mappers/` MAY be used only for HTTP/DTO concerns
+- AND MUST NOT contain Prisma imports or row-to-entity mapping
 
 ---
 

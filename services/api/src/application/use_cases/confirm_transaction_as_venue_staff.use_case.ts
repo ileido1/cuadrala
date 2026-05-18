@@ -15,7 +15,7 @@ import {
   isMultiCurrencyPaymentsEnabledSV,
   isReservationPaymentLedgerEnabledSV,
 } from '../../config/feature_flags.js';
-import type { ReservationLedgerService } from '../services/reservation_ledger.service.js';
+import type { RecordReservationLedgerEntryUseCase } from './record_reservation_ledger_entry.use_case.js';
 import { GetRateForReservationDayUseCase } from './get_rate_for_reservation_day.use_case.js';
 
 function majorToMinorSV(_major: string): bigint {
@@ -29,7 +29,7 @@ export class ConfirmTransactionAsVenueStaffUseCase {
     private readonly _venuePaymentMethodRepository: VenuePaymentMethodRepository,
     private readonly _moneyConversionService: MoneyConversionService,
     private readonly _getRateForReservationDayUseCase: GetRateForReservationDayUseCase,
-    private readonly _reservationLedgerService?: ReservationLedgerService,
+    private readonly _recordReservationLedgerEntryUseCase?: RecordReservationLedgerEntryUseCase,
   ) {}
 
   async executeSV(_input: {
@@ -139,9 +139,9 @@ export class ConfirmTransactionAsVenueStaffUseCase {
       isReservationPaymentLedgerEnabledSV()
       && MCP !== undefined
       && TX.reservationId !== null
-      && this._reservationLedgerService !== undefined
+      && this._recordReservationLedgerEntryUseCase !== undefined
     ) {
-      await this._reservationLedgerService.recordPaymentSV({
+      await this._recordReservationLedgerEntryUseCase.executeSV({
         reservationId: TX.reservationId,
         transactionId: UPDATED.id,
         appliedToObligationMinor: MCP.appliedToObligationMinor,

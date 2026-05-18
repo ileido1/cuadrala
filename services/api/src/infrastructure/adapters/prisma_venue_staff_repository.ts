@@ -1,5 +1,5 @@
+import type { PrismaClient } from '../../generated/prisma/client.js';
 import type { VenueStaffDTO, VenueStaffRepository, UpsertVenueStaffDTO } from '../../domain/ports/venue_staff_repository.js';
-import { PRISMA } from '../prisma_client.js';
 
 function mapRowSV(_row: {
   id: string;
@@ -18,8 +18,10 @@ function mapRowSV(_row: {
 }
 
 export class PrismaVenueStaffRepository implements VenueStaffRepository {
+  constructor(private readonly _prisma: PrismaClient) {}
+
   async upsertSV(_input: UpsertVenueStaffDTO): Promise<{ created: boolean; staff: VenueStaffDTO }> {
-    const EXISTING = await PRISMA.venueStaff.findUnique({
+    const EXISTING = await this._prisma.venueStaff.findUnique({
       where: {
         venueId_userId: {
           venueId: _input.venueId,
@@ -29,14 +31,14 @@ export class PrismaVenueStaffRepository implements VenueStaffRepository {
     });
 
     if (EXISTING !== null) {
-      const UPDATED = await PRISMA.venueStaff.update({
+      const UPDATED = await this._prisma.venueStaff.update({
         where: { id: EXISTING.id },
         data: { role: (_input.role ?? 'STAFF') as never },
       });
       return { created: false, staff: mapRowSV(UPDATED) };
     }
 
-    const CREATED = await PRISMA.venueStaff.create({
+    const CREATED = await this._prisma.venueStaff.create({
       data: {
         venueId: _input.venueId,
         userId: _input.userId,
@@ -47,7 +49,7 @@ export class PrismaVenueStaffRepository implements VenueStaffRepository {
   }
 
   async findByVenueAndUserSV(_venueId: string, _userId: string): Promise<VenueStaffDTO | null> {
-    const ROW = await PRISMA.venueStaff.findUnique({
+    const ROW = await this._prisma.venueStaff.findUnique({
       where: {
         venueId_userId: {
           venueId: _venueId,
@@ -59,7 +61,7 @@ export class PrismaVenueStaffRepository implements VenueStaffRepository {
   }
 
   async listByVenueIdSV(_venueId: string): Promise<VenueStaffDTO[]> {
-    const ROWS = await PRISMA.venueStaff.findMany({
+    const ROWS = await this._prisma.venueStaff.findMany({
       where: { venueId: _venueId },
       orderBy: { createdAt: 'asc' },
     });
@@ -67,7 +69,7 @@ export class PrismaVenueStaffRepository implements VenueStaffRepository {
   }
 
   async listByUserIdSV(_userId: string): Promise<VenueStaffDTO[]> {
-    const ROWS = await PRISMA.venueStaff.findMany({
+    const ROWS = await this._prisma.venueStaff.findMany({
       where: { userId: _userId },
       orderBy: { createdAt: 'asc' },
     });
@@ -75,7 +77,7 @@ export class PrismaVenueStaffRepository implements VenueStaffRepository {
   }
 
   async removeByVenueAndUserSV(_venueId: string, _userId: string): Promise<boolean> {
-    const EXISTING = await PRISMA.venueStaff.findUnique({
+    const EXISTING = await this._prisma.venueStaff.findUnique({
       where: {
         venueId_userId: {
           venueId: _venueId,
@@ -85,12 +87,12 @@ export class PrismaVenueStaffRepository implements VenueStaffRepository {
     });
     if (EXISTING === null) return false;
 
-    await PRISMA.venueStaff.delete({ where: { id: EXISTING.id } });
+    await this._prisma.venueStaff.delete({ where: { id: EXISTING.id } });
     return true;
   }
 
   async isUserStaffOfVenueSV(_userId: string, _venueId: string): Promise<boolean> {
-    const COUNT = await PRISMA.venueStaff.count({
+    const COUNT = await this._prisma.venueStaff.count({
       where: {
         userId: _userId,
         venueId: _venueId,

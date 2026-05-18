@@ -1,8 +1,8 @@
-import { AppError } from '../../domain/errors/app_error.js';
+import { AppError } from '../../errors/app_error.js';
 import type {
   TournamentFormatParametersValidator,
   ValidateTournamentFormatParametersInput,
-} from '../../domain/ports/tournament_format_parameters_validator.js';
+} from '../../ports/tournament_format_parameters_validator.js';
 
 function isPlainObject(_value: unknown): _value is Record<string, unknown> {
   if (typeof _value !== 'object' || _value === null) {
@@ -37,8 +37,12 @@ function assertIntGte1(_value: unknown): void {
   }
 }
 
-export class TournamentFormatParametersValidatorService implements TournamentFormatParametersValidator {
-  validateAndNormalizeSV(_input: ValidateTournamentFormatParametersInput): unknown | undefined {
+export class DefaultTournamentFormatParametersValidator
+  implements TournamentFormatParametersValidator
+{
+  validateAndNormalizeSV(
+    _input: ValidateTournamentFormatParametersInput,
+  ): unknown | undefined {
     if (_input.formatParameters === undefined) {
       return undefined;
     }
@@ -93,8 +97,6 @@ export class TournamentFormatParametersValidatorService implements TournamentFor
       return OUT;
     }
 
-    // SchemaVersion/presetCode sin validador conocido → rechazo estricto si el cliente mandó parámetros.
     throwValidationFailed();
   }
 }
-

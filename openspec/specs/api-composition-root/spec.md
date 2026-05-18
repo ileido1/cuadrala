@@ -100,3 +100,51 @@ Any new HTTP endpoint merged after Wave 0 MUST include a corresponding `*.compos
 - GIVEN a PR adding `POST /api/v1/venues/:id/foo`
 - WHEN review runs
 - THEN PR MUST add or extend `venues.composition.ts` (or feature-specific composition) and controller MUST not wire Prisma inline
+
+---
+
+## Wave 7 — ADDED Requirements
+
+### Requirement: Unified Prisma client injection in composition (P6)
+
+Every `presentation/composition/*.composition.ts` file that instantiates Prisma-backed adapters MUST obtain a single Prisma client from the canonical module `infrastructure/prisma_client.ts` (`PRISMA` export or `getPrismaClient()`). Adapters MUST receive that client via constructor argument. Compositions MUST NOT rely on adapters that construct their own hidden `PrismaClient` singleton when a shared client is available.
+
+(Previously: mixed patterns — some compositions used `new PrismaXAdapter()` without args, others passed `PRISMA` explicitly.)
+
+#### Scenario: Gold composition transaction_receipts
+
+- GIVEN `transaction_receipts.composition.ts` as reference implementation
+- WHEN Wave 7 PR5 completes
+- THEN all Prisma adapters in that file MUST be constructed as `new Prisma*(PRISMA)`
+- AND `PRISMA` MUST be imported once from `infrastructure/prisma_client.js`
+
+#### Scenario: Gold composition matches
+
+- GIVEN `matches.composition.ts` with multiple Prisma adapters
+- WHEN Wave 7 PR5 completes
+- THEN every `new Prisma*Adapter` in that composition MUST receive the same `PRISMA` instance
+
+#### Scenario: Gold composition venue_dashboard
+
+- GIVEN `venue_dashboard.composition.ts` after PR1 and PR5
+- WHEN adapters for analytics, venue, and staff are wired
+- THEN staff adapter used by `ASSERT_VENUE_STAFF_UC` MUST use explicit `PRISMA` injection per unified pattern
+
+#### Scenario: New composition after Wave 7
+
+- GIVEN a new `*.composition.ts` added post-programme
+- WHEN it wires Prisma persistence
+- THEN review MUST reject `new PrismaFooAdapter()` with zero constructor args unless adapter is documented as non-Prisma
+
+---
+
+### Requirement: Assert venue staff UC exported from dashboard composition (P1)
+
+`venue_dashboard.composition.ts` MUST export `ASSERT_VENUE_STAFF_UC` as the sole staff-authorization entry point for dashboard controllers, wired with `VenueStaffRepository` adapter internally.
+
+#### Scenario: Dashboard controller wiring
+
+- GIVEN `venue_dashboard.controller.ts` handlers
+- WHEN they enforce staff access
+- THEN they MUST call `ASSERT_VENUE_STAFF_UC.executeSV(actorUserId, venueId)` before business use cases
+- AND composition MUST NOT export the staff repository to the controller

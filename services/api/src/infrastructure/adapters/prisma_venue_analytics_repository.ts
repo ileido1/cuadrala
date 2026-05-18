@@ -5,7 +5,7 @@ import type {
   VenueTransactionHistoryItemDTO,
   WeeklyIncomeItemDTO,
 } from '../../domain/ports/venue_analytics_repository.js';
-import { PRISMA } from '../prisma_client.js';
+import type { PrismaClient } from '../../generated/prisma/client.js';
 
 const DAY_NAMES: Record<number, string> = {
   0: 'Dom',
@@ -18,12 +18,14 @@ const DAY_NAMES: Record<number, string> = {
 };
 
 export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository {
+  constructor(private readonly _prisma: PrismaClient) {}
+
   async getDashboardStatsSV(_venueId: string): Promise<DashboardStatsDTO> {
-    const courtsCount = await PRISMA.court.count({
+    const courtsCount = await this._prisma.court.count({
       where: { venueId: _venueId, status: 'ACTIVE' },
     });
 
-    const confirmedTransactions = await PRISMA.transaction.findMany({
+    const confirmedTransactions = await this._prisma.transaction.findMany({
       where: {
         status: 'CONFIRMED',
         match: { court: { venueId: _venueId } },
@@ -32,7 +34,7 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
       orderBy: { createdAt: 'desc' },
     });
 
-    const pendingTransactions = await PRISMA.transaction.count({
+    const pendingTransactions = await this._prisma.transaction.count({
       where: {
         status: 'PENDING',
         match: { court: { venueId: _venueId } },
@@ -100,7 +102,7 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const confirmedTxs = await PRISMA.transaction.findMany({
+    const confirmedTxs = await this._prisma.transaction.findMany({
       where: {
         status: 'CONFIRMED',
         match: { court: { venueId: _venueId } },
@@ -113,7 +115,7 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
       },
     });
 
-    const pendingTxs = await PRISMA.transaction.count({
+    const pendingTxs = await this._prisma.transaction.count({
       where: {
         status: 'PENDING',
         match: { court: { venueId: _venueId } },
@@ -125,7 +127,7 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
       0,
     );
 
-    const allConfirmedTxs = await PRISMA.transaction.findMany({
+    const allConfirmedTxs = await this._prisma.transaction.findMany({
       where: {
         status: 'CONFIRMED',
         match: { court: { venueId: _venueId } },
@@ -192,11 +194,11 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
   ): Promise<{ items: VenueTransactionHistoryItemDTO[]; total: number }> {
     const SKIP = (_page - 1) * _limit;
 
-    const [TOTAL, ROWS] = await PRISMA.$transaction([
-      PRISMA.transaction.count({
+    const [TOTAL, ROWS] = await this._prisma.$transaction([
+      this._prisma.transaction.count({
         where: { match: { court: { venueId: _venueId } } },
       }),
-      PRISMA.transaction.findMany({
+      this._prisma.transaction.findMany({
         where: { match: { court: { venueId: _venueId } } },
         include: {
           user: { select: { name: true } },

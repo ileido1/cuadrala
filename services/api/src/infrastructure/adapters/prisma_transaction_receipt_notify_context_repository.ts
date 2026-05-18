@@ -3,13 +3,15 @@ import type {
   TransactionReceiptNotifyContextRepository,
 } from '../../domain/ports/transaction_receipt_notify_context_repository.js';
 
-import { PRISMA } from '../prisma_client.js';
+import type { PrismaClient } from '../../generated/prisma/client.js';
 
 export class PrismaTransactionReceiptNotifyContextRepository
   implements TransactionReceiptNotifyContextRepository
 {
+  constructor(private readonly _prisma: PrismaClient) {}
+
   async getForTransactionSV(_transactionId: string): Promise<TransactionReceiptNotifyContextDTO | null> {
-    const ROW = await PRISMA.transaction.findUnique({
+    const ROW = await this._prisma.transaction.findUnique({
       where: { id: _transactionId },
       select: {
         userId: true,

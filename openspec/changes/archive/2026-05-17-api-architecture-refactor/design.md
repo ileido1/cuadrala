@@ -518,3 +518,378 @@ sequenceDiagram
 | Tooling | `ARCHITECTURE.md` | `eslint.config.mjs`, `AGENTS.md` | — |
 
 **Next:** `sdd-tasks` — desglosar Wave 0 en tareas con DAG; ejecutar child `payment-domain-refactor` tras Wave 0 verde.
+
+---
+
+## 12. Wave 7 — Cierre de deuda arquitectónica (P1–P7)
+
+| Campo | Valor |
+|-------|-------|
+| **Propuesta** | `proposal.md` § Wave 7 |
+| **Estado AS-IS** | ~37 compositions, ~77 adapters; P1 violación en `venue_dashboard`; 2 `application/services/*.service.ts`; scaffolds vacíos; DI Prisma heterogénea |
+| **Entrega** | 6 PRs encadenados (`W7-PR1`…`W7-PR6`), ≤400 LOC c/u |
+| **Gate programa** | `verify-report.md` Wave 7 → archive `api-architecture-refactor` |
+
+### 12.1 Technical approach (Wave 7)
+
+Cierre **quirúrgico** sin reabrir migraciones BC: (1) última violación P1 — auth staff fuera del controller; (2) eliminar `application/services/` residuales; (3) housekeeping carpetas/docs; (4) convención mapper piloto; (5) DI Prisma documentada + compositions referencia; (6) ESLint opcional anti-export repo.
+
+**Decisiones del proposal (obligatorias en implementación):**
+
+| ID | Elección | Detalle |
+|----|----------|---------|
+| **P1** | Opción **A** | `AssertVenueStaffAccessUseCase` + `ASSERT_VENUE_STAFF_UC` en composition |
+| **P4** | Opción **B** (default) | `prisma_*_mapper.ts` **junto al adapter**; piloto `transaction` + `reservation` |
+| **P6** | Ctor Prisma | `new PrismaXAdapter(PRISMA)` solo en composition; adapters sin singleton `PRISMA` interno |
+
+---
+
+### 12.2 Architecture decisions (Wave 7)
+
+#### Decision W7-1: `AssertVenueStaffAccessUseCase` (P1-A)
+
+| | |
+|---|---|
+| **Choice** | UC dedicado: `executeSV({ actorUserId, venueId, forbiddenMessage? })` → `void` o `AppError` 403. Composition exporta `ASSERT_VENUE_STAFF_UC`. |
+| **Alternatives** | B: auth dentro de cada UC dashboard; C: middleware `requireVenueStaffCON`. |
+| **Rationale** | Alineado con bookings/monetization (auth en application, no controller). Reutilizable; tests unitarios con fake `VenueStaffRepository`. Un solo mensaje 403 por handler (preservar textos actuales vía parámetro opcional). |
+
+**Nota `ListVenueMatchesUseCase`:** hoy valida staff **dentro** del UC (doble check con `getVenueMatchesCON`). En W7-PR1: **eliminar** bloque auth de `list_venue_matches.use_case.ts` y exigir `ASSERT_VENUE_STAFF_UC` en **ambos** controllers (`venue_dashboard.controller.ts`, `list_venue_matches.controller.ts`) antes de `LIST_VENUE_MATCHES_UC`. Unifica los 5 endpoints dashboard bajo el mismo patrón sin tocar bookings/reservations.
+
+#### Decision W7-2: Mappers colocados en adapter (P4-B)
+
+| | |
+|---|---|
+| **Choice** | Archivo hermano: `infrastructure/adapters/prisma_{aggregate}_mapper.ts` importado por `prisma_{aggregate}_*_repository.ts`. Funciones puras `mapXRowToY`. |
+| **Alternatives** | Carpeta global `infrastructure/mappers/{bc}/` (objetivo largo plazo). |
+| **Rationale** | Cierre rápido; `prisma_court_mapper.ts` ya es precedente. Piloto solo si mapping inline > ~40 LOC o duplicado. |
+
+#### Decision W7-3: DI Prisma por constructor (P6)
+
+| | |
+|---|---|
+| **Choice** | `export const PRISMA` en `infrastructure/prisma_client.ts`; composition: `const prisma = PRISMA`; `new PrismaFooAdapter(prisma)`. Adapters migrados dejan de `import { PRISMA }`. |
+| **Alternatives** | Mantener singleton global en cada adapter (AS-IS ~65 adapters). |
+| **Rationale** | `bookings.composition.ts` ya pasa `PRISMA` a `PrismaBookingRepository`. Tests pueden inyectar cliente mock. Wave 7 **no** big-bang: solo compositions gold + adapters que toquen PRs piloto. |
+
+#### Decision W7-4: P5 — destino de servicios application
+
+| Servicio AS-IS | Destino | Rationale |
+|----------------|---------|-----------|
+| `reservation_ledger.service.ts` | `RecordReservationLedgerEntryUseCase` | Orquesta port `ReservationLedgerRepository`; sin lógica de dominio extra. |
+| `tournament_format_parameters_validator.service.ts` | `domain/services/tournament/tournament_format_parameters_validator.ts` | Cero IO; implementa port `TournamentFormatParametersValidator`; reglas puras. |
+
+---
+
+### 12.3 Secuencia — auth staff dashboard (P1)
+
+**Flujo objetivo (handlers stats / transacciones / patch venue / matches):**
+
+```mermaid
+sequenceDiagram
+  participant R as venues.router
+  participant C as venue_dashboard.controller
+  participant A as AssertVenueStaffAccessUseCase
+  participant VS as VenueStaffRepository port
+  participant AD as PrismaVenueStaffAdapter
+  participant B as Business UC
+  participant DB as PostgreSQL
+
+  R->>C: GET/PATCH + auth middleware (401 si sin sesión)
+  C->>C: Zod parse params/query/body
+  C->>A: executeSV(actorUserId, venueId, message?)
+  A->>VS: isUserStaffOfVenueSV(userId, venueId)
+  VS->>AD: adapter
+  AD->>DB: venueStaff.findFirst
+  AD-->>VS: boolean
+  alt no staff
+    VS-->>A: false
+    A-->>C: AppError 403 (mensaje handler)
+    C-->>R: JSON error
+  else staff
+    VS-->>A: true
+    A-->>C: void
+    C->>B: executeSV(...)
+    B-->>C: DTO
+    C-->>R: 200 JSON
+  end
+```
+
+**Comparación AS-IS (anti-patrón P1):**
+
+```text
+Controller ──import──► VENUE_STAFF_REPOSITORY (export composition)
+         └──► isUserStaffOfVenueSV()  ◄── viola regla "solo *_UC"
+         └──► GET_DASHBOARD_STATS_UC
+```
+
+**Comparación TO-BE:**
+
+```text
+Controller ──import──► ASSERT_VENUE_STAFF_UC, GET_DASHBOARD_STATS_UC
+         └──► ASSERT_VENUE_STAFF_UC.executeSV(...)
+         └──► GET_DASHBOARD_STATS_UC.executeSV(...)
+```
+
+---
+
+### 12.4 Interfaces / puertos
+
+| Port | Ubicación | Uso Wave 7 |
+|------|-----------|------------|
+| `VenueStaffRepository` | `domain/ports/venue_staff_repository.ts` | Inyectado en `AssertVenueStaffAccessUseCase`; **no** exportado a controllers |
+| `ReservationLedgerRepository` | `domain/ports/reservation_ledger_repository.ts` | `RecordReservationLedgerEntryUseCase` (ex `ReservationLedgerService`) |
+| `TournamentFormatParametersValidator` | `domain/ports/tournament_format_parameters_validator.ts` | Implementación en `domain/services/tournament/` |
+
+**Firma UC nueva (conceptual):**
+
+```typescript
+// application/use_cases/assert_venue_staff_access.use_case.ts
+export type AssertVenueStaffAccessInput = {
+  actorUserId: string;
+  venueId: string;
+  forbiddenMessage?: string; // default español genérico
+};
+
+export class AssertVenueStaffAccessUseCase {
+  constructor(private readonly _venueStaffRepository: VenueStaffRepository) {}
+
+  async executeSV(_input: AssertVenueStaffAccessInput): Promise<void> {
+    const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
+      _input.actorUserId,
+      _input.venueId,
+    );
+    if (!IS_STAFF) {
+      throw new AppError(
+        'NO_AUTORIZADO',
+        _input.forbiddenMessage ?? 'No tienes permisos para esta sede.',
+        403,
+      );
+    }
+  }
+}
+```
+
+---
+
+### 12.5 Composition — antes / después (`venue_dashboard`)
+
+**Antes (P1 violación):**
+
+```typescript
+const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository();
+export const GET_DASHBOARD_STATS_UC = new GetDashboardStatsUseCase(VENUE_ANALYTICS_REPOSITORY);
+export const LIST_VENUE_MATCHES_UC = new ListVenueMatchesUseCase(
+  MATCH_QUERY_REPOSITORY,
+  VENUE_STAFF_REPOSITORY,
+);
+export { VENUE_STAFF_REPOSITORY }; // ◄── prohibido Wave 7
+```
+
+**Después:**
+
+```typescript
+import { PRISMA } from '../../infrastructure/prisma_client.js';
+
+const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
+const VENUE_ANALYTICS_REPOSITORY = new PrismaVenueAnalyticsRepository(PRISMA);
+// … demás adapters con PRISMA en ctor (W7-PR5 alinea este archivo)
+
+export const ASSERT_VENUE_STAFF_UC = new AssertVenueStaffAccessUseCase(
+  VENUE_STAFF_REPOSITORY,
+);
+export const GET_DASHBOARD_STATS_UC = new GetDashboardStatsUseCase(
+  VENUE_ANALYTICS_REPOSITORY,
+);
+export const LIST_VENUE_MATCHES_UC = new ListVenueMatchesUseCase(
+  MATCH_QUERY_REPOSITORY,
+); // sin VenueStaffRepository — auth vía ASSERT en controller
+// sin export de *_REPOSITORY
+```
+
+**Controller (extracto):**
+
+```typescript
+await ASSERT_VENUE_STAFF_UC.executeSV({
+  actorUserId: ACTOR_USER_ID,
+  venueId: PARAMS.venueId,
+  forbiddenMessage: 'No tienes permisos para ver stats de esta sede.',
+});
+const STATS = await GET_DASHBOARD_STATS_UC.executeSV(PARAMS.venueId);
+```
+
+---
+
+### 12.6 Qué NO tocar
+
+| Área | Motivo |
+|------|--------|
+| `bookings.composition.ts`, `reservations.composition.ts`, `monetization.composition.ts`, `court_pricing.composition.ts`, `venue_payment_methods.composition.ts`, `tournament_bracket.composition.ts` | Ya inyectan `VENUE_STAFF_REPOSITORY` **al UC de negocio** — patrón válido; fuera de P1 |
+| `ConfirmTransactionAsVenueStaffUseCase`, `booking.use_cases.ts`, etc. | Auth staff embebida en UC — no refactorizar en Wave 7 |
+| `list_venue_matches.controller.ts` | Solo añadir `ASSERT_VENUE_STAFF_UC` (W7-PR1); ya no importa repo |
+| 77 adapters restantes (mappers/DI) | Fuera de piloto P4/P6 salvo archivos listados en PRs |
+| Contratos HTTP / rutas | Sin cambios de shape JSON |
+| `apps/mobile`, `apps/web` | P7 explícitamente out of scope |
+| `multi-currency-payments` | Change hijo post-gate |
+
+---
+
+### 12.7 Convención mapper (documentar en ARCHITECTURE §3.4)
+
+| Regla | Detalle |
+|-------|---------|
+| Ubicación | `infrastructure/adapters/prisma_{entity}_mapper.ts` adyacente al adapter |
+| Contenido | Funciones puras; importan tipos `generated/prisma` y `domain/entities` o DTOs de port |
+| Adapter | Delega mapping al mapper; métodos repository permanecen delgados |
+| `presentation/mappers/` | Solo respuesta HTTP (ej. `booking_response.mapper.ts`) — no Prisma |
+| `domain/services/money/*mapper*` | Excepción VO↔persistencia en dominio money |
+| Extracción | Obligatoria en piloto W7-PR4; recomendada cuando inline > ~40 LOC |
+
+**Piloto W7-PR4:**
+
+| Adapter | Mapper nuevo | Notas |
+|---------|--------------|-------|
+| `prisma_payment_transaction_repository.ts` | `prisma_payment_transaction_mapper.ts` | Extraer mapeo filas pending/confirmed |
+| `prisma_reservation_repository.ts` | `prisma_reservation_mapper.ts` | Extraer `mapReservation` existente |
+
+---
+
+### 12.8 Convención DI Prisma (documentar en ARCHITECTURE §3.5)
+
+```typescript
+// presentation/composition/{feature}.composition.ts
+import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+
+const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
+
+export const ASSERT_VENUE_STAFF_UC = new AssertVenueStaffAccessUseCase(
+  VENUE_STAFF_REPOSITORY,
+);
+```
+
+| Regla | Detalle |
+|-------|---------|
+| Singleton | Un `PRISMA` en `prisma_client.ts` |
+| Composition | Único lugar que instancia adapters con `PRISMA` |
+| Adapter ctor | `constructor(private readonly _prisma: PrismaClient)` |
+| Prohibido | `import { PRISMA }` dentro de adapter (post-migración del adapter) |
+| UC | Nunca recibe `PrismaClient` |
+| Compositions gold W7-PR5 | `venue_dashboard`, `transaction_receipts`, `matches`, `bookings` (ya parcial), `monetization` (ledger adapter) |
+
+---
+
+### 12.9 Plan de migración por PR
+
+```text
+W7-PR1 (P1) ──┬──► W7-PR6 (docs + verify)
+W7-PR2 (P5)  ──┤
+W7-PR3 (P3)  ──┼──► W7-PR4 (P4 mappers) ──► W7-PR5 (P6 DI)
+               └──► (PR2/PR3 paralelos tras merge PR1 opcional)
+```
+
+#### W7-PR1 — P1: `AssertVenueStaffAccessUseCase`
+
+| Acción | Archivo |
+|--------|---------|
+| Create | `application/use_cases/assert_venue_staff_access.use_case.ts` |
+| Create | `src/test/unit/assert_venue_staff_access.use_case.test.ts` |
+| Modify | `presentation/composition/venue_dashboard.composition.ts` |
+| Modify | `presentation/controllers/venue_dashboard.controller.ts` |
+| Modify | `presentation/controllers/list_venue_matches.controller.ts` |
+| Modify | `application/use_cases/list_venue_matches.use_case.ts` (quitar auth interna) |
+| Modify | Contract tests venues/dashboard si existen |
+
+| Riesgo | Mitigación |
+|--------|------------|
+| Regresión 403/200 | Tests UC + contract; preservar `forbiddenMessage` por handler |
+| Doble auth en matches | Eliminar auth en UC; ASSERT solo en controller |
+
+#### W7-PR2 — P5: servicios application
+
+| Acción | Archivo |
+|--------|---------|
+| Create | `application/use_cases/record_reservation_ledger_entry.use_case.ts` |
+| Create | `domain/services/tournament/tournament_format_parameters_validator.ts` |
+| Modify | `presentation/composition/monetization.composition.ts` |
+| Modify | `presentation/composition/tournaments.composition.ts` |
+| Modify | `application/use_cases/confirm_transaction_as_venue_staff.use_case.ts` |
+| Modify | `application/validation/tournament_format_parameters.data_validate.ts` |
+| Delete | `application/services/reservation_ledger.service.ts` |
+| Delete | `application/services/tournament_format_parameters_validator.service.ts` |
+| Move tests | `reservation_ledger.service.test.ts` → UC test |
+
+#### W7-PR3 — P3: scaffolds
+
+| Acción | Archivo |
+|--------|---------|
+| Delete | `domain/repositories/` (`.gitkeep`) |
+| Delete | `domain/validation/` (vacío) |
+| Delete | `infrastructure/db/`, `infrastructure/legacy/` |
+| Delete | `infrastructure/repositories/` (`.gitkeep`) |
+| Modify | `ARCHITECTURE.md` §3.1 — carpetas prohibidas |
+
+#### W7-PR4 — P4: mappers piloto
+
+| Acción | Archivo |
+|--------|---------|
+| Create | `infrastructure/adapters/prisma_payment_transaction_mapper.ts` |
+| Create | `infrastructure/adapters/prisma_reservation_mapper.ts` |
+| Modify | `prisma_payment_transaction_repository.ts`, `prisma_reservation_repository.ts` |
+| Modify | `ARCHITECTURE.md` §3.4 mapper convention |
+
+#### W7-PR5 — P6: DI Prisma
+
+| Acción | Archivo |
+|--------|---------|
+| Modify | Adapters usados por compositions gold (staff, analytics, match query, receipt, booking, ledger) |
+| Modify | `venue_dashboard.composition.ts`, `transaction_receipts.composition.ts`, `matches.composition.ts`, `monetization.composition.ts` |
+| Modify | `ARCHITECTURE.md` §3.5 DI |
+
+#### W7-PR6 — P2 + P6b: docs y ESLint
+
+| Acción | Archivo |
+|--------|---------|
+| Modify | `services/api/ARCHITECTURE.md` (AS-IS post olas 0–6) |
+| Modify | `openspec/changes/api-architecture-refactor/exploration.md`, `proposal.md`, `tasks.md` |
+| Create | `openspec/changes/api-architecture-refactor/verify-report.md` (Wave 7) |
+| Modify | `eslint.config.mjs` (opcional): `no-restricted-syntax` export `*_REPOSITORY` desde `composition/**/*.ts` consumido por controllers |
+| Modify | `AGENTS.md` si gate programa |
+
+**Verificación final:** `rg "export.*VENUE_STAFF_REPOSITORY" presentation/composition` → 0 · `rg "application/services/.*\\.service" src` → 0 · `typecheck` → `lint` → `test`.
+
+---
+
+### 12.10 Testing strategy (Wave 7)
+
+| PR | Unit | Contract / integration |
+|----|------|------------------------|
+| W7-PR1 | `assert_venue_staff_access.use_case.test.ts` (staff true/false, mensaje custom) | Contract dashboard 403 sin staff |
+| W7-PR2 | `record_reservation_ledger_entry` (migrar test ledger); validator domain puro | Torneos create con params inválidos → 400 |
+| W7-PR3 | — | — |
+| W7-PR4 | Mapper golden row → DTO (1–2 casos por piloto) | — |
+| W7-PR5 | Adapter con prisma mock inyectado (smoke) | Booking/confirm smoke si `TEST_DATABASE_URL` |
+| W7-PR6 | — | `npm test` suite completa |
+
+---
+
+### 12.11 Risks (Wave 7)
+
+| Risk | L | Mitigación |
+|------|---|------------|
+| Regresión mensajes 403 dashboard | M | `forbiddenMessage` por handler en ASSERT |
+| Scope creep mapper (77 adapters) | H | Solo 2 pilotos + doc |
+| ESLint export-repo rompe compositions legítimas | L | Grep previo; regla solo si import path es `controllers/` |
+| P5 rompe confirm payment / torneos | M | TDD PR2 antes de delete services |
+| DI big-bang | M | Solo adapters en compositions gold PR5 |
+| `ListVenueMatches` sin auth si olvidan ASSERT | M | Test controller + quitar auth UC en mismo PR |
+
+---
+
+### 12.12 Open questions (Wave 7)
+
+- [ ] ¿Extraer `assertVenueStaffSV` privado de `venue_payment_method.use_cases.ts` para reutilizar en ASSERT UC (DRY) o mantener duplicación mínima?
+- [ ] ¿ESLint `export { *_REPOSITORY }` en `warn` un sprint antes de `error`?
+- [ ] ¿Migrar `prisma_venue_staff_repository.mapRowSV` al mapper en PR4 o PR5?
+
+**Next (programa):** `sdd-tasks` — checklist W7-PR1…PR6 con DAG; luego `sdd-apply` / `sdd-verify` / archive.

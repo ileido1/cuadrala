@@ -7,9 +7,10 @@ import {
 import { PrismaCourtPricingTierRepository } from '../../infrastructure/adapters/prisma_court_pricing_tier_repository.js';
 import { PrismaCourtRepository } from '../../infrastructure/adapters/prisma_court_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 const PRICING_TIER_REPOSITORY = new PrismaCourtPricingTierRepository();
-const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository();
+const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
 const COURT_REPOSITORY = new PrismaCourtRepository();
 
 export const LIST_COURT_PRICING_TIERS_UC = new ListCourtPricingTiersUseCase(

@@ -6,12 +6,12 @@ import type { Request, Response } from 'express';
 
 import { AppError } from '../../domain/errors/app_error.js';
 import {
+  ASSERT_VENUE_STAFF_UC,
   GET_DASHBOARD_STATS_UC,
   GET_TRANSACTION_STATS_UC,
   LIST_VENUE_MATCHES_UC,
   LIST_VENUE_TRANSACTION_HISTORY_UC,
   UPDATE_VENUE_UC,
-  VENUE_STAFF_REPOSITORY,
 } from '../composition/venue_dashboard.composition.js';
 import {
   DASHBOARD_STATS_QUERY_SCHEMA,
@@ -22,8 +22,6 @@ import {
   VENUE_ID_PARAM_SCHEMA,
 } from '../validation/venues.validation.js';
 
-const VENUE_STAFF_REPO = VENUE_STAFF_REPOSITORY;
-
 export async function getDashboardStatsCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
   if (ACTOR_USER_ID === undefined) {
@@ -33,10 +31,11 @@ export async function getDashboardStatsCON(_req: Request, _res: Response): Promi
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   DASHBOARD_STATS_QUERY_SCHEMA.parse(_req.query);
 
-  const IS_STAFF = await VENUE_STAFF_REPO.isUserStaffOfVenueSV(ACTOR_USER_ID, PARAMS.venueId);
-  if (!IS_STAFF) {
-    throw new AppError('NO_AUTORIZADO', 'No tienes permisos para ver stats de esta sede.', 403);
-  }
+  await ASSERT_VENUE_STAFF_UC.executeSV({
+    actorUserId: ACTOR_USER_ID,
+    venueId: PARAMS.venueId,
+    forbiddenMessage: 'No tienes permisos para ver stats de esta sede.',
+  });
 
   const STATS = await GET_DASHBOARD_STATS_UC.executeSV(PARAMS.venueId);
 
@@ -56,10 +55,11 @@ export async function getTransactionStatsCON(_req: Request, _res: Response): Pro
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   TRANSACTIONS_STATS_QUERY_SCHEMA.parse(_req.query);
 
-  const IS_STAFF = await VENUE_STAFF_REPO.isUserStaffOfVenueSV(ACTOR_USER_ID, PARAMS.venueId);
-  if (!IS_STAFF) {
-    throw new AppError('NO_AUTORIZADO', 'No tienes permisos para ver transacciones de esta sede.', 403);
-  }
+  await ASSERT_VENUE_STAFF_UC.executeSV({
+    actorUserId: ACTOR_USER_ID,
+    venueId: PARAMS.venueId,
+    forbiddenMessage: 'No tienes permisos para ver transacciones de esta sede.',
+  });
 
   const STATS = await GET_TRANSACTION_STATS_UC.executeSV(PARAMS.venueId);
 
@@ -79,10 +79,11 @@ export async function getTransactionHistoryCON(_req: Request, _res: Response): P
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const QUERY = TRANSACTIONS_HISTORY_QUERY_SCHEMA.parse(_req.query);
 
-  const IS_STAFF = await VENUE_STAFF_REPO.isUserStaffOfVenueSV(ACTOR_USER_ID, PARAMS.venueId);
-  if (!IS_STAFF) {
-    throw new AppError('NO_AUTORIZADO', 'No tienes permisos para ver transacciones de esta sede.', 403);
-  }
+  await ASSERT_VENUE_STAFF_UC.executeSV({
+    actorUserId: ACTOR_USER_ID,
+    venueId: PARAMS.venueId,
+    forbiddenMessage: 'No tienes permisos para ver transacciones de esta sede.',
+  });
 
   const RESULT = await LIST_VENUE_TRANSACTION_HISTORY_UC.executeSV(
     PARAMS.venueId,
@@ -106,10 +107,11 @@ export async function patchVenueCON(_req: Request, _res: Response): Promise<void
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = UPDATE_VENUE_BODY_SCHEMA.parse(_req.body);
 
-  const IS_STAFF = await VENUE_STAFF_REPO.isUserStaffOfVenueSV(ACTOR_USER_ID, PARAMS.venueId);
-  if (!IS_STAFF) {
-    throw new AppError('NO_AUTORIZADO', 'No tienes permisos para editar esta sede.', 403);
-  }
+  await ASSERT_VENUE_STAFF_UC.executeSV({
+    actorUserId: ACTOR_USER_ID,
+    venueId: PARAMS.venueId,
+    forbiddenMessage: 'No tienes permisos para editar esta sede.',
+  });
 
   const RESULT = await UPDATE_VENUE_UC.executeSV(PARAMS.venueId, {
     name: BODY.name,
@@ -138,10 +140,11 @@ export async function getVenueMatchesCON(_req: Request, _res: Response): Promise
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const QUERY = VENUE_MATCHES_QUERY_SCHEMA.parse(_req.query);
 
-  const IS_STAFF = await VENUE_STAFF_REPO.isUserStaffOfVenueSV(ACTOR_USER_ID, PARAMS.venueId);
-  if (!IS_STAFF) {
-    throw new AppError('NO_AUTORIZADO', 'No tienes permisos para ver partidos de esta sede.', 403);
-  }
+  await ASSERT_VENUE_STAFF_UC.executeSV({
+    actorUserId: ACTOR_USER_ID,
+    venueId: PARAMS.venueId,
+    forbiddenMessage: 'No tienes permisos para ver partidos de esta sede.',
+  });
 
   const FILTERS: {
     courtId?: string;
@@ -156,10 +159,12 @@ export async function getVenueMatchesCON(_req: Request, _res: Response): Promise
   if (QUERY.courtId !== undefined) FILTERS.courtId = QUERY.courtId;
   if (QUERY.status !== undefined) FILTERS.status = QUERY.status;
 
-  const RESULT = await LIST_VENUE_MATCHES_UC.executeSV(
-    { venueId: PARAMS.venueId, ...FILTERS, page: QUERY.page, limit: QUERY.limit },
-    ACTOR_USER_ID,
-  );
+  const RESULT = await LIST_VENUE_MATCHES_UC.executeSV({
+    venueId: PARAMS.venueId,
+    ...FILTERS,
+    page: QUERY.page,
+    limit: QUERY.limit,
+  });
 
   _res.status(200).json({
     success: true,

@@ -1,5 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
-import { TournamentFormatParametersValidatorService } from '../services/tournament_format_parameters_validator.service.js';
+import { DefaultTournamentFormatParametersValidator } from '../../domain/services/tournament/tournament_format_parameters_validator.js';
 
 type ValidateTournamentFormatParametersInput = {
   presetCode: string;
@@ -7,12 +7,13 @@ type ValidateTournamentFormatParametersInput = {
   formatParameters?: unknown;
 };
 
+const FORMAT_PARAMETERS_VALIDATOR = new DefaultTournamentFormatParametersValidator();
+
 export function validateTournamentFormatParametersDVAL(
   _input: ValidateTournamentFormatParametersInput,
 ): unknown | undefined {
-  const VALIDATOR = new TournamentFormatParametersValidatorService();
   try {
-    return VALIDATOR.validateAndNormalizeSV(_input);
+    return FORMAT_PARAMETERS_VALIDATOR.validateAndNormalizeSV(_input);
   } catch (_error) {
     if (_error instanceof AppError) {
       throw _error;
@@ -20,4 +21,3 @@ export function validateTournamentFormatParametersDVAL(
     throw _error;
   }
 }
-

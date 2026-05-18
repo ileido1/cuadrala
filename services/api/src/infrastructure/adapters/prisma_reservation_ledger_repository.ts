@@ -1,12 +1,14 @@
 import type { ReservationLedgerRepository } from '../../domain/ports/reservation_ledger_repository.js';
 import type { AppendReservationLedgerEntryInput } from '../../domain/ports/reservation_ledger_repository.js';
-import { PRISMA } from '../prisma_client.js';
+import type { PrismaClient } from '../../generated/prisma/client.js';
 
 export class PrismaReservationLedgerRepository implements ReservationLedgerRepository {
+  constructor(private readonly _prisma: PrismaClient) {}
+
   async appendEntrySV(
     _input: AppendReservationLedgerEntryInput,
   ): Promise<{ id: string }> {
-    const ROW = await PRISMA.reservationPaymentLedger.create({
+    const ROW = await this._prisma.reservationPaymentLedger.create({
       data: {
         reservationId: _input.reservationId,
         transactionId: _input.transactionId ?? null,

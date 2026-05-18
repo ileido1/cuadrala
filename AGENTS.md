@@ -58,7 +58,7 @@ src/generated/prisma → Auto-generated Prisma client (DO NOT edit)
 
 Prisma client output is configured to `src/generated/prisma` (not the default `node_modules`).
 
-**Active refactor:** `openspec/changes/api-architecture-refactor/` (Wave 0–6). Do not add `application/*.service.ts` or `infrastructure/repositories/` for new code.
+**API architecture (cerrado 2026-05-17):** Reglas vigentes en `services/api/ARCHITECTURE.md` y `openspec/specs/` (capabilities `api-*`, `domain-folder-structure`, `infrastructure-adapters-only`, `venue-staff-authorization-uc`, etc.). No añadir `application/*.service.ts` ni `infrastructure/repositories/`. Programa archivado: `openspec/changes/archive/2026-05-17-api-architecture-refactor/`.
 
 ### Mobile — Feature-first with BLoC
 
@@ -136,4 +136,5 @@ Exception: skip for trivial changes (typos, comments) or when user explicitly sa
 | `services/api/ARCHITECTURE.md` | API Clean Architecture — layers, DI, patterns, migration |
 | `services/api/prisma/schema.prisma` | Full DB schema |
 | `services/api/README.md` | API endpoints + setup details |
-| `openspec/changes/api-architecture-refactor/` | API refactor program (spec, design, tasks) |
+| `openspec/specs/` | Specs fuente de verdad API (post `api-architecture-refactor`) |
+| `openspec/changes/archive/2026-05-17-api-architecture-refactor/` | Programa API refactor archivado (olas 0–7) |

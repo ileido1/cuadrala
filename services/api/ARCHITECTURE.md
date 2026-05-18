@@ -2,7 +2,7 @@
 
 Documento de referencia para el API de Cuadrala. Describe la **arquitectura objetivo** (Clean Architecture / hexagonal) y el estado de migración desde el código legacy.
 
-**Programa de migración:** [`openspec/changes/api-architecture-refactor/`](../../openspec/changes/api-architecture-refactor/) (olas 0–6).
+**Programa de migración:** Completado (olas 0–7, archivado 2026-05-17). Auditoría: [`openspec/changes/archive/2026-05-17-api-architecture-refactor/`](../../openspec/changes/archive/2026-05-17-api-architecture-refactor/). Specs vigentes: [`openspec/specs/`](../../openspec/specs/).
 
 **Reglas Cursor:** [`.cursor/rules/clean-architecture.mdc`](../../.cursor/rules/clean-architecture.mdc).
 
@@ -120,13 +120,20 @@ src/
   generated/prisma/       # Auto-generado — NO editar
 ```
 
-### 3.1 Domain: `ports/` vs `infrastructure/repositories/`
+### 3.1 Domain: `ports/` y carpetas prohibidas
 
 | Ubicación | Qué es | Estado |
 |-----------|--------|--------|
-| `domain/ports/` | Interfaces que application consume | **Target** — ~62 ports |
-| `domain/repositories/` | Carpeta vacía (scaffold) | **Eliminar** en Wave 0 |
-| `infrastructure/repositories/` | Funciones procedurales `findXRepo` | **Legacy** — 15 archivos; migrar a `adapters/` |
+| `domain/ports/` | Interfaces que application consume | **Target** — contratos de persistencia/servicios |
+| `domain/services/{bc}/` | Lógica de dominio sin IO (ej. `tournament/`, `money/`) | **Target** |
+
+**Carpetas prohibidas** (no crear; fueron scaffolds legacy eliminados en Wave 7):
+
+- `domain/repositories/` — usar `domain/ports/` en su lugar
+- `domain/validation/` — validación HTTP en `presentation/validation/`; dominio en `domain/services/` o value objects
+- `infrastructure/repositories/` — usar `infrastructure/adapters/`
+- `infrastructure/db/`
+- `infrastructure/legacy/`
 
 La confusión de nombres se resuelve con este documento y ESLint, **no** renombrando `ports/` a `repositories/` en domain.
 
@@ -139,21 +146,30 @@ Entidades en `domain/entities/{bc}/` (ej. `booking/`, `payments/`). Sin decorado
 | Patrón | Estado |
 |--------|--------|
 | `application/use_cases/*.use_case.ts` + ports inyectados | **Target** (~89 archivos) |
-| `application/*.service.ts` (9 god services) | **Legacy** — eliminar por ola |
+| `application/services/*.service.ts` (god services) | **Prohibido** — usar use cases; Wave 7 dejó solo helpers no-`*.service.ts` si aplica |
 
 Orquestadores delgados (`PaymentOrchestrator`, etc.) MAY existir en application **sin** importar infrastructure.
 
 ### 3.4 Infrastructure: adapters + mappers
 
 - **Adapter:** clase `PrismaXxxAdapter` (o `PrismaXxxRepository` si ya existe) implementa el port.
-- **Mapper:** funciones/clases que convierten tipos Prisma → `entities/` / `money/`.
+- **Mapper (convención Wave 7):** funciones puras en `infrastructure/adapters/prisma_*_mapper.ts`, colocadas **junto al adapter** que las consume (ej. `prisma_reservation_mapper.ts`, `prisma_payment_transaction_mapper.ts`). El adapter delega el mapeo y no devuelve tipos `generated/prisma` a application.
+- **Objetivo incremental:** carpeta `infrastructure/mappers/{bc}/` solo si un BC acumula muchos mappers compartidos entre adapters.
+- **`presentation/mappers/`:** solo respuestas HTTP (DTO de salida), no filas Prisma.
 - **Prohibido:** exponer tipos `generated/prisma` fuera de infrastructure (salvo composition al instanciar adapters).
 
-### 3.5 Presentation: composition root
+### 3.5 DI Prisma (Wave 7)
+
+- **Singleton:** `infrastructure/prisma_client.ts` exporta `PRISMA` (única instancia del cliente).
+- **Composition root:** cada `*.composition.ts` importa `PRISMA` e instancia adapters con `new PrismaXxxRepository(PRISMA)` (o adapter equivalente).
+- **Adapters gold (inyección por ctor):** `PrismaVenueStaffRepository`, `PrismaVenueAnalyticsRepository`, `PrismaVenueRepository`, `PrismaMatchQueryRepository`, adapters de `transaction_receipts`, `PrismaReservationLedgerRepository`. El resto de adapters migran de forma incremental.
+- **Prohibido:** use cases y controllers con `PrismaClient`; tests de integración usan `PRISMA` o DB de test vía helpers.
+
+### 3.6 Presentation: composition root
 
 Todo wiring en `presentation/composition/{feature}.composition.ts`:
 
-- Instanciar adapters (y `PRISMA` solo aquí si el ctor lo requiere).
+- Instanciar adapters pasando `PRISMA` cuando el ctor lo requiere.
 - Instanciar use cases con ports.
 - Exportar **solo** constantes `*_UC` en UPPER_SNAKE.
 
@@ -251,9 +267,9 @@ export class ConfirmTransactionAsVenueStaffUseCase {
 
 **Overrides `eslint-disable-next-line`:** máximo **1 sprint**, con ticket/issue vinculado en el comentario. No usar en archivos nuevos.
 
-**Inventario violadores (baseline):** ~10 `application/**`, ~9 `controllers/**`, ~2 `routes/**` — ver [`exploration.md`](../../openspec/changes/api-architecture-refactor/exploration.md) §1.1 y §7.
+**Inventario violadores (histórico AS-IS):** ver [`exploration.md`](../../openspec/changes/archive/2026-05-17-api-architecture-refactor/exploration.md) §1.1 y §7 (cerrado en olas 0–7).
 
-Detalle de patrones: [`design.md`](../../openspec/changes/api-architecture-refactor/design.md) §5.
+Detalle de patrones: [`design.md`](../../openspec/changes/archive/2026-05-17-api-architecture-refactor/design.md) §5 y §12 (Wave 7).
 
 ---
 
@@ -289,7 +305,7 @@ Detalle producto multi-moneda: change [`multi-currency-payments`](../../openspec
 Wave 0 → Wave 1 (payments) → GATE MCP → Waves 2–6
 ```
 
-Tareas ejecutables: [`openspec/changes/api-architecture-refactor/tasks.md`](../../openspec/changes/api-architecture-refactor/tasks.md).
+Tareas del programa (histórico): [`tasks.md`](../../openspec/changes/archive/2026-05-17-api-architecture-refactor/tasks.md). Verificación Wave 7: [`verify-report.md`](../../openspec/changes/archive/2026-05-17-api-architecture-refactor/verify-report.md).
 
 ---
 
@@ -329,7 +345,7 @@ Ver también [`.cursor/rules/naming-conventions.mdc`](../../.cursor/rules/naming
 |---------|------|
 | Schema DB | `prisma/schema.prisma` |
 | Setup API | `README.md` |
-| Spec programa | `openspec/changes/api-architecture-refactor/spec.md` |
-| Design técnico | `openspec/changes/api-architecture-refactor/design.md` |
-| Exploración AS-IS | `openspec/changes/api-architecture-refactor/exploration.md` |
+| Specs capabilities (SoT) | `openspec/specs/{capability}/spec.md` |
+| Programa archivado | `openspec/changes/archive/2026-05-17-api-architecture-refactor/` |
+| Design / exploration / verify | `design.md`, `exploration.md`, `verify-report.md` en carpeta archivada |
 | AGENTS monorepo | `../../AGENTS.md` |

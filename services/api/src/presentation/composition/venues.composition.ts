@@ -14,8 +14,9 @@ import {
 import { PrismaCourtRepository } from '../../infrastructure/adapters/prisma_court_repository.js';
 import { PrismaUserRepository } from '../../infrastructure/adapters/prisma_user_repository.js';
 import { PrismaVenueRepository } from '../../infrastructure/adapters/prisma_venue_repository.js';
+import { PRISMA } from '../../infrastructure/prisma_client.js';
 
-const VENUE_REPOSITORY = new PrismaVenueRepository();
+const VENUE_REPOSITORY = new PrismaVenueRepository(PRISMA);
 const COURT_REPOSITORY = new PrismaCourtRepository();
 const USER_REPOSITORY = new PrismaUserRepository();
 

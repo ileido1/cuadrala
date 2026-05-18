@@ -9,11 +9,12 @@ import { UploadTransactionReceiptUseCase } from '../../application/use_cases/upl
 import { LocalFilesystemReceiptStorage } from '../../infrastructure/adapters/local_filesystem_receipt_storage.js';
 import { PrismaTransactionReceiptAccessRepository } from '../../infrastructure/adapters/prisma_transaction_receipt_access_repository.js';
 import { PrismaTransactionReceiptRepository } from '../../infrastructure/adapters/prisma_transaction_receipt_repository.js';
+import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 const RECEIPT_STORAGE = new LocalFilesystemReceiptStorage(path.resolve(process.cwd(), 'uploads'));
-const TRANSACTION_RECEIPT_REPOSITORY = new PrismaTransactionReceiptRepository();
-const RECEIPT_ACCESS_REPOSITORY = new PrismaTransactionReceiptAccessRepository();
-const RECEIPT_NOTIFY_CONTEXT_REPOSITORY = new PrismaTransactionReceiptNotifyContextRepository();
+const TRANSACTION_RECEIPT_REPOSITORY = new PrismaTransactionReceiptRepository(PRISMA);
+const RECEIPT_ACCESS_REPOSITORY = new PrismaTransactionReceiptAccessRepository(PRISMA);
+const RECEIPT_NOTIFY_CONTEXT_REPOSITORY = new PrismaTransactionReceiptNotifyContextRepository(PRISMA);
 
 export const UPLOAD_TRANSACTION_RECEIPT_UC = new UploadTransactionReceiptUseCase(
   RECEIPT_STORAGE,

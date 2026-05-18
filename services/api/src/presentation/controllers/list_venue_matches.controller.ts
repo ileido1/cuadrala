@@ -1,7 +1,10 @@
 import type { Request, Response } from 'express';
 
 import { AppError } from '../../domain/errors/app_error.js';
-import { LIST_VENUE_MATCHES_UC } from '../composition/venue_dashboard.composition.js';
+import {
+  ASSERT_VENUE_STAFF_UC,
+  LIST_VENUE_MATCHES_UC,
+} from '../composition/venue_dashboard.composition.js';
 import { LIST_VENUE_MATCHES_QUERY_SCHEMA, VENUE_ID_PARAM_SCHEMA } from '../validation/venues.validation.js';
 
 export async function listVenueMatchesCON(_req: Request, _res: Response): Promise<void> {
@@ -13,17 +16,20 @@ export async function listVenueMatchesCON(_req: Request, _res: Response): Promis
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const QUERY = LIST_VENUE_MATCHES_QUERY_SCHEMA.parse(_req.query);
 
-  const RESULT = await LIST_VENUE_MATCHES_UC.executeSV(
-    {
-      venueId: PARAMS.venueId,
-      ...(QUERY.courtId !== undefined ? { courtId: QUERY.courtId } : {}),
-      ...(QUERY.date !== undefined ? { date: QUERY.date } : {}),
-      ...(QUERY.status !== undefined ? { status: QUERY.status } : {}),
-      page: QUERY.page,
-      limit: QUERY.limit,
-    },
-    ACTOR_USER_ID,
-  );
+  await ASSERT_VENUE_STAFF_UC.executeSV({
+    actorUserId: ACTOR_USER_ID,
+    venueId: PARAMS.venueId,
+    forbiddenMessage: 'No tienes permisos para ver las reservas de esta sede.',
+  });
+
+  const RESULT = await LIST_VENUE_MATCHES_UC.executeSV({
+    venueId: PARAMS.venueId,
+    ...(QUERY.courtId !== undefined ? { courtId: QUERY.courtId } : {}),
+    ...(QUERY.date !== undefined ? { date: QUERY.date } : {}),
+    ...(QUERY.status !== undefined ? { status: QUERY.status } : {}),
+    page: QUERY.page,
+    limit: QUERY.limit,
+  });
 
   _res.status(200).json({
     success: true,

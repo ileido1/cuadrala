@@ -9,7 +9,7 @@ import type {
   VenueRepository,
   VenueSettingsDTO,
 } from '../../domain/ports/venue_repository.js';
-import { PRISMA } from '../prisma_client.js';
+import type { PrismaClient } from '../../generated/prisma/client.js';
 
 const VENUE_LIST_SELECT = {
   id: true,
@@ -93,15 +93,16 @@ function mapVenueDetailSV(_venue: {
 }
 
 export class PrismaVenueRepository implements VenueRepository {
+  constructor(private readonly _prisma: PrismaClient) {}
   async findByIdSV(_venueId: string): Promise<{ id: string; name: string } | null> {
-    return PRISMA.venue.findUnique({
+    return this._prisma.venue.findUnique({
       where: { id: _venueId },
       select: { id: true, name: true },
     });
   }
 
   async updateSV(_venueId: string, _data: UpdateVenueDataDTO): Promise<VenueSettingsDTO> {
-    const UPDATED = await PRISMA.venue.update({
+    const UPDATED = await this._prisma.venue.update({
       where: { id: _venueId },
       data: {
         ...(_data.name !== undefined ? { name: _data.name } : {}),
@@ -142,7 +143,7 @@ export class PrismaVenueRepository implements VenueRepository {
   }
 
   async getPaymentInfoSV(_venueId: string): Promise<VenuePaymentInfoDTO | null> {
-    return PRISMA.venue.findUnique({
+    return this._prisma.venue.findUnique({
       where: { id: _venueId },
       select: {
         paymentHolder: true,
@@ -156,9 +157,9 @@ export class PrismaVenueRepository implements VenueRepository {
 
   async listVenuesSV(_page: PageDTO): Promise<{ items: VenueListItemDTO[]; total: number }> {
     const SKIP = (_page.page - 1) * _page.limit;
-    const [TOTAL, ROWS] = await PRISMA.$transaction([
-      PRISMA.venue.count(),
-      PRISMA.venue.findMany({
+    const [TOTAL, ROWS] = await this._prisma.$transaction([
+      this._prisma.venue.count(),
+      this._prisma.venue.findMany({
         orderBy: [{ createdAt: 'desc' }],
         skip: SKIP,
         take: _page.limit,
@@ -175,7 +176,7 @@ export class PrismaVenueRepository implements VenueRepository {
     const LAT_DELTA = kmToLatitudeDeltaSV(_input.radiusKm);
     const LNG_DELTA = kmToLongitudeDeltaSV(_input.radiusKm, _input.lat);
 
-    const ROWS = await PRISMA.venue.findMany({
+    const ROWS = await this._prisma.venue.findMany({
       where: {
         latitude: { gte: _input.lat - LAT_DELTA, lte: _input.lat + LAT_DELTA },
         longitude: { gte: _input.lng - LNG_DELTA, lte: _input.lng + LNG_DELTA },
@@ -204,7 +205,7 @@ export class PrismaVenueRepository implements VenueRepository {
   }
 
   async listVenuesForUserSV(_userId: string): Promise<VenueListItemDTO[]> {
-    return PRISMA.venue.findMany({
+    return this._prisma.venue.findMany({
       where: {
         OR: [
           { ownerUserId: _userId },
@@ -217,7 +218,7 @@ export class PrismaVenueRepository implements VenueRepository {
   }
 
   async createVenueSV(_input: CreateVenueInputDTO): Promise<VenueListItemDTO> {
-    return PRISMA.$transaction(async (_tx) => {
+    return this._prisma.$transaction(async (_tx) => {
       const VENUE = await _tx.venue.create({
         data: {
           name: _input.name,
@@ -249,7 +250,7 @@ export class PrismaVenueRepository implements VenueRepository {
   }
 
   async getVenueDetailSV(_venueId: string): Promise<VenueDetailDTO | null> {
-    const VENUE = await PRISMA.venue.findUnique({
+    const VENUE = await this._prisma.venue.findUnique({
       where: { id: _venueId },
       select: {
         id: true,
@@ -278,7 +279,7 @@ export class PrismaVenueRepository implements VenueRepository {
   async getPaymentInfoWithNameSV(
     _venueId: string,
   ): Promise<VenuePaymentInfoWithNameDTO | null> {
-    return PRISMA.venue.findUnique({
+    return this._prisma.venue.findUnique({
       where: { id: _venueId },
       select: {
         id: true,

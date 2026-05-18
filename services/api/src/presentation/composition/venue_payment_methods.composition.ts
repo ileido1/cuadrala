@@ -7,9 +7,10 @@ import {
 } from '../../application/use_cases/venue_payment_method.use_cases.js';
 import { PrismaVenuePaymentMethodRepository } from '../../infrastructure/adapters/prisma_venue_payment_method_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 const VENUE_PAYMENT_METHOD_REPOSITORY = new PrismaVenuePaymentMethodRepository();
-const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository();
+const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
 
 export const LIST_ACTIVE_VENUE_PAYMENT_METHODS_UC = new ListActiveVenuePaymentMethodsUseCase(
   VENUE_PAYMENT_METHOD_REPOSITORY,

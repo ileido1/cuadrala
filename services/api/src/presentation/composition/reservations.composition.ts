@@ -8,9 +8,10 @@ import { PrismaBookingCatalogReadRepository } from '../../infrastructure/adapter
 import { PrismaCourtRepository } from '../../infrastructure/adapters/prisma_court_repository.js';
 import { PrismaReservationRepository } from '../../infrastructure/adapters/prisma_reservation_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 const RESERVATION_REPOSITORY = new PrismaReservationRepository();
-const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository();
+const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
 const COURT_REPOSITORY = new PrismaCourtRepository();
 const CATALOG_READ_REPOSITORY = new PrismaBookingCatalogReadRepository();
 

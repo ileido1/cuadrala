@@ -5,12 +5,14 @@
 | **Programa** | `api-architecture-refactor` |
 | **Alcance** | Todo `services/api/src` (no solo pagos) |
 | **Relacionado** | `payment-domain-refactor` → `multi-currency-payments` (cadena) |
-| **Estado** | Exploration complete |
+| **Estado** | Exploration complete · **Wave 7 cerrada** (2026-05-17) — ver `verify-report.md` |
 | **Postura** | Fintech global — sin atajos MVP |
 
 ## Resumen ejecutivo
 
-Cuadrala API tiene **dos arquitecturas en paralelo**:
+> **Nota Wave 7 (2026-05-17):** Las métricas AS-IS de este documento describen el estado **pre-olas 0–6**. Tras Wave 7: god services eliminados, `infrastructure/repositories/` vacío eliminado, `AssertVenueStaffAccessUseCase`, 0× `application/services/*.service.ts`, mappers piloto y DI Prisma en compositions gold. Estado vigente: [`verify-report.md`](./verify-report.md).
+
+Cuadrala API tiene **dos arquitecturas en paralelo** (histórico pre-refactor):
 
 1. **Target (parcial, ~70% de use cases):** `domain/ports` → `application/use_cases` → `infrastructure/adapters` → `presentation/composition` → controller skinny.
 2. **Legacy (sistémico):** `application/*.service.ts` + `infrastructure/repositories/*.ts` (funciones) + controllers que **cablean Prisma a mano** + routers que **saltan application**.

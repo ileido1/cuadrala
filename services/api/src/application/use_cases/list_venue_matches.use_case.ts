@@ -5,7 +5,6 @@ import type {
   MatchQueryRepository,
   PageDTO,
 } from '../../domain/ports/match_query_repository.js';
-import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 
 export type ListVenueMatchesUseCaseInput = {
   venueId: string;
@@ -22,19 +21,12 @@ export type VenueMatchListItemDTO = MatchListItemDTO & {
 };
 
 export class ListVenueMatchesUseCase {
-  constructor(
-    private readonly _matchQueryRepository: MatchQueryRepository,
-    private readonly _venueStaffRepository: VenueStaffRepository,
-  ) {}
+  constructor(private readonly _matchQueryRepository: MatchQueryRepository) {}
 
-  async executeSV(
-    _input: ListVenueMatchesUseCaseInput,
-    _actorUserId: string,
-  ): Promise<{
+  async executeSV(_input: ListVenueMatchesUseCaseInput): Promise<{
     items: VenueMatchListItemDTO[];
     pageInfo: { page: number; limit: number; total: number };
   }> {
-    // Validación de paginación
     if (_input.page < 1) {
       throw new AppError(
         'PAGINACION_INVALIDA',
@@ -50,25 +42,11 @@ export class ListVenueMatchesUseCase {
       );
     }
 
-    // Validación de formato de fecha (YYYY-MM-DD)
     if (_input.date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(_input.date)) {
       throw new AppError(
         'VALIDACION_FALLIDA',
         'date debe estar en formato YYYY-MM-DD.',
         400,
-      );
-    }
-
-    // Autorización: el usuario debe ser staff de esta sede
-    const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
-      _actorUserId,
-      _input.venueId,
-    );
-    if (!IS_STAFF) {
-      throw new AppError(
-        'NO_AUTORIZADO',
-        'No tienes permisos para ver las reservas de esta sede.',
-        403,
       );
     }
 

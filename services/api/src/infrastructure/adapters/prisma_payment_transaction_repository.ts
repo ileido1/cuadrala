@@ -18,6 +18,11 @@ import {
   isReservationPaymentLedgerEnabledSV,
 } from '../../config/feature_flags.js';
 import { PRISMA } from '../prisma_client.js';
+import {
+  mapPrismaTransactionToPaymentRowSV,
+  mapPrismaTransactionToPendingStaffRowSV,
+  mapPrismaTransactionToStaffRowSV,
+} from './prisma_payment_transaction_mapper.js';
 
 export class PrismaPaymentTransactionRepository
   implements PaymentTransactionRepository, VenueStaffTransactionRepository
@@ -33,7 +38,7 @@ export class PrismaPaymentTransactionRepository
         status: { in: ['PENDING', 'CONFIRMED'] },
       },
     });
-    return ROW as PaymentTransactionRow | null;
+    return ROW === null ? null : mapPrismaTransactionToPaymentRowSV(ROW);
   }
 
   async findPendingForReservationUserSV(
@@ -48,7 +53,7 @@ export class PrismaPaymentTransactionRepository
       },
       orderBy: { createdAt: 'desc' },
     });
-    return ROW as PaymentTransactionRow | null;
+    return ROW === null ? null : mapPrismaTransactionToPaymentRowSV(ROW);
   }
 
   async createSV(_input: CreatePaymentTransactionInput): Promise<PaymentTransactionRow> {
@@ -64,12 +69,12 @@ export class PrismaPaymentTransactionRepository
         paymentMethod: 'MANUAL',
       },
     });
-    return ROW as PaymentTransactionRow;
+    return mapPrismaTransactionToPaymentRowSV(ROW);
   }
 
   async findByIdSV(_id: string): Promise<PaymentTransactionRow | null> {
     const ROW = await PRISMA.transaction.findUnique({ where: { id: _id } });
-    return ROW as PaymentTransactionRow | null;
+    return ROW === null ? null : mapPrismaTransactionToPaymentRowSV(ROW);
   }
 
   async listByMatchSV(_matchId: string): Promise<PaymentTransactionRow[]> {
@@ -77,7 +82,7 @@ export class PrismaPaymentTransactionRepository
       where: { matchId: _matchId },
       orderBy: { createdAt: 'asc' },
     });
-    return ROWS as PaymentTransactionRow[];
+    return ROWS.map(mapPrismaTransactionToPaymentRowSV);
   }
 
   async listByReservationSV(_reservationId: string): Promise<PaymentTransactionRow[]> {
@@ -85,7 +90,7 @@ export class PrismaPaymentTransactionRepository
       where: { reservationId: _reservationId },
       orderBy: { createdAt: 'asc' },
     });
-    return ROWS as PaymentTransactionRow[];
+    return ROWS.map(mapPrismaTransactionToPaymentRowSV);
   }
 
   async listByUserSV(_userId: string, _limit: number): Promise<PaymentTransactionRow[]> {
@@ -94,7 +99,7 @@ export class PrismaPaymentTransactionRepository
       orderBy: { createdAt: 'desc' },
       take: _limit,
     });
-    return ROWS as PaymentTransactionRow[];
+    return ROWS.map(mapPrismaTransactionToPaymentRowSV);
   }
 
   async confirmManualSV(
@@ -305,7 +310,7 @@ export class PrismaPaymentTransactionRepository
     });
     const ROW =
       WITH_RESERVATION?.reservationId != null ? WITH_RESERVATION : WITH_MATCH;
-    return ROW as StaffTransactionRow | null;
+    return ROW === null ? null : mapPrismaTransactionToStaffRowSV(ROW);
   }
 
   async listPendingByVenueSV(
@@ -370,6 +375,6 @@ export class PrismaPaymentTransactionRepository
       },
       orderBy: { createdAt: 'asc' },
     });
-    return ROWS as PendingStaffTransactionRow[];
+    return ROWS.map(mapPrismaTransactionToPendingStaffRowSV);
   }
 }

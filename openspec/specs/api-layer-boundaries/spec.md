@@ -97,3 +97,36 @@ After Wave 0, any new or touched code in `application/` or `domain/` that repres
 - GIVEN a new use case in payments BC post-Wave-0
 - WHEN it aggregates transaction amounts
 - THEN it MUST NOT use `amountTotal * 100` on untyped numbers; it MUST use `MoneyAmount` operations per `money-value-objects` spec
+
+---
+
+## Wave 7 — ADDED Requirements
+
+### Requirement: Composition MUST NOT export repository symbols to controllers (P1 / P6b)
+
+Files under `presentation/composition/*.composition.ts` MUST wire repositories and adapters internally and export only use case instances (or factory functions returning use cases). Controllers MUST NOT import `*_REPOSITORY`, `*_ADAPTER`, or port implementations exported from composition files.
+
+Wave 7 MUST eliminate the anti-pattern in `venue_dashboard.composition.ts` exporting `VENUE_STAFF_REPOSITORY`. An optional ESLint rule MAY enforce `no-restricted-exports` or custom grep in CI for `export { *_REPOSITORY }` / `export const *_REPOSITORY` consumed from `presentation/controllers/`.
+
+(Previously: controllers could import repositories if composition exported them — only forbidden for direct `infrastructure/` imports.)
+
+#### Scenario: Venue dashboard composition post-P1
+
+- GIVEN `venue_dashboard.composition.ts` after Wave 7 PR1
+- WHEN `venue_dashboard.controller.ts` imports from composition
+- THEN imports MUST be limited to `*_UC` symbols
+- AND `VENUE_STAFF_REPOSITORY` MUST NOT be exported from composition
+
+#### Scenario: Optional ESLint blocks new repository exports
+
+- GIVEN Wave 7 enables ESLint rule P6b
+- WHEN a PR adds `export { BOOKING_REPOSITORY }` in a composition file for controller use
+- THEN `npm run lint` MUST fail
+- AND PR MUST refactor to export only `RECORD_BOOKING_UC` (or equivalent)
+
+#### Scenario: Staff check stays in application layer
+
+- GIVEN authorization requires `VenueStaffRepository`
+- WHEN dashboard handlers need staff validation
+- THEN validation MUST occur via `AssertVenueStaffAccessUseCase` (see `venue-staff-authorization-uc`)
+- AND NOT via controller calling `isUserStaffOfVenueSV` on an exported repository

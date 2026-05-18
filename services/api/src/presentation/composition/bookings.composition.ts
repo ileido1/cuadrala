@@ -16,7 +16,7 @@ import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 const BOOKING_REPOSITORY = new PrismaBookingRepository(PRISMA);
-const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository();
+const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
 const COURT_REPOSITORY = new PrismaCourtRepository();
 const CATALOG_READ_REPOSITORY = new PrismaBookingCatalogReadRepository();
 
