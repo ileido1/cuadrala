@@ -98,8 +98,8 @@ M1 Schema + dual-write infra ──► M2 Backfill scripts ──► M3 Domain s
 - [x] GET resumen reserva expone `paidAmountBs` cuando ledger activo
 - [x] Script `npm run backfill:reservation-ledger` (forward-only, idempotente)
 - [x] Test integración `multi_currency_ledger.integration.test.ts`
-- [ ] Job conciliación diaria ledger vs agregados (REQ-MCP-056)
-- [ ] API admin asientos compensatorios (REQ-MCP-057)
+- [x] Job conciliación diaria ledger vs agregados (REQ-MCP-056) — `npm run reconcile:reservation-ledger`
+- [x] API staff asientos compensatorios (REQ-MCP-057) — POST `.../ledger/compensatory-adjustments`
 
 ---
 

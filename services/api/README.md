@@ -100,6 +100,7 @@ Con `RESERVATION_PAYMENT_LEDGER=true` (junto a MCP), cada confirmación de reser
 | `npm run seed`            | `prisma db seed` — catálogo PADEL + presets + FeeRule (requiere `DATABASE_URL`) |
 | `npm run backfill:multi-currency` | Backfill MCP Fase 1 (`*Minor`, tasas 90d) |
 | `npm run backfill:reservation-ledger` | Backfill asientos PAYMENT Fase 2 (idempotente) |
+| `npm run reconcile:reservation-ledger` | Conciliación ledger vs `paidAmountBsMinor` (exit 1 si hay excepciones) |
 | `npm test`                 | Vitest (contrato HTTP/Zod + integración opcional) |
 
 ## Tests

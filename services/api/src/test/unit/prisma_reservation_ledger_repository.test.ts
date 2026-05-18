@@ -7,6 +7,7 @@ describe('PrismaReservationLedgerRepository', () => {
     const CREATE = vi.fn().mockResolvedValue({ id: 'ledger-1' });
     const PRISMA = {
       reservationPaymentLedger: { create: CREATE },
+      $queryRaw: vi.fn(),
     };
 
     const REPO = new PrismaReservationLedgerRepository(

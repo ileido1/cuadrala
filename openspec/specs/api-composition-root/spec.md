@@ -41,7 +41,7 @@ Controllers under `presentation/controllers/` MUST: (1) extract/validate input v
 #### Scenario: Monetization anti-pattern resolved in Wave 1
 
 - GIVEN `monetization.controller.ts` mixing `monetization.service.ts` and use cases (AS-IS)
-- WHEN Wave 1 (`payment-domain-refactor`) closes
+- WHEN Wave 1 (`payment-domain-refactor`) closes — ver [`payment-domain-refactor/spec.md`](../payment-domain-refactor/spec.md)
 - THEN controller MUST delegate exclusively to use cases exported from `monetization.composition.ts`
 - AND `monetization.service.ts` MUST have zero imports from controllers
 

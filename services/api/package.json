@@ -20,7 +20,8 @@
     "prisma:generate": "prisma generate",
     "seed": "prisma db seed",
     "backfill:multi-currency": "tsx scripts/backfill-multi-currency.ts",
-    "backfill:reservation-ledger": "tsx scripts/backfill-reservation-ledger.ts"
+    "backfill:reservation-ledger": "tsx scripts/backfill-reservation-ledger.ts",
+    "reconcile:reservation-ledger": "tsx scripts/reconcile-reservation-ledger.ts"
   },
   "keywords": [],
   "author": "",

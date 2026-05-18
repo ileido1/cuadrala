@@ -8,6 +8,8 @@ describe('RecordReservationLedgerEntryUseCase', () => {
     const APPEND = vi.fn().mockResolvedValue({ id: 'ledger-1' });
     const REPO: ReservationLedgerRepository = {
       appendEntrySV: APPEND,
+      sumAmountBsMinorByReservationSV: vi.fn(),
+      listBsDiscrepanciesSV: vi.fn(),
     };
     const UC = new RecordReservationLedgerEntryUseCase(REPO);
 

@@ -1,7 +1,7 @@
 # Capability: money-value-objects
 
 **Programa:** `api-architecture-refactor` (Wave 0 fundación)  
-**Relación MCP:** Semántica alineada con [`multi-currency-payments/specs/money-types.md`](../../changes/multi-currency-payments/specs/money-types.md); requisitos de producto/API JSON MUST NOT duplicarse aquí.
+**Relación MCP:** Semántica alineada con [`money-types/spec.md`](../money-types/spec.md); requisitos de producto/API JSON MUST NOT duplicarse aquí.
 
 ## Purpose
 
@@ -80,7 +80,7 @@ For `BS`, `USD`, and `EUR`, `amountMinor` SHALL represent the minor unit with **
 
 1. This capability is implemented and unit-tested under `src/test/` or `tests/`
 2. `api-layer-boundaries` ESLint is green
-3. Wave 1 (`payment-domain-refactor`) ports/adapters for transactions are complete
+3. Wave 1 (`payment-domain-refactor`) ports/adapters for transactions are complete — ver [`payment-domain-refactor/spec.md`](../payment-domain-refactor/spec.md) (archivado 2026-05-18)
 
 #### Scenario: PO attempts MCP PR1 before gate
 

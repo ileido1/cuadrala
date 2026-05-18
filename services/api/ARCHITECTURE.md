@@ -285,7 +285,7 @@ Postura **fintech global** (no MVP):
 - Tests: `src/test/unit/money_amount.test.ts`.
 - Sin tipos Prisma en domain ni application.
 
-Detalle producto multi-moneda: change [`multi-currency-payments`](../../openspec/changes/multi-currency-payments/) — **bloqueado** hasta Wave 0 + [`payment-domain-refactor`](../../openspec/changes/payment-domain-refactor/).
+Detalle producto multi-moneda: [`openspec/specs/multi-currency-payments/`](../../openspec/specs/multi-currency-payments/spec.md) (archivo [`2026-05-18-multi-currency-payments`](../../openspec/changes/archive/2026-05-18-multi-currency-payments/)). BC Payments Wave 1: [`openspec/specs/payment-domain-refactor/`](../../openspec/specs/payment-domain-refactor/spec.md) (archivo [`2026-05-18-payment-domain-refactor`](../../openspec/changes/archive/2026-05-18-payment-domain-refactor/)).
 
 ---
 
@@ -294,7 +294,7 @@ Detalle producto multi-moneda: change [`multi-currency-payments`](../../openspec
 | Ola | Foco | Gate |
 |-----|------|------|
 | **0** | Este doc, ESLint, `domain/money`, entities por BC, validation unificada | Lint verde capas domain/application |
-| **1** | BC Payments (`payment-domain-refactor`) | **Desbloquea MCP** |
+| **1** | BC Payments (`payment-domain-refactor`) | ✅ Archivado — desbloqueó MCP |
 | **2** | Booking & Venue — usar `bookings.composition` |
 | **3** | Match & Tournament |
 | **4** | Identity (auth, profile) |

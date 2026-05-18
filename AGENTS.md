@@ -136,5 +136,7 @@ Exception: skip for trivial changes (typos, comments) or when user explicitly sa
 | `services/api/ARCHITECTURE.md` | API Clean Architecture — layers, DI, patterns, migration |
 | `services/api/prisma/schema.prisma` | Full DB schema |
 | `services/api/README.md` | API endpoints + setup details |
-| `openspec/specs/` | Specs fuente de verdad API (post `api-architecture-refactor`) |
+| `openspec/specs/` | Specs fuente de verdad (API + MCP) |
 | `openspec/changes/archive/2026-05-17-api-architecture-refactor/` | Programa API refactor archivado (olas 0–7) |
+| `openspec/changes/archive/2026-05-18-multi-currency-payments/` | Modelo financiero multi-moneda (M1–M7) archivado |
+| `openspec/changes/archive/2026-05-18-payment-domain-refactor/` | BC Payments Wave 1 (R1–R6) archivado |

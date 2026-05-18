@@ -90,7 +90,7 @@ From Wave 0 merge onward, `services/api` ESLint configuration MUST include `no-r
 
 ### Requirement: Money operations MUST use MoneyAmount after Wave 0
 
-After Wave 0, any new or touched code in `application/` or `domain/` that represents monetary amounts MUST use `MoneyAmount` from `domain/money/` instead of raw `number` cents fields for business logic (structural rule; JSON/API contract details live in `multi-currency-payments`).
+After Wave 0, any new or touched code in `application/` or `domain/` that represents monetary amounts MUST use `MoneyAmount` from `domain/money/` instead of raw `number` cents fields for business logic (structural rule; JSON/API contract details live in `openspec/specs/multi-currency-payments/`).
 
 #### Scenario: New use case sums payment totals
 

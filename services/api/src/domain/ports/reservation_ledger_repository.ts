@@ -21,6 +21,19 @@ export type AppendReservationLedgerEntryInput = {
   reason?: string;
 };
 
+export type ReservationLedgerBsDiscrepancyDTO = {
+  reservationId: string;
+  ledgerSumBsMinor: bigint;
+  paidAmountBsMinor: bigint;
+  deltaBsMinor: bigint;
+};
+
 export interface ReservationLedgerRepository {
   appendEntrySV(_input: AppendReservationLedgerEntryInput): Promise<{ id: string }>;
+
+  /** Suma amountBsMinor de todos los asientos de la reserva (nulls como 0). */
+  sumAmountBsMinorByReservationSV(_reservationId: string): Promise<bigint>;
+
+  /** Reservas donde |ledgerSum - paidAmountBsMinor| > tolerancia. */
+  listBsDiscrepanciesSV(_toleranceBsMinor: bigint): Promise<ReservationLedgerBsDiscrepancyDTO[]>;
 }

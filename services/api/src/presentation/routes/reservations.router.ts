@@ -12,6 +12,7 @@ import {
   postBlockSlotCON,
   deleteBlockSlotCON,
 } from '../controllers/reservations.controller.js';
+import { postCompensatoryLedgerAdjustmentCON } from '../controllers/reservation_ledger.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 
@@ -36,6 +37,13 @@ RESERVATIONS_ROUTER.delete(
   '/venues/:venueId/reservations/:reservationId',
   requireAuth,
   asyncHandler(deleteReservationCON),
+);
+
+// POST /venues/:venueId/reservations/:reservationId/ledger/compensatory-adjustments
+RESERVATIONS_ROUTER.post(
+  '/venues/:venueId/reservations/:reservationId/ledger/compensatory-adjustments',
+  requireAuth,
+  asyncHandler(postCompensatoryLedgerAdjustmentCON),
 );
 
 // POST /venues/:venueId/courts/:courtId/slots/block — bloquear horario

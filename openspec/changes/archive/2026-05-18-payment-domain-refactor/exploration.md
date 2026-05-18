@@ -4,7 +4,7 @@
 |-------|-------|
 | **Change** | `payment-domain-refactor` (Wave 1 de `api-architecture-refactor`) |
 | **Relacionado** | `api-architecture-refactor`, `multi-currency-payments` (MCP) |
-| **Programa padre** | [`../archive/2026-05-17-api-architecture-refactor/exploration.md`](../archive/2026-05-17-api-architecture-refactor/exploration.md) |
+| **Programa padre** | [`../2026-05-17-api-architecture-refactor/exploration.md`](../2026-05-17-api-architecture-refactor/exploration.md) |
 | **Estado** | Exploration complete |
 | **Workspace** | `services/api` (primario), impacto secundario web/mobile vía contratos |
 
