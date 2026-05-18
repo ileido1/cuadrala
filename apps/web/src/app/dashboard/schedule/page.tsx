@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
-import type { BookingItem, Court } from '~/types/api';
+import type { BookingItem, Court, Venue } from '~/types/api';
+import type { OpeningHoursMap } from '~/lib/venue-opening-hours';
 import { ReservationModal } from '~/components/schedule/ReservationModal';
 import { BlockSlotModal } from '~/components/schedule/BlockSlotModal';
 import { ReservationDetailModal } from '~/components/schedule/ReservationDetailModal';
@@ -177,6 +178,22 @@ export default function SchedulePage() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [openingHours, setOpeningHours] = useState<OpeningHoursMap | null>(null);
+
+  useEffect(() => {
+    if (!currentVenue) {
+      setOpeningHours(null);
+      return;
+    }
+
+    apiClient.venues
+      .get(currentVenue.id)
+      .then((res) => {
+        const VENUE = res.data.data as Venue;
+        setOpeningHours(VENUE.openingHours ?? null);
+      })
+      .catch(() => setOpeningHours(null));
+  }, [currentVenue?.id]);
 
   // Compute week range from selectedDate (monday to sunday)
   const { weekFrom, weekTo } = useMemo(() => {
@@ -492,6 +509,7 @@ export default function SchedulePage() {
         <ReservationModal
           venueId={currentVenue.id}
           courts={courts}
+          openingHours={openingHours}
           defaultDate={weekFrom}
           onClose={() => setShowReservationModal(false)}
           onSuccess={handleSuccess}
@@ -502,6 +520,7 @@ export default function SchedulePage() {
         <BlockSlotModal
           venueId={currentVenue.id}
           courts={courts}
+          openingHours={openingHours}
           defaultDate={weekFrom}
           onClose={() => setShowBlockModal(false)}
           onSuccess={handleSuccess}

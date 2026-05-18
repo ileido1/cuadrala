@@ -5,7 +5,7 @@ import type {
   VenueTransactionHistoryItemDTO,
   WeeklyIncomeItemDTO,
 } from '../../domain/ports/venue_analytics_repository.js';
-import type { PrismaClient } from '../../generated/prisma/client.js';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 
 const DAY_NAMES: Record<number, string> = {
   0: 'Dom',
@@ -16,6 +16,57 @@ const DAY_NAMES: Record<number, string> = {
   5: 'Vie',
   6: 'Sáb',
 };
+
+/** Partidos (match) y reservas directas (reservation) de la sede. */
+function venueTransactionsWhereSV(_venueId: string): Prisma.TransactionWhereInput {
+  return {
+    OR: [
+      { match: { court: { venueId: _venueId } } },
+      { reservation: { venueId: _venueId } },
+    ],
+  };
+}
+
+type TransactionHistoryRow = Prisma.TransactionGetPayload<{
+  include: {
+    user: { select: { name: true } };
+    match: { include: { court: { select: { name: true } } } };
+    reservation: { include: { court: { select: { name: true } } } };
+  };
+}>;
+
+/** Monto en unidades mayores para agregados (prioriza obligación aplicada). */
+function transactionAmountMajorSV(_tx: {
+  amountTotal: { toString(): string } | number;
+  appliedToObligationMinor: bigint | null;
+}): number {
+  if (_tx.appliedToObligationMinor != null) {
+    return Number(_tx.appliedToObligationMinor) / 100;
+  }
+  return Number(_tx.amountTotal);
+}
+
+function mapTransactionHistoryItemSV(
+  _tx: TransactionHistoryRow,
+): VenueTransactionHistoryItemDTO {
+  const DISPLAY_NAME =
+    _tx.reservation?.responsibleName?.trim()
+    || _tx.user.name
+    || 'Cliente';
+  const FIRST_NAME = DISPLAY_NAME.split(' ')[0] ?? DISPLAY_NAME;
+
+  return {
+    id: _tx.id,
+    date: _tx.createdAt.toISOString().split('T')[0] ?? '',
+    clientName: `${FIRST_NAME}.`,
+    courtName:
+      _tx.match?.court?.name
+      ?? _tx.reservation?.court?.name
+      ?? 'N/A',
+    amount: transactionAmountMajorSV(_tx),
+    status: _tx.status,
+  };
+}
 
 export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository {
   constructor(private readonly _prisma: PrismaClient) {}
@@ -28,21 +79,27 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
     const confirmedTransactions = await this._prisma.transaction.findMany({
       where: {
         status: 'CONFIRMED',
-        match: { court: { venueId: _venueId } },
+        ...venueTransactionsWhereSV(_venueId),
       },
-      select: { amountTotal: true, createdAt: true },
-      orderBy: { createdAt: 'desc' },
+      select: {
+        amountTotal: true,
+        appliedToObligationMinor: true,
+        confirmedAt: true,
+        createdAt: true,
+      },
+      orderBy: { confirmedAt: 'desc' },
     });
 
     const pendingTransactions = await this._prisma.transaction.count({
       where: {
         status: 'PENDING',
-        match: { court: { venueId: _venueId } },
+        ...venueTransactionsWhereSV(_venueId),
       },
     });
 
     const totalRevenue = confirmedTransactions.reduce(
-      (sum, tx) => sum + Number(tx.amountTotal),
+      (sum, tx) => sum + transactionAmountMajorSV(tx),
+
       0,
     );
 
@@ -50,19 +107,23 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
+    const confirmedAtOrCreated = (tx: { confirmedAt: Date | null; createdAt: Date }) =>
+      tx.confirmedAt ?? tx.createdAt;
+
     const thisWeekTxs = confirmedTransactions.filter(
-      (tx) => tx.createdAt >= oneWeekAgo,
+      (tx) => confirmedAtOrCreated(tx) >= oneWeekAgo,
     );
-    const lastWeekTxs = confirmedTransactions.filter(
-      (tx) => tx.createdAt >= twoWeeksAgo && tx.createdAt < oneWeekAgo,
-    );
+    const lastWeekTxs = confirmedTransactions.filter((tx) => {
+      const AT = confirmedAtOrCreated(tx);
+      return AT >= twoWeeksAgo && AT < oneWeekAgo;
+    });
 
     const thisWeekRevenue = thisWeekTxs.reduce(
-      (sum, tx) => sum + Number(tx.amountTotal),
+      (sum, tx) => sum + transactionAmountMajorSV(tx),
       0,
     );
     const lastWeekRevenue = lastWeekTxs.reduce(
-      (sum, tx) => sum + Number(tx.amountTotal),
+      (sum, tx) => sum + transactionAmountMajorSV(tx),
       0,
     );
 
@@ -105,50 +166,54 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
     const confirmedTxs = await this._prisma.transaction.findMany({
       where: {
         status: 'CONFIRMED',
-        match: { court: { venueId: _venueId } },
-        createdAt: { gte: startOfWeek },
+        ...venueTransactionsWhereSV(_venueId),
+        confirmedAt: { gte: startOfWeek },
       },
       select: {
         amountTotal: true,
+        appliedToObligationMinor: true,
         paymentMethod: true,
-        createdAt: true,
+        confirmedAt: true,
       },
     });
 
     const pendingTxs = await this._prisma.transaction.count({
       where: {
         status: 'PENDING',
-        match: { court: { venueId: _venueId } },
+        ...venueTransactionsWhereSV(_venueId),
       },
     });
 
     const weeklyRevenue = confirmedTxs.reduce(
-      (sum, tx) => sum + Number(tx.amountTotal),
+      (sum, tx) => sum + transactionAmountMajorSV(tx),
       0,
     );
 
     const allConfirmedTxs = await this._prisma.transaction.findMany({
       where: {
         status: 'CONFIRMED',
-        match: { court: { venueId: _venueId } },
+        ...venueTransactionsWhereSV(_venueId),
       },
-      select: { amountTotal: true },
+      select: { amountTotal: true, appliedToObligationMinor: true },
     });
     const totalPaid = allConfirmedTxs.reduce(
-      (sum, tx) => sum + Number(tx.amountTotal),
+      (sum, tx) => sum + transactionAmountMajorSV(tx),
       0,
     );
 
-    const totalTxs = confirmedTxs.length + pendingTxs;
+    const totalTxs = allConfirmedTxs.length + pendingTxs;
     const successRate =
-      totalTxs > 0 ? Math.round((confirmedTxs.length / totalTxs) * 100) : 0;
+      totalTxs > 0
+        ? Math.round((allConfirmedTxs.length / totalTxs) * 100)
+        : 0;
 
     const incomeByDay = new Map<number, number>();
     for (const tx of confirmedTxs) {
-      const dayOfWeek = tx.createdAt.getDay();
+      const confirmedAt = tx.confirmedAt ?? new Date();
+      const dayOfWeek = confirmedAt.getDay();
       incomeByDay.set(
         dayOfWeek,
-        (incomeByDay.get(dayOfWeek) ?? 0) + Number(tx.amountTotal),
+        (incomeByDay.get(dayOfWeek) ?? 0) + transactionAmountMajorSV(tx),
       );
     }
 
@@ -194,15 +259,20 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
   ): Promise<{ items: VenueTransactionHistoryItemDTO[]; total: number }> {
     const SKIP = (_page - 1) * _limit;
 
+    const VENUE_WHERE = venueTransactionsWhereSV(_venueId);
+
     const [TOTAL, ROWS] = await this._prisma.$transaction([
-      this._prisma.transaction.count({
-        where: { match: { court: { venueId: _venueId } } },
-      }),
+      this._prisma.transaction.count({ where: VENUE_WHERE }),
       this._prisma.transaction.findMany({
-        where: { match: { court: { venueId: _venueId } } },
+        where: VENUE_WHERE,
         include: {
           user: { select: { name: true } },
           match: {
+            include: {
+              court: { select: { name: true } },
+            },
+          },
+          reservation: {
             include: {
               court: { select: { name: true } },
             },
@@ -214,14 +284,7 @@ export class PrismaVenueAnalyticsRepository implements VenueAnalyticsRepository 
       }),
     ]);
 
-    const items = ROWS.map((tx) => ({
-      id: tx.id,
-      date: tx.createdAt.toISOString().split('T')[0] ?? '',
-      clientName: `${tx.user.name.split(' ')[0] ?? ''}.`,
-      courtName: tx.match.court?.name ?? 'N/A',
-      amount: Number(tx.amountTotal),
-      status: tx.status,
-    }));
+    const items = ROWS.map((tx) => mapTransactionHistoryItemSV(tx));
 
     return { items, total: TOTAL };
   }

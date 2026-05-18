@@ -44,6 +44,21 @@ function createMockVenueStaffRepository() {
   };
 }
 
+function createMockVenueRepository() {
+  return {
+    findByIdSV: vi.fn(),
+    getOpeningHoursSV: vi.fn().mockResolvedValue(null),
+    updateSV: vi.fn(),
+    getPaymentInfoSV: vi.fn(),
+    listVenuesSV: vi.fn(),
+    listVenuesNearSV: vi.fn(),
+    listVenuesForUserSV: vi.fn(),
+    createVenueSV: vi.fn(),
+    getVenueDetailSV: vi.fn(),
+    getPaymentInfoWithNameSV: vi.fn(),
+  };
+}
+
 function createMockCourtRepository() {
   return {
     findById: vi.fn().mockResolvedValue({
@@ -112,6 +127,7 @@ describe('CreateReservationUseCase', () => {
   let venueStaffRepo: ReturnType<typeof createMockVenueStaffRepository>;
   let courtRepo: ReturnType<typeof createMockCourtRepository>;
   let catalogRepo: ReturnType<typeof createMockCatalogRepository>;
+  let venueRepo: ReturnType<typeof createMockVenueRepository>;
   let useCase: CreateReservationUseCase;
 
   beforeEach(() => {
@@ -119,7 +135,14 @@ describe('CreateReservationUseCase', () => {
     venueStaffRepo = createMockVenueStaffRepository();
     courtRepo = createMockCourtRepository();
     catalogRepo = createMockCatalogRepository();
-    useCase = new CreateReservationUseCase(repo, venueStaffRepo, courtRepo, catalogRepo);
+    venueRepo = createMockVenueRepository();
+    useCase = new CreateReservationUseCase(
+      repo,
+      venueStaffRepo,
+      courtRepo,
+      catalogRepo,
+      venueRepo,
+    );
   });
 
   it('should create a DIRECT reservation when valid input provided', async () => {
@@ -186,6 +209,25 @@ describe('CreateReservationUseCase', () => {
 
     await expect(useCase.executeSV(input, ACTOR_USER_ID)).rejects.toThrow(AppError);
     await expect(useCase.executeSV(input, ACTOR_USER_ID)).rejects.toThrow('Ya existe una reserva confirmada para ese horario en esta cancha.');
+  });
+
+  it('should throw HORARIO_CERRADO when venue is closed that day', async () => {
+    const input: CreateReservationInput = {
+      venueId: VENUE_ID,
+      courtId: COURT_ID,
+      sportId: SPORT_ID,
+      categoryId: CATEGORY_ID,
+      scheduledAt: new Date('2026-05-17T10:00:00.000Z'),
+    };
+    venueStaffRepo.isUserStaffOfVenueSV.mockResolvedValue(true);
+    venueRepo.getOpeningHoursSV.mockResolvedValue({
+      monday: { open: '08:00', close: '23:00' },
+    });
+
+    await expect(useCase.executeSV(input, ACTOR_USER_ID)).rejects.toThrow(AppError);
+    await expect(useCase.executeSV(input, ACTOR_USER_ID)).rejects.toThrow(
+      'La sede no atiende el domingo.',
+    );
   });
 
   it('should create BLOCKED reservation when type is BLOCKED', async () => {

@@ -11,6 +11,13 @@ import {
   resolveCurrencyCode,
   type CurrencyCode,
 } from '~/lib/format-money';
+import {
+  convertMinorBetweenCurrenciesSV,
+  localCalendarDateIsoSV,
+  pickExchangeRateForDateSV,
+  type ExchangeRateRow,
+} from '~/lib/money-conversion';
+import type { ExchangeRate } from '~/types/api';
 
 type PaymentStep = 'summary' | 'method' | 'confirm';
 
@@ -204,8 +211,102 @@ interface PaymentConfirmDialogProps {
   venueId: string;
   pricingCurrency?: string | null;
   displayCurrency?: string | null;
+  countryCode?: string;
+  venueTimezone?: string;
   onClose: () => void;
   onSuccess: () => void;
+}
+
+function parseExchangeRatesResponse(_data: unknown): ExchangeRate[] {
+  if (Array.isArray(_data)) return _data as ExchangeRate[];
+  if (
+    _data !== null
+    && typeof _data === 'object'
+    && Array.isArray((_data as { items?: unknown }).items)
+  ) {
+    return (_data as { items: ExchangeRate[] }).items;
+  }
+  return [];
+}
+
+type FxSnapshot =
+  | { kind: 'none' }
+  | {
+      kind: 'ready';
+      settlementMinor: number;
+      obligationRateToBs: number;
+      settlementRateToBs: number;
+      reservationDateIso: string;
+      settlementCurrency: CurrencyCode;
+    }
+  | { kind: 'missing_rate'; message: string };
+
+function SettlementConversionCard({
+  obligationMinor,
+  obligationCurrency,
+  settlementMinor,
+  settlementCurrency,
+  obligationRateToBs,
+  settlementRateToBs,
+  reservationDateIso,
+  loading,
+  error,
+}: {
+  obligationMinor: number;
+  obligationCurrency: CurrencyCode;
+  settlementMinor: number;
+  settlementCurrency: CurrencyCode;
+  obligationRateToBs: number;
+  settlementRateToBs: number;
+  reservationDateIso: string;
+  loading?: boolean;
+  error?: string | null;
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-outline bg-surface-container/40 px-4 py-3 text-sm text-muted">
+        Cargando tasa de cambio…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        {error}
+      </div>
+    );
+  }
+
+  const RATE_LABEL =
+    obligationCurrency === 'BS'
+      ? `1 ${settlementCurrency} = ${settlementRateToBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Bs`
+      : `1 ${obligationCurrency} = ${obligationRateToBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Bs`;
+
+  return (
+    <div className="rounded-xl border border-sky-200 bg-sky-50/80 px-4 py-3 space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wider text-sky-800">
+        Conversión a {settlementCurrency}
+      </p>
+      <p className="text-sm text-sky-900">
+        <span className="text-muted">Cobro en reserva:</span>{' '}
+        <strong>{formatCentsWithCurrency(obligationMinor, obligationCurrency)}</strong>
+      </p>
+      <p className="text-lg font-bold tabular-nums text-sky-950">
+        {formatCentsWithCurrency(settlementMinor, settlementCurrency)}
+      </p>
+      <dl className="grid grid-cols-1 gap-1 text-xs text-sky-800/90 border-t border-sky-200/80 pt-2">
+        <div className="flex justify-between gap-2">
+          <dt>Tasa ({reservationDateIso})</dt>
+          <dd className="font-medium text-right">{RATE_LABEL}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt>Día de la reserva</dt>
+          <dd className="font-medium">{reservationDateIso}</dd>
+        </div>
+      </dl>
+    </div>
+  );
 }
 
 function PaymentStepper({ step }: { step: PaymentStep }) {
@@ -345,6 +446,8 @@ export function PaymentConfirmDialog({
   venueId,
   pricingCurrency,
   displayCurrency,
+  countryCode = 'VE',
+  venueTimezone = 'America/Caracas',
   onClose,
   onSuccess,
 }: PaymentConfirmDialogProps) {
@@ -354,6 +457,9 @@ export function PaymentConfirmDialog({
   );
 
   const [loading, setLoading] = useState(false);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesError, setRatesError] = useState<string | null>(null);
   const [stepLoading, setStepLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<VenuePaymentMethod[]>([]);
@@ -370,6 +476,9 @@ export function PaymentConfirmDialog({
   const [paymentAmountInput, setPaymentAmountInput] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [confirmedAmountCents, setConfirmedAmountCents] = useState<number | null>(
+    null,
+  );
+  const [confirmedCurrency, setConfirmedCurrency] = useState<CurrencyCode | null>(
     null,
   );
 
@@ -393,6 +502,97 @@ export function PaymentConfirmDialog({
     selectedPaymentMethodId,
     selectedPaymentMethodType,
   );
+
+  const settlementCurrency = resolveCurrencyCode(
+    selectedMethod?.settlementCurrency,
+    currencyCode,
+  );
+
+  const reservationDateIso = useMemo(
+    () => localCalendarDateIsoSV(reservation.scheduledAt, venueTimezone),
+    [reservation.scheduledAt, venueTimezone],
+  );
+
+  const fxSnapshot: FxSnapshot = useMemo(() => {
+    if (
+      settlementCurrency === currencyCode
+      || paymentAmountCents === null
+      || paymentAmountCents <= 0
+    ) {
+      return { kind: 'none' };
+    }
+
+    const RATE_ROWS: ExchangeRateRow[] = exchangeRates.map((r) => ({
+      currency: r.currency,
+      rateToBs: r.rateToBs,
+      effectiveDate: r.effectiveDate,
+      source: r.source,
+    }));
+
+    const OBLIGATION_RATE = pickExchangeRateForDateSV(
+      RATE_ROWS,
+      currencyCode,
+      reservationDateIso,
+    );
+    const SETTLEMENT_RATE = pickExchangeRateForDateSV(
+      RATE_ROWS,
+      settlementCurrency,
+      reservationDateIso,
+    );
+
+    if (!OBLIGATION_RATE || !SETTLEMENT_RATE) {
+      const MISSING =
+        !OBLIGATION_RATE && currencyCode !== 'BS'
+          ? currencyCode
+          : settlementCurrency;
+      return {
+        kind: 'missing_rate',
+        message: `No hay tasa de cambio para ${MISSING} en la fecha de la reserva (${reservationDateIso}). Actualizá tasas en Ajustes o el panel de administración.`,
+      };
+    }
+
+    const SETTLEMENT_MINOR = convertMinorBetweenCurrenciesSV(
+      paymentAmountCents,
+      currencyCode,
+      settlementCurrency,
+      OBLIGATION_RATE.rateToBs,
+      SETTLEMENT_RATE.rateToBs,
+    );
+
+    return {
+      kind: 'ready',
+      settlementMinor: SETTLEMENT_MINOR,
+      obligationRateToBs: OBLIGATION_RATE.rateToBs,
+      settlementRateToBs: SETTLEMENT_RATE.rateToBs,
+      reservationDateIso,
+      settlementCurrency,
+    };
+  }, [
+    settlementCurrency,
+    currencyCode,
+    paymentAmountCents,
+    exchangeRates,
+    reservationDateIso,
+  ]);
+
+  const needsFxConversion = fxSnapshot.kind !== 'none';
+  const canProceedWithFx =
+    !needsFxConversion || fxSnapshot.kind === 'ready';
+
+  const loadExchangeRates = () => {
+    setRatesLoading(true);
+    setRatesError(null);
+    apiClient.exchangeRates
+      .list(countryCode)
+      .then((r) => {
+        setExchangeRates(parseExchangeRatesResponse(r.data?.data));
+      })
+      .catch(() => {
+        setRatesError('No se pudieron cargar las tasas de cambio.');
+        setExchangeRates([]);
+      })
+      .finally(() => setRatesLoading(false));
+  };
 
   const loadPaymentMethods = () => {
     if (!venueId) return;
@@ -463,8 +663,9 @@ export function PaymentConfirmDialog({
     setError(null);
     setConfirmed(false);
     loadPaymentMethods();
+    loadExchangeRates();
     fetchPaymentSummary();
-  }, [open, reservation.id]);
+  }, [open, reservation.id, countryCode]);
 
   useEffect(() => {
     if (paymentStep !== 'method' || paymentMethods.length === 0) return;
@@ -519,6 +720,10 @@ export function PaymentConfirmDialog({
       setError('Seleccioná un medio de pago.');
       return;
     }
+    if (fxSnapshot.kind === 'missing_rate') {
+      setError(fxSnapshot.message);
+      return;
+    }
     setSelectedPaymentMethodId(resolvedPaymentMethodId);
     setError(null);
     setStepDirection('forward');
@@ -544,6 +749,15 @@ export function PaymentConfirmDialog({
       );
       return;
     }
+    if (fxSnapshot.kind === 'missing_rate') {
+      setError(fxSnapshot.message);
+      return;
+    }
+
+    const settlementMinor =
+      fxSnapshot.kind === 'ready'
+        ? fxSnapshot.settlementMinor
+        : paymentAmountCents;
 
     setLoading(true);
     setError(null);
@@ -595,7 +809,7 @@ export function PaymentConfirmDialog({
         );
       }
 
-      const settlementCurrency = resolveCurrencyCode(
+      const methodSettlementCurrency = resolveCurrencyCode(
         method?.settlementCurrency,
         currencyCode,
       );
@@ -605,15 +819,16 @@ export function PaymentConfirmDialog({
         {
           venuePaymentMethodId: methodId,
           settlementAmount: {
-            amountMinor: String(paymentAmountCents),
-            currencyCode: settlementCurrency,
+            amountMinor: String(settlementMinor),
+            currencyCode: methodSettlementCurrency,
           },
           referenceNumber: paymentReference || undefined,
           paymentData: method?.config ?? undefined,
         },
       );
 
-      setConfirmedAmountCents(paymentAmountCents);
+      setConfirmedAmountCents(settlementMinor);
+      setConfirmedCurrency(methodSettlementCurrency);
       setConfirmed(true);
       setTimeout(() => {
         onSuccess();
@@ -645,8 +860,8 @@ export function PaymentConfirmDialog({
           </div>
           <h2 className="text-xl font-bold text-secondary-900">Pago registrado</h2>
           <p className="mt-2 text-sm text-muted">
-            {confirmedAmountCents !== null
-              ? formatCentsWithCurrency(confirmedAmountCents, currencyCode)
+            {confirmedAmountCents !== null && confirmedCurrency
+              ? formatCentsWithCurrency(confirmedAmountCents, confirmedCurrency)
               : ''}{' '}
             confirmado correctamente.
           </p>
@@ -865,14 +1080,45 @@ export function PaymentConfirmDialog({
                             onClick={() => setSelectedPaymentMethodId(pm.id)}
                             className={`w-full rounded-lg border-2 px-3 py-2.5 text-left text-sm transition-all ${
                               selectedPaymentMethodId === pm.id
-                                ? 'border-primary bg-primary/5 font-medium'
+                                ? 'border-primary-500 bg-primary-500/5 font-medium'
                                 : 'border-outline hover:bg-gray-50'
                             }`}
                           >
-                            {pm.name}
+                            <span className="block">{pm.name}</span>
+                            <span className="text-xs font-normal text-muted">
+                              Liquida en{' '}
+                              {resolveCurrencyCode(pm.settlementCurrency, currencyCode)}
+                            </span>
                           </button>
                         ))}
                     </div>
+                  )}
+                  {resolvedPaymentMethodId && needsFxConversion && paymentAmountCents !== null && (
+                    <SettlementConversionCard
+                      obligationMinor={paymentAmountCents}
+                      obligationCurrency={currencyCode}
+                      settlementMinor={
+                        fxSnapshot.kind === 'ready' ? fxSnapshot.settlementMinor : 0
+                      }
+                      settlementCurrency={
+                        fxSnapshot.kind === 'ready'
+                          ? fxSnapshot.settlementCurrency
+                          : settlementCurrency
+                      }
+                      obligationRateToBs={
+                        fxSnapshot.kind === 'ready' ? fxSnapshot.obligationRateToBs : 0
+                      }
+                      settlementRateToBs={
+                        fxSnapshot.kind === 'ready' ? fxSnapshot.settlementRateToBs : 0
+                      }
+                      reservationDateIso={reservationDateIso}
+                      loading={ratesLoading}
+                      error={
+                        fxSnapshot.kind === 'missing_rate'
+                          ? fxSnapshot.message
+                          : ratesError
+                      }
+                    />
                   )}
                 </>
               )}
@@ -931,15 +1177,41 @@ export function PaymentConfirmDialog({
                 )}
               </div>
 
+              {fxSnapshot.kind === 'ready' && paymentAmountCents !== null && (
+                <SettlementConversionCard
+                  obligationMinor={paymentAmountCents}
+                  obligationCurrency={currencyCode}
+                  settlementMinor={fxSnapshot.settlementMinor}
+                  settlementCurrency={fxSnapshot.settlementCurrency}
+                  obligationRateToBs={fxSnapshot.obligationRateToBs}
+                  settlementRateToBs={fxSnapshot.settlementRateToBs}
+                  reservationDateIso={fxSnapshot.reservationDateIso}
+                />
+              )}
+
               <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-center">
                 <p className="text-xs font-medium uppercase tracking-wider text-emerald-700">
-                  Monto a confirmar
+                  {fxSnapshot.kind === 'ready'
+                    ? `Monto a registrar (${fxSnapshot.settlementCurrency})`
+                    : 'Monto a confirmar'}
                 </p>
                 <p className="mt-1 text-3xl font-bold tabular-nums text-emerald-800">
-                  {paymentAmountCents !== null
-                    ? formatCentsWithCurrency(paymentAmountCents, currencyCode)
-                    : '—'}
+                  {fxSnapshot.kind === 'ready'
+                    ? formatCentsWithCurrency(
+                        fxSnapshot.settlementMinor,
+                        fxSnapshot.settlementCurrency,
+                      )
+                    : paymentAmountCents !== null
+                      ? formatCentsWithCurrency(paymentAmountCents, currencyCode)
+                      : '—'}
                 </p>
+                {fxSnapshot.kind === 'ready' && paymentAmountCents !== null && (
+                  <p className="mt-1 text-xs text-emerald-700/80">
+                    Equivale a{' '}
+                    {formatCentsWithCurrency(paymentAmountCents, currencyCode)} en la
+                    reserva
+                  </p>
+                )}
               </div>
 
               <div>
@@ -994,7 +1266,11 @@ export function PaymentConfirmDialog({
             <button
               type="button"
               onClick={handleMethodContinue}
-              disabled={paymentMethodsLoading || !resolvedPaymentMethodId}
+              disabled={
+                paymentMethodsLoading
+                || !resolvedPaymentMethodId
+                || !canProceedWithFx
+              }
               className="btn btn-primary flex-[2]"
             >
               Continuar
@@ -1004,7 +1280,7 @@ export function PaymentConfirmDialog({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={loading || !resolvedPaymentMethodId}
+              disabled={loading || !resolvedPaymentMethodId || !canProceedWithFx}
               className="btn btn-primary flex-[2]"
             >
               {loading ? 'Confirmando…' : 'Confirmar pago'}

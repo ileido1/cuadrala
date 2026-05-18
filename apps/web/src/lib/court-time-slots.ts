@@ -140,10 +140,14 @@ export function findFirstSelectableBlockTime(
   return SLOT?.time ?? null;
 }
 
-export function getMinTimeForToday(_blockDurationMinutes: number): string {
+export function getMinTimeForToday(
+  _blockDurationMinutes: number,
+  _openMinutes: number = DEFAULT_VENUE_OPEN_MINUTES,
+  _closeMinutes: number = DEFAULT_VENUE_CLOSE_MINUTES,
+): string {
   const NOW = new Date();
   const NOW_MINUTES = NOW.getHours() * 60 + NOW.getMinutes();
-  const OPEN = DEFAULT_VENUE_OPEN_MINUTES;
+  const OPEN = _openMinutes;
 
   if (NOW_MINUTES <= OPEN) {
     return minutesToTimeString(OPEN);
@@ -153,8 +157,8 @@ export function getMinTimeForToday(_blockDurationMinutes: number): string {
   const BLOCKS_PASSED = Math.ceil(ELAPSED / _blockDurationMinutes);
   const NEXT_START = OPEN + BLOCKS_PASSED * _blockDurationMinutes;
 
-  if (NEXT_START + _blockDurationMinutes > DEFAULT_VENUE_CLOSE_MINUTES) {
-    return minutesToTimeString(DEFAULT_VENUE_CLOSE_MINUTES);
+  if (NEXT_START + _blockDurationMinutes > _closeMinutes) {
+    return minutesToTimeString(_closeMinutes);
   }
 
   return minutesToTimeString(NEXT_START);

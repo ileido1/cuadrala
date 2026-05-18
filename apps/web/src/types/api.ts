@@ -24,6 +24,7 @@ export interface ExchangeRate {
   countryCode: string;
   currency: string; // 'USD' | 'EUR'
   rateToBs: number;
+  effectiveDate?: string;
   source: string | null;
   updatedAt: string;
 }

@@ -1,18 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Court } from '~/types/api';
 import { apiClient } from '~/lib/api-client';
+import { minutesToTimeString } from '~/lib/court-time-slots';
+import {
+  closedDayMessage,
+  getDayHoursForDate,
+  hoursRangeLabel,
+  type OpeningHoursMap,
+  validateTimeWithinDayHours,
+} from '~/lib/venue-opening-hours';
 
 interface BlockSlotModalProps {
   venueId: string;
   courts: Court[];
+  openingHours?: OpeningHoursMap | null;
   defaultDate?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function BlockSlotModal({ venueId, courts, defaultDate, onClose, onSuccess }: BlockSlotModalProps) {
+export function BlockSlotModal({
+  venueId,
+  courts,
+  openingHours,
+  defaultDate,
+  onClose,
+  onSuccess,
+}: BlockSlotModalProps) {
   const [courtId, setCourtId] = useState(courts[0]?.id ?? '');
   const [date, setDate] = useState(defaultDate ?? new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('09:00');
@@ -21,11 +37,33 @@ export function BlockSlotModal({ venueId, courts, defaultDate, onClose, onSucces
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const dayHours = useMemo(
+    () => getDayHoursForDate(date, openingHours),
+    [date, openingHours],
+  );
+  const isClosedDay = dayHours === null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!courtId) {
       setError('Selecciona una cancha');
       return;
+    }
+    if (isClosedDay) {
+      setError(closedDayMessage(date, openingHours));
+      return;
+    }
+    if (dayHours) {
+      const TIME_ERROR = validateTimeWithinDayHours(
+        startTime,
+        durationMinutes,
+        dayHours.openMinutes,
+        dayHours.closeMinutes,
+      );
+      if (TIME_ERROR) {
+        setError(TIME_ERROR);
+        return;
+      }
     }
 
     setLoading(true);
@@ -46,6 +84,9 @@ export function BlockSlotModal({ venueId, courts, defaultDate, onClose, onSucces
       setLoading(false);
     }
   };
+
+  const minTime = dayHours ? minutesToTimeString(dayHours.openMinutes) : '00:00';
+  const maxTime = dayHours ? minutesToTimeString(dayHours.closeMinutes) : '23:59';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -106,8 +147,21 @@ export function BlockSlotModal({ venueId, courts, defaultDate, onClose, onSucces
             />
           </div>
 
+          {isClosedDay && (
+            <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+              {closedDayMessage(date, openingHours)}
+            </div>
+          )}
+
+          {!isClosedDay && dayHours && (
+            <p className="text-xs text-gray-500">
+              Horario de atención:{' '}
+              {hoursRangeLabel(dayHours.openMinutes, dayHours.closeMinutes)}
+            </p>
+          )}
+
           {/* Time + Duration row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid grid-cols-2 gap-4 ${isClosedDay ? 'opacity-50 pointer-events-none' : ''}`}>
             <div>
               <label htmlFor="startTime" className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Hora inicio
@@ -116,9 +170,12 @@ export function BlockSlotModal({ venueId, courts, defaultDate, onClose, onSucces
                 type="time"
                 id="startTime"
                 value={startTime}
+                min={minTime}
+                max={maxTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 required
+                disabled={isClosedDay}
               />
             </div>
             <div>
@@ -130,6 +187,7 @@ export function BlockSlotModal({ venueId, courts, defaultDate, onClose, onSucces
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
                 className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                disabled={isClosedDay}
               >
                 <option value={30}>30 min</option>
                 <option value={60}>1 hora</option>
@@ -165,7 +223,7 @@ export function BlockSlotModal({ venueId, courts, defaultDate, onClose, onSucces
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isClosedDay}
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
             >
               {loading ? 'Bloqueando...' : 'Bloquear'}

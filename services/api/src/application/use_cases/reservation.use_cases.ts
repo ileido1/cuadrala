@@ -8,6 +8,8 @@ import type { ReservationRepository } from '../../domain/ports/reservation_repos
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 import type { BookingCatalogReadRepository } from '../../domain/ports/booking_catalog_read_repository.js';
 import type { ICourtRepository } from '../../domain/ports/court_repository.js';
+import type { VenueRepository } from '../../domain/ports/venue_repository.js';
+import { assertReservationWithinOpeningHoursSV } from '../../domain/services/venue/venue_opening_hours.service.js';
 import type {
   CreateReservationInputDTO,
   ListReservationsFiltersDTO,
@@ -45,6 +47,7 @@ export class CreateReservationUseCase {
     private readonly _venueStaffRepository: VenueStaffRepository,
     private readonly _courtRepository: ICourtRepository,
     private readonly _catalogReadRepository: BookingCatalogReadRepository,
+    private readonly _venueRepository: VenueRepository,
   ) {}
 
   async executeSV(_input: CreateReservationInput, _actorUserId: string): Promise<CreateReservationOutput> {
@@ -70,6 +73,16 @@ export class CreateReservationUseCase {
       );
     }
 
+    const COURT = await this._courtRepository.findById(_input.courtId);
+    const DURATION = _input.durationMinutes ?? COURT?.durationMinutes ?? 60;
+
+    const OPENING_HOURS = await this._venueRepository.getOpeningHoursSV(_input.venueId);
+    assertReservationWithinOpeningHoursSV(
+      _input.scheduledAt,
+      DURATION,
+      OPENING_HOURS,
+    );
+
     // Verificar que no exista una reserva confirmada para ese court+scheduledAt
     const EXISTING = await this._reservationRepository.findByCourtAndScheduledAtSV(
       _input.courtId,
@@ -82,9 +95,6 @@ export class CreateReservationUseCase {
         409,
       );
     }
-
-    const COURT = await this._courtRepository.findById(_input.courtId);
-    const DURATION = _input.durationMinutes ?? COURT?.durationMinutes ?? 60;
     const totalAmountCents =
       COURT != null
         ? calculateReservationTotalCentsSV({

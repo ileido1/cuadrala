@@ -74,6 +74,7 @@ function mapVenueDetailSV(_venue: {
     phone: _venue.phone,
     email: _venue.email,
     description: _venue.description,
+    openingHours: OPENING_HOURS,
     openingTime: OPENING_HOURS?.monday?.open ?? '08:00',
     closingTime: OPENING_HOURS?.monday?.close ?? '23:00',
     activeDays: OPENING_HOURS
@@ -99,6 +100,19 @@ export class PrismaVenueRepository implements VenueRepository {
       where: { id: _venueId },
       select: { id: true, name: true },
     });
+  }
+
+  async getOpeningHoursSV(
+    _venueId: string,
+  ): Promise<Record<string, { open: string; close: string }> | null> {
+    const ROW = await this._prisma.venue.findUnique({
+      where: { id: _venueId },
+      select: { openingHours: true },
+    });
+    if (!ROW) {
+      return null;
+    }
+    return ROW.openingHours as Record<string, { open: string; close: string }> | null;
   }
 
   async updateSV(_venueId: string, _data: UpdateVenueDataDTO): Promise<VenueSettingsDTO> {

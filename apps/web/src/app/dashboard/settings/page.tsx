@@ -41,7 +41,7 @@ function parseOpeningHours(
 ): ScheduleState {
   if (!raw || typeof raw !== 'object') return DEFAULT_SCHEDULE;
 
-  const schedule: ScheduleState = { ...DEFAULT_SCHEDULE };
+  const schedule = {} as ScheduleState;
 
   for (const day of DAY_KEYS) {
     const entry = (raw as Record<string, { open: string; close: string }>)[day];
@@ -50,6 +50,12 @@ function parseOpeningHours(
         enabled: true,
         open: entry.open ?? '08:00',
         close: entry.close ?? '23:00',
+      };
+    } else {
+      schedule[day] = {
+        enabled: false,
+        open: '08:00',
+        close: '23:00',
       };
     }
   }
@@ -141,20 +147,20 @@ export default function SettingsPage() {
 
     try {
       const res = await apiClient.venues.update(currentVenue.id, updateData);
-      const saved = res.data.data as {
-        pricingCurrency?: string;
-        displayCurrency?: string;
-      };
+      const saved = res.data.data as Venue;
+      setVenue(saved);
+      setSchedule(parseOpeningHours(saved.openingHours));
       if (currentVenue) {
         setCurrentVenue({
           ...currentVenue,
-          name: name.trim() || currentVenue.name,
-          address: address.trim() || null,
-          phone: phone.trim() || null,
-          email: email.trim() || null,
-          description: description.trim() || null,
-          latitude,
-          longitude,
+          name: saved.name,
+          address: saved.address ?? null,
+          phone: saved.phone ?? null,
+          email: saved.email ?? null,
+          description: saved.description ?? null,
+          latitude: saved.latitude ?? null,
+          longitude: saved.longitude ?? null,
+          openingHours: saved.openingHours ?? null,
           pricingCurrency: saved.pricingCurrency ?? pricingCurrency,
           displayCurrency: saved.displayCurrency ?? displayCurrency,
         });

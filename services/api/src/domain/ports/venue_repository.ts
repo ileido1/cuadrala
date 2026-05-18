@@ -52,6 +52,8 @@ export type VenueDetailDTO = {
   phone: string | null;
   email: string | null;
   description: string | null;
+  /** Horarios por día (días cerrados ausentes del objeto). */
+  openingHours: Record<string, { open: string; close: string }> | null;
   openingTime: string;
   closingTime: string;
   activeDays: string[];
@@ -90,6 +92,9 @@ export type PageDTO = {
 
 export interface VenueRepository {
   findByIdSV(_venueId: string): Promise<{ id: string; name: string } | null>;
+  getOpeningHoursSV(
+    _venueId: string,
+  ): Promise<Record<string, { open: string; close: string }> | null>;
   updateSV(_venueId: string, _data: UpdateVenueDataDTO): Promise<VenueSettingsDTO>;
   getPaymentInfoSV(_venueId: string): Promise<VenuePaymentInfoDTO | null>;
   listVenuesSV(_page: PageDTO): Promise<{ items: VenueListItemDTO[]; total: number }>;

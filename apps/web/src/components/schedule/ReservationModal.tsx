@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type {
   Court,
   CreateReservationRequest,
@@ -14,12 +14,21 @@ import {
   formatDurationLabel,
   generateCourtBlockSlots,
   getMinTimeForToday,
+  minutesToTimeString,
 } from '~/lib/court-time-slots';
 import { buildScheduledAtIso } from '~/lib/schedule-datetime';
+import {
+  closedDayMessage,
+  getDayHoursForDate,
+  hoursRangeLabel,
+  type OpeningHoursMap,
+  validateTimeWithinDayHours,
+} from '~/lib/venue-opening-hours';
 
 interface ReservationModalProps {
   venueId: string;
   courts: Court[];
+  openingHours?: OpeningHoursMap | null;
   defaultDate?: string;
   onClose: () => void;
   onSuccess: (_reservationDate: string) => void;
@@ -32,7 +41,14 @@ function isToday(dateStr: string): boolean {
   return dateStr === today;
 }
 
-export function ReservationModal({ venueId, courts, defaultDate, onClose, onSuccess }: ReservationModalProps) {
+export function ReservationModal({
+  venueId,
+  courts,
+  openingHours,
+  defaultDate,
+  onClose,
+  onSuccess,
+}: ReservationModalProps) {
   const today = new Date().toISOString().split('T')[0];
   const [courtId, setCourtId] = useState(courts[0]?.id ?? '');
   const [date, setDate] = useState(defaultDate ?? today);
@@ -55,15 +71,41 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
   const selectedCourt = courts.find((c) => c.id === courtId);
   const blockDurationMinutes = selectedCourt?.durationMinutes ?? 60;
   const pricingTiers = selectedCourt?.pricingTiers;
-  const minTime = isToday(date)
-    ? getMinTimeForToday(blockDurationMinutes)
-    : '00:00';
 
-  const timeSlots = generateCourtBlockSlots({
-    blockDurationMinutes,
-    pricingTiers,
-    reservations: existingReservations,
-  });
+  const dayHours = useMemo(
+    () => getDayHoursForDate(date, openingHours),
+    [date, openingHours],
+  );
+  const isClosedDay = dayHours === null;
+  const openMinutes = dayHours?.openMinutes ?? 8 * 60;
+  const closeMinutes = dayHours?.closeMinutes ?? 23 * 60;
+
+  const minTime = isClosedDay
+    ? '23:59'
+    : isToday(date)
+      ? getMinTimeForToday(blockDurationMinutes, openMinutes, closeMinutes)
+      : minutesToTimeString(openMinutes);
+
+  const timeSlots = useMemo(
+    () =>
+      isClosedDay
+        ? []
+        : generateCourtBlockSlots({
+            blockDurationMinutes,
+            pricingTiers,
+            reservations: existingReservations,
+            openMinutes,
+            closeMinutes,
+          }),
+    [
+      isClosedDay,
+      blockDurationMinutes,
+      pricingTiers,
+      existingReservations,
+      openMinutes,
+      closeMinutes,
+    ],
+  );
 
   // Fetch existing reservations for this court and date
   useEffect(() => {
@@ -157,8 +199,22 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
       setError('Selecciona una cancha');
       return;
     }
+    if (isClosedDay) {
+      setError(closedDayMessage(date, openingHours));
+      return;
+    }
     if (!selectedTime) {
       setError('Selecciona un horario');
+      return;
+    }
+    const TIME_ERROR = validateTimeWithinDayHours(
+      selectedTime,
+      blockDurationMinutes,
+      openMinutes,
+      closeMinutes,
+    );
+    if (TIME_ERROR) {
+      setError(TIME_ERROR);
       return;
     }
     if (responsibleType === 'guest' && !guestName.trim()) {
@@ -250,6 +306,19 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
             />
           </div>
 
+          {isClosedDay && (
+            <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+              {closedDayMessage(date, openingHours)}
+            </div>
+          )}
+
+          {!isClosedDay && dayHours && (
+            <p className="text-xs text-gray-500">
+              Horario de atención:{' '}
+              {hoursRangeLabel(dayHours.openMinutes, dayHours.closeMinutes)}
+            </p>
+          )}
+
           {selectedCourt && (
             <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -266,7 +335,7 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
           )}
 
           {/* Time Slots Chips */}
-          <div>
+          <div className={isClosedDay ? 'opacity-50 pointer-events-none' : undefined}>
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
               Horario <span className="text-gray-400 normal-case">(seleccioná un bloque)</span>
             </label>
@@ -489,7 +558,12 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
             </button>
             <button
               type="submit"
-              disabled={loading || !selectedTime || (responsibleType === 'guest' && !guestName.trim())}
+              disabled={
+                loading
+                || isClosedDay
+                || !selectedTime
+                || (responsibleType === 'guest' && !guestName.trim())
+              }
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50"
             >
               {loading ? 'Creando...' : 'Crear Reserva'}
