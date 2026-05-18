@@ -99,7 +99,12 @@ export class CreateVenuePaymentMethodUseCase {
   async executeSV(
     _venueId: string,
     _actorUserId: string,
-    _body: { type: string; name: string; config?: unknown },
+    _body: {
+      type: string;
+      name: string;
+      config?: unknown;
+      settlementCurrency?: string;
+    },
   ): Promise<VenuePaymentMethodDTO> {
     await assertVenueStaffSV(this._venueStaffRepository, _actorUserId, _venueId);
     const VALIDATED = validatePaymentMethodInputSV(_body);
@@ -110,6 +115,9 @@ export class CreateVenuePaymentMethodUseCase {
       name: VALIDATED.name,
       config: VALIDATED.config,
       position: POSITION,
+      ...(_body.settlementCurrency !== undefined
+        ? { settlementCurrency: _body.settlementCurrency }
+        : {}),
     });
   }
 }
@@ -130,6 +138,7 @@ export class UpdateVenuePaymentMethodUseCase {
       config?: unknown;
       isActive?: boolean;
       position?: number;
+      settlementCurrency?: string;
     },
   ): Promise<VenuePaymentMethodDTO> {
     await assertVenueStaffSV(this._venueStaffRepository, _actorUserId, _venueId);
@@ -163,6 +172,9 @@ export class UpdateVenuePaymentMethodUseCase {
         : {}),
       ...(_body.isActive !== undefined ? { isActive: _body.isActive } : {}),
       ...(_body.position !== undefined ? { position: _body.position } : {}),
+      ...(_body.settlementCurrency !== undefined
+        ? { settlementCurrency: _body.settlementCurrency }
+        : {}),
     });
   }
 }

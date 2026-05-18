@@ -20,7 +20,12 @@ export function prismaToCourtEntity(_model: CourtModel | null | undefined): Cour
   if (_model == null) return null;
 
   const SPORT_TYPE = _model.sportType === 'TENNIS' ? SportType.TENNIS : SportType.PADEL;
-  const STATUS = _model.status === 'INACTIVE' ? CourtStatus.INACTIVE : CourtStatus.ACTIVE;
+  const STATUS =
+    _model.status === 'INACTIVE'
+      ? CourtStatus.INACTIVE
+      : _model.status === 'MAINTENANCE'
+        ? CourtStatus.MAINTENANCE
+        : CourtStatus.ACTIVE;
 
   const PRICING_TIERS =
     'pricingTiers' in _model && Array.isArray(_model.pricingTiers)

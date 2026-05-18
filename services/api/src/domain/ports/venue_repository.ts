@@ -15,6 +15,8 @@ export type UpdateVenueDataDTO = {
   email?: string | null;
   description?: string | null;
   openingHours?: Record<string, { open: string; close: string }> | null;
+  pricingCurrency?: string | null;
+  displayCurrency?: string | null;
 };
 
 export type VenueSettingsDTO = {
@@ -27,6 +29,8 @@ export type VenueSettingsDTO = {
   address: string | null;
   latitude: number | null;
   longitude: number | null;
+  pricingCurrency: string;
+  displayCurrency: string;
 };
 
 export type VenueListItemDTO = {

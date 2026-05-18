@@ -57,8 +57,11 @@ export class PrismaVenuePaymentMethodRepository implements VenuePaymentMethodRep
     name: string;
     config: VenuePaymentMethodDTO['config'];
     position: number;
+    settlementCurrency?: string;
   }): Promise<VenuePaymentMethodDTO> {
-    const SETTLEMENT_CURRENCY = await loadVenuePricingCurrencySV(PRISMA, _data.venueId);
+    const SETTLEMENT_CURRENCY =
+      _data.settlementCurrency
+      ?? await loadVenuePricingCurrencySV(PRISMA, _data.venueId);
     const ROW = await PRISMA.venuePaymentMethod.create({
       data: {
         venueId: _data.venueId,
@@ -81,6 +84,7 @@ export class PrismaVenuePaymentMethodRepository implements VenuePaymentMethodRep
       config?: VenuePaymentMethodDTO['config'];
       isActive?: boolean;
       position?: number;
+      settlementCurrency?: string;
     },
   ): Promise<VenuePaymentMethodDTO> {
     const ROW = await PRISMA.venuePaymentMethod.update({
@@ -88,6 +92,9 @@ export class PrismaVenuePaymentMethodRepository implements VenuePaymentMethodRep
       data: {
         ...(_data.type !== undefined && { type: _data.type }),
         ...(_data.name !== undefined && { name: _data.name }),
+        ...(_data.settlementCurrency !== undefined
+          ? { settlementCurrency: _data.settlementCurrency }
+          : {}),
         ...(_data.config !== undefined && { config: _data.config as object }),
         ...(_data.isActive !== undefined && { isActive: _data.isActive }),
         ...(_data.position !== undefined && { position: _data.position }),

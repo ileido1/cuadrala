@@ -3,10 +3,11 @@
  * Solo atributos core, sin lógica de infraestructura.
  */
 
-/** Estado de una cancha: ACTIVE = disponible, INACTIVE = cancelada (soft-delete). */
+/** Estado de una cancha: ACTIVE, MAINTENANCE (temporal), INACTIVE (eliminada). */
 export enum CourtStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
+  MAINTENANCE = 'MAINTENANCE',
 }
 
 /** Tipo de deporte soportado por una cancha. */
@@ -68,4 +69,5 @@ export interface UpdateCourtInput {
   readonly pricePerHourCents?: number | null;
   readonly capacity?: string | null;
   readonly durationMinutes?: number;
+  readonly status?: CourtStatus;
 }

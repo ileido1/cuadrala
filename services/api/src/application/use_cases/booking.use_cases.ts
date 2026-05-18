@@ -20,6 +20,7 @@ import type {
   ReservationDTO,
   ReservationStatus,
 } from '../../domain/entities/booking/reservation.entity.js';
+import { calculateReservationTotalCentsSV } from '../../domain/services/booking/pricing.service.js';
 import {
   ReservationType,
   Visibility as Vis,
@@ -116,15 +117,17 @@ export class CreateBookingUseCase {
       _input.scheduledAt,
     );
 
-    // Obtener el court para calcular el monto total desde pricePerHourCents
     const COURT = await this._courtRepository.findById(_input.courtId);
     const DURATION = _input.durationMinutes ?? COURT?.durationMinutes ?? 60;
-    let totalAmountCents: number | null = null;
-
-    if (COURT?.pricePerHourCents != null) {
-      // Calcular: pricePerHourCents * (durationMinutes / 60)
-      totalAmountCents = Math.round((COURT.pricePerHourCents * DURATION) / 60);
-    }
+    const totalAmountCents =
+      COURT != null
+        ? calculateReservationTotalCentsSV({
+            pricePerHourCents: COURT.pricePerHourCents,
+            pricingTiers: COURT.pricingTiers,
+            scheduledAt: _input.scheduledAt,
+            durationMinutes: DURATION,
+          })
+        : null;
 
     // Construir el DTO de input para el repositorio
     const INPUT_DTO: CreateBookingInputDTO = {

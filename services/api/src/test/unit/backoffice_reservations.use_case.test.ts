@@ -50,6 +50,7 @@ function createMockCourtRepository() {
       id: COURT_ID,
       durationMinutes: 60,
       pricePerHourCents: null,
+      pricingTiers: [],
     }),
     findByVenue: vi.fn(),
     create: vi.fn(),

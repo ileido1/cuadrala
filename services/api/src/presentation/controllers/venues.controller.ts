@@ -93,6 +93,8 @@ export async function postCourtCON(_req: Request, _res: Response): Promise<void>
     ...(BODY.lighting !== undefined ? { lighting: BODY.lighting } : {}),
     ...(BODY.surfaceType !== undefined ? { surfaceType: BODY.surfaceType } : {}),
     ...(BODY.durationMinutes !== undefined ? { durationMinutes: BODY.durationMinutes } : {}),
+    ...(BODY.pricePerHourCents !== undefined ? { pricePerHourCents: BODY.pricePerHourCents } : {}),
+    ...(BODY.capacity !== undefined ? { capacity: BODY.capacity } : {}),
   };
 
   const RESULT = await CREATE_COURT_UC.executeSV(INPUT);

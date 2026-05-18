@@ -122,6 +122,8 @@ export async function patchVenueCON(_req: Request, _res: Response): Promise<void
     email: BODY.email,
     description: BODY.description,
     openingHours: BODY.openingHours,
+    pricingCurrency: BODY.pricingCurrency,
+    displayCurrency: BODY.displayCurrency,
   });
 
   _res.status(200).json({

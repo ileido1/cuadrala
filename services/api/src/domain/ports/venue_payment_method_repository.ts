@@ -20,6 +20,7 @@ export interface VenuePaymentMethodRepository {
     name: string;
     config: VenuePaymentMethodDTO['config'];
     position: number;
+    settlementCurrency?: string;
   }): Promise<VenuePaymentMethodDTO>;
 
   /** Actualiza un método de pago. */
@@ -29,6 +30,7 @@ export interface VenuePaymentMethodRepository {
     config?: VenuePaymentMethodDTO['config'];
     isActive?: boolean;
     position?: number;
+    settlementCurrency?: string;
   }): Promise<VenuePaymentMethodDTO>;
 
   /** Elimina un método de pago. */

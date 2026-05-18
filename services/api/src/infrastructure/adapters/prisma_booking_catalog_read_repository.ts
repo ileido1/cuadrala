@@ -6,14 +6,10 @@ export class PrismaBookingCatalogReadRepository implements BookingCatalogReadRep
   async resolveSportIdForCourtSV(_courtId: string): Promise<string> {
     const COURT = await PRISMA.court.findUnique({
       where: { id: _courtId },
-      select: { sportId: true, sportType: true },
+      select: { sportType: true },
     });
     if (COURT === null) {
       throw new AppError('CANCHA_NO_ENCONTRADA', 'La cancha no existe.', 404);
-    }
-
-    if (COURT.sportId) {
-      return COURT.sportId;
     }
 
     const SPORT = await PRISMA.sport.findFirst({

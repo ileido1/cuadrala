@@ -5,6 +5,7 @@ import { moneyAmountDtoFromMinorSV } from '../dto/money.dto.js';
 import type { MoneyAmountDTO } from '../dto/money.dto.js';
 import { parseCurrencyCode } from '../../domain/money/currency_code.js';
 import { isReservationPaymentLedgerEnabledSV } from '../../config/feature_flags.js';
+import { calculateReservationTotalCentsSV } from '../../domain/services/booking/pricing.service.js';
 
 export class GetReservationPaymentSummaryUseCase {
   constructor(
@@ -35,13 +36,19 @@ export class GetReservationPaymentSummaryUseCase {
       throw new AppError('RESERVA_NO_ENCONTRADA', 'La reserva indicada no existe.', 404);
     }
 
-    if (RESERVATION.court?.pricePerHourCents != null) {
+    if (RESERVATION.court != null) {
       const DURATION =
         RESERVATION.durationMinutes ?? RESERVATION.court.durationMinutes ?? 60;
-      const TOTAL_FROM_COURT = Math.round(
-        (RESERVATION.court.pricePerHourCents * DURATION) / 60,
-      );
-      if (RESERVATION.totalAmountCents !== TOTAL_FROM_COURT) {
+      const TOTAL_FROM_COURT = calculateReservationTotalCentsSV({
+        pricePerHourCents: RESERVATION.court.pricePerHourCents,
+        pricingTiers: RESERVATION.court.pricingTiers,
+        scheduledAt: RESERVATION.scheduledAt,
+        durationMinutes: DURATION,
+      });
+      if (
+        TOTAL_FROM_COURT != null
+        && RESERVATION.totalAmountCents !== TOTAL_FROM_COURT
+      ) {
         await this._reservationReadRepository.updateTotalAmountCentsSV(
           _reservationId,
           TOTAL_FROM_COURT,

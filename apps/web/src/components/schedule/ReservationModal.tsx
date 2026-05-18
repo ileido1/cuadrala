@@ -1,103 +1,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Court, CreateReservationRequest, CourtPricingTier, ReservationResponsible, UserSearchResult, ReservationListItem } from '~/types/api';
+import type {
+  Court,
+  CreateReservationRequest,
+  ReservationResponsible,
+  UserSearchResult,
+  ReservationListItem,
+} from '~/types/api';
 import { apiClient } from '~/lib/api-client';
+import {
+  findFirstSelectableBlockTime,
+  formatDurationLabel,
+  generateCourtBlockSlots,
+  getMinTimeForToday,
+} from '~/lib/court-time-slots';
+import { buildScheduledAtIso } from '~/lib/schedule-datetime';
 
 interface ReservationModalProps {
   venueId: string;
   courts: Court[];
   defaultDate?: string;
   onClose: () => void;
-  onSuccess: () => void;
-}
-
-interface TimeSlot {
-  time: string;
-  endTime: string;
-  pricePerHourCents: number | null;
-  tierLabel: string | null;
-  isOccupied: boolean;
+  onSuccess: (_reservationDate: string) => void;
 }
 
 type ResponsibleType = 'player' | 'guest';
 
-/**
- * Check if a slot overlaps with any existing reservation.
- * A slot (slotTime to slotTime + durationMinutes) overlaps if:
- * slotTime < reservationEnd AND slotEnd > reservationStart
- */
-function isSlotOccupied(slotTime: string, slotDuration: number, reservations: ReservationListItem[]): boolean {
-  const [sh, sm] = slotTime.split(':').map(Number);
-  const slotStartMinutes = sh * 60 + sm;
-  const slotEndMinutes = slotStartMinutes + slotDuration;
-
-  return reservations.some((res) => {
-    const resTime = res.scheduledAt.split('T')[1]?.substring(0, 5) ?? res.scheduledAt;
-    const [rh, rm] = resTime.split(':').map(Number);
-    const resStartMinutes = rh * 60 + rm;
-    const resEndMinutes = resStartMinutes + res.durationMinutes;
-
-    // Overlap: slot starts before reservation ends AND slot ends after reservation starts
-    return slotStartMinutes < resEndMinutes && slotEndMinutes > resStartMinutes;
-  });
-}
-
-function generateTimeSlots(durationMinutes: number, pricingTiers: CourtPricingTier[] | undefined, reservations: ReservationListItem[]): TimeSlot[] {
-  const slots: TimeSlot[] = [];
-  // Step equals duration so consecutive slots are adjacent (no gaps, no overlap)
-  const step = durationMinutes;
-
-  for (let h = 8; h < 23; h++) {
-    for (let m = 0; m < 60; m += step) {
-      const startTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      const [eh, em] = [h, m + durationMinutes];
-      const endHour = eh + Math.floor(em / 60);
-      const endMin = em % 60;
-      const endTime = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
-
-      // Check if slot is occupied
-      const isOccupied = isSlotOccupied(startTime, durationMinutes, reservations);
-
-      // Find matching pricing tier
-      let pricePerHourCents: number | null = null;
-      let tierLabel: string | null = null;
-      if (pricingTiers && pricingTiers.length > 0) {
-        const [sh, sm] = startTime.split(':').map(Number);
-        const tier = pricingTiers.find((t) => {
-          const [ts, tm] = t.startTime.split(':').map(Number);
-          const [te, tem] = t.endTime.split(':').map(Number);
-          const slotMinutes = sh * 60 + sm;
-          const tierStartMinutes = ts * 60 + tm;
-          const tierEndMinutes = te * 60 + tem;
-          return slotMinutes >= tierStartMinutes && slotMinutes < tierEndMinutes;
-        });
-        if (tier) {
-          pricePerHourCents = tier.pricePerHourCents;
-          tierLabel = tier.label;
-        }
-      }
-
-      slots.push({ time: startTime, endTime, pricePerHourCents, tierLabel, isOccupied });
-    }
-  }
-  return slots;
-}
-
 function isToday(dateStr: string): boolean {
   const today = new Date().toISOString().split('T')[0];
   return dateStr === today;
-}
-
-function getMinTimeForToday(): string {
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const roundedMinute = Math.ceil(currentMinute / 30) * 30;
-  if (roundedMinute >= 60) {
-    return `${String(currentHour + 1).padStart(2, '0')}:00`;
-  }
-  return `${String(currentHour).padStart(2, '0')}:${String(roundedMinute).padStart(2, '0')}`;
 }
 
 export function ReservationModal({ venueId, courts, defaultDate, onClose, onSuccess }: ReservationModalProps) {
@@ -105,7 +37,6 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
   const [courtId, setCourtId] = useState(courts[0]?.id ?? '');
   const [date, setDate] = useState(defaultDate ?? today);
   const [selectedTime, setSelectedTime] = useState<string>('08:00');
-  const [durationMinutes, setDurationMinutes] = useState(courts[0]?.durationMinutes ?? 60);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,19 +53,17 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
   const [existingReservations, setExistingReservations] = useState<ReservationListItem[]>([]);
 
   const selectedCourt = courts.find((c) => c.id === courtId);
+  const blockDurationMinutes = selectedCourt?.durationMinutes ?? 60;
   const pricingTiers = selectedCourt?.pricingTiers;
-  const minTime = isToday(date) ? getMinTimeForToday() : '00:00';
+  const minTime = isToday(date)
+    ? getMinTimeForToday(blockDurationMinutes)
+    : '00:00';
 
-  // Generate slots based on duration, pricing tiers and existing reservations
-  const timeSlots = generateTimeSlots(durationMinutes, pricingTiers, existingReservations);
-
-  // When court changes, update duration to match court's default duration
-  useEffect(() => {
-    const court = courts.find((c) => c.id === courtId);
-    if (court?.durationMinutes) {
-      setDurationMinutes(court.durationMinutes);
-    }
-  }, [courtId, courts]);
+  const timeSlots = generateCourtBlockSlots({
+    blockDurationMinutes,
+    pricingTiers,
+    reservations: existingReservations,
+  });
 
   // Fetch existing reservations for this court and date
   useEffect(() => {
@@ -157,20 +86,19 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
     fetchReservations();
   }, [courtId, date, venueId]);
 
-  // When duration changes, reset selected time if it's no longer valid
   useEffect(() => {
-    const validTimes = timeSlots.map((s) => s.time);
-    if (!validTimes.includes(selectedTime)) {
-      setSelectedTime(validTimes.find((t) => t >= minTime) ?? validTimes[0] ?? '08:00');
+    const current = timeSlots.find((s) => s.time === selectedTime);
+    const isCurrentValid =
+      current != null && !current.isOccupied && current.time >= minTime;
+    if (isCurrentValid) {
+      return;
     }
-  }, [durationMinutes, date]);
-
-  // When date changes to today, adjust selected time if it's in the past
-  useEffect(() => {
-    if (isToday(date) && selectedTime < minTime) {
-      setSelectedTime(minTime);
-    }
-  }, [date, minTime, selectedTime]);
+    const next = findFirstSelectableBlockTime(timeSlots, minTime);
+    setSelectedTime(
+      next ?? timeSlots.find((s) => !s.isOccupied)?.time ?? '08:00',
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo re-sincronizar al cambiar cancha/fecha/bloque/reservas
+  }, [courtId, date, blockDurationMinutes, existingReservations, minTime]);
 
   const buildResponsible = (): ReservationResponsible | undefined => {
     if (responsibleType === 'player' && selectedPlayerId) {
@@ -242,18 +170,18 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
     setError(null);
 
     try {
-      const scheduledAt = `${date}T${selectedTime}:00Z`;
+      const scheduledAt = buildScheduledAtIso(date, selectedTime);
       const responsible = buildResponsible();
       const data: CreateReservationRequest = {
         courtId,
         scheduledAt,
-        durationMinutes,
+        durationMinutes: blockDurationMinutes,
         notes: notes || undefined,
         ...(responsible && { responsible }),
       };
 
       await apiClient.venues.reservations.create(venueId, data);
-      onSuccess();
+      onSuccess(date);
       onClose();
     } catch {
       setError('No se pudo crear la reserva. Intenta de nuevo.');
@@ -322,23 +250,20 @@ export function ReservationModal({ venueId, courts, defaultDate, onClose, onSucc
             />
           </div>
 
-          {/* Duration */}
-          <div>
-            <label htmlFor="duration" className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Duración
-            </label>
-            <select
-              id="duration"
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(Number(e.target.value))}
-              className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            >
-              <option value={30}>30 min</option>
-              <option value={60}>1 hora</option>
-              <option value={90}>1.5 horas</option>
-              <option value={120}>2 horas</option>
-            </select>
-          </div>
+          {selectedCourt && (
+            <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Bloque de la cancha
+              </p>
+              <p className="text-sm text-gray-800 mt-0.5">
+                {formatDurationLabel(blockDurationMinutes)}
+                <span className="text-gray-500 font-normal">
+                  {' '}
+                  (definido al crear la cancha)
+                </span>
+              </p>
+            </div>
+          )}
 
           {/* Time Slots Chips */}
           <div>

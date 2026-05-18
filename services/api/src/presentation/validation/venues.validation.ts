@@ -55,6 +55,7 @@ export const UPDATE_COURT_BODY_SCHEMA = z
     pricePerHourCents: z.number().int().nonnegative().nullable().optional(),
     capacity: z.string().max(20).nullable().optional(),
     durationMinutes: z.number().int().positive().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'MAINTENANCE']).optional(),
   })
   .strict();
 
@@ -65,7 +66,7 @@ export const COURT_ID_PARAM_SCHEMA = z
 
 export const LIST_COURTS_QUERY_SCHEMA = z
   .object({
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'MAINTENANCE']).optional(),
   })
   .strict();
 
@@ -126,6 +127,8 @@ export const UPDATE_VENUE_BODY_SCHEMA = z
       })
       .nullable()
       .optional(),
+    pricingCurrency: z.enum(['BS', 'USD', 'EUR']).optional(),
+    displayCurrency: z.enum(['BS', 'USD', 'EUR']).optional(),
   })
   .strict();
 

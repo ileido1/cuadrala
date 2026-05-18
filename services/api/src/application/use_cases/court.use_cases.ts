@@ -74,7 +74,7 @@ export class CreateCourtUseCase {
 
 export interface ListCourtsInputDTO {
   venueId: string;
-  status?: 'ACTIVE' | 'INACTIVE';
+  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 }
 
 export interface ListCourtsOutputDTO {
@@ -98,6 +98,8 @@ export class ListCourtsUseCase {
       status = CourtStatusEnum.INACTIVE;
     } else if (_input.status === 'ACTIVE') {
       status = CourtStatusEnum.ACTIVE;
+    } else if (_input.status === 'MAINTENANCE') {
+      status = CourtStatusEnum.MAINTENANCE;
     }
 
     const courts = await this._courtRepository.findByVenue(_input.venueId, status);
@@ -119,6 +121,7 @@ export interface UpdateCourtInputDTO {
   pricePerHourCents?: number | null;
   capacity?: string | null;
   durationMinutes?: number;
+  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 }
 
 export interface UpdateCourtOutputDTO {
@@ -154,6 +157,13 @@ export class UpdateCourtUseCase {
       ...(_input.pricePerHourCents !== undefined ? { pricePerHourCents: _input.pricePerHourCents } : {}),
       ...(_input.capacity !== undefined ? { capacity: _input.capacity } : {}),
       ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
+      ...(_input.status === 'INACTIVE'
+        ? { status: CourtStatusEnum.INACTIVE }
+        : _input.status === 'MAINTENANCE'
+          ? { status: CourtStatusEnum.MAINTENANCE }
+          : _input.status === 'ACTIVE'
+            ? { status: CourtStatusEnum.ACTIVE }
+            : {}),
     };
 
     const updated = await this._courtRepository.update(_input.courtId, INPUT);

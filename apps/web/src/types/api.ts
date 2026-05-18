@@ -71,6 +71,8 @@ export interface TransactionHistoryResponse {
 }
 
 // Venue update
+export type VenueCurrencyCode = 'BS' | 'USD' | 'EUR';
+
 export interface VenueUpdateData {
   name?: string;
   address?: string | null;
@@ -80,6 +82,8 @@ export interface VenueUpdateData {
   latitude?: number | null;
   longitude?: number | null;
   openingHours?: Record<string, { open: string; close: string }> | null;
+  pricingCurrency?: VenueCurrencyCode;
+  displayCurrency?: VenueCurrencyCode;
 }
 
 export interface PendingTransaction {
@@ -116,7 +120,7 @@ export interface PendingPayment {
 export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'refunded';
 
 // Court types
-export type CourtStatus = 'ACTIVE' | 'INACTIVE';
+export type CourtStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 export type SportType = 'PADEL' | 'TENNIS';
 
 export interface CourtPricingTier {

@@ -11,14 +11,19 @@ import { prismaToCourtEntity } from './prisma_court_mapper.js';
 
 export class PrismaCourtRepository implements ICourtRepository {
   async findById(_id: string): Promise<Court | null> {
-    const MODEL = await PRISMA.court.findUnique({ where: { id: _id } });
+    const MODEL = await PRISMA.court.findUnique({
+      where: { id: _id },
+      include: { pricingTiers: true },
+    });
     return prismaToCourtEntity(MODEL);
   }
 
   async findByVenue(_venueId: string, _status?: CourtStatus): Promise<Court[]> {
     const WHERE: Record<string, unknown> = { venueId: _venueId };
     if (_status !== undefined) {
-      WHERE.status = _status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      WHERE.status = _status;
+    } else {
+      WHERE.status = { not: 'INACTIVE' };
     }
     const MODELS = await PRISMA.court.findMany({
       where: WHERE,
@@ -56,6 +61,7 @@ export class PrismaCourtRepository implements ICourtRepository {
     if (_data.pricePerHourCents !== undefined) DATA.pricePerHourCents = _data.pricePerHourCents;
     if (_data.capacity !== undefined) DATA.capacity = _data.capacity;
     if (_data.durationMinutes !== undefined) DATA.durationMinutes = _data.durationMinutes;
+    if (_data.status !== undefined) DATA.status = _data.status;
 
     const MODEL = await PRISMA.court.update({
       where: { id: _id },

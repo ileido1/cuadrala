@@ -115,6 +115,12 @@ export class PrismaVenueRepository implements VenueRepository {
         ...(_data.openingHours !== undefined
           ? { openingHours: _data.openingHours as object }
           : {}),
+        ...(_data.pricingCurrency !== undefined
+          ? { pricingCurrency: _data.pricingCurrency }
+          : {}),
+        ...(_data.displayCurrency !== undefined
+          ? { displayCurrency: _data.displayCurrency }
+          : {}),
       },
       select: {
         id: true,
@@ -126,6 +132,8 @@ export class PrismaVenueRepository implements VenueRepository {
         address: true,
         latitude: true,
         longitude: true,
+        pricingCurrency: true,
+        displayCurrency: true,
       },
     });
 
@@ -139,6 +147,8 @@ export class PrismaVenueRepository implements VenueRepository {
       address: UPDATED.address,
       latitude: UPDATED.latitude,
       longitude: UPDATED.longitude,
+      pricingCurrency: UPDATED.pricingCurrency,
+      displayCurrency: UPDATED.displayCurrency,
     };
   }
 

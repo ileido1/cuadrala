@@ -6,9 +6,15 @@ export type PaymentReservationDetailDTO = {
   pricingCurrency: string;
   totalAmountMinor: bigint | null;
   paidAmountMinor: bigint;
+  scheduledAt: Date;
   court: {
     pricePerHourCents: number | null;
     durationMinutes: number | null;
+    pricingTiers: Array<{
+      startTime: string;
+      endTime: string;
+      pricePerHourCents: number;
+    }>;
   } | null;
 };
 

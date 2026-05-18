@@ -189,6 +189,7 @@ enum AvailabilitySlot {
 enum CourtStatus {
   ACTIVE
   INACTIVE
+  MAINTENANCE
 }
 
 enum ReservationType {

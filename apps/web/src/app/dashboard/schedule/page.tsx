@@ -8,6 +8,14 @@ import { ReservationModal } from '~/components/schedule/ReservationModal';
 import { BlockSlotModal } from '~/components/schedule/BlockSlotModal';
 import { ReservationDetailModal } from '~/components/schedule/ReservationDetailModal';
 import { DayPicker } from '~/components/schedule/DayPicker';
+import {
+  scheduledAtToCalendarDate,
+  wallClockRangeFromScheduledAt,
+} from '~/lib/schedule-datetime';
+import {
+  DayBookingsLayer,
+  type DayBookingInput,
+} from '~/components/schedule/DayBookingsLayer';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -75,76 +83,12 @@ function buildWeekColumns(baseDateStr: string): DayColumn[] {
   });
 }
 
-function getKindColor(kind: BookingKind, status: BookingStatus): string {
-  if (status === 'cancelled') return 'bg-red-400';
-  return {
-    match:   'bg-blue-500',
-    direct:  'bg-emerald-500',
-    blocked: 'bg-red-500',
-  }[kind];
-}
-
-function getKindLabel(kind: BookingKind): string {
-  switch (kind) {
-    case 'match':   return 'Partido';
-    case 'direct':  return 'Reserva';
-    case 'blocked': return 'Bloqueado';
-  }
-}
-
 // ─── Components ────────────────────────────────────────────────────────────
-
-interface BookingCardProps {
-  booking: Booking;
-  cellHeight: number;
-  onClick: () => void;
-}
-
-function BookingCard({ booking, cellHeight, onClick }: BookingCardProps) {
-  const [h, m] = booking.timeStart.split(':').map(Number);
-  const startHour = h;
-  const durationH = () => {
-    const [eh, em] = booking.timeEnd.split(':').map(Number);
-    return (eh - h) + (em - m) / 60;
-  };
-  const heightPct = (durationH() / 1) * cellHeight;
-  const topOffset = ((startHour - 8) / 1) * cellHeight;
-
-  // Badge: payment status for non-cancelled reservations
-  const badge = booking.paymentStatus ? (
-    <span className={`ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium ${
-      booking.paymentStatus === 'PAID' ? 'bg-green-400 text-green-900' :
-      booking.paymentStatus === 'PARTIAL' ? 'bg-yellow-100 text-yellow-700 border border-yellow-300' :
-      'bg-gray-800/80 text-white'
-    }`}>
-      {booking.paymentStatus === 'PAID' ? 'Pagado' :
-       booking.paymentStatus === 'PARTIAL' ? `Parcial` : 'Sin pagar'}
-    </span>
-  ) : null;
-
-  return (
-    <button
-      onClick={onClick}
-      className={`absolute left-0 right-0 rounded-md px-2 flex flex-col justify-center text-xs font-medium text-white shadow-sm transition-opacity hover:opacity-80 ${getKindColor(booking.kind, booking.status)}`}
-      style={{
-        top: `${topOffset}px`,
-        height: `${Math.max(heightPct - 4, 20)}px`,
-        minHeight: '20px',
-      }}
-    >
-      <span className="block truncate text-center leading-tight">
-        {booking.playerName}
-        {badge && <>{' '}{badge}</>}
-      </span>
-      <span className="block text-[10px] opacity-75 text-center">{getKindLabel(booking.kind)}</span>
-    </button>
-  );
-}
 
 interface WeeklyCalendarProps {
   weekColumns: DayColumn[];
   cellHeight: number;
-  onSlotClick: (booking: Booking) => void;
+  onSlotClick: (booking: DayBookingInput) => void;
   hourLabels: string[];
 }
 
@@ -204,15 +148,12 @@ function WeeklyCalendar({ weekColumns, cellHeight, onSlotClick, hourLabels }: We
         >
           <div />
           {weekColumns.map((col) => (
-            <div key={col.dateStr} className="relative">
-              {col.bookings.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  cellHeight={cellHeight}
-                  onClick={() => onSlotClick(booking)}
-                />
-              ))}
+            <div key={col.dateStr} className="relative min-h-0">
+              <DayBookingsLayer
+                bookings={col.bookings}
+                cellHeight={cellHeight}
+                onBookingClick={onSlotClick}
+              />
             </div>
           ))}
         </div>
@@ -265,7 +206,11 @@ export default function SchedulePage() {
     if (!currentVenue) return;
 
     Promise.all([
-      apiClient.venues.bookings.list(currentVenue.id, { from: weekFrom, to: weekTo }),
+      apiClient.venues.bookings.list(currentVenue.id, {
+        from: weekFrom,
+        to: weekTo,
+        limit: 100,
+      }),
       apiClient.venues.courts.list(currentVenue.id, { status: 'ACTIVE' }),
     ])
       .then(([bookingsRes, courtsRes]) => {
@@ -290,19 +235,14 @@ export default function SchedulePage() {
     return columns.map((col) => {
       const dayBookings = bookings.filter((booking) => {
         if (!booking.scheduledAt) return false;
-        const bookingDate = new Date(booking.scheduledAt).toISOString().split('T')[0];
-        return bookingDate === col.dateStr;
+        return scheduledAtToCalendarDate(booking.scheduledAt) === col.dateStr;
       });
 
       const bookingsAsCalendar: Booking[] = dayBookings.map((booking): Booking => {
-        const scheduledDate = new Date(booking.scheduledAt);
-        const hours = scheduledDate.getHours();
-        const minutes = scheduledDate.getMinutes();
-        const startHour = String(hours).padStart(2, '0');
-        const startMin = String(minutes).padStart(2, '0');
-        const totalMins = minutes + (booking.durationMinutes ?? 60);
-        const endMin = totalMins % 60;
-        const endHour = String(hours + Math.floor(totalMins / 60)).padStart(2, '0');
+        const { timeStart, timeEnd } = wallClockRangeFromScheduledAt(
+          booking.scheduledAt,
+          booking.durationMinutes ?? 60,
+        );
 
         const status: BookingStatus =
           booking.status === 'CONFIRMED' ? 'confirmed' : 'cancelled';
@@ -312,13 +252,15 @@ export default function SchedulePage() {
             ? `Match ${booking.participantCount ?? 0}/${booking.maxParticipants ?? 4}`
             : booking.type === 'BLOCKED'
               ? 'Bloqueado'
-              : booking.courtName ?? booking.notes ?? 'Reserva';
+              : booking.responsibleName?.trim()
+                || booking.notes?.trim()
+                || 'Reserva';
 
         return {
           id: booking.id,
           playerName,
-          timeStart: `${startHour}:${startMin}`,
-          timeEnd: `${endHour}:${String(endMin).padStart(2, '0')}`,
+          timeStart,
+          timeEnd,
           status,
           courtName: booking.courtName ?? undefined,
           kind:
@@ -333,8 +275,35 @@ export default function SchedulePage() {
     });
   }, [bookings, weekFrom]);
 
-  const handleSlotClick = (booking: Booking) => {
-    setSelectedBooking(booking);
+  const handleSlotClick = (booking: DayBookingInput) => {
+    const full = bookings.find((b) => b.id === booking.id);
+    if (!full) return;
+    const { timeStart, timeEnd } = wallClockRangeFromScheduledAt(
+      full.scheduledAt,
+      full.durationMinutes ?? 60,
+    );
+    setSelectedBooking({
+      id: full.id,
+      playerName:
+        full.type === 'MATCH'
+          ? `Match ${full.participantCount ?? 0}/${full.maxParticipants ?? 4}`
+          : full.type === 'BLOCKED'
+            ? 'Bloqueado'
+            : full.responsibleName?.trim() || full.notes?.trim() || 'Reserva',
+      timeStart,
+      timeEnd,
+      status: full.status === 'CONFIRMED' ? 'confirmed' : 'cancelled',
+      courtName: full.courtName ?? undefined,
+      kind:
+        full.type === 'MATCH'
+          ? 'match'
+          : full.type === 'BLOCKED'
+            ? 'blocked'
+            : 'direct',
+      matchStatus: full.matchStatus ?? undefined,
+      paymentStatus: full.paymentStatus,
+      _booking: full,
+    });
   };
 
   const handleModalClose = () => {
@@ -343,12 +312,31 @@ export default function SchedulePage() {
     setSelectedBooking(null);
   };
 
-  const handleSuccess = async () => {
+  const handleSuccess = async (createdDate?: string) => {
+    if (createdDate) {
+      setSelectedDate(createdDate);
+    }
     if (!currentVenue) return;
+    const from = createdDate
+      ? (() => {
+          const [y, m, d] = createdDate.split('-').map(Number);
+          const date = new Date(y, m - 1, d);
+          const dayOfWeek = date.getDay();
+          const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          const monday = new Date(date);
+          monday.setDate(date.getDate() + mondayOffset);
+          const sunday = new Date(monday);
+          sunday.setDate(monday.getDate() + 6);
+          const fmt = (dt: Date) =>
+            `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+          return { weekFrom: fmt(monday), weekTo: fmt(sunday) };
+        })()
+      : { weekFrom, weekTo };
     try {
       const bookingsRes = await apiClient.venues.bookings.list(currentVenue.id, {
-        from: weekFrom,
-        to: weekTo,
+        from: from.weekFrom,
+        to: from.weekTo,
+        limit: 100,
       });
       const bookingsData = bookingsRes.data.data as { items: BookingItem[] };
       setBookings(bookingsData.items);
@@ -481,7 +469,7 @@ export default function SchedulePage() {
       {/* Weekly Calendar */}
       {!loading && !error && viewMode === 'calendar' && (
         <div className="animate-fade-in stagger-1 overflow-x-auto">
-          <WeeklyCalendar weekColumns={weekColumns} cellHeight={60} onSlotClick={handleSlotClick} hourLabels={hourLabels} />
+          <WeeklyCalendar weekColumns={weekColumns} cellHeight={64} onSlotClick={handleSlotClick} hourLabels={hourLabels} />
         </div>
       )}
 

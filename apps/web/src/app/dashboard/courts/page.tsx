@@ -1,8 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  CourtPricingTiersForm,
+  courtTiersToDrafts,
+  type PricingTierDraft,
+  validateTierDrafts,
+} from '~/components/courts/CourtPricingTiersForm';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
+import {
+  parseBasePriceCents,
+  syncCourtPricingTiers,
+} from '~/lib/court-pricing-sync';
+import {
+  centsToFormattedMajorInput,
+  formatCentsWithCurrency,
+  resolveCurrencyCode,
+} from '~/lib/format-money';
 import type { Court, SportType } from '~/types/api';
 
 type TabValue = 'all' | 'active' | 'maintenance';
@@ -12,7 +27,18 @@ interface CourtFormData {
   sportType: string;
   surface: string;
   durationMinutes: number;
+  capacity: string;
+  basePricePerHour: string;
 }
+
+const EMPTY_COURT_FORM: CourtFormData = {
+  name: '',
+  sportType: '',
+  surface: '',
+  durationMinutes: 60,
+  capacity: '4v4',
+  basePricePerHour: '',
+};
 
 interface Sport {
   id: string;
@@ -20,14 +46,17 @@ interface Sport {
   name: string;
 }
 
-// Court display status mapping for UI demo
-const COURT_DISPLAY_STATUS: Record<string, 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'> = {
-  '1': 'ACTIVE',
-  '2': 'ACTIVE',
-  '3': 'ACTIVE',
-  '4': 'MAINTENANCE',
-  '5': 'INACTIVE',
-};
+function formatDurationLabel(_minutes: number): string {
+  const _hours = Math.floor(_minutes / 60);
+  const _mins = _minutes % 60;
+  if (_hours === 0) {
+    return `${_mins} min`;
+  }
+  if (_mins === 0) {
+    return `${_hours} h`;
+  }
+  return `${_hours} h ${_mins} min`;
+}
 
 // Sport icon component
 function SportIcon({ type, className = 'w-5 h-5' }: { type: SportType; className?: string }) {
@@ -47,148 +76,179 @@ function SportIcon({ type, className = 'w-5 h-5' }: { type: SportType; className
   );
 }
 
-// Capacity icon
-function CapacityIcon({ className = 'w-5 h-5' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.1a36.346 36.346 0 011.622-3.395m6.382-3.232a23.88 23.88 0 00-2.149-2.193M7.755 14.406l-1.06-1.06a1.5 1.5 0 012.121-2.121l1.06 1.06a1.5 1.5 0 01-2.121 2.121zM12 12l.929-.929a2.5 2.5 0 013.536 3.536L12 12z" />
-    </svg>
-  );
-}
+function CourtCard({
+  court,
+  animationIndex,
+  currency,
+  onEdit,
+  onDelete,
+  onSetMaintenance,
+  onActivate,
+}: {
+  court: Court;
+  animationIndex: number;
+  currency: ReturnType<typeof resolveCurrencyCode>;
+  onEdit: (court: Court) => void;
+  onDelete: (court: Court) => void;
+  onSetMaintenance: (court: Court) => void;
+  onActivate: (court: Court) => void;
+}) {
+  const statusBadge =
+    court.status === 'ACTIVE' ? (
+      <span className="badge badge-success shrink-0">Activa</span>
+    ) : court.status === 'MAINTENANCE' ? (
+      <span className="badge badge-warning shrink-0">Mantenimiento</span>
+    ) : (
+      <span className="badge badge-error shrink-0">Inactiva</span>
+    );
 
-// Clock/duration icon
-function ClockIcon({ className = 'w-5 h-5' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
+  const accentClass =
+    court.status === 'ACTIVE'
+      ? 'border-l-green-500'
+      : court.status === 'MAINTENANCE'
+        ? 'border-l-amber-500'
+        : 'border-l-slate-400';
 
-// Court card component
-function CourtCard({ court, index, onEdit, onDelete }: { court: Court; index: number; onEdit: (court: Court) => void; onDelete: (court: Court) => void }) {
-  const displayStatus = court.status === 'ACTIVE' ? 'ACTIVE' : court.status === 'INACTIVE' ? 'INACTIVE' : 'MAINTENANCE';
-
-  const getStatusBadge = (status: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE') => {
-    switch (status) {
-      case 'ACTIVE':
-        return <span className="badge badge-success">Activa</span>;
-      case 'MAINTENANCE':
-        return <span className="badge badge-warning">Mantenimiento</span>;
-      case 'INACTIVE':
-        return <span className="badge badge-error">Inactiva</span>;
-      default:
-        return <span className="badge badge-info">Activa</span>;
-    }
-  };
-
-  const getCardAccentColor = (status: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE') => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'border-l-4 border-l-green-500';
-      case 'MAINTENANCE':
-        return 'border-l-4 border-l-amber-500';
-      case 'INACTIVE':
-        return 'border-l-4 border-l-blue-500';
-      default:
-        return 'border-l-4 border-l-green-500';
-    }
-  };
+  const durationLabel = formatDurationLabel(court.durationMinutes ?? 60);
+  const hasBasePrice =
+    court.pricePerHourCents != null && court.pricePerHourCents > 0;
+  const tiers = court.pricingTiers ?? [];
+  const hasPricing = hasBasePrice || tiers.length > 0;
 
   return (
-    <div
-      className={`card p-6 flex flex-col gap-4 ${getCardAccentColor(displayStatus)} animate-fade-in`}
-      style={{ animationDelay: `${index * 50}ms` }}
+    <article
+      className={`card flex flex-col border-l-4 ${accentClass} animate-fade-in overflow-hidden`}
+      style={{ animationDelay: `${animationIndex * 50}ms` }}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-5xl font-bold text-slate-800 leading-none">
-            {index + 1}
-          </span>
-          {getStatusBadge(displayStatus)}
-        </div>
-      </div>
-
-      {/* Court Info */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-slate-600">
-          <SportIcon type={court.sportType} />
-          <span className="font-medium">{court.sportType}</span>
-          <span className="text-slate-400">•</span>
-          <span className="text-sm">{court.surfaceType || 'Sin superficie'}</span>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-200">
-        <div className="text-center">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Capacidad</p>
-          <p className="text-lg font-bold text-slate-800 flex items-center justify-center gap-1">
-            <span>{court.capacity || '-'}</span>
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Duración</p>
-          <p className="text-lg font-bold text-slate-800 flex items-center justify-center gap-1">
-            <span>
-              {(() => {
-                const mins = court.durationMinutes ?? 60;
-                const hours = Math.floor(mins / 60);
-                const minutes = mins % 60;
-                return `${hours}:${minutes.toString().padStart(2, '0')}h`;
-              })()}
-            </span>
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Iluminación</p>
-          <p className="text-lg font-bold text-slate-800 flex items-center justify-center gap-1">
-            <span>{court.lighting ? 'Sí' : 'No'}</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Pricing Tiers */}
-      {court.pricingTiers && court.pricingTiers.length > 0 ? (
-        <div className="space-y-2">
-          <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Tarifas por franja</p>
-          <div className="flex flex-wrap gap-2">
-            {court.pricingTiers.map((tier) => (
-              <div
-                key={tier.id}
-                className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg text-xs"
-              >
-                <span className="font-medium text-slate-700">{tier.label}</span>
-                <span className="text-slate-400">
-                  {tier.startTime}-{tier.endTime}
-                </span>
-                <span className="font-bold text-green-600">
-                  ${(tier.pricePerHourCents / 100).toLocaleString('es-AR')}
-                </span>
-              </div>
-            ))}
+      <div className="p-5 space-y-4">
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-bold text-slate-900 truncate">
+              {court.name}
+            </h2>
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+              <SportIcon type={court.sportType} className="w-4 h-4 shrink-0" />
+              <span>{court.sportType}</span>
+              {court.surfaceType ? (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="truncate">{court.surfaceType}</span>
+                </>
+              ) : null}
+            </p>
           </div>
-        </div>
-      ) : (
-        <p className="text-xs text-slate-400 italic">Sin tarifas configuradas</p>
-      )}
+          {statusBadge}
+        </header>
 
-      {/* Actions */}
-      <div className="flex gap-3 pt-2">
-        <button onClick={() => onEdit(court)} className="btn btn-outline flex-1 text-sm py-2.5">
+        <dl className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
+          <div>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              Capacidad
+            </dt>
+            <dd className="mt-0.5 text-sm font-semibold text-slate-800">
+              {court.capacity || '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              Bloque
+            </dt>
+            <dd className="mt-0.5 text-sm font-semibold text-slate-800">
+              {durationLabel}
+            </dd>
+          </div>
+        </dl>
+
+        <section className="space-y-2">
+          <h3 className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+            Tarifas
+          </h3>
+          {!hasPricing ? (
+            <p className="text-sm text-slate-400 italic">
+              Sin precios configurados
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {hasBasePrice && (
+                <li className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                  <span className="text-slate-600">Precio base</span>
+                  <span className="font-semibold text-green-700 tabular-nums">
+                    {formatCentsWithCurrency(court.pricePerHourCents!, currency)}
+                    <span className="text-slate-400 font-normal">/h</span>
+                  </span>
+                </li>
+              )}
+              {tiers.map((tier) => (
+                <li
+                  key={tier.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 truncate">
+                      {tier.label}
+                    </p>
+                    <p className="text-xs text-slate-500 tabular-nums">
+                      {tier.startTime} – {tier.endTime}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold text-green-700 tabular-nums">
+                    {formatCentsWithCurrency(tier.pricePerHourCents, currency)}
+                    <span className="text-slate-400 font-normal">/h</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <footer className="mt-auto flex flex-wrap gap-2 border-t border-slate-100 bg-slate-50/80 p-3">
+        <button
+          type="button"
+          onClick={() => onEdit(court)}
+          className="btn btn-outline flex-1 min-w-[7rem] text-sm py-2"
+        >
           Editar
         </button>
-        <button onClick={() => onDelete(court)} className="btn btn-outline text-red-600 border-red-200 hover:bg-red-50 flex-1 text-sm py-2.5">
-          Eliminar
-        </button>
-      </div>
-    </div>
+        {court.status === 'ACTIVE' && (
+          <>
+            <button
+              type="button"
+              onClick={() => onSetMaintenance(court)}
+              className="btn btn-outline flex-1 min-w-[7rem] text-sm py-2 text-amber-700 border-amber-200 hover:bg-amber-50"
+            >
+              Mantenimiento
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(court)}
+              className="btn btn-outline flex-1 min-w-[7rem] text-sm py-2 text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Eliminar
+            </button>
+          </>
+        )}
+        {court.status === 'MAINTENANCE' && (
+          <button
+            type="button"
+            onClick={() => onActivate(court)}
+            className="btn btn-outline flex-1 min-w-[7rem] text-sm py-2 text-green-700 border-green-200 hover:bg-green-50"
+          >
+            Activar
+          </button>
+        )}
+      </footer>
+    </article>
   );
 }
+
 
 export default function CourtsPage() {
   const { currentVenue } = useVenue();
+  const venueCurrency = resolveCurrencyCode(
+    currentVenue?.pricingCurrency,
+    currentVenue?.displayCurrency,
+  );
   const [activeTab, setActiveTab] = useState<TabValue>('active');
   const [courts, setCourts] = useState<Court[]>([]);
   const [loading, setLoading] = useState(true);
@@ -200,12 +260,9 @@ export default function CourtsPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [sports, setSports] = useState<Sport[]>([]);
-  const [form, setForm] = useState<CourtFormData>({
-    name: '',
-    sportType: '',
-    surface: '',
-    durationMinutes: 60,
-  });
+  const [form, setForm] = useState<CourtFormData>(EMPTY_COURT_FORM);
+  const [tierDrafts, setTierDrafts] = useState<PricingTierDraft[]>([]);
+  const [originalTierIds, setOriginalTierIds] = useState<string[]>([]);
 
   // Delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -235,40 +292,107 @@ export default function CourtsPage() {
       .finally(() => setLoading(false));
   }, [currentVenue]);
 
-  const filteredCourts = courts.filter((court) => {
-    const displayStatus = court.status === 'ACTIVE' ? 'ACTIVE' : court.status === 'INACTIVE' ? 'INACTIVE' : 'MAINTENANCE';
+  const loadCourts = async () => {
+    if (!currentVenue) return;
+    const courtsRes = await apiClient.venues.courts.list(currentVenue.id);
+    setCourts((courtsRes.data.data?.items ?? courtsRes.data.data ?? []) as Court[]);
+  };
+
+  const resetFormState = (_sportDefault?: string) => {
+    setForm({
+      ...EMPTY_COURT_FORM,
+      sportType: _sportDefault ?? '',
+    });
+    setTierDrafts([]);
+    setOriginalTierIds([]);
+    setEditingCourt(null);
+    setFormError(null);
+  };
+
+  const visibleCourts = courts.filter((court) => court.status !== 'INACTIVE');
+
+  const filteredCourts = visibleCourts.filter((court) => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'active') return displayStatus === 'ACTIVE';
-    if (activeTab === 'maintenance') return displayStatus === 'MAINTENANCE';
+    if (activeTab === 'active') return court.status === 'ACTIVE';
+    if (activeTab === 'maintenance') return court.status === 'MAINTENANCE';
     return true;
   });
 
+  const handleCourtStatusChange = async (
+    _court: Court,
+    _status: 'ACTIVE' | 'MAINTENANCE',
+  ) => {
+    if (!currentVenue) return;
+    try {
+      await apiClient.venues.courts.update(currentVenue.id, _court.id, {
+        status: _status,
+      });
+      await loadCourts();
+      showToast(
+        _status === 'MAINTENANCE'
+          ? 'Cancha en mantenimiento.'
+          : 'Cancha activada correctamente.',
+        'success',
+      );
+    } catch {
+      showToast('No se pudo actualizar el estado de la cancha.', 'error');
+    }
+  };
+
   const handleSave = async () => {
     if (!currentVenue || !form.name.trim()) return;
+
+    const tierValidation = validateTierDrafts(tierDrafts);
+    if (tierValidation !== null) {
+      setFormError(tierValidation);
+      return;
+    }
+
     setSaving(true);
     setFormError(null);
 
     try {
-      const data: { name: string; sportType?: string; surfaceType?: string | null; durationMinutes?: number } = {
+      const pricePerHourCents = parseBasePriceCents(form.basePricePerHour);
+      const data = {
         name: form.name.trim(),
         sportType: form.sportType || undefined,
         surfaceType: form.surface.trim() || null,
         durationMinutes: form.durationMinutes,
+        pricePerHourCents,
+        capacity: form.capacity.trim() || null,
       };
 
+      let courtId: string;
+
       if (editingCourt) {
-        const res = await apiClient.venues.courts.update(currentVenue.id, editingCourt.id, data);
-        setCourts(courts.map((c) => (c.id === editingCourt.id ? { ...c, ...res.data.data } : c)));
+        await apiClient.venues.courts.update(
+          currentVenue.id,
+          editingCourt.id,
+          data,
+        );
+        courtId = editingCourt.id;
       } else {
         const res = await apiClient.venues.courts.create(currentVenue.id, data);
-        setCourts([...courts, res.data.data as Court]);
+        courtId = (res.data.data as Court).id;
       }
 
+      await syncCourtPricingTiers(
+        currentVenue.id,
+        courtId,
+        tierDrafts,
+        originalTierIds,
+      );
+
+      await loadCourts();
       setShowForm(false);
-      setForm({ name: '', sportType: '', surface: '', durationMinutes: 60 });
-      setEditingCourt(null);
+      resetFormState(sports[0]?.code);
+      showToast(
+        editingCourt ? 'Cancha actualizada correctamente.' : 'Cancha creada correctamente.',
+        'success',
+      );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error al guardar la cancha';
+      const message =
+        err instanceof Error ? err.message : 'Error al guardar la cancha';
       setFormError(message);
     } finally {
       setSaving(false);
@@ -282,7 +406,15 @@ export default function CourtsPage() {
       sportType: court.sportType,
       surface: court.surfaceType || '',
       durationMinutes: court.durationMinutes ?? 60,
+      capacity: court.capacity || '4v4',
+      basePricePerHour:
+        court.pricePerHourCents != null
+          ? centsToFormattedMajorInput(court.pricePerHourCents, venueCurrency)
+          : '',
     });
+    const tiers = court.pricingTiers ?? [];
+    setTierDrafts(courtTiersToDrafts(tiers, venueCurrency));
+    setOriginalTierIds(tiers.map((t) => t.id));
     setFormError(null);
     setShowForm(true);
   };
@@ -296,7 +428,7 @@ export default function CourtsPage() {
     if (!courtToDelete || !currentVenue) return;
     try {
       await apiClient.venues.courts.cancel(currentVenue.id, courtToDelete.id);
-      setCourts(courts.filter((c) => c.id !== courtToDelete.id));
+      await loadCourts();
       setShowDeleteModal(false);
       setCourtToDelete(null);
       showToast('Cancha eliminada correctamente.', 'success');
@@ -314,9 +446,7 @@ export default function CourtsPage() {
           <p className="text-body mt-1">Gestiona las canchas de tu club</p>
         </div>
         <button onClick={() => {
-          setEditingCourt(null);
-          setForm({ name: '', sportType: sports[0]?.code || '', surface: '', durationMinutes: 60 });
-          setFormError(null);
+          resetFormState(sports[0]?.code || '');
           setShowForm(true);
         }} className="btn btn-primary self-start">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,7 +459,7 @@ export default function CourtsPage() {
       {/* Modal Form */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scale-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 animate-scale-in">
             <h2 className="text-xl font-bold text-slate-800 mb-6">
               {editingCourt ? 'Editar Cancha' : 'Nueva Cancha'}
             </h2>
@@ -391,6 +521,29 @@ export default function CourtsPage() {
                 </select>
                 <p className="text-xs text-slate-400 mt-1">Duración de cada reserva para esta cancha.</p>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Capacidad
+                </label>
+                <input
+                  type="text"
+                  value={form.capacity}
+                  onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                  className="input w-full"
+                  placeholder="4v4"
+                />
+              </div>
+
+              <CourtPricingTiersForm
+                tiers={tierDrafts}
+                onChange={setTierDrafts}
+                currency={venueCurrency}
+                basePricePerHour={form.basePricePerHour}
+                onBasePriceChange={(value) =>
+                  setForm((f) => ({ ...f, basePricePerHour: value }))
+                }
+              />
 
               {formError && (
                 <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{formError}</p>
@@ -485,7 +638,16 @@ export default function CourtsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourts.map((court, index) => (
-            <CourtCard key={court.id} court={court} index={index} onEdit={handleEdit} onDelete={handleDelete} />
+            <CourtCard
+              key={court.id}
+              court={court}
+              animationIndex={index}
+              currency={venueCurrency}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onSetMaintenance={(c) => handleCourtStatusChange(c, 'MAINTENANCE')}
+              onActivate={(c) => handleCourtStatusChange(c, 'ACTIVE')}
+            />
           ))}
         </div>
       )}

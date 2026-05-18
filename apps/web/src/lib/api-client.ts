@@ -169,6 +169,7 @@ class ApiClient {
         type: string;
         name: string;
         config?: Record<string, unknown>;
+        settlementCurrency?: string;
       }) =>
         this.client.post(`/venues/${venueId}/payment-methods`, data),
       update: (venueId: string, paymentMethodId: string, data: {
@@ -177,6 +178,7 @@ class ApiClient {
         config?: Record<string, unknown>;
         isActive?: boolean;
         position?: number;
+        settlementCurrency?: string;
       }) =>
         this.client.put(`/venues/${venueId}/payment-methods/${paymentMethodId}`, data),
       delete: (venueId: string, paymentMethodId: string) =>
@@ -199,9 +201,9 @@ class ApiClient {
     courts: {
       list: (venueId: string, params?: { status?: 'ACTIVE' | 'INACTIVE' }) =>
         this.client.get(`/venues/${venueId}/courts`, { params }),
-      create: (venueId: string, data: { name: string; sportType?: string; indoor?: boolean; lighting?: boolean; surfaceType?: string | null; pricePerHourCents?: number; durationMinutes?: number }) =>
+      create: (venueId: string, data: { name: string; sportType?: string; indoor?: boolean; lighting?: boolean; surfaceType?: string | null; pricePerHourCents?: number | null; capacity?: string | null; durationMinutes?: number }) =>
         this.client.post(`/venues/${venueId}/courts`, data),
-      update: (venueId: string, courtId: string, data: { name?: string; sportType?: string; indoor?: boolean; lighting?: boolean; surfaceType?: string | null; durationMinutes?: number }) =>
+      update: (venueId: string, courtId: string, data: { name?: string; sportType?: string; indoor?: boolean; lighting?: boolean; surfaceType?: string | null; pricePerHourCents?: number | null; capacity?: string | null; durationMinutes?: number; status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' }) =>
         this.client.put(`/venues/${venueId}/courts/${courtId}`, data),
       cancel: (venueId: string, courtId: string) =>
         this.client.delete(`/venues/${venueId}/courts/${courtId}`),

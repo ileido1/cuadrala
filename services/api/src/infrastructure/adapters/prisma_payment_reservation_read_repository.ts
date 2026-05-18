@@ -11,7 +11,10 @@ export class PrismaPaymentReservationReadRepository
   async findByIdSV(_reservationId: string): Promise<PaymentReservationDetailDTO | null> {
     const ROW = await PRISMA.reservation.findUnique({
       where: { id: _reservationId },
-      include: { venue: true, court: true },
+      include: {
+        venue: true,
+        court: { include: { pricingTiers: true } },
+      },
     });
     if (ROW === null) {
       return null;
@@ -24,10 +27,16 @@ export class PrismaPaymentReservationReadRepository
       pricingCurrency: ROW.pricingCurrency,
       totalAmountMinor: ROW.totalAmountMinor,
       paidAmountMinor: ROW.paidAmountMinor,
+      scheduledAt: ROW.scheduledAt,
       court: ROW.court
         ? {
             pricePerHourCents: ROW.court.pricePerHourCents,
             durationMinutes: ROW.court.durationMinutes,
+            pricingTiers: ROW.court.pricingTiers.map((t) => ({
+              startTime: t.startTime,
+              endTime: t.endTime,
+              pricePerHourCents: t.pricePerHourCents,
+            })),
           }
         : null,
     };

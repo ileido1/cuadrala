@@ -1,4 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import { calculateReservationTotalCentsSV } from '../../domain/services/booking/pricing.service.js';
 import type { PaymentReservationReadRepository } from '../../domain/ports/payment_reservation_read_repository.js';
 import type { PaymentTransactionRepository } from '../../domain/ports/payment_transaction_repository.js';
 import type { VenueFeeRuleRepository } from '../../domain/ports/venue_fee_rule_repository.js';
@@ -74,19 +75,21 @@ export class CreateReservationObligationUseCase {
       });
     }
 
-    if (
-      RESERVATION.totalAmountCents == null
-      && RESERVATION.court?.pricePerHourCents != null
-    ) {
+    if (RESERVATION.totalAmountCents == null && RESERVATION.court != null) {
       const DURATION =
         RESERVATION.durationMinutes ?? RESERVATION.court.durationMinutes ?? 60;
-      const TOTAL_FROM_COURT = Math.round(
-        (RESERVATION.court.pricePerHourCents * DURATION) / 60,
-      );
-      await this._reservationReadRepository.updateTotalAmountCentsSV(
-        _input.reservationId,
-        TOTAL_FROM_COURT,
-      );
+      const TOTAL_FROM_COURT = calculateReservationTotalCentsSV({
+        pricePerHourCents: RESERVATION.court.pricePerHourCents,
+        pricingTiers: RESERVATION.court.pricingTiers,
+        scheduledAt: RESERVATION.scheduledAt,
+        durationMinutes: DURATION,
+      });
+      if (TOTAL_FROM_COURT != null) {
+        await this._reservationReadRepository.updateTotalAmountCentsSV(
+          _input.reservationId,
+          TOTAL_FROM_COURT,
+        );
+      }
     }
 
     return { created: CREATED, skipped: SKIPPED };

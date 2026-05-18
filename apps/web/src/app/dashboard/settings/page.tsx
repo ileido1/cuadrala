@@ -5,11 +5,11 @@ import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
 import { PaymentMethodsSettings } from '~/components/settings/PaymentMethodsSettings';
 import {
-  formatCentsWithCurrency,
-  pricePerHourLabel,
+  CURRENCY_OPTIONS,
   resolveCurrencyCode,
+  type CurrencyCode,
 } from '~/lib/format-money';
-import type { Court, CourtPricingTier, CreateCourtPricingTierRequest, UpdateCourtPricingTierRequest, Venue, VenueUpdateData } from '~/types/api';
+import type { Venue, VenueCurrencyCode, VenueUpdateData } from '~/types/api';
 import dynamic from 'next/dynamic';
 
 // Dynamic import for Leaflet (no SSR)
@@ -72,40 +72,8 @@ function buildOpeningHours(schedule: ScheduleState): Record<string, { open: stri
   return Object.keys(result).length > 0 ? result : null;
 }
 
-// Parse time string "HH:MM" to minutes since midnight for sorting
-function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-}
-
-// Sort tiers by startTime
-function sortTiers(tiers: CourtPricingTier[]): CourtPricingTier[] {
-  return [...tiers].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
-}
-
-interface TierFormData {
-  label: string;
-  startTime: string;
-  endTime: string;
-  pricePerHourCents: string;
-}
-
-const EMPTY_TIER_FORM: TierFormData = {
-  label: '',
-  startTime: '08:00',
-  endTime: '12:00',
-  pricePerHourCents: '',
-};
-
 export default function SettingsPage() {
-  const { currentVenue } = useVenue();
-  const venueCurrency = resolveCurrencyCode(
-    currentVenue?.pricingCurrency,
-    currentVenue?.displayCurrency,
-  );
-  const formatPrice = (cents: number) =>
-    formatCentsWithCurrency(cents, venueCurrency);
-  const perHourLabel = pricePerHourLabel(venueCurrency);
+  const { currentVenue, setCurrentVenue } = useVenue();
   const [venue, setVenue] = useState<Venue | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -121,17 +89,8 @@ export default function SettingsPage() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [schedule, setSchedule] = useState<ScheduleState>(DEFAULT_SCHEDULE);
-
-  // Court Pricing Tiers state
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [tiersByCourt, setTiersByCourt] = useState<Record<string, CourtPricingTier[]>>({});
-  const [loadingTiers, setLoadingTiers] = useState(false);
-  const [tiersError, setTiersError] = useState<string | null>(null);
-  const [addingTierForCourt, setAddingTierForCourt] = useState<string | null>(null);
-  const [editingTier, setEditingTier] = useState<{ courtId: string; tier: CourtPricingTier } | null>(null);
-  const [tierForm, setTierForm] = useState<TierFormData>(EMPTY_TIER_FORM);
-  const [savingTier, setSavingTier] = useState(false);
-  const [tierFormError, setTierFormError] = useState<string | null>(null);
+  const [pricingCurrency, setPricingCurrency] = useState<VenueCurrencyCode>('USD');
+  const [displayCurrency, setDisplayCurrency] = useState<VenueCurrencyCode>('BS');
 
   useEffect(() => {
     if (!currentVenue) return;
@@ -148,44 +107,16 @@ export default function SettingsPage() {
         setLatitude(data.latitude ?? null);
         setLongitude(data.longitude ?? null);
         setSchedule(parseOpeningHours(data.openingHours));
+        setPricingCurrency(
+          resolveCurrencyCode(data.pricingCurrency, 'USD') as VenueCurrencyCode,
+        );
+        setDisplayCurrency(
+          resolveCurrencyCode(data.displayCurrency, 'BS') as VenueCurrencyCode,
+        );
       })
       .catch(() => setError('Error al cargar los datos del club.'))
       .finally(() => setLoading(false));
   }, [currentVenue]);
-
-  // Fetch courts when venue loads
-  useEffect(() => {
-    if (!currentVenue || loading) return;
-
-    setLoadingTiers(true);
-    setTiersError(null);
-
-    apiClient.venues.courts.list(currentVenue.id, { status: 'ACTIVE' })
-      .then((res) => {
-        const courtList = res.data.data.items as Court[];
-        setCourts(courtList);
-
-        // Fetch pricing tiers for each court
-        const tierPromises = courtList.map((court) =>
-          apiClient.venues.courts.pricingTiers.list(currentVenue.id, court.id)
-            .then((tierRes) => ({
-              courtId: court.id,
-              tiers: sortTiers(tierRes.data.data.items as CourtPricingTier[]),
-            }))
-            .catch(() => ({ courtId: court.id, tiers: [] as CourtPricingTier[] }))
-        );
-
-        Promise.all(tierPromises).then((results) => {
-          const tiersMap: Record<string, CourtPricingTier[]> = {};
-          results.forEach((result) => {
-            tiersMap[result.courtId] = result.tiers;
-          });
-          setTiersByCourt(tiersMap);
-        });
-      })
-      .catch(() => setTiersError('Error al cargar las canchas.'))
-      .finally(() => setLoadingTiers(false));
-  }, [currentVenue, loading]);
 
   const handleSave = async () => {
     if (!currentVenue) return;
@@ -204,10 +135,30 @@ export default function SettingsPage() {
       latitude,
       longitude,
       openingHours: buildOpeningHours(schedule),
+      pricingCurrency,
+      displayCurrency,
     };
 
     try {
-      await apiClient.venues.update(currentVenue.id, updateData);
+      const res = await apiClient.venues.update(currentVenue.id, updateData);
+      const saved = res.data.data as {
+        pricingCurrency?: string;
+        displayCurrency?: string;
+      };
+      if (currentVenue) {
+        setCurrentVenue({
+          ...currentVenue,
+          name: name.trim() || currentVenue.name,
+          address: address.trim() || null,
+          phone: phone.trim() || null,
+          email: email.trim() || null,
+          description: description.trim() || null,
+          latitude,
+          longitude,
+          pricingCurrency: saved.pricingCurrency ?? pricingCurrency,
+          displayCurrency: saved.displayCurrency ?? displayCurrency,
+        });
+      }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: unknown) {
@@ -226,130 +177,6 @@ export default function SettingsPage() {
       ...prev,
       [day]: { ...prev[day], [field]: value },
     }));
-  };
-
-  // Court Pricing Tiers handlers
-  const startAddTier = (courtId: string) => {
-    setAddingTierForCourt(courtId);
-    setTierForm(EMPTY_TIER_FORM);
-    setTierFormError(null);
-  };
-
-  const startEditTier = (courtId: string, tier: CourtPricingTier) => {
-    setEditingTier({ courtId, tier });
-    setTierForm({
-      label: tier.label,
-      startTime: tier.startTime,
-      endTime: tier.endTime,
-      pricePerHourCents: (tier.pricePerHourCents / 100).toFixed(2),
-    });
-    setTierFormError(null);
-  };
-
-  const cancelTierForm = () => {
-    setAddingTierForCourt(null);
-    setEditingTier(null);
-    setTierForm(EMPTY_TIER_FORM);
-    setTierFormError(null);
-  };
-
-  const validateTierForm = (): boolean => {
-    if (!tierForm.label.trim()) {
-      setTierFormError('El nombre es requerido.');
-      return false;
-    }
-    if (!tierForm.startTime || !tierForm.endTime) {
-      setTierFormError('Los horarios son requeridos.');
-      return false;
-    }
-    if (tierForm.startTime >= tierForm.endTime) {
-      setTierFormError('La hora de inicio debe ser menor que la hora de fin.');
-      return false;
-    }
-    const price = parseFloat(tierForm.pricePerHourCents);
-    if (isNaN(price) || price < 0) {
-      setTierFormError('El precio debe ser un número positivo.');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSaveTier = async () => {
-    if (!currentVenue) return;
-    if (!validateTierForm()) return;
-
-    setSavingTier(true);
-    setTierFormError(null);
-
-    const priceCents = Math.round(parseFloat(tierForm.pricePerHourCents) * 100);
-
-    try {
-      if (addingTierForCourt) {
-        // Create new tier
-        const data: CreateCourtPricingTierRequest = {
-          label: tierForm.label.trim(),
-          startTime: tierForm.startTime,
-          endTime: tierForm.endTime,
-          pricePerHourCents: priceCents,
-        };
-        const res = await apiClient.venues.courts.pricingTiers.create(currentVenue.id, addingTierForCourt, data);
-        const newTier = res.data.data as CourtPricingTier;
-        setTiersByCourt((prev) => ({
-          ...prev,
-          [addingTierForCourt]: sortTiers([...(prev[addingTierForCourt] || []), newTier]),
-        }));
-        cancelTierForm();
-      } else if (editingTier) {
-        // Update existing tier
-        const data: UpdateCourtPricingTierRequest = {
-          label: tierForm.label.trim(),
-          startTime: tierForm.startTime,
-          endTime: tierForm.endTime,
-          pricePerHourCents: priceCents,
-        };
-        const res = await apiClient.venues.courts.pricingTiers.update(
-          currentVenue.id,
-          editingTier.courtId,
-          editingTier.tier.id,
-          data
-        );
-        const updatedTier = res.data.data as CourtPricingTier;
-        setTiersByCourt((prev) => ({
-          ...prev,
-          [editingTier.courtId]: sortTiers(
-            prev[editingTier.courtId].map((t) => (t.id === updatedTier.id ? updatedTier : t))
-          ),
-        }));
-        cancelTierForm();
-      }
-    } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : 'Error al guardar la tarifa.';
-      setTierFormError(typeof msg === 'string' ? msg : 'Error al guardar la tarifa.');
-    } finally {
-      setSavingTier(false);
-    }
-  };
-
-  const handleDeleteTier = async (courtId: string, tierId: string) => {
-    if (!currentVenue) return;
-    if (!confirm('¿Estás seguro de eliminar esta tarifa?')) return;
-
-    try {
-      await apiClient.venues.courts.pricingTiers.delete(currentVenue.id, courtId, tierId);
-      setTiersByCourt((prev) => ({
-        ...prev,
-        [courtId]: prev[courtId].filter((t) => t.id !== tierId),
-      }));
-    } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : 'Error al eliminar la tarifa.';
-      alert(typeof msg === 'string' ? msg : 'Error al eliminar la tarifa.');
-    }
   };
 
   if (loading) {
@@ -559,9 +386,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Card 3: Tarifas por Franja Horaria */}
-      <div className="card p-6 mb-8">
-        <div className="flex items-center gap-3 mb-6">
+
+      {/* Card 3: Moneda y precios */}
+      <div className="card p-6 mb-6">
+        <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center">
             <svg
               className="w-5 h-5 text-primary"
@@ -577,235 +405,65 @@ export default function SettingsPage() {
               />
             </svg>
           </div>
-          <h2 className="section-heading">Tarifas por Franja Horaria</h2>
+          <h2 className="section-heading">Moneda y precios</h2>
         </div>
-
-        {loadingTiers ? (
-          <div className="space-y-4">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="border border-outline rounded-xl p-4">
-                <div className="h-4 bg-secondary-200 rounded w-32 mb-4 animate-pulse" />
-                <div className="space-y-2">
-                  <div className="h-3 bg-secondary-100 rounded w-full animate-pulse" />
-                  <div className="h-3 bg-secondary-100 rounded w-3/4 animate-pulse" />
-                </div>
-              </div>
-            ))}
+        <p className="text-sm text-muted mb-6">
+          La moneda de precios define en qué unidad se cargan tarifas y montos
+          de reservas. La moneda de visualización es la referencia en pantalla
+          para el equipo del club.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-semibold text-secondary-700 mb-2">
+              MONEDA DE PRECIOS
+            </label>
+            <select
+              className="input"
+              value={pricingCurrency}
+              onChange={(e) =>
+                setPricingCurrency(e.target.value as VenueCurrencyCode)
+              }
+            >
+              {CURRENCY_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted mt-1">
+              Usada en canchas, franjas horarias y cobros del venue.
+            </p>
           </div>
-        ) : tiersError ? (
-          <div className="text-center py-8">
-            <p className="text-error text-sm">{tiersError}</p>
+          <div>
+            <label className="block text-sm font-semibold text-secondary-700 mb-2">
+              MONEDA DE VISUALIZACIÓN
+            </label>
+            <select
+              className="input"
+              value={displayCurrency}
+              onChange={(e) =>
+                setDisplayCurrency(e.target.value as VenueCurrencyCode)
+              }
+            >
+              {CURRENCY_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted mt-1">
+              Referencia mostrada en el panel cuando aplique conversión.
+            </p>
           </div>
-        ) : courts.length === 0 ? (
-          <div className="text-center py-8 text-secondary-500">
-            <p>No hay canchas configuradas para esta sede.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {courts.map((court) => {
-              const courtTiers = tiersByCourt[court.id] || [];
-              const isAddingTier = addingTierForCourt === court.id;
-              const isEditing = editingTier?.courtId === court.id;
-
-              return (
-                <div key={court.id} className="border border-outline rounded-xl p-4">
-                  {/* Court Header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-secondary-700">{court.name}</h3>
-                    <button
-                      type="button"
-                      onClick={() => startAddTier(court.id)}
-                      className="btn btn-secondary text-sm py-1.5 px-3"
-                      disabled={isAddingTier || isEditing}
-                    >
-                      + Agregar tarifa
-                    </button>
-                  </div>
-
-                  {/* Tiers List */}
-                  {courtTiers.length === 0 && !isAddingTier ? (
-                    <p className="text-secondary-400 text-sm py-2">Sin tarifas configuradas</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {courtTiers.map((tier) => {
-                        const isEditingThisTier = isEditing && editingTier?.tier.id === tier.id;
-
-                        return (
-                          <div key={tier.id} className="flex items-center gap-3 py-2 px-3 bg-surface-container rounded-lg">
-                            {isEditingThisTier ? (
-                              // Edit mode
-                              <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
-                                <input
-                                  type="text"
-                                  className="input text-sm py-1.5"
-                                  placeholder="Nombre"
-                                  value={tierForm.label}
-                                  onChange={(e) => setTierForm((f) => ({ ...f, label: e.target.value }))}
-                                />
-                                <input
-                                  type="time"
-                                  className="input text-sm py-1.5"
-                                  value={tierForm.startTime}
-                                  onChange={(e) => setTierForm((f) => ({ ...f, startTime: e.target.value }))}
-                                />
-                                <input
-                                  type="time"
-                                  className="input text-sm py-1.5"
-                                  value={tierForm.endTime}
-                                  onChange={(e) => setTierForm((f) => ({ ...f, endTime: e.target.value }))}
-                                />
-                                <input
-                                  type="text"
-                                  className="input text-sm py-1.5"
-                                  placeholder={perHourLabel}
-                                  value={tierForm.pricePerHourCents}
-                                  onChange={(e) => setTierForm((f) => ({ ...f, pricePerHourCents: e.target.value }))}
-                                />
-                              </div>
-                            ) : (
-                              // View mode
-                              <>
-                                <div className="flex-1">
-                                  <span className="font-medium text-sm">{tier.label}</span>
-                                </div>
-                                <div className="text-sm text-secondary-500">
-                                  {tier.startTime} - {tier.endTime}
-                                </div>
-                                <div className="text-sm font-semibold text-primary">
-                                  {formatPrice(tier.pricePerHourCents)}/hora
-                                </div>
-                              </>
-                            )}
-
-                            {/* Actions */}
-                            {isEditingThisTier ? (
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  onClick={handleSaveTier}
-                                  disabled={savingTier}
-                                  className="btn btn-primary text-sm py-1.5 px-2"
-                                >
-                                  {savingTier ? '...' : '✓'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={cancelTierForm}
-                                  className="btn btn-secondary text-sm py-1.5 px-2"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              !isAddingTier && (
-                                <div className="flex gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => startEditTier(court.id, tier)}
-                                    className="text-secondary-500 hover:text-primary p-1"
-                                    title="Editar"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteTier(court.id, tier.id)}
-                                    className="text-secondary-500 hover:text-error p-1"
-                                    title="Eliminar"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Add Tier Form */}
-                  {isAddingTier && (
-                    <div className="mt-4 p-4 bg-surface-container rounded-xl border border-primary-200">
-                      <h4 className="text-sm font-semibold text-secondary-700 mb-3">Nueva tarifa para {court.name}</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-                        <div>
-                          <label className="block text-xs text-secondary-500 mb-1">Nombre</label>
-                          <input
-                            type="text"
-                            className="input text-sm"
-                            placeholder="Ej: Mañana"
-                            value={tierForm.label}
-                            onChange={(e) => setTierForm((f) => ({ ...f, label: e.target.value }))}
-                            autoFocus
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-secondary-500 mb-1">Hora inicio</label>
-                          <input
-                            type="time"
-                            className="input text-sm"
-                            value={tierForm.startTime}
-                            onChange={(e) => setTierForm((f) => ({ ...f, startTime: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-secondary-500 mb-1">Hora fin</label>
-                          <input
-                            type="time"
-                            className="input text-sm"
-                            value={tierForm.endTime}
-                            onChange={(e) => setTierForm((f) => ({ ...f, endTime: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-secondary-500 mb-1">
-                            Precio/hora ({perHourLabel})
-                          </label>
-                          <input
-                            type="text"
-                            className="input text-sm"
-                            placeholder="20.00"
-                            value={tierForm.pricePerHourCents}
-                            onChange={(e) => setTierForm((f) => ({ ...f, pricePerHourCents: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                      {tierFormError && (
-                        <p className="text-error text-xs mt-2">{tierFormError}</p>
-                      )}
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          type="button"
-                          onClick={handleSaveTier}
-                          disabled={savingTier}
-                          className="btn btn-primary text-sm"
-                        >
-                          {savingTier ? 'Guardando...' : 'Agregar'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelTierForm}
-                          className="btn btn-secondary text-sm"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Payment Methods */}
-      <PaymentMethodsSettings />
+      <PaymentMethodsSettings
+        defaultSettlementCurrency={
+          resolveCurrencyCode(pricingCurrency, 'USD') as CurrencyCode
+        }
+      />
 
       {/* Save Button */}
       <div className="flex justify-end gap-4">
