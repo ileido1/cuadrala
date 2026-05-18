@@ -1,3 +1,5 @@
+import '../../../../core/venue/opening_hours.dart';
+
 final class VenueDto {
   const VenueDto({
     required this.id,
@@ -7,6 +9,7 @@ final class VenueDto {
     required this.longitude,
     this.pricingCurrency,
     this.displayCurrency,
+    this.openingHours,
   });
 
   final String id;
@@ -16,6 +19,7 @@ final class VenueDto {
   final double? longitude;
   final String? pricingCurrency;
   final String? displayCurrency;
+  final OpeningHoursMap? openingHours;
 
   static VenueDto fromJson(Map<String, Object?> json) {
     final latRaw = json['latitude'];
@@ -28,6 +32,7 @@ final class VenueDto {
       longitude: lngRaw is num ? lngRaw.toDouble() : null,
       pricingCurrency: json['pricingCurrency'] as String?,
       displayCurrency: json['displayCurrency'] as String?,
+      openingHours: openingHoursFromJson(json['openingHours']),
     );
   }
 }

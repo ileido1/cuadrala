@@ -4,6 +4,7 @@ import 'models/match_payment_info_dto.dart';
 import 'models/match_transactions_summary_dto.dart';
 import 'models/transaction_dto.dart';
 import 'models/venue_payment_info_dto.dart';
+import 'models/venue_payment_method_dto.dart';
 import 'monetization_api.dart';
 
 final class UserTransactionsResult {
@@ -61,32 +62,23 @@ class MonetizationRepository {
     );
   }
 
-  Future<TransactionDto> confirmTransactionManual({
-    required String transactionId,
+  Future<List<VenuePaymentMethodDto>> listVenuePaymentMethods({
+    required String venueId,
   }) async {
-    final json = await _api.confirmTransactionManualEnvelope(
-      transactionId: transactionId,
-    );
+    final json = await _api.listVenuePaymentMethodsEnvelope(venueId: venueId);
     final data = json['data'];
-    if (data is Map<String, Object?>) {
-      // confirm-manual devuelve {id,status,confirmedAt}; completamos el resto en UI si hace falta.
-      return TransactionDto(
-        id: data['id'] as String,
-        matchId: '',
-        userId: '',
-        amountBase: '0',
-        feeAmount: '0',
-        amountTotal: '0',
-        status: data['status'] as String,
-        paymentMethod: 'MANUAL',
-        confirmedAt: DateTime.tryParse(data['confirmedAt'] as String),
-        createdAt: DateTime.now(),
+    final raw = data is Map<String, Object?> ? data : json;
+    final itemsRaw = raw['items'];
+    if (itemsRaw is! List) {
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
       );
     }
-    throw const AppFailure(
-      code: 'INVALID_RESPONSE',
-      message: 'Respuesta inválida del servidor.',
-    );
+    return itemsRaw
+        .whereType<Map<String, Object?>>()
+        .map(VenuePaymentMethodDto.fromJson)
+        .toList();
   }
 
   Future<Map<String, Object?>> uploadReceipt({

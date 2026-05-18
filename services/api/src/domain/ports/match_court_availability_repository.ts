@@ -25,4 +25,9 @@ export interface MatchCourtAvailabilityRepository {
     durationMinutes: number;
     excludeMatchId?: string;
   }): Promise<string | null>;
+
+  hasConfirmedReservationAtCourtScheduledAtSV(
+    _courtId: string,
+    _scheduledAt: Date,
+  ): Promise<boolean>;
 }

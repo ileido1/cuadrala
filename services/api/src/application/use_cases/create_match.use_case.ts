@@ -37,14 +37,28 @@ export class CreateMatchUseCase {
       _input.scheduledAt !== undefined &&
       _input.venueId !== undefined
     ) {
+      const DURATION_MINUTES = _input.durationMinutes ?? 90;
       await assertMatchCourtSlotAvailableSV(this._matchCourtAvailabilityRepository, {
         venueId: _input.venueId,
         courtId: _input.courtId,
         scheduledAt: _input.scheduledAt,
         sportId: _input.sportId,
         categoryId: _input.categoryId,
-        ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
+        durationMinutes: DURATION_MINUTES,
       });
+
+      const HAS_RESERVATION =
+        await this._matchCourtAvailabilityRepository.hasConfirmedReservationAtCourtScheduledAtSV(
+          _input.courtId,
+          _input.scheduledAt,
+        );
+      if (HAS_RESERVATION) {
+        throw new AppError(
+          'CONFLICTO',
+          'Ya existe una reserva confirmada para ese horario en esta cancha.',
+          409,
+        );
+      }
     }
 
     const CREATE_INPUT: CreateMatchInputDTO = {
@@ -55,6 +69,8 @@ export class CreateMatchUseCase {
       ...(_input.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: _input.pricePerPlayerCents } : {}),
       ...(_input.scheduledAt !== undefined ? { scheduledAt: _input.scheduledAt } : {}),
       ...(_input.courtId !== undefined ? { courtId: _input.courtId } : {}),
+      ...(_input.venueId !== undefined ? { venueId: _input.venueId } : {}),
+      ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
       ...(_input.tournamentId !== undefined ? { tournamentId: _input.tournamentId } : {}),
     };
 

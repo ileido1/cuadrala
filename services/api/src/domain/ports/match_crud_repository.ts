@@ -4,6 +4,8 @@ export type CreateMatchInputDTO = {
   type: 'AMERICANO' | 'REGULAR';
   scheduledAt?: Date;
   courtId?: string;
+  venueId?: string;
+  durationMinutes?: number;
   tournamentId?: string;
   pricePerPlayerCents?: number;
   maxParticipants: number;

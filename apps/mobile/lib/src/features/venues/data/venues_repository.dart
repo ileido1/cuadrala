@@ -29,6 +29,11 @@ final class VenuesRepository {
     return itemsRaw.whereType<Map<String, Object?>>().map(VenueDto.fromJson).toList();
   }
 
+  Future<VenueDto> getVenueDetail({required String venueId}) async {
+    final data = await _venuesApi.getVenueDetailEnvelope(venueId: venueId);
+    return VenueDto.fromJson(data);
+  }
+
   Future<List<CourtDto>> listVenueCourts({required String venueId, String? status}) async {
     final data = await _venuesApi.listVenueCourtsEnvelope(venueId: venueId, status: status);
     final itemsRaw = data['items'];

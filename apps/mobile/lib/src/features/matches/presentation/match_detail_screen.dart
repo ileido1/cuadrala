@@ -102,7 +102,14 @@ final class _MatchDetailView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (isParticipant) _ParticipantBanner(hasPrice: hasPrice, matchId: m.id, amountCents: m.pricePerPlayerCents, clubName: m.clubName),
+                          if (isParticipant)
+                            _ParticipantBanner(
+                              hasPrice: hasPrice,
+                              matchId: m.id,
+                              amountCents: m.pricePerPlayerCents,
+                              clubName: m.clubName,
+                              venueId: m.venueId,
+                            ),
                           _MatchInfoSection(match: m),
                           const Divider(height: 1, indent: 20, endIndent: 20),
                           _PlayersSection(match: m),
@@ -392,12 +399,14 @@ final class _ParticipantBanner extends StatelessWidget {
     required this.matchId,
     required this.amountCents,
     required this.clubName,
+    this.venueId,
   });
 
   final bool hasPrice;
   final String matchId;
   final int amountCents;
   final String? clubName;
+  final String? venueId;
 
   @override
   Widget build(BuildContext context) {
@@ -442,6 +451,7 @@ final class _ParticipantBanner extends StatelessWidget {
                   matchId: matchId,
                   amountPerPersonCents: amountCents,
                   matchTitle: clubName ?? 'Partida',
+                  venueId: venueId,
                 ),
               ),
               child: const Text('Pagar'),
@@ -773,6 +783,7 @@ final class _BottomBar extends StatelessWidget {
               matchId: m.id,
               amountPerPersonCents: m.pricePerPlayerCents,
               matchTitle: m.clubName ?? 'Partida',
+              venueId: m.venueId,
             ),
           );
     } else if (isParticipant) {

@@ -12,10 +12,6 @@ abstract interface class MonetizationApi {
     required String matchId,
   });
 
-  Future<Map<String, Object?>> confirmTransactionManualEnvelope({
-    required String transactionId,
-  });
-
   Future<Map<String, Object?>> uploadTransactionReceiptEnvelope({
     required String transactionId,
     required List<int> fileBytes,
@@ -33,6 +29,10 @@ abstract interface class MonetizationApi {
 
   Future<Map<String, Object?>> getMatchPaymentInfoEnvelope({
     required String matchId,
+  });
+
+  Future<Map<String, Object?>> listVenuePaymentMethodsEnvelope({
+    required String venueId,
   });
 }
 
@@ -57,13 +57,6 @@ final class DioMonetizationApi implements MonetizationApi {
     required String matchId,
   }) {
     return _apiClient.getJson('/api/v1/matches/$matchId/transactions/summary');
-  }
-
-  @override
-  Future<Map<String, Object?>> confirmTransactionManualEnvelope({
-    required String transactionId,
-  }) {
-    return _apiClient.patchJson('/api/v1/transactions/$transactionId/confirm-manual');
   }
 
   @override
@@ -111,6 +104,13 @@ final class DioMonetizationApi implements MonetizationApi {
     required String matchId,
   }) {
     return _apiClient.getJson('/api/v1/matches/$matchId/payment-info');
+  }
+
+  @override
+  Future<Map<String, Object?>> listVenuePaymentMethodsEnvelope({
+    required String venueId,
+  }) {
+    return _apiClient.getJson('/api/v1/venues/$venueId/payment-methods');
   }
 }
 

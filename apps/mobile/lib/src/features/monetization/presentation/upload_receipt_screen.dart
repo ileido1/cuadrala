@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/money_format.dart';
+import '../../../core/models/currency_code.dart';
 import '../data/monetization_repository.dart';
 import 'waiting_confirmation_screen.dart';
 
@@ -17,6 +18,7 @@ final class UploadReceiptScreen extends StatefulWidget {
     required this.method,
     required this.amountPerPersonCents,
     required this.matchTitle,
+    this.pricingCurrency,
   });
 
   final String matchId;
@@ -24,6 +26,7 @@ final class UploadReceiptScreen extends StatefulWidget {
   final String method;
   final int amountPerPersonCents;
   final String matchTitle;
+  final String? pricingCurrency;
 
   static String route({
     required String matchId,
@@ -31,12 +34,14 @@ final class UploadReceiptScreen extends StatefulWidget {
     required String method,
     required int amountPerPersonCents,
     required String matchTitle,
+    String? pricingCurrency,
   }) {
     final qp = <String, String>{
       'tx': transactionId,
       'method': method,
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
+      if (pricingCurrency != null) 'currency': pricingCurrency,
     };
     final query = Uri(queryParameters: qp).query;
     return '/matches/$matchId/pay/upload-receipt?$query';
@@ -85,6 +90,8 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
           matchId: widget.matchId,
           amountPerPersonCents: widget.amountPerPersonCents,
           matchTitle: widget.matchTitle,
+          pricingCurrency: widget.pricingCurrency,
+          transactionId: widget.transactionId,
         ),
       );
     } catch (e) {
@@ -100,7 +107,8 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final amount = formatMoneyCents(widget.amountPerPersonCents);
+    final currency = CurrencyCode.resolve(pricingCurrency: widget.pricingCurrency);
+    final amount = formatMoneyCents(widget.amountPerPersonCents, currency);
 
     return Scaffold(
       key: const Key('pay.upload.receipt.screen'),

@@ -8,6 +8,8 @@ abstract class VenuesApi {
     int? radiusKm,
   });
 
+  Future<Map<String, Object?>> getVenueDetailEnvelope({required String venueId});
+
   Future<Map<String, Object?>> listVenueCourtsEnvelope({
     required String venueId,
     String? status,
@@ -70,6 +72,11 @@ final class DioVenuesApi implements VenuesApi {
         if (radiusKm != null) 'radiusKm': radiusKm,
       },
     );
+  }
+
+  @override
+  Future<Map<String, Object?>> getVenueDetailEnvelope({required String venueId}) {
+    return _apiClient.getEnvelopeDataMap('/api/v1/venues/$venueId');
   }
 
   @override

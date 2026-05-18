@@ -6,10 +6,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/failures/app_failure.dart';
 import '../../../core/formatting/money_format.dart';
+import '../../../core/models/currency_code.dart';
 import '../../profile/data/profile_repository.dart';
+import '../../venues/data/venues_repository.dart';
 import '../data/monetization_repository.dart';
 import '../data/models/match_payment_info_dto.dart';
 import '../data/models/transaction_dto.dart';
+import '../data/models/venue_payment_method_dto.dart';
 import 'upload_receipt_screen.dart';
 
 final class PayMethodScreen extends StatefulWidget {
@@ -18,20 +21,28 @@ final class PayMethodScreen extends StatefulWidget {
     required this.matchId,
     required this.amountPerPersonCents,
     required this.matchTitle,
+    this.venueId,
+    this.pricingCurrency,
   });
 
   final String matchId;
   final int amountPerPersonCents;
   final String matchTitle;
+  final String? venueId;
+  final String? pricingCurrency;
 
   static String route({
     required String matchId,
     required int amountPerPersonCents,
     required String matchTitle,
+    String? venueId,
+    String? pricingCurrency,
   }) {
     final qp = <String, String>{
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
+      if (venueId != null && venueId.isNotEmpty) 'venueId': venueId,
+      if (pricingCurrency != null) 'currency': pricingCurrency,
     };
     final query = Uri(queryParameters: qp).query;
     return '/matches/$matchId/pay/method?$query';
@@ -46,8 +57,22 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
   bool _submitting = false;
   String? _error;
   String? _transactionId;
-  String _method = 'TRANSFER';
-  MatchPaymentInfoDto? _paymentInfo;
+  String? _selectedMethodId;
+  List<VenuePaymentMethodDto> _methods = const [];
+  MatchPaymentInfoDto? _legacyPaymentInfo;
+  String? _resolvedPricingCurrency;
+
+  CurrencyCode get _currency => CurrencyCode.resolve(
+        pricingCurrency: _resolvedPricingCurrency ?? widget.pricingCurrency,
+      );
+
+  VenuePaymentMethodDto? get _selectedMethod {
+    if (_selectedMethodId == null) return null;
+    for (final m in _methods) {
+      if (m.id == _selectedMethodId) return m;
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -62,12 +87,35 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     });
     try {
       final repo = getIt<MonetizationRepository>();
+      final venueId = widget.venueId;
 
-      MatchPaymentInfoDto? info;
-      try {
-        info = await repo.getMatchPaymentInfo(matchId: widget.matchId);
-      } catch (_) {
-        info = null;
+      var pricingCurrency = widget.pricingCurrency;
+      if ((pricingCurrency == null || pricingCurrency.isEmpty) &&
+          venueId != null &&
+          venueId.isNotEmpty) {
+        try {
+          final venue =
+              await getIt<VenuesRepository>().getVenueDetail(venueId: venueId);
+          pricingCurrency = venue.pricingCurrency ?? venue.displayCurrency;
+        } catch (_) {}
+      }
+
+      List<VenuePaymentMethodDto> methods = const [];
+      if (venueId != null && venueId.isNotEmpty) {
+        try {
+          methods = await repo.listVenuePaymentMethods(venueId: venueId);
+        } catch (_) {
+          methods = const [];
+        }
+      }
+
+      MatchPaymentInfoDto? legacyInfo;
+      if (methods.isEmpty) {
+        try {
+          legacyInfo = await repo.getMatchPaymentInfo(matchId: widget.matchId);
+        } catch (_) {
+          legacyInfo = null;
+        }
       }
 
       final me = await getIt<ProfileRepository>().getMe();
@@ -77,17 +125,23 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      final pending = existing.firstWhere(
-        (t) => t.status == 'PENDING',
-        orElse: () => existing.isEmpty ? _emptyTx() : existing.first,
-      );
+      TransactionDto? pendingTx;
+      for (final t in existing) {
+        if (t.status == 'PENDING') {
+          pendingTx = t;
+          break;
+        }
+      }
 
-      if (pending.id.isNotEmpty && pending.status == 'PENDING') {
+      if (pendingTx != null) {
         if (!mounted) return;
         setState(() {
-          _transactionId = pending.id;
+          _transactionId = pendingTx!.id;
+          _methods = methods;
+          _legacyPaymentInfo = legacyInfo;
+          _resolvedPricingCurrency = pricingCurrency;
+          _selectedMethodId = methods.isNotEmpty ? methods.first.id : 'TRANSFER';
           _loading = false;
-          _paymentInfo = info;
         });
         return;
       }
@@ -105,8 +159,11 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           if (!mounted) return;
           setState(() {
             _transactionId = first['id'] as String;
+            _methods = methods;
+            _legacyPaymentInfo = legacyInfo;
+            _resolvedPricingCurrency = pricingCurrency;
+            _selectedMethodId = methods.isNotEmpty ? methods.first.id : 'TRANSFER';
             _loading = false;
-            _paymentInfo = info;
           });
           return;
         }
@@ -123,18 +180,11 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     }
   }
 
-  TransactionDto _emptyTx() => TransactionDto(
-        id: '',
-        matchId: '',
-        userId: '',
-        amountBase: '0',
-        feeAmount: '0',
-        amountTotal: '0',
-        status: 'NONE',
-        paymentMethod: 'MANUAL',
-        confirmedAt: null,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-      );
+  String get _methodRouteValue {
+    final selected = _selectedMethod;
+    if (selected != null) return selected.type;
+    return 'TRANSFER';
+  }
 
   Future<void> _continue() async {
     final txId = _transactionId;
@@ -146,9 +196,10 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
         UploadReceiptScreen.route(
           matchId: widget.matchId,
           transactionId: txId,
-          method: _method,
+          method: _methodRouteValue,
           amountPerPersonCents: widget.amountPerPersonCents,
           matchTitle: widget.matchTitle,
+          pricingCurrency: _resolvedPricingCurrency ?? widget.pricingCurrency,
         ),
       );
     } finally {
@@ -186,7 +237,10 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                   children: [
                     _MatchHeaderCard(
                       title: widget.matchTitle,
-                      amount: formatMoneyCents(widget.amountPerPersonCents),
+                      amount: formatMoneyCents(
+                        widget.amountPerPersonCents,
+                        _currency,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     Text(
@@ -196,36 +250,48 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                           ),
                     ),
                     const SizedBox(height: 10),
-                    Card(
-                      child: RadioListTile<String>(
-                        value: 'TRANSFER',
-                        groupValue: _method,
-                        onChanged: (v) => setState(() => _method = v ?? 'TRANSFER'),
-                        title: const Text('Transferencia bancaria'),
-                        subtitle: const Text('Recomendado'),
+                    if (_methods.isNotEmpty)
+                      ..._methods.map(
+                        (m) => Card(
+                          child: RadioListTile<String>(
+                            value: m.id,
+                            groupValue: _selectedMethodId,
+                            onChanged: (v) =>
+                                setState(() => _selectedMethodId = v),
+                            title: Text(m.displayLabel),
+                            subtitle: Text(
+                              '${m.name} · ${m.settlementCurrency}',
+                            ),
+                          ),
+                        ),
+                      )
+                    else ...[
+                      Card(
+                        child: RadioListTile<String>(
+                          value: 'TRANSFER',
+                          groupValue: _selectedMethodId,
+                          onChanged: (v) =>
+                              setState(() => _selectedMethodId = v ?? 'TRANSFER'),
+                          title: const Text('Transferencia bancaria'),
+                          subtitle: const Text('Recomendado'),
+                        ),
                       ),
-                    ),
-                    Card(
-                      child: RadioListTile<String>(
-                        value: 'WALLET',
-                        groupValue: _method,
-                        onChanged: (v) => setState(() => _method = v ?? 'WALLET'),
-                        title: const Text('Wallet Cuádrala'),
-                        subtitle: const Text('Próximamente'),
-                        enabled: false,
+                      Card(
+                        child: RadioListTile<String>(
+                          value: 'CASH',
+                          groupValue: _selectedMethodId,
+                          onChanged: (v) =>
+                              setState(() => _selectedMethodId = v ?? 'CASH'),
+                          title: const Text('Efectivo'),
+                          subtitle: const Text('Coordina con el organizador'),
+                        ),
                       ),
-                    ),
-                    Card(
-                      child: RadioListTile<String>(
-                        value: 'CASH',
-                        groupValue: _method,
-                        onChanged: (v) => setState(() => _method = v ?? 'CASH'),
-                        title: const Text('Efectivo'),
-                        subtitle: const Text('Coordina con el organizador'),
-                      ),
-                    ),
-                    if (_method == 'TRANSFER' && _paymentInfo != null)
-                      _BankInfoCard(paymentInfo: _paymentInfo!),
+                    ],
+                    if (_selectedMethod != null)
+                      _PaymentMethodDetailsCard(method: _selectedMethod!)
+                    else if (_selectedMethodId == 'TRANSFER' &&
+                        _legacyPaymentInfo != null)
+                      _BankInfoCard(paymentInfo: _legacyPaymentInfo!),
                     const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
@@ -311,6 +377,56 @@ final class _MatchHeaderCard extends StatelessWidget {
   }
 }
 
+final class _PaymentMethodDetailsCard extends StatelessWidget {
+  const _PaymentMethodDetailsCard({required this.method});
+
+  final VenuePaymentMethodDto method;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rows = method.detailRows;
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: scheme.tertiaryContainer.withValues(alpha: 0.4),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.payments_outlined, size: 18, color: scheme.tertiary),
+                const SizedBox(width: 8),
+                Text(
+                  'Datos para pagar',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...rows.map(
+              (r) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _InfoRow(label: r.label, value: r.value),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 final class _BankInfoCard extends StatelessWidget {
   const _BankInfoCard({required this.paymentInfo});
 
@@ -321,7 +437,8 @@ final class _BankInfoCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final fields = <_InfoRow>[];
 
-    if (paymentInfo.paymentHolder != null && paymentInfo.paymentHolder!.isNotEmpty) {
+    if (paymentInfo.paymentHolder != null &&
+        paymentInfo.paymentHolder!.isNotEmpty) {
       fields.add(_InfoRow(label: 'Titular', value: paymentInfo.paymentHolder!));
     }
     if (paymentInfo.paymentBank != null && paymentInfo.paymentBank!.isNotEmpty) {
@@ -330,7 +447,8 @@ final class _BankInfoCard extends StatelessWidget {
     if (paymentInfo.paymentCvu != null && paymentInfo.paymentCvu!.isNotEmpty) {
       fields.add(_InfoRow(label: 'CVU', value: paymentInfo.paymentCvu!));
     }
-    if (paymentInfo.paymentAlias != null && paymentInfo.paymentAlias!.isNotEmpty) {
+    if (paymentInfo.paymentAlias != null &&
+        paymentInfo.paymentAlias!.isNotEmpty) {
       fields.add(_InfoRow(label: 'Alias', value: paymentInfo.paymentAlias!));
     }
 
@@ -360,19 +478,7 @@ final class _BankInfoCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            ...fields.map((f) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: f,
-                )),
-            if (paymentInfo.paymentNotes != null && paymentInfo.paymentNotes!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                paymentInfo.paymentNotes!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
+            ...fields,
           ],
         ),
       ),
@@ -393,7 +499,7 @@ final class _InfoRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 60,
+          width: 72,
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -414,4 +520,3 @@ final class _InfoRow extends StatelessWidget {
     );
   }
 }
-

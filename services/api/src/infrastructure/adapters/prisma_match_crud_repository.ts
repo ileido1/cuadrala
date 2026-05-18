@@ -5,7 +5,27 @@ import type {
   UpdateMatchPatchDTO,
 } from '../../domain/ports/match_crud_repository.js';
 
+import {
+  loadVenuePricingCurrencySV,
+  reservationMoneyCreateFieldsSV,
+} from '../prisma_money_fields.js';
 import { PRISMA } from '../prisma_client.js';
+
+const MATCH_SELECT = {
+  id: true,
+  sportId: true,
+  categoryId: true,
+  type: true,
+  status: true,
+  scheduledAt: true,
+  courtId: true,
+  tournamentId: true,
+  pricePerPlayerCents: true,
+  maxParticipants: true,
+  createdAt: true,
+  updatedAt: true,
+  _count: { select: { participants: true } },
+} as const;
 
 function computeDetailDTO(_row: {
   id: string;
@@ -41,6 +61,61 @@ function computeDetailDTO(_row: {
 
 export class PrismaMatchCrudRepository implements MatchCrudRepository {
   async createMatchSV(_input: CreateMatchInputDTO, _creatorUserId: string): Promise<MatchDetailDTO> {
+    const LINKS_RESERVATION =
+      _input.courtId !== undefined &&
+      _input.scheduledAt !== undefined &&
+      _input.venueId !== undefined;
+
+    if (LINKS_RESERVATION) {
+      const DURATION_MINUTES = _input.durationMinutes ?? 90;
+      const PRICING_CURRENCY = await loadVenuePricingCurrencySV(PRISMA, _input.venueId!);
+      const ROW = await PRISMA.$transaction(async (_tx) => {
+        const MATCH = await _tx.match.create({
+          data: {
+            sportId: _input.sportId,
+            categoryId: _input.categoryId,
+            organizerUserId: _creatorUserId,
+            type: _input.type,
+            status: 'SCHEDULED',
+            scheduledAt: _input.scheduledAt!,
+            courtId: _input.courtId!,
+            tournamentId: _input.tournamentId ?? null,
+            pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
+            maxParticipants: _input.maxParticipants,
+            participants: {
+              create: [{ userId: _creatorUserId }],
+            },
+          },
+          select: MATCH_SELECT,
+        });
+
+        await _tx.reservation.create({
+          data: {
+            venueId: _input.venueId!,
+            courtId: _input.courtId!,
+            sportId: _input.sportId,
+            categoryId: _input.categoryId,
+            type: 'MATCH',
+            scheduledAt: _input.scheduledAt!,
+            durationMinutes: DURATION_MINUTES,
+            status: 'CONFIRMED',
+            visibility: 'PUBLISHED',
+            matchStatus: 'SCHEDULED',
+            matchId: MATCH.id,
+            organizerUserId: _creatorUserId,
+            createdByUserId: _creatorUserId,
+            maxParticipants: _input.maxParticipants,
+            pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
+            ...reservationMoneyCreateFieldsSV(PRICING_CURRENCY, null),
+          },
+        });
+
+        return MATCH;
+      });
+
+      return computeDetailDTO(ROW);
+    }
+
     const ROW = await PRISMA.match.create({
       data: {
         sportId: _input.sportId,
@@ -57,21 +132,7 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
           create: [{ userId: _creatorUserId }],
         },
       },
-      select: {
-        id: true,
-        sportId: true,
-        categoryId: true,
-        type: true,
-        status: true,
-        scheduledAt: true,
-        courtId: true,
-        tournamentId: true,
-        pricePerPlayerCents: true,
-        maxParticipants: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { participants: true } },
-      },
+      select: MATCH_SELECT,
     });
 
     return computeDetailDTO(ROW);

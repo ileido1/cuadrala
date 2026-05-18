@@ -95,4 +95,17 @@ export class PrismaMatchCourtAvailabilityRepository implements MatchCourtAvailab
 
     return null;
   }
+
+  async hasConfirmedReservationAtCourtScheduledAtSV(
+    _courtId: string,
+    _scheduledAt: Date,
+  ): Promise<boolean> {
+    const ROW = await PRISMA.reservation.findUnique({
+      where: {
+        courtId_scheduledAt: { courtId: _courtId, scheduledAt: _scheduledAt },
+      },
+      select: { status: true },
+    });
+    return ROW?.status === 'CONFIRMED';
+  }
 }

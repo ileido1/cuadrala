@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/failures/app_failure.dart';
+import '../../../core/venue/opening_hours.dart';
 import '../../../router/routes.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models/category_dto.dart';
@@ -42,6 +43,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   bool _availabilityLoading = false;
   Object? _availabilityError;
   List<DateTime> _availableSlotsUtc = const [];
+  OpeningHoursMap? _openingHours;
 
   bool _loading = true;
   bool _submitting = false;
@@ -183,6 +185,15 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     if (selectedVenue == null) return;
     if (!mounted) return;
 
+    OpeningHoursMap? openingHours = selectedVenue.openingHours;
+    try {
+      final detail =
+          await getIt<VenuesRepository>().getVenueDetail(venueId: selectedVenue.id);
+      openingHours = detail.openingHours ?? openingHours;
+    } catch (_) {}
+
+    if (!mounted) return;
+
     final selectedCourt = await showModalBottomSheet<CourtDto>(
       context: context,
       showDragHandle: true,
@@ -277,6 +288,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     setState(() {
       _selectedVenue = selectedVenue;
       _selectedCourt = selectedCourt;
+      _openingHours = openingHours;
       _clubController.text = selectedVenue.name;
       _courtController.text = selectedCourt.name;
       _selectedSlotUtc = null;
@@ -299,12 +311,27 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     await _refreshAvailability();
   }
 
+  String _isoDateForSelected() {
+    final d = _selectedDate;
+    return '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+  }
+
   DateTime _availabilityFromUtc() {
-    return DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 6).toUtc();
+    final window = availabilityWindowUtcForLocalDate(
+      localDate: _selectedDate,
+      openingHours: _openingHours,
+    );
+    return window.fromUtc;
   }
 
   DateTime _availabilityToUtc() {
-    return DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 23, 59).toUtc();
+    final window = availabilityWindowUtcForLocalDate(
+      localDate: _selectedDate,
+      openingHours: _openingHours,
+    );
+    return window.toUtc;
   }
 
   Future<void> _refreshAvailability() async {
@@ -315,6 +342,17 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       setState(() {
         _availabilityLoading = false;
         _availabilityError = null;
+        _availableSlotsUtc = const [];
+      });
+      return;
+    }
+
+    final isoDate = _isoDateForSelected();
+    if (!isVenueOpenOnDate(isoDate, _openingHours)) {
+      if (!mounted) return;
+      setState(() {
+        _availabilityLoading = false;
+        _availabilityError = closedDayMessage(isoDate, _openingHours);
         _availableSlotsUtc = const [];
       });
       return;
@@ -424,6 +462,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         venueId: venueId,
         maxParticipants: _players,
         pricePerPlayerCents: _pricePerPlayer * 100,
+        durationMinutes: 90,
       );
       if (!mounted) return;
       context.go(Routes.matchDetail(created.id));
@@ -623,10 +662,13 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                           )
                                         : _availabilityError != null
                                             ? Text(
-                                                'No disponible',
+                                                _availabilityError is String
+                                                    ? _availabilityError as String
+                                                    : 'No disponible',
                                                 style: TextStyle(
-                                                  fontWeight: FontWeight.w900,
+                                                  fontWeight: FontWeight.w700,
                                                   color: scheme.error,
+                                                  fontSize: 12,
                                                 ),
                                               )
                                             : _availableSlotsUtc.isEmpty
