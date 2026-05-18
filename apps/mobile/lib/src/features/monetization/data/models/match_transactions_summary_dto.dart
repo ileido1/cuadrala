@@ -1,3 +1,5 @@
+import '../../../../core/models/money_amount.dart';
+
 final class MatchTransactionsSummaryDto {
   const MatchTransactionsSummaryDto({
     required this.matchId,
@@ -8,6 +10,10 @@ final class MatchTransactionsSummaryDto {
     required this.pendingCount,
     required this.confirmedCount,
     required this.cancelledCount,
+    this.pricingCurrency,
+    this.totalAmountMoney,
+    this.totalAmountBaseMoney,
+    this.totalFeeAmountMoney,
   });
 
   final String matchId;
@@ -18,6 +24,10 @@ final class MatchTransactionsSummaryDto {
   final int pendingCount;
   final int confirmedCount;
   final int cancelledCount;
+  final String? pricingCurrency;
+  final MoneyAmount? totalAmountMoney;
+  final MoneyAmount? totalAmountBaseMoney;
+  final MoneyAmount? totalFeeAmountMoney;
 
   static MatchTransactionsSummaryDto fromJson(Map<String, Object?> json) {
     return MatchTransactionsSummaryDto(
@@ -29,7 +39,10 @@ final class MatchTransactionsSummaryDto {
       pendingCount: (json['pendingCount'] as num).toInt(),
       confirmedCount: (json['confirmedCount'] as num).toInt(),
       cancelledCount: (json['cancelledCount'] as num).toInt(),
+      pricingCurrency: json['pricingCurrency'] as String?,
+      totalAmountMoney: MoneyAmount.tryFromJson(json['totalAmountMoney']),
+      totalAmountBaseMoney: MoneyAmount.tryFromJson(json['totalAmountBaseMoney']),
+      totalFeeAmountMoney: MoneyAmount.tryFromJson(json['totalFeeAmountMoney']),
     );
   }
 }
-

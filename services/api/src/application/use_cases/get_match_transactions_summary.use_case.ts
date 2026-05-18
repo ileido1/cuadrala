@@ -1,6 +1,12 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { PaymentMatchReadRepository } from '../../domain/ports/payment_match_read_repository.js';
 import type { PaymentTransactionRepository } from '../../domain/ports/payment_transaction_repository.js';
+import { moneyAmountDtoFromMinorSV, type MoneyAmountDTO } from '../dto/money.dto.js';
+import { parseCurrencyCode } from '../../domain/money/currency_code.js';
+
+function majorUnitsToMinorSV(_value: number): bigint {
+  return BigInt(Math.round(_value * 100));
+}
 
 export class GetMatchTransactionsSummaryUseCase {
   constructor(
@@ -14,6 +20,10 @@ export class GetMatchTransactionsSummaryUseCase {
     totalAmountBase: string;
     totalFeeAmount: string;
     totalAmount: string;
+    pricingCurrency: string;
+    totalAmountMoney: MoneyAmountDTO;
+    totalAmountBaseMoney: MoneyAmountDTO;
+    totalFeeAmountMoney: MoneyAmountDTO;
     pendingCount: number;
     confirmedCount: number;
     cancelledCount: number;
@@ -22,6 +32,8 @@ export class GetMatchTransactionsSummaryUseCase {
     if (MATCH === null) {
       throw new AppError('PARTIDO_NO_ENCONTRADO', 'El partido indicado no existe.', 404);
     }
+
+    const PRICING = parseCurrencyCode(MATCH.pricingCurrency);
 
     const ROWS = await this._transactionRepository.listByMatchSV(_matchId);
     let totalBase = 0;
@@ -46,6 +58,10 @@ export class GetMatchTransactionsSummaryUseCase {
       totalAmountBase: String(totalBase),
       totalFeeAmount: String(totalFee),
       totalAmount: String(totalAll),
+      pricingCurrency: PRICING,
+      totalAmountMoney: moneyAmountDtoFromMinorSV(PRICING, majorUnitsToMinorSV(totalAll)),
+      totalAmountBaseMoney: moneyAmountDtoFromMinorSV(PRICING, majorUnitsToMinorSV(totalBase)),
+      totalFeeAmountMoney: moneyAmountDtoFromMinorSV(PRICING, majorUnitsToMinorSV(totalFee)),
       pendingCount: pending,
       confirmedCount: confirmed,
       cancelledCount: cancelled,

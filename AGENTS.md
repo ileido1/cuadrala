@@ -73,6 +73,8 @@ lib/src/
 
 **State management:** Prefer `Cubit` over `Bloc`. Use `Bloc` only when event traceability or complex event processing is needed. States are sealed classes or single class with status enum, always extend `Equatable`.
 
+**Mobile product role (2026-05-18):** `apps/mobile` es **solo jugador**; agenda staff, confirmación manual de pagos y settings de sede viven en `apps/web`. Specs: `openspec/specs/mobile-player-alignment/`.
+
 ## Testing
 
 ### API
@@ -140,3 +142,5 @@ Exception: skip for trivial changes (typos, comments) or when user explicitly sa
 | `openspec/changes/archive/2026-05-17-api-architecture-refactor/` | Programa API refactor archivado (olas 0–7) |
 | `openspec/changes/archive/2026-05-18-multi-currency-payments/` | Modelo financiero multi-moneda (M1–M7) archivado |
 | `openspec/changes/archive/2026-05-18-payment-domain-refactor/` | BC Payments Wave 1 (R1–R6) archivado |
+| `openspec/changes/archive/2026-05-18-mobile-player-alignment/` | Mobile jugador-only M1–M4 (staff solo web) archivado |
+| `openspec/specs/mobile-player-alignment/spec.md` | Índice capabilities mobile jugador (vigente) |

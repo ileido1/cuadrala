@@ -157,6 +157,13 @@ Mensajes al usuario en **español**; identificadores de campo en inglés.
 5. `VenueFeeRule` % en moneda de pricing por sede.  
 6. `ReservationPaymentLedger` solo Fase 2.
 
+## Relacionado: `mobile-player-alignment` (archivado 2026-05-18)
+
+- Mobile **jugador-only**: lectura/formateo `MoneyAmount`, `payment-methods`, sin confirmación manual en app.
+- Phase 2 «mobile staff paridad» **descartada**; staff monetización/agenda en `apps/web`.
+- Índice: [`openspec/specs/mobile-player-alignment/spec.md`](../mobile-player-alignment/spec.md)
+- Archive: [`openspec/changes/archive/2026-05-18-mobile-player-alignment/`](../changes/archive/2026-05-18-mobile-player-alignment/)
+
 ## Próximo paso SDD
 
-**sdd-design** (interfaces `MoneyConversionService`, `PaymentOrchestrator`, migraciones detalladas) → **sdd-tasks** tras diseño.
+Programa MCP cerrado en archive. Nuevos cambios mobile jugador: extender capabilities `mobile-player-*` en `openspec/specs/`.

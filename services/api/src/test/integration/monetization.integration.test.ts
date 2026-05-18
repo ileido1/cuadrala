@@ -131,6 +131,13 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(RES.body.data.pendingCount).toBe(2);
       expect(RES.body.data.confirmedCount).toBe(0);
       expect(RES.body.data.cancelledCount).toBe(0);
+      expect(RES.body.data.pricingCurrency).toBe('BS');
+      expect(RES.body.data.totalAmountMoney).toEqual({
+        amountMinor: '2200',
+        currencyCode: 'BS',
+      });
+      expect(RES.body.data.totalAmountBaseMoney.amountMinor).toBe('2000');
+      expect(RES.body.data.totalFeeAmountMoney.amountMinor).toBe('200');
     });
 
     it('PATCH confirm-manual confirma una transacción', async () => {

@@ -119,3 +119,34 @@ Re-confirmación MUST responder `409 TRANSACCION_YA_CONFIRMADA`.
 **Given** `Transaction.status = CONFIRMED`  
 **When** segundo PATCH confirm  
 **Then** MUST 409 sin mutar montos.
+
+---
+
+### REQ-MCP-041 — Summary match con MoneyAmount (jugador)
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P0 |
+| **Fase** | 1 (ext. `mobile-player-alignment`) |
+| **Change** | `mobile-player-alignment` (archivado 2026-05-18) |
+
+`GET /api/v1/matches/:matchId/transactions/summary` MUST incluir `pricingCurrency` y campos `*Money` (`totalAmountMoney`, `totalAmountBaseMoney`, `totalFeeAmountMoney`) con `amountMinor` + `currencyCode`. Strings legacy (`totalAmount`, etc.) MAY permanecer para compatibilidad.
+
+**Given** partida con transacciones en moneda de pricing USD  
+**When** jugador o cliente consume summary  
+**Then** `totalAmountMoney.currencyCode` MUST ser `USD`.
+
+---
+
+### REQ-MCP-042 — Mobile MUST NOT confirm-manual
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P0 |
+| **Fase** | 1 (ext. `mobile-player-alignment`) |
+
+`apps/mobile` MUST NOT invocar `PATCH .../confirm-manual`. Confirmación staff permanece en `apps/web`.
+
+**Given** build mobile post `mobile-player-alignment`  
+**When** búsqueda estática en `apps/mobile`  
+**Then** MUST NOT existir `confirm-manual` ni `confirmTransactionManual`.
