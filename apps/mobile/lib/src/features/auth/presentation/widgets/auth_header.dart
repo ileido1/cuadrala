@@ -26,7 +26,18 @@ class AuthHeader extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(Icons.emoji_events_outlined, color: Colors.white, size: 30),
+          child: ClipOval(
+            child: Container(
+              color: Colors.white,
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Image(
+                  image: AssetImage('assets/images/logo.png'),
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 10),
         const Text(

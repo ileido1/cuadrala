@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import 'widgets/google_g_logo.dart';
+import 'widgets/social_button.dart';
+
 import '../../../core/di/service_locator.dart';
 import '../../../core/env/app_env.dart';
 import '../data/models/social_login_request.dart';
@@ -27,6 +30,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       final env = getIt<AppEnv>();
       final googleSignIn = GoogleSignIn(
         scopes: const ['email', 'profile'],
+        clientId: env.googleWebClientId,
         serverClientId: env.googleWebClientId,
       );
       final account = await googleSignIn.signIn();
@@ -48,7 +52,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo iniciar con Google.')),
+        SnackBar(content: Text('Error Google: $e'), duration: const Duration(seconds: 8)),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -110,8 +114,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   const SizedBox(height: 26),
                   Center(
                     child: Container(
-                      width: 76,
-                      height: 76,
+                      width: 96,
+                      height: 96,
                       decoration: BoxDecoration(
                         color: scheme.primary,
                         borderRadius: BorderRadius.circular(22),
@@ -123,10 +127,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.emoji_events_outlined,
-                        color: Colors.white,
-                        size: 34,
+                      padding: const EdgeInsets.all(8),
+                      child: ClipOval(
+                        child: Container(
+                          color: Colors.white,
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Image(
+                              image: AssetImage('assets/images/logo.png'),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -152,8 +164,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  _SocialButton(
-                    icon: Icons.g_translate,
+                  SocialButton(
+                    icon: const GoogleGLogo(size: 20),
                     label: 'Continuar con Google',
                     background: scheme.surface,
                     foreground: scheme.onSurface,
@@ -161,8 +173,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     onPressed: _isLoading ? null : _socialLoginGoogle,
                   ),
                   const SizedBox(height: 10),
-                  _SocialButton(
-                    icon: Icons.apple,
+                  SocialButton(
+                    icon: const Icon(Icons.apple),
                     label: 'Continuar con Apple',
                     background: const Color(0xFF111111),
                     foreground: Colors.white,
@@ -181,7 +193,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          'o',
+                          'o continuar con email',
                           style: TextStyle(
                             color: scheme.onSurfaceVariant,
                             fontWeight: FontWeight.w800,
@@ -235,43 +247,3 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 }
 
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({
-    required this.icon,
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.border,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color background;
-  final Color foreground;
-  final Color border;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 50,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: background,
-          foregroundColor: foreground,
-          side: BorderSide(color: border),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-        ),
-        icon: Icon(icon),
-        label: Align(
-          alignment: Alignment.center,
-          child: Text(label),
-        ),
-      ),
-    );
-  }
-}

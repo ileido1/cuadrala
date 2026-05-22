@@ -81,5 +81,17 @@ void main() {
 
       expect(find.text('Credenciales inválidas'), findsOneWidget);
     });
+
+    testWidgets('tocar "¿Olvidaste tu contraseña?" muestra SnackBar con "Próximamente"',
+        (tester) async {
+      when(() => loginCubit.state).thenReturn(const LoginState.idle());
+
+      await tester.pumpWidget(wrap());
+
+      await tester.tap(find.text('¿Olvidaste tu contraseña?'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Próximamente'), findsOneWidget);
+    });
   });
 }

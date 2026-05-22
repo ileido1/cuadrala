@@ -10,6 +10,7 @@ import 'cubit/register_state.dart';
 import 'cubit/session_cubit.dart';
 import 'cubit/session_state.dart';
 import 'widgets/auth_header.dart';
+import 'widgets/auth_tabs.dart';
 import 'widgets/password_strength_indicator.dart';
 
 final class RegisterScreen extends StatefulWidget {
@@ -119,7 +120,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     subtitle: 'Usarás este correo para ingresar.',
                   ),
                   const SizedBox(height: 18),
-                  _AuthTabs(isLogin: false, isDisabled: isLoading),
+                  AuthTabs(
+                    selectedIndex: 1,
+                    isDisabled: isLoading,
+                    onTabChanged: (i) {
+                      if (i == 0) context.go(Routes.login);
+                    },
+                  ),
                   const SizedBox(height: 18),
                   TextField(
                     key: const Key('register.email'),
@@ -228,77 +235,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-final class _AuthTabs extends StatelessWidget {
-  const _AuthTabs({required this.isLogin, required this.isDisabled});
-
-  final bool isLogin;
-  final bool isDisabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TabButton(
-              label: 'Ingresar',
-              selected: isLogin,
-              onTap: isDisabled ? null : () => context.go(Routes.login),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _TabButton(
-              label: 'Crear cuenta',
-              selected: !isLogin,
-              onTap: isDisabled ? null : () => context.go(Routes.register),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _TabButton extends StatelessWidget {
-  const _TabButton({required this.label, required this.selected, required this.onTap});
-
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: selected ? scheme.surface : Colors.transparent,
-          border: Border.all(color: selected ? scheme.outlineVariant : Colors.transparent),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

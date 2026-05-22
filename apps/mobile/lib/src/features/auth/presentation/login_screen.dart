@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../data/models/login_request.dart';
+import '../data/models/social_login_request.dart';
+import '../data/auth_repository.dart';
 import 'cubit/login_cubit.dart';
 import 'cubit/login_state.dart';
 import 'cubit/session_cubit.dart';
 import 'cubit/session_state.dart';
 import 'widgets/auth_header.dart';
+import 'widgets/auth_tabs.dart';
+import 'widgets/google_g_logo.dart';
+import 'widgets/social_button.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/env/app_env.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/primary_button.dart';
 
@@ -22,12 +31,97 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _socialLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _socialLoginGoogle() async {
+    setState(() => _socialLoading = true);
+    try {
+      final env = getIt<AppEnv>();
+      final googleSignIn = GoogleSignIn(
+        scopes: const ['email', 'profile'],
+        clientId: env.googleWebClientId,
+        serverClientId: env.googleWebClientId,
+      );
+      final account = await googleSignIn.signIn();
+      final auth = await account?.authentication;
+      final idToken = auth?.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('No se pudo obtener idToken de Google.');
+      }
+      await getIt<AuthRepository>().socialLogin(
+        SocialLoginRequest(
+          provider: 'google',
+          idToken: idToken,
+          name: account?.displayName,
+        ),
+      );
+      if (!mounted) return;
+      await context.read<SessionCubit>().markAuthenticated();
+      if (!mounted) return;
+      final session = context.read<SessionCubit>().state;
+      if (session is SessionAuthenticated && session.onboardingComplete == false) {
+        context.go(Routes.onboarding);
+      } else {
+        context.go(Routes.home);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error Google: $e'), duration: const Duration(seconds: 8)),
+      );
+    } finally {
+      if (mounted) setState(() => _socialLoading = false);
+    }
+  }
+
+  Future<void> _socialLoginApple() async {
+    setState(() => _socialLoading = true);
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      final idToken = credential.identityToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('No se pudo obtener identityToken de Apple.');
+      }
+      final fullName = [credential.givenName, credential.familyName]
+          .whereType<String>()
+          .where((p) => p.trim().isNotEmpty)
+          .join(' ');
+      await getIt<AuthRepository>().socialLogin(
+        SocialLoginRequest(
+          provider: 'apple',
+          idToken: idToken,
+          name: fullName.isEmpty ? null : fullName,
+        ),
+      );
+      if (!mounted) return;
+      await context.read<SessionCubit>().markAuthenticated();
+      if (!mounted) return;
+      final session = context.read<SessionCubit>().state;
+      if (session is SessionAuthenticated && session.onboardingComplete == false) {
+        context.go(Routes.onboarding);
+      } else {
+        context.go(Routes.home);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo iniciar con Apple.')),
+      );
+    } finally {
+      if (mounted) setState(() => _socialLoading = false);
+    }
   }
 
   void _submit() {
@@ -59,6 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
         },
         builder: (context, state) {
           final isLoading = state is LoginLoading;
+          final isBusy = isLoading || _socialLoading;
           final errorMessage = state is LoginFailure ? state.message : null;
           final scheme = Theme.of(context).colorScheme;
 
@@ -70,7 +165,48 @@ class _LoginScreenState extends State<LoginScreen> {
                     subtitle: 'Inicia sesión para seguir cuadrando partidas.',
                   ),
                   const SizedBox(height: 18),
-                  _AuthTabs(isLogin: true, isDisabled: isLoading),
+                  AuthTabs(
+                    selectedIndex: 0,
+                    isDisabled: isBusy,
+                    onTabChanged: (i) {
+                      if (i == 1) context.go(Routes.register);
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  SocialButton(
+                    icon: const GoogleGLogo(size: 20),
+                    label: 'Continuar con Google',
+                    background: scheme.surface,
+                    foreground: scheme.onSurface,
+                    border: scheme.outlineVariant,
+                    onPressed: isBusy ? null : _socialLoginGoogle,
+                  ),
+                  const SizedBox(height: 10),
+                  SocialButton(
+                    icon: const Icon(Icons.apple),
+                    label: 'Continuar con Apple',
+                    background: const Color(0xFF111111),
+                    foreground: Colors.white,
+                    border: const Color(0xFF111111),
+                    onPressed: isBusy ? null : _socialLoginApple,
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: scheme.outlineVariant, thickness: 1)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'o continuar con email',
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: scheme.outlineVariant, thickness: 1)),
+                    ],
+                  ),
                   const SizedBox(height: 18),
                   TextField(
                     key: const Key('login.email'),
@@ -107,7 +243,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: isLoading ? null : () {},
+                      onPressed: isBusy
+                          ? null
+                          : () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Próximamente'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            },
                       child: Text(
                         '¿Olvidaste tu contraseña?',
                         style: TextStyle(
@@ -160,7 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       InkWell(
                         key: const Key('login.go_register'),
-                        onTap: isLoading ? null : () => context.go(Routes.register),
+                        onTap: isBusy ? null : () => context.go(Routes.register),
                         child: Text(
                           'Crear cuenta',
                           style: TextStyle(
@@ -201,77 +346,3 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-final class _AuthTabs extends StatelessWidget {
-  const _AuthTabs({required this.isLogin, required this.isDisabled});
-
-  final bool isLogin;
-  final bool isDisabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TabButton(
-              label: 'Ingresar',
-              selected: isLogin,
-              onTap: isDisabled ? null : () => context.go(Routes.login),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _TabButton(
-              label: 'Crear cuenta',
-              selected: !isLogin,
-              onTap: isDisabled ? null : () => context.go(Routes.register),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _TabButton extends StatelessWidget {
-  const _TabButton({required this.label, required this.selected, required this.onTap});
-
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: selected ? scheme.surface : Colors.transparent,
-          border: Border.all(color: selected ? scheme.outlineVariant : Colors.transparent),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

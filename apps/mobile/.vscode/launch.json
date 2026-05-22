@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "mobile (dev)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=API_BASE_URL=http://10.0.2.2:4000",
+        "--dart-define=GOOGLE_WEB_CLIENT_ID=333629585796-746gafae62rpbdoiqb16jb67cef4qvfl.apps.googleusercontent.com"
+      ]
+    },
+    {
+      "name": "mobile (dev) — sin Google",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=API_BASE_URL=http://10.0.2.2:4000"
+      ]
+    }
+  ]
+}
