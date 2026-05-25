@@ -45,6 +45,7 @@ export const CREATE_MATCH_BODY_SCHEMA = z
     tournamentId: z.string().uuid('tournamentId debe ser un UUID valido.').optional(),
     pricePerPlayerCents: z.coerce.number().int().min(0).max(100_000_000).optional(),
     maxParticipants: z.coerce.number().int().min(2).max(100).optional(),
+    notes: z.string().trim().min(1).max(500).optional(),
   })
   .strict()
   .superRefine((_data, _ctx) => {

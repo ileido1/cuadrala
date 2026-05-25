@@ -125,6 +125,7 @@ class MatchesRepository {
     int? pricePerPlayerCents,
     int? maxParticipants,
     int? durationMinutes,
+    String? notes,
   }) async {
     final json = await _matchesApi.createMatchEnvelope(
       body: {
@@ -138,6 +139,7 @@ class MatchesRepository {
         if (pricePerPlayerCents != null) 'pricePerPlayerCents': pricePerPlayerCents,
         if (maxParticipants != null) 'maxParticipants': maxParticipants,
         if (durationMinutes != null) 'durationMinutes': durationMinutes,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
     );
     final data = json['data'];

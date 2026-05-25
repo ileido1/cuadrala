@@ -49,6 +49,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   Object? _availabilityError;
   List<_AvailabilitySlot> _slots = const [];
   OpeningHoursMap? _openingHours;
+  String _venueTimezone = 'America/Caracas';
 
   bool _loading = true;
   bool _submitting = false;
@@ -163,6 +164,42 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     return (perPlayerCents / 100).round();
   }
 
+  Widget _buildCategoryReadOnly(ColorScheme scheme) {
+    if (_categoryId == null || _categoryId!.isEmpty) {
+      return Text(
+        'Completa tu categoría en el perfil para este deporte.',
+        style: TextStyle(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+    final name = _categories
+        .where((c) => c.id == _categoryId)
+        .map((c) => c.name)
+        .firstOrNull;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name ?? '—',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Según tu perfil',
+          style: TextStyle(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _pickVenueAndCourt() async {
     final selectedVenue = await showModalBottomSheet<VenueDto>(
       context: context,
@@ -242,10 +279,12 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     if (!mounted) return;
 
     OpeningHoursMap? openingHours = selectedVenue.openingHours;
+    var venueTimezone = selectedVenue.timezone ?? 'America/Caracas';
     try {
       final detail =
           await getIt<VenuesRepository>().getVenueDetail(venueId: selectedVenue.id);
       openingHours = detail.openingHours ?? openingHours;
+      venueTimezone = detail.timezone ?? venueTimezone;
     } catch (_) {}
 
     if (!mounted) return;
@@ -345,6 +384,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       _selectedVenue = selectedVenue;
       _selectedCourt = selectedCourt;
       _openingHours = openingHours;
+      _venueTimezone = venueTimezone;
       _clubController.text = selectedVenue.name;
       _courtController.text = selectedCourt.name;
       _selectedSlotUtc = null;
@@ -378,6 +418,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     final window = availabilityWindowUtcForLocalDate(
       localDate: _selectedDate,
       openingHours: _openingHours,
+      venueTimezone: _venueTimezone,
     );
     return window.fromUtc;
   }
@@ -386,6 +427,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     final window = availabilityWindowUtcForLocalDate(
       localDate: _selectedDate,
       openingHours: _openingHours,
+      venueTimezone: _venueTimezone,
     );
     return window.toUtc;
   }
@@ -430,7 +472,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         from: _availabilityFromUtc(),
         to: _availabilityToUtc(),
         durationMinutes: durationMinutes,
-        stepMinutes: 30,
+        stepMinutes: durationMinutes,
         sportId: sportId,
         categoryId: categoryId,
       );
@@ -457,6 +499,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
           _AvailabilitySlot(
             scheduledAtUtc: DateTime.parse(at),
             isAvailable: s['isAvailable'] == true,
+            reason: s['reason'] as String?,
           ),
         );
       }
@@ -525,6 +568,9 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         maxParticipants: _players,
         pricePerPlayerCents: _pricePerPlayer * 100,
         durationMinutes: _selectedCourt!.durationMinutes,
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
       );
       if (!mounted) return;
       context.go(Routes.matchDetail(created.id));
@@ -789,7 +835,9 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                                             ),
                                                         tooltip: enabled
                                                             ? null
-                                                            : 'Ocupado',
+                                                            : _slotUnavailableTooltip(
+                                                                slot,
+                                                              ),
                                                       );
                                                     }).toList(),
                                                   ),
@@ -803,34 +851,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                             Expanded(
                               child:                         _SectionCard(
                           title: 'Categoría',
-                          child: _categories.isEmpty
-                              ? const Text('Sin categorías disponibles')
-                              : Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: _categories
-                                      .map(
-                                        (c) {
-                                          final selected =
-                                              _categoryId == c.id;
-                                          return ChoiceChip(
-                                            label: Text(c.name),
-                                            selected: selected,
-                                            onSelected: (_) => setState(
-                                              () => _categoryId = c.id,
-                                            ),
-                                            selectedColor: scheme.primary,
-                                            labelStyle: TextStyle(
-                                              color: selected
-                                                  ? scheme.onPrimary
-                                                  : scheme.onSurface,
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          );
-                                        },
-                                      )
-                                      .toList(),
-                                ),
+                          child: _buildCategoryReadOnly(scheme),
                         ),
                             ),
                             const SizedBox(width: 12),
@@ -936,14 +957,27 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
 }
 
+String? _slotUnavailableTooltip(_AvailabilitySlot slot) {
+  return switch (slot.reason) {
+    'INCOMPATIBLE_VACANT_HOUR' =>
+      'Horario publicado para otra categoría',
+    'OUT_OF_RANGE' => 'Fuera del horario de la sede',
+    'OCCUPIED_RESERVATION' => 'Reserva confirmada',
+    'OCCUPIED_MATCH' => 'Ocupado',
+    _ => 'Ocupado',
+  };
+}
+
 final class _AvailabilitySlot {
   const _AvailabilitySlot({
     required this.scheduledAtUtc,
     required this.isAvailable,
+    this.reason,
   });
 
   final DateTime scheduledAtUtc;
   final bool isAvailable;
+  final String? reason;
 }
 
 String _formatDateShort(DateTime d) {

@@ -76,17 +76,18 @@ export class PrismaMatchCourtAvailabilityRepository implements MatchCourtAvailab
         scheduledAt: { not: null, gte: WINDOW_START, lte: WINDOW_END },
         ...(_params.excludeMatchId !== undefined ? { id: { not: _params.excludeMatchId } } : {}),
       },
-      select: { id: true, scheduledAt: true },
+      select: { id: true, scheduledAt: true, durationMinutes: true },
     });
 
     for (const R of ROWS) {
       if (R.scheduledAt === null) continue;
+      const EXISTING_DURATION = R.durationMinutes ?? DEFAULT_BLOCK_MINUTES;
       if (
         intervalsOverlapMs(
           _params.scheduledAt,
           _params.durationMinutes,
           R.scheduledAt,
-          DEFAULT_BLOCK_MINUTES,
+          EXISTING_DURATION,
         )
       ) {
         return R.id;

@@ -2,6 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cuadrala_mobile/src/core/venue/opening_hours.dart';
 
+void main() {
+  setUpAll(ensureOpeningHoursTimezoneData);
+
 const _hours = {
   'monday': OpeningHoursDay(open: '08:00', close: '23:00'),
   'tuesday': OpeningHoursDay(open: '08:00', close: '23:00'),
@@ -11,7 +14,6 @@ const _hours = {
   'saturday': OpeningHoursDay(open: '08:00', close: '23:00'),
 };
 
-void main() {
   group('opening_hours', () {
     test('should treat sunday as closed when absent from openingHours', () {
       expect(dayKeyFromIsoDate('2026-05-17'), 'sunday');
@@ -36,5 +38,22 @@ void main() {
         isNotNull,
       );
     });
+
+    test(
+      'should convert venue opening hours to UTC using venue timezone',
+      () {
+        final window = availabilityWindowUtcForLocalDate(
+          localDate: DateTime(2026, 5, 18),
+          openingHours: _hours,
+          venueTimezone: 'America/Caracas',
+        );
+        // 08:00 America/Caracas (UTC-4) => 12:00 UTC
+        expect(window.fromUtc.isUtc, isTrue);
+        expect(window.fromUtc.hour, 12);
+        expect(window.fromUtc.minute, 0);
+        // 23:00 local => 03:00 UTC next calendar day
+        expect(window.toUtc.hour, 3);
+      },
+    );
   });
 }

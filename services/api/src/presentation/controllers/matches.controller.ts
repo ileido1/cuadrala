@@ -111,6 +111,7 @@ export async function postCreateMatchCON(_req: Request, _res: Response): Promise
     ...(BODY.tournamentId !== undefined ? { tournamentId: BODY.tournamentId } : {}),
     ...(BODY.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: BODY.pricePerPlayerCents } : {}),
     ...(BODY.maxParticipants !== undefined ? { maxParticipants: BODY.maxParticipants } : {}),
+    ...(BODY.notes !== undefined ? { notes: BODY.notes } : {}),
   });
 
   _res.status(201).json({

@@ -9,6 +9,7 @@ export type CreateMatchInputDTO = {
   tournamentId?: string;
   pricePerPlayerCents?: number;
   maxParticipants: number;
+  notes?: string;
 };
 
 export type UpdateMatchPatchDTO = {

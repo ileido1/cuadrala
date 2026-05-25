@@ -63,6 +63,7 @@ function mapVenueDetailSV(_venue: {
   paymentNotes: string | null;
   displayCurrency: string;
   pricingCurrency: string;
+  monetizationSettings: { timezone: string } | null;
   _count: { courts: number };
 }): VenueDetailDTO {
   const OPENING_HOURS = _venue.openingHours as Record<string, { open: string; close: string }> | null;
@@ -90,6 +91,7 @@ function mapVenueDetailSV(_venue: {
     paymentNotes: _venue.paymentNotes,
     displayCurrency: _venue.displayCurrency,
     pricingCurrency: _venue.pricingCurrency,
+    timezone: _venue.monetizationSettings?.timezone ?? 'America/Caracas',
   };
 }
 
@@ -293,6 +295,7 @@ export class PrismaVenueRepository implements VenueRepository {
         paymentNotes: true,
         displayCurrency: true,
         pricingCurrency: true,
+        monetizationSettings: { select: { timezone: true } },
         _count: { select: { courts: true } },
       },
     });

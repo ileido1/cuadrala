@@ -1,5 +1,8 @@
 // Horarios de sede (paridad con apps/web/src/lib/venue-opening-hours.ts).
 
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
+
 typedef OpeningHoursMap = Map<String, OpeningHoursDay>;
 
 final class OpeningHoursDay {
@@ -11,25 +14,44 @@ final class OpeningHoursDay {
 
 const _defaultOpenMinutes = 8 * 60;
 const _defaultCloseMinutes = 23 * 60;
+const _defaultVenueTimezone = 'America/Caracas';
 
-const _dayKeys = [
-  'sunday',
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
+bool _timezoneDataLoaded = false;
+
+void ensureOpeningHoursTimezoneData() {
+  if (_timezoneDataLoaded) return;
+  tz_data.initializeTimeZones();
+  _timezoneDataLoaded = true;
+}
+
+final class _dayKeys {
+  static const sunday = 'sunday';
+  static const monday = 'monday';
+  static const tuesday = 'tuesday';
+  static const wednesday = 'wednesday';
+  static const thursday = 'thursday';
+  static const friday = 'friday';
+  static const saturday = 'saturday';
+}
+
+const _dayKeysList = [
+  _dayKeys.sunday,
+  _dayKeys.monday,
+  _dayKeys.tuesday,
+  _dayKeys.wednesday,
+  _dayKeys.thursday,
+  _dayKeys.friday,
+  _dayKeys.saturday,
 ];
 
 const _dayLabelsEs = {
-  'sunday': 'Domingo',
-  'monday': 'Lunes',
-  'tuesday': 'Martes',
-  'wednesday': 'Miércoles',
-  'thursday': 'Jueves',
-  'friday': 'Viernes',
-  'saturday': 'Sábado',
+  _dayKeys.sunday: 'Domingo',
+  _dayKeys.monday: 'Lunes',
+  _dayKeys.tuesday: 'Martes',
+  _dayKeys.wednesday: 'Miércoles',
+  _dayKeys.thursday: 'Jueves',
+  _dayKeys.friday: 'Viernes',
+  _dayKeys.saturday: 'Sábado',
 };
 
 int parseTimeToMinutes(String time) {
@@ -46,7 +68,7 @@ String minutesToTimeString(int minutes) {
 }
 
 String dayKeyFromDate(DateTime localDate) {
-  return _dayKeys[localDate.weekday % 7];
+  return _dayKeysList[localDate.weekday % 7];
 }
 
 String dayKeyFromIsoDate(String isoDate) {
@@ -77,7 +99,7 @@ OpeningHoursMap? openingHoursFromJson(Object? json) {
   final dayKey = dayKeyFromIsoDate(isoDate);
 
   if (openingHours == null) {
-    if (dayKey == 'sunday') return null;
+    if (dayKey == _dayKeys.sunday) return null;
     return (openMinutes: _defaultOpenMinutes, closeMinutes: _defaultCloseMinutes);
   }
 
@@ -124,35 +146,53 @@ String? validateTimeWithinDayHours(
   return null;
 }
 
-/// Ventana UTC para consultar availability en un día local.
+tz.Location _venueLocation(String venueTimezone) {
+  ensureOpeningHoursTimezoneData();
+  try {
+    return tz.getLocation(venueTimezone);
+  } catch (_) {
+    return tz.getLocation(_defaultVenueTimezone);
+  }
+}
+
+tz.TZDateTime _tzAtMinutes(
+  tz.Location location,
+  int year,
+  int month,
+  int day,
+  int totalMinutes,
+) {
+  return tz.TZDateTime(
+    location,
+    year,
+    month,
+    day,
+    totalMinutes ~/ 60,
+    totalMinutes % 60,
+  );
+}
+
+/// Ventana UTC para availability: día calendario + horario en timezone de sede.
 ({DateTime fromUtc, DateTime toUtc}) availabilityWindowUtcForLocalDate({
   required DateTime localDate,
   OpeningHoursMap? openingHours,
+  String venueTimezone = _defaultVenueTimezone,
 }) {
   final iso = '${localDate.year.toString().padLeft(4, '0')}-'
       '${localDate.month.toString().padLeft(2, '0')}-'
       '${localDate.day.toString().padLeft(2, '0')}';
   final hours = getDayHoursForDate(iso, openingHours);
+  final location = _venueLocation(venueTimezone);
+  final y = localDate.year;
+  final m = localDate.month;
+  final d = localDate.day;
+
   if (hours == null) {
-    return (
-      fromUtc: DateTime.utc(localDate.year, localDate.month, localDate.day, 6),
-      toUtc: DateTime.utc(localDate.year, localDate.month, localDate.day, 6),
-    );
+    final closed = _tzAtMinutes(location, y, m, d, 6 * 60);
+    return (fromUtc: closed.toUtc(), toUtc: closed.toUtc());
   }
-  return (
-    fromUtc: DateTime.utc(
-      localDate.year,
-      localDate.month,
-      localDate.day,
-      hours.openMinutes ~/ 60,
-      hours.openMinutes % 60,
-    ),
-    toUtc: DateTime.utc(
-      localDate.year,
-      localDate.month,
-      localDate.day,
-      hours.closeMinutes ~/ 60,
-      hours.closeMinutes % 60,
-    ),
-  );
+
+  final fromLocal = _tzAtMinutes(location, y, m, d, hours.openMinutes);
+  final toLocal = _tzAtMinutes(location, y, m, d, hours.closeMinutes);
+  return (fromUtc: fromLocal.toUtc(), toUtc: toLocal.toUtc());
 }

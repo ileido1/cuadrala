@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { CreateMatchUseCase } from '../../application/use_cases/create_match.use_case.js';
 import type { MatchCourtAvailabilityRepository } from '../../domain/ports/match_court_availability_repository.js';
 import type { MatchCrudRepository } from '../../domain/ports/match_crud_repository.js';
+import type { UserCategoryRepository } from '../../domain/ports/user_category_repository.js';
 
 const VENUE_ID = '00000000-0000-4000-8000-000000000004';
 const COURT_ID = '00000000-0000-4000-8000-000000000003';
@@ -17,7 +18,44 @@ function buildAvailabilityRepo(): MatchCourtAvailabilityRepository {
   };
 }
 
+function buildUserCategoryRepo(_hasCategory = true): UserCategoryRepository {
+  return {
+    userHasCategoryForSportSV: vi.fn().mockResolvedValue(_hasCategory),
+    userHasCategorySV: vi.fn(),
+    listByUserIdSV: vi.fn(),
+    upsertForUserSportSV: vi.fn(),
+    replaceForUserSV: vi.fn(),
+  };
+}
+
 describe('CreateMatchUseCase', () => {
+  it('should reject when creator category does not match sport profile', async () => {
+    const availability = buildAvailabilityRepo();
+    const crud: MatchCrudRepository = {
+      createMatchSV: vi.fn(),
+      updateMatchSV: vi.fn(),
+      cancelMatchSV: vi.fn(),
+    };
+    const uc = new CreateMatchUseCase(
+      crud,
+      availability,
+      buildUserCategoryRepo(false),
+    );
+
+    await expect(
+      uc.executeSV({
+        creatorUserId: 'user-1',
+        sportId: '00000000-0000-4000-8000-000000000001',
+        categoryId: '00000000-0000-4000-8000-000000000002',
+      }),
+    ).rejects.toMatchObject({
+      code: 'CATEGORIA_NO_COMPATIBLE',
+      statusCode: 403,
+    });
+
+    expect(crud.createMatchSV).not.toHaveBeenCalled();
+  });
+
   it('should reject when confirmed reservation exists at court slot', async () => {
     const availability = buildAvailabilityRepo();
     vi.mocked(availability.hasConfirmedReservationAtCourtScheduledAtSV).mockResolvedValue(
@@ -30,7 +68,7 @@ describe('CreateMatchUseCase', () => {
       cancelMatchSV: vi.fn(),
     };
 
-    const uc = new CreateMatchUseCase(crud, availability);
+    const uc = new CreateMatchUseCase(crud, availability, buildUserCategoryRepo());
 
     await expect(
       uc.executeSV({
@@ -72,7 +110,7 @@ describe('CreateMatchUseCase', () => {
       cancelMatchSV: vi.fn(),
     };
 
-    const uc = new CreateMatchUseCase(crud, availability);
+    const uc = new CreateMatchUseCase(crud, availability, buildUserCategoryRepo());
     const scheduledAt = new Date('2026-06-01T15:00:00.000Z');
 
     await uc.executeSV({

@@ -3,6 +3,7 @@ import type { MatchCourtAvailabilityRepository } from '../../domain/ports/match_
 
 export type CourtAvailabilityReasonDTO =
   | 'OCCUPIED_MATCH'
+  | 'OCCUPIED_RESERVATION'
   | 'INCOMPATIBLE_VACANT_HOUR'
   | 'OUT_OF_RANGE';
 
@@ -98,6 +99,17 @@ export class GetCourtAvailabilityUseCase {
               continue;
             }
           }
+        }
+
+        const HAS_CONFIRMED =
+          await this._repo.hasConfirmedReservationAtCourtScheduledAtSV(C.id, t);
+        if (HAS_CONFIRMED) {
+          SLOTS.push({
+            scheduledAt: t.toISOString(),
+            isAvailable: false,
+            reason: 'OCCUPIED_RESERVATION',
+          });
+          continue;
         }
 
         const CONFLICT_ID = await this._repo.findConflictingActiveMatchIdSV({
