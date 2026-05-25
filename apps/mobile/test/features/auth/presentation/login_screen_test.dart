@@ -24,6 +24,11 @@ void main() {
 
     setUp(() {
       loginCubit = _MockLoginCubit();
+      whenListen(
+        loginCubit,
+        Stream<LoginState>.value(const LoginState.idle()),
+        initialState: const LoginState.idle(),
+      );
     });
 
     Widget wrap({ThemeMode themeMode = ThemeMode.light}) {
@@ -39,8 +44,6 @@ void main() {
     }
 
     testWidgets('renderiza campos y botón', (tester) async {
-      when(() => loginCubit.state).thenReturn(const LoginState.idle());
-
       await tester.pumpWidget(wrap());
 
       expect(find.byKey(const Key('login.screen')), findsOneWidget);
@@ -50,14 +53,16 @@ void main() {
     });
 
     testWidgets('al tocar entrar llama submit', (tester) async {
-      when(() => loginCubit.state).thenReturn(const LoginState.idle());
       when(() => loginCubit.submit(any())).thenAnswer((_) async {});
 
       await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
 
       await tester.enterText(find.byKey(const Key('login.email')), 'a@b.com');
       await tester.enterText(find.byKey(const Key('login.password')), '12345678');
+      await tester.ensureVisible(find.byKey(const Key('login.submit')));
       await tester.tap(find.byKey(const Key('login.submit')));
+      await tester.pump();
 
       verify(
         () => loginCubit.submit(
@@ -88,12 +93,16 @@ void main() {
 
     testWidgets('tocar "¿Olvidaste tu contraseña?" muestra SnackBar con "Próximamente"',
         (tester) async {
-      when(() => loginCubit.state).thenReturn(const LoginState.idle());
-
       await tester.pumpWidget(wrap());
-
-      await tester.tap(find.text('¿Olvidaste tu contraseña?'));
       await tester.pumpAndSettle();
+
+      final forgotButton = find.ancestor(
+        of: find.text('¿Olvidaste tu contraseña?'),
+        matching: find.byType(TextButton),
+      );
+      await tester.ensureVisible(forgotButton);
+      await tester.tap(forgotButton);
+      await tester.pump();
 
       expect(find.text('Próximamente'), findsOneWidget);
     });

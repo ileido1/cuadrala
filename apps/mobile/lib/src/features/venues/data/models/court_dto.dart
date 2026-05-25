@@ -9,6 +9,8 @@ final class CourtDto {
     this.surfaceType,
     required this.status,
     required this.createdAt,
+    required this.pricePerHourCents,
+    required this.durationMinutes,
   });
 
   final String id;
@@ -20,6 +22,8 @@ final class CourtDto {
   final String? surfaceType;
   final String status;
   final DateTime createdAt;
+  final int pricePerHourCents;
+  final int durationMinutes;
 
   static CourtDto fromJson(Map<String, Object?> json) {
     return CourtDto(
@@ -32,6 +36,8 @@ final class CourtDto {
       surfaceType: json['surfaceType'] as String?,
       status: (json['status'] as String?) ?? 'ACTIVE',
       createdAt: DateTime.parse(json['createdAt'] as String),
+      pricePerHourCents: (json['pricePerHourCents'] as num?)?.toInt() ?? 0,
+      durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 60,
     );
   }
 }

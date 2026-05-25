@@ -8,6 +8,8 @@ import '../../../router/routes.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models/category_dto.dart';
 import '../../catalog/data/models/sport_dto.dart';
+import '../../onboarding/data/models/player_sport_profile_dto.dart';
+import '../../onboarding/data/onboarding_repository.dart';
 import '../../venues/data/models/court_dto.dart';
 import '../../venues/data/models/venue_dto.dart';
 import '../../venues/data/venues_repository.dart';
@@ -24,6 +26,8 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   final _clubController = TextEditingController();
   final _courtController = TextEditingController();
   final _notesController = TextEditingController();
+  late final TextEditingController _priceController =
+      TextEditingController(text: _pricePerPlayer.toString());
 
   List<VenueDto> _venues = const [];
   VenueDto? _selectedVenue;
@@ -33,6 +37,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   String? _selectedSportId;
 
   List<CategoryDto> _categories = const [];
+  List<PlayerSportProfileDto> _sportProfiles = const [];
   String? _categoryId;
   int _players = 4;
   int _pricePerPlayer = 4500;
@@ -42,7 +47,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
   bool _availabilityLoading = false;
   Object? _availabilityError;
-  List<DateTime> _availableSlotsUtc = const [];
+  List<_AvailabilitySlot> _slots = const [];
   OpeningHoursMap? _openingHours;
 
   bool _loading = true;
@@ -53,6 +58,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     _clubController.dispose();
     _courtController.dispose();
     _notesController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
@@ -65,15 +71,14 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   Future<void> _bootstrap() async {
     setState(() => _loading = true);
     try {
-      final catalog = getIt<CatalogRepository>();
       final results = await Future.wait([
-        catalog.listSports(),
-        catalog.listCategories(),
+        getIt<CatalogRepository>().listSports(),
         getIt<VenuesRepository>().listVenues(limit: 100),
+        getIt<OnboardingRepository>().listSportProfiles(),
       ]);
       final sports = results[0] as List<SportDto>;
-      final categories = results[1] as List<CategoryDto>;
-      final venues = results[2] as List<VenueDto>;
+      final venues = results[1] as List<VenueDto>;
+      final profiles = results[2] as List<PlayerSportProfileDto>;
       String? selectedSport = sports.isEmpty ? null : sports.first.id;
       for (final s in sports) {
         if (s.code.toUpperCase() == 'PADEL') {
@@ -84,14 +89,13 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       if (!mounted) return;
       setState(() {
         _sports = sports;
-        _selectedSportId = selectedSport;
-        _categories = categories;
-        _categoryId = categories.isEmpty ? null : categories.first.id;
         _venues = venues;
+        _sportProfiles = profiles;
         _selectedVenue = null;
         _selectedCourt = null;
         _loading = false;
       });
+      await _applySportSelection(selectedSport);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -100,11 +104,63 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         _categories = const [];
         _categoryId = null;
         _venues = const [];
+        _sportProfiles = const [];
         _selectedVenue = null;
         _selectedCourt = null;
         _loading = false;
       });
     }
+  }
+
+  Future<void> _applySportSelection(String? sportId) async {
+    if (sportId == null) {
+      setState(() {
+        _selectedSportId = null;
+        _categories = const [];
+        _categoryId = null;
+      });
+      return;
+    }
+    final catalog = getIt<CatalogRepository>();
+    final filtered = await catalog.listCategories(sportId: sportId);
+    if (!mounted) return;
+
+    String? preferred;
+    for (final p in _sportProfiles) {
+      if (p.sportId == sportId &&
+          p.categoryId != null &&
+          p.categoryId!.isNotEmpty) {
+        preferred = p.categoryId;
+        break;
+      }
+    }
+    String? resolved;
+    if (preferred != null && filtered.any((c) => c.id == preferred)) {
+      resolved = preferred;
+    } else if (filtered.isNotEmpty) {
+      resolved = filtered.first.id;
+    }
+
+    setState(() {
+      _selectedSportId = sportId;
+      _categories = filtered;
+      _categoryId = resolved;
+    });
+    if (_selectedCourt != null) {
+      await _refreshAvailability();
+    }
+  }
+
+  int? _computedPricePerPlayer() {
+    final court = _selectedCourt;
+    if (court == null) return null;
+    if (court.pricePerHourCents <= 0) return null;
+    if (court.durationMinutes <= 0) return null;
+    if (_players <= 0) return null;
+    final totalCents =
+        court.pricePerHourCents * court.durationMinutes / 60;
+    final perPlayerCents = totalCents / _players;
+    return (perPlayerCents / 100).round();
   }
 
   Future<void> _pickVenueAndCourt() async {
@@ -342,7 +398,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       setState(() {
         _availabilityLoading = false;
         _availabilityError = null;
-        _availableSlotsUtc = const [];
+        _slots = const [];
       });
       return;
     }
@@ -353,7 +409,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       setState(() {
         _availabilityLoading = false;
         _availabilityError = closedDayMessage(isoDate, _openingHours);
-        _availableSlotsUtc = const [];
+        _slots = const [];
       });
       return;
     }
@@ -361,18 +417,19 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     setState(() {
       _availabilityLoading = true;
       _availabilityError = null;
-      _availableSlotsUtc = const [];
+      _slots = const [];
     });
 
     try {
       final sportId = _selectedSportId;
       final categoryId = _categoryId;
+      final durationMinutes = _selectedCourt?.durationMinutes ?? 60;
       final data = await getIt<VenuesRepository>().getVenueAvailability(
         venueId: venueId,
         courtId: courtId,
         from: _availabilityFromUtc(),
         to: _availabilityToUtc(),
-        durationMinutes: 90,
+        durationMinutes: durationMinutes,
         stepMinutes: 30,
         sportId: sportId,
         categoryId: categoryId,
@@ -392,25 +449,30 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         throw Exception('Respuesta inválida: slots');
       }
 
-      final available = <DateTime>[];
+      final slots = <_AvailabilitySlot>[];
       for (final s in slotsRaw.whereType<Map<String, Object?>>()) {
-        if (s['isAvailable'] == true && s['scheduledAt'] is String) {
-          available.add(DateTime.parse(s['scheduledAt'] as String));
-        }
+        final at = s['scheduledAt'];
+        if (at is! String) continue;
+        slots.add(
+          _AvailabilitySlot(
+            scheduledAtUtc: DateTime.parse(at),
+            isAvailable: s['isAvailable'] == true,
+          ),
+        );
       }
 
       if (!mounted) return;
       setState(() {
         _availabilityLoading = false;
         _availabilityError = null;
-        _availableSlotsUtc = available;
+        _slots = slots;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _availabilityLoading = false;
         _availabilityError = e;
-        _availableSlotsUtc = const [];
+        _slots = const [];
       });
     }
   }
@@ -462,7 +524,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         venueId: venueId,
         maxParticipants: _players,
         pricePerPlayerCents: _pricePerPlayer * 100,
-        durationMinutes: 90,
+        durationMinutes: _selectedCourt!.durationMinutes,
       );
       if (!mounted) return;
       context.go(Routes.matchDetail(created.id));
@@ -568,35 +630,31 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'DEPORTE',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: _sports
-                              .map(
-                                (s) => ChoiceChip(
-                                  label: Text(s.name),
-                                  selected: _selectedSportId == s.id,
-                                  onSelected: (_) => setState(() => _selectedSportId = s.id),
-                                  selectedColor: scheme.primary,
-                                  labelStyle: TextStyle(
-                                    color: _selectedSportId == s.id
-                                        ? scheme.onPrimary
-                                        : scheme.onSurface,
-                                    fontWeight: FontWeight.w900,
+                        _SectionCard(
+                          title: 'Deporte',
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _sports
+                                .map(
+                                  (s) => ChoiceChip(
+                                    label: Text(s.name),
+                                    selected: _selectedSportId == s.id,
+                                    onSelected: (_) =>
+                                        _applySportSelection(s.id),
+                                    selectedColor: scheme.primary,
+                                    labelStyle: TextStyle(
+                                      color: _selectedSportId == s.id
+                                          ? scheme.onPrimary
+                                          : scheme.onSurface,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
-                                ),
-                              )
-                              .toList(),
+                                )
+                                .toList(),
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         _SectionCard(
                           title: 'Sede / Cancha',
                           footer: _selectedCourt == null
@@ -671,30 +729,67 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                                   fontSize: 12,
                                                 ),
                                               )
-                                            : _availableSlotsUtc.isEmpty
+                                            : _slots.isEmpty
                                                 ? const Text(
                                                     'Sin horarios',
-                                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
                                                   )
                                                 : Wrap(
                                                     spacing: 8,
                                                     runSpacing: 8,
-                                                    children: _availableSlotsUtc.map((slotUtc) {
-                                                      final local = slotUtc.toLocal();
+                                                    children: _slots.map((slot) {
+                                                      final local =
+                                                          slot.scheduledAtUtc
+                                                              .toLocal();
                                                       final label =
                                                           '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-                                                      final selected = _selectedSlotUtc == slotUtc;
+                                                      final selected =
+                                                          _selectedSlotUtc ==
+                                                              slot
+                                                                  .scheduledAtUtc;
+                                                      final enabled =
+                                                          slot.isAvailable;
                                                       return ChoiceChip(
                                                         label: Text(
                                                           label,
-                                                          style: const TextStyle(fontWeight: FontWeight.w900),
+                                                          style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w900,
+                                                            color: !enabled
+                                                                ? scheme
+                                                                    .onSurfaceVariant
+                                                                : selected
+                                                                    ? scheme
+                                                                        .onPrimary
+                                                                    : scheme
+                                                                        .onSurface,
+                                                            decoration: enabled
+                                                                ? null
+                                                                : TextDecoration
+                                                                    .lineThrough,
+                                                          ),
                                                         ),
-                                                        selected: selected,
-                                                        onSelected: (_) => setState(() => _selectedSlotUtc = slotUtc),
-                                                        selectedColor: scheme.primary,
-                                                        labelStyle: TextStyle(
-                                                          color: selected ? scheme.onPrimary : scheme.onSurface,
-                                                        ),
+                                                        selected:
+                                                            selected && enabled,
+                                                        onSelected: enabled
+                                                            ? (_) => setState(
+                                                                  () =>
+                                                                      _selectedSlotUtc =
+                                                                          slot.scheduledAtUtc,
+                                                                )
+                                                            : null,
+                                                        selectedColor:
+                                                            scheme.primary,
+                                                        disabledColor: scheme
+                                                            .outlineVariant
+                                                            .withValues(
+                                                              alpha: 0.35,
+                                                            ),
+                                                        tooltip: enabled
+                                                            ? null
+                                                            : 'Ocupado',
                                                       );
                                                     }).toList(),
                                                   ),
@@ -715,12 +810,24 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                   runSpacing: 8,
                                   children: _categories
                                       .map(
-                                        (c) => ChoiceChip(
-                                          label: Text(c.name),
-                                          selected: _categoryId == c.id,
-                                          onSelected: (_) =>
-                                              setState(() => _categoryId = c.id),
-                                        ),
+                                        (c) {
+                                          final selected =
+                                              _categoryId == c.id;
+                                          return ChoiceChip(
+                                            label: Text(c.name),
+                                            selected: selected,
+                                            onSelected: (_) => setState(
+                                              () => _categoryId = c.id,
+                                            ),
+                                            selectedColor: scheme.primary,
+                                            labelStyle: TextStyle(
+                                              color: selected
+                                                  ? scheme.onPrimary
+                                                  : scheme.onSurface,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          );
+                                        },
                                       )
                                       .toList(),
                                 ),
@@ -759,13 +866,27 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         const SizedBox(height: 12),
                         _SectionCard(
                           title: 'Precio por persona',
-                          child: TextField(
-                            keyboardType: TextInputType.number,
-                            controller: TextEditingController(text: _pricePerPlayer.toString()),
-                            decoration: const InputDecoration(prefixIcon: Icon(Icons.attach_money)),
-                            onChanged: (v) => setState(() {
-                              _pricePerPlayer = int.tryParse(v) ?? _pricePerPlayer;
-                            }),
+                          child: Builder(
+                            builder: (context) {
+                              final hint = _computedPricePerPlayer();
+                              return TextField(
+                                controller: _priceController,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.attach_money),
+                                  hintText:
+                                      hint == null ? null : '~\$$hint',
+                                  helperText: hint == null
+                                      ? null
+                                      : 'Sugerido según la cancha y la '
+                                          'cantidad de jugadores',
+                                ),
+                                onChanged: (v) => setState(() {
+                                  _pricePerPlayer =
+                                      int.tryParse(v) ?? _pricePerPlayer;
+                                }),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -815,6 +936,16 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
 }
 
+final class _AvailabilitySlot {
+  const _AvailabilitySlot({
+    required this.scheduledAtUtc,
+    required this.isAvailable,
+  });
+
+  final DateTime scheduledAtUtc;
+  final bool isAvailable;
+}
+
 String _formatDateShort(DateTime d) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
@@ -848,6 +979,7 @@ final class _SectionCard extends StatelessWidget {
             title,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w900,
+                  color: scheme.onSurfaceVariant,
                 ),
           ),
           const SizedBox(height: 10),
