@@ -62,6 +62,14 @@ export async function patchRecordPlayerPaymentSelectionCON(
     actorUserId: ACTOR_USER_ID,
     venuePaymentMethodId: BODY.venuePaymentMethodId,
     paymentMethodType: BODY.paymentMethodType,
+    ...(BODY.reportedSettlement !== undefined
+      ? {
+          reportedSettlement: {
+            amountMinor: BigInt(BODY.reportedSettlement.amountMinor),
+            currencyCode: parseCurrencyCode(BODY.reportedSettlement.currencyCode),
+          },
+        }
+      : {}),
   });
 
   _res.status(200).json({

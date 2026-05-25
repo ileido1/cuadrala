@@ -42,7 +42,38 @@ type PlayerPaymentSelectionJson = {
   name?: string;
   config?: Record<string, unknown>;
   legacy?: boolean;
+  reportedSettlement?: {
+    amountMinor?: string;
+    currencyCode?: string;
+  };
 };
+
+function resolvePlayerReportedSettlementSV(_row: {
+  paymentData: unknown;
+}): {
+  playerReportedSettlementMinor: string | null;
+  playerReportedSettlementCurrency: string | null;
+} {
+  const DATA = _row.paymentData;
+  if (DATA === null || typeof DATA !== 'object' || Array.isArray(DATA)) {
+    return {
+      playerReportedSettlementMinor: null,
+      playerReportedSettlementCurrency: null,
+    };
+  }
+  const REPORTED = (DATA as { playerSelection?: PlayerPaymentSelectionJson })
+    .playerSelection?.reportedSettlement;
+  if (REPORTED?.amountMinor === undefined) {
+    return {
+      playerReportedSettlementMinor: null,
+      playerReportedSettlementCurrency: null,
+    };
+  }
+  return {
+    playerReportedSettlementMinor: String(REPORTED.amountMinor),
+    playerReportedSettlementCurrency: REPORTED.currencyCode ?? null,
+  };
+}
 
 function resolvePlayerPaymentMethodSV(_row: {
   venuePaymentMethod: { type: string; name: string; config: unknown } | null;
@@ -150,6 +181,7 @@ export function mapPrismaTransactionToPendingStaffRowSV(
   }
 
   const PAYMENT_METHOD = resolvePlayerPaymentMethodSV(_row);
+  const REPORTED = resolvePlayerReportedSettlementSV(_row);
 
   return {
     id: _row.id,
@@ -181,6 +213,8 @@ export function mapPrismaTransactionToPendingStaffRowSV(
     paymentMethodName: PAYMENT_METHOD.paymentMethodName,
     paymentMethodConfig: PAYMENT_METHOD.paymentMethodConfig,
     venuePaymentMethodId: _row.venuePaymentMethodId,
+    playerReportedSettlementMinor: REPORTED.playerReportedSettlementMinor,
+    playerReportedSettlementCurrency: REPORTED.playerReportedSettlementCurrency,
   };
 }
 

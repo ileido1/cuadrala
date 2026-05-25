@@ -14,7 +14,16 @@ export class ListTournamentChatMessagesUseCase {
     tournamentId: string;
     limit: number;
     cursorCreatedAt?: Date;
-  }): Promise<{ threadId: string; messages: { id: string; senderUserId: string; text: string; createdAt: Date }[] }> {
+  }): Promise<{
+    threadId: string;
+    messages: {
+      id: string;
+      senderUserId: string;
+      senderDisplayName: string;
+      text: string;
+      createdAt: Date;
+    }[];
+  }> {
     const TOURNAMENT = await this._tournamentRepository.findByIdSV(_input.tournamentId);
     if (TOURNAMENT === null) {
       throw new AppError('TORNEO_NO_ENCONTRADO', 'El torneo indicado no existe.', 404);
@@ -32,6 +41,7 @@ export class ListTournamentChatMessagesUseCase {
       messages: MESSAGES.map((_m) => ({
         id: _m.id,
         senderUserId: _m.senderUserId,
+        senderDisplayName: _m.senderDisplayName,
         text: _m.text,
         createdAt: _m.createdAt,
       })),

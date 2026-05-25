@@ -2,12 +2,14 @@ import { AppError } from '../../domain/errors/app_error.js';
 import type { MatchParticipationRepository } from '../../domain/ports/match_participation_repository.js';
 import type { MatchReadRepository } from '../../domain/ports/match_read_repository.js';
 import type { UserCategoryRepository } from '../../domain/ports/user_category_repository.js';
+import type { CreateMatchPlayerJoinedNotificationEventUseCase } from './create_match_player_joined_notification_event.use_case.js';
 
 export class JoinMatchUseCase {
   constructor(
     private readonly _matchReadRepository: MatchReadRepository,
     private readonly _matchParticipationRepository: MatchParticipationRepository,
     private readonly _userCategoryRepository: UserCategoryRepository,
+    private readonly _createMatchPlayerJoinedNotificationEvent: CreateMatchPlayerJoinedNotificationEventUseCase | null = null,
   ) {}
 
   async executeSV(_matchId: string, _userId: string): Promise<{ matchId: string; userId: string }> {
@@ -44,7 +46,43 @@ export class JoinMatchUseCase {
     if (RESULT === 'MATCH_FULL') {
       throw new AppError('PARTIDO_LLENO', 'El partido ya está completo.', 409);
     }
+
+    await this._notifyExistingParticipantsSV({
+      matchId: _matchId,
+      categoryId: MATCH.categoryId,
+      joinedUserId: _userId,
+    });
+
     return { matchId: _matchId, userId: _userId };
+  }
+
+  private async _notifyExistingParticipantsSV(_input: {
+    matchId: string;
+    categoryId: string;
+    joinedUserId: string;
+  }): Promise<void> {
+    if (this._createMatchPlayerJoinedNotificationEvent === null) {
+      return;
+    }
+    try {
+      const PARTICIPANT_IDS =
+        await this._matchParticipationRepository.listParticipantUserIdsSV(_input.matchId);
+      const RECIPIENTS = PARTICIPANT_IDS.filter((_id) => _id !== _input.joinedUserId);
+      if (RECIPIENTS.length === 0) {
+        return;
+      }
+      await this._createMatchPlayerJoinedNotificationEvent.executeSV({
+        matchId: _input.matchId,
+        categoryId: _input.categoryId,
+        userIds: RECIPIENTS,
+        payload: {
+          kind: 'MATCH_PLAYER_JOINED',
+          joinedUserId: _input.joinedUserId,
+        },
+      });
+    } catch {
+      // No bloquear el join si falla la notificación.
+    }
   }
 }
 

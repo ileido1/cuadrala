@@ -7,6 +7,10 @@ import type { NotificationSubscriptionRepository } from '../../domain/ports/noti
 import type { NotificationsObservability } from '../../domain/ports/notifications_observability.js';
 import type { PushNotificationProvider } from '../../domain/ports/push_notification_provider.js';
 import { NoopNotificationsObservability } from '../../domain/ports/notifications_observability.js';
+import {
+  DIRECT_NOTIFICATION_EVENT_TYPES,
+  notificationContentForTypeSV,
+} from '../../domain/notifications/notification_content.js';
 
 export type DispatchNotificationsResultDTO = {
   processedEvents: number;
@@ -70,6 +74,11 @@ export class DispatchNotificationsUseCase {
     let disabledTokens = 0;
 
     for (const _event of EVENTS) {
+      // Deliveries directos (chat, join, pagos): fase 2 envía push; no audiencia geo.
+      if (DIRECT_NOTIFICATION_EVENT_TYPES.has(_event.type)) {
+        continue;
+      }
+
       const MATCH_CONTEXT = await this._matchNotificationContextReadRepository.getByMatchIdSV(
         _event.matchId,
       );
@@ -182,14 +191,7 @@ export class DispatchNotificationsUseCase {
       remainingTokenBudget -= tokensToSend.length;
 
       const BATCH_STARTED_AT = Date.now();
-      const CONTENT =
-        EVENT.type === 'MATCH_SLOT_OPENED'
-          ? { title: 'Se abrió una vacante', body: 'Hay una vacante disponible en una partida que coincide con tus preferencias.' }
-          : EVENT.type === 'MATCH_CANCELLED'
-            ? { title: 'Partida cancelada', body: 'Una partida fue cancelada.' }
-            : EVENT.type === 'PAYMENT_PENDING'
-              ? { title: 'Pago pendiente', body: 'Tienes un pago pendiente asociado a una partida.' }
-              : { title: 'Nuevo mensaje', body: 'Tienes un nuevo mensaje en el chat.' };
+      const CONTENT = notificationContentForTypeSV(EVENT.type);
 
       const PUSH_RESULT = await this._pushNotificationProvider.sendToDeviceTokensSV(tokensToSend, {
         title: CONTENT.title,

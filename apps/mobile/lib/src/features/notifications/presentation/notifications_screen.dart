@@ -127,6 +127,18 @@ final class _NotificationTile extends StatelessWidget {
         if (notification.isUnread) {
           context.read<NotificationsCubit>().markOneAsRead(notification.id);
         }
+        final link = notification.deepLink;
+        if (link != null && link.startsWith('/matches/')) {
+          final matchId = link.replaceFirst('/matches/', '').split('/').first;
+          if (matchId.isNotEmpty) {
+            if (notification.type == NotificationType.chatMessage) {
+              context.push(Routes.matchChat(matchId));
+            } else {
+              context.push(Routes.matchDetail(matchId));
+            }
+            return;
+          }
+        }
         context.push('${Routes.notifications}/${notification.id}');
       },
       child: Container(
@@ -200,6 +212,8 @@ final class _NotificationTile extends StatelessWidget {
       NotificationType.chatMessage => (Icons.chat_bubble_outline, Colors.blue.withValues(alpha: 0.12), Colors.blue.shade700),
       NotificationType.matchSlotOpened => (Icons.emoji_events_outlined, scheme.primary.withValues(alpha: 0.12), scheme.primary),
       NotificationType.paymentPending => (Icons.credit_card, scheme.tertiary.withValues(alpha: 0.25), scheme.onTertiary),
+      NotificationType.paymentConfirmed => (Icons.check_circle_outline, Colors.green.withValues(alpha: 0.12), Colors.green.shade700),
+      NotificationType.matchPlayerJoined => (Icons.person_add_alt_1, scheme.secondary.withValues(alpha: 0.12), scheme.secondary),
       NotificationType.matchCancelled => (Icons.event_busy, scheme.error.withValues(alpha: 0.12), scheme.error),
       NotificationType.unknown => (Icons.notifications_none_outlined, scheme.surfaceContainerHighest, scheme.onSurfaceVariant),
     };

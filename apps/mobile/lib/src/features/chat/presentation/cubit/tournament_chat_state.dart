@@ -28,6 +28,7 @@ final class TournamentChatFailure extends TournamentChatState {
 final class TournamentChatLoaded extends TournamentChatState {
   const TournamentChatLoaded({
     required this.items,
+    required this.viewerUserId,
     required this.nextCursorCreatedAt,
     this.isLoadingMore = false,
     this.sending = false,
@@ -35,11 +36,19 @@ final class TournamentChatLoaded extends TournamentChatState {
   });
 
   final List<ChatMessageDto> items;
+  final String viewerUserId;
   final String? nextCursorCreatedAt;
   final bool isLoadingMore;
   final bool sending;
   final String? sendError;
 
   @override
-  List<Object?> get props => [items, nextCursorCreatedAt, isLoadingMore, sending, sendError];
+  List<Object?> get props => [
+        items,
+        viewerUserId,
+        nextCursorCreatedAt,
+        isLoadingMore,
+        sending,
+        sendError,
+      ];
 }

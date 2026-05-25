@@ -6,16 +6,29 @@ import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
 import 'package:cuadrala_mobile/src/features/chat/data/chat_repository.dart';
 import 'package:cuadrala_mobile/src/features/chat/data/models/chat_message_dto.dart';
 import 'package:cuadrala_mobile/src/features/chat/presentation/match_chat_read_only_screen.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 
 final class _MockChatRepository extends Mock implements ChatRepository {}
+final class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 void main() {
   group('MatchChatReadOnlyScreen', () {
     late _MockChatRepository repo;
+    late _MockProfileRepository profileRepo;
 
     setUp(() async {
       await getIt.reset();
       repo = _MockChatRepository();
+      profileRepo = _MockProfileRepository();
+      when(() => profileRepo.getMe()).thenAnswer(
+        (_) async => const UserMeDto(
+          id: 'u1',
+          email: 'a@test.local',
+          name: 'Usuario',
+          subscriptionType: 'FREE',
+        ),
+      );
       when(() => repo.listMatchMessages(
             matchId: any(named: 'matchId'),
             limit: any(named: 'limit'),
@@ -27,6 +40,7 @@ void main() {
               id: 'c1',
               threadId: 't',
               authorUserId: 'u1',
+              senderDisplayName: 'Jugador',
               text: 'Mensaje de prueba',
               createdAt: DateTime.utc(2026, 5, 11, 15, 30),
             ),
@@ -35,6 +49,7 @@ void main() {
         ),
       );
       getIt.registerSingleton<ChatRepository>(repo);
+      getIt.registerSingleton<ProfileRepository>(profileRepo);
     });
 
     tearDown(() async {

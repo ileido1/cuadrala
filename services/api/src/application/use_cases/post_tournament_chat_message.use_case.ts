@@ -12,7 +12,13 @@ export class PostTournamentChatMessageUseCase {
 
   async executeSV(_input: { tournamentId: string; senderUserId: string; text: string }): Promise<{
     threadId: string;
-    message: { id: string; senderUserId: string; text: string; createdAt: Date };
+    message: {
+      id: string;
+      senderUserId: string;
+      senderDisplayName: string;
+      text: string;
+      createdAt: Date;
+    };
   }> {
     const TOURNAMENT = await this._tournamentRepository.findByIdSV(_input.tournamentId);
     if (TOURNAMENT === null) {
@@ -31,6 +37,7 @@ export class PostTournamentChatMessageUseCase {
       message: {
         id: MESSAGE.id,
         senderUserId: MESSAGE.senderUserId,
+        senderDisplayName: MESSAGE.senderDisplayName,
         text: MESSAGE.text,
         createdAt: MESSAGE.createdAt,
       },

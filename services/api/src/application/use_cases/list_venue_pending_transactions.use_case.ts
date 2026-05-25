@@ -44,6 +44,8 @@ export class ListVenuePendingTransactionsUseCase {
       paymentMethodName: string | null;
       paymentMethodConfig: Record<string, unknown> | null;
       venuePaymentMethodId: string | null;
+      playerReportedSettlementMinor: string | null;
+      playerReportedSettlementCurrency: string | null;
     }>;
   }> {
     const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
@@ -97,6 +99,8 @@ export class ListVenuePendingTransactionsUseCase {
         paymentMethodName: tx.paymentMethodName,
         paymentMethodConfig: tx.paymentMethodConfig,
         venuePaymentMethodId: tx.venuePaymentMethodId,
+        playerReportedSettlementMinor: tx.playerReportedSettlementMinor,
+        playerReportedSettlementCurrency: tx.playerReportedSettlementCurrency,
       })),
     };
   }

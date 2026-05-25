@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { PendingPaymentDetailModal } from '~/components/payments/pending-payment-detail-modal';
+import { PendingPaymentReviewDialog } from '~/components/payments/pending-payment-review-dialog';
 import { PaymentsList } from '~/components/payments/payments-list';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
@@ -169,7 +169,7 @@ export default function PaymentsPage() {
       ) : null}
 
       {currentVenue ? (
-        <PendingPaymentDetailModal
+        <PendingPaymentReviewDialog
           open={selectedPending !== null}
           transaction={selectedPending}
           venueId={currentVenue.id}

@@ -11,34 +11,44 @@ void main() {
         id: 'm1',
         threadId: 't1',
         authorUserId: 'u1',
+        senderDisplayName: 'Jugador',
         text: 'Mensaje de prueba',
         createdAt: DateTime(2026, 5, 11, 15, 30),
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: ChatMessageTile(message: msg))),
+        MaterialApp(
+          home: Scaffold(
+            body: ChatMessageTile(message: msg, viewerUserId: 'u2'),
+          ),
+        ),
       );
 
       expect(find.text('Mensaje de prueba'), findsOneWidget);
-      // Timestamp: verify time is shown (15:30)
+      expect(find.text('Jugador'), findsOneWidget);
       expect(find.textContaining('15:30'), findsOneWidget);
     });
 
-    testWidgets('renderiza fecha MAÑANA cuando corresponde', (tester) async {
-      final tomorrow = DateTime.now().add(const Duration(days: 1));
+    testWidgets('mensaje propio alineado a la derecha sin nombre', (tester) async {
       final msg = ChatMessageDto(
         id: 'm1',
         threadId: 't1',
         authorUserId: 'u1',
+        senderDisplayName: 'Yo',
         text: 'Msg',
-        createdAt: tomorrow,
+        createdAt: DateTime(2026, 5, 11, 15, 30),
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: ChatMessageTile(message: msg))),
+        MaterialApp(
+          home: Scaffold(
+            body: ChatMessageTile(message: msg, viewerUserId: 'u1'),
+          ),
+        ),
       );
 
-      expect(find.textContaining('MAÑANA'), findsOneWidget);
+      expect(find.text('Yo'), findsNothing);
+      expect(find.text('Msg'), findsOneWidget);
     });
   });
 }

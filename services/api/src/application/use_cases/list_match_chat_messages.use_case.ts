@@ -14,7 +14,16 @@ export class ListMatchChatMessagesUseCase {
     matchId: string;
     limit: number;
     cursorCreatedAt?: Date;
-  }): Promise<{ threadId: string; messages: { id: string; senderUserId: string; text: string; createdAt: Date }[] }> {
+  }): Promise<{
+    threadId: string;
+    messages: {
+      id: string;
+      senderUserId: string;
+      senderDisplayName: string;
+      text: string;
+      createdAt: Date;
+    }[];
+  }> {
     const MATCH = await this._matchReadRepository.findByIdSV(_input.matchId);
     if (MATCH === null) {
       throw new AppError('PARTIDO_NO_ENCONTRADO', 'El partido indicado no existe.', 404);
@@ -32,6 +41,7 @@ export class ListMatchChatMessagesUseCase {
       messages: MESSAGES.map((_m) => ({
         id: _m.id,
         senderUserId: _m.senderUserId,
+        senderDisplayName: _m.senderDisplayName,
         text: _m.text,
         createdAt: _m.createdAt,
       })),

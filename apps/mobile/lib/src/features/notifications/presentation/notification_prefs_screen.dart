@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -69,6 +70,21 @@ final class _NotificationPrefsView extends StatelessWidget {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     _SectionHeader(title: 'Notificaciones push'),
+                    if (kIsWeb)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: Text(
+                          'Las alertas en la bandeja del sistema solo '
+                          'funcionan en la app Android o iOS. En el '
+                          'navegador verás las notificaciones en Avisos.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                        ),
+                      ),
                     _TypeToggleTile(
                       icon: Icons.people_outline,
                       title: 'Cupos disponibles',

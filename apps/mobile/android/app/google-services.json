@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "879337441410",
+    "project_id": "gianmarcos-login",
+    "storage_bucket": "gianmarcos-login.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:879337441410:android:c0045428f5d6b950fe8c9b",
+        "android_client_info": {
+          "package_name": "com.cuadrala"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHcC3v25Wr4GLE6XuoW8hFMd2oRJjYyfI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:879337441410:android:fca37a744f031abdfe8c9b",
+        "android_client_info": {
+          "package_name": "com.cuadrala.cuadrala_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHcC3v25Wr4GLE6XuoW8hFMd2oRJjYyfI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

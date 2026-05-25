@@ -65,5 +65,6 @@ export interface PaymentTransactionRepository {
     actorUserId: string;
     venuePaymentMethodId?: string;
     paymentMethodType?: string;
+    reportedSettlement?: { amountMinor: bigint; currencyCode: string };
   }): Promise<void>;
 }

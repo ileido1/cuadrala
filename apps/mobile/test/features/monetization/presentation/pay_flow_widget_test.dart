@@ -85,6 +85,9 @@ void main() {
             transactionId: any(named: 'transactionId'),
             venuePaymentMethodId: any(named: 'venuePaymentMethodId'),
             paymentMethodType: any(named: 'paymentMethodType'),
+            reportedSettlementMinor: any(named: 'reportedSettlementMinor'),
+            reportedSettlementCurrency:
+                any(named: 'reportedSettlementCurrency'),
           )).thenAnswer((_) async {});
       getIt.registerSingleton<MatchesRepository>(matchesRepo);
       getIt.registerSingleton<ExchangeRatesRepository>(fxRepo);
@@ -282,7 +285,13 @@ void main() {
             )).thenAnswer(
           (_) async => {
             'created': [
-              {'id': 'tx-new'},
+              {
+                'id': 'tx-new',
+                'amountBase': '50',
+                'feeAmount': '5',
+                'amountTotal': '55',
+                'status': 'PENDING',
+              },
             ],
           },
         );

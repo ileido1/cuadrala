@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { PendingPaymentDetailModal } from '~/components/payments/pending-payment-detail-modal';
+import { PendingPaymentReviewDialog } from '~/components/payments/pending-payment-review-dialog';
 import { apiClient } from '~/lib/api-client';
 import {
   formatCentsWithCurrency,
@@ -225,7 +225,7 @@ export function PaymentsList({
       </div>
 
       {!isControlled ? (
-        <PendingPaymentDetailModal
+        <PendingPaymentReviewDialog
           open={selected !== null}
           transaction={selected}
           venueId={venueId}

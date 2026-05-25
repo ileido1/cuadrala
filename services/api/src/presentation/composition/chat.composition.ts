@@ -4,10 +4,13 @@ import { PostMatchChatMessageUseCase } from '../../application/use_cases/post_ma
 import { PostTournamentChatMessageUseCase } from '../../application/use_cases/post_tournament_chat_message.use_case.js';
 import { PrismaChatMessageRepository } from '../../infrastructure/adapters/prisma_chat_message_repository.js';
 import { PrismaChatThreadRepository } from '../../infrastructure/adapters/prisma_chat_thread_repository.js';
+import { PrismaMatchParticipationRepository } from '../../infrastructure/adapters/prisma_match_participation_repository.js';
 import { PrismaMatchReadRepository } from '../../infrastructure/adapters/prisma_match_read_repository.js';
 import { PrismaTournamentRepository } from '../../infrastructure/adapters/prisma_tournament_repository.js';
+import { CREATE_CHAT_MESSAGE_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
 
 const MATCH_READ_REPOSITORY = new PrismaMatchReadRepository();
+const MATCH_PARTICIPATION_REPOSITORY = new PrismaMatchParticipationRepository();
 const TOURNAMENT_REPOSITORY = new PrismaTournamentRepository();
 const CHAT_THREAD_REPOSITORY = new PrismaChatThreadRepository();
 const CHAT_MESSAGE_REPOSITORY = new PrismaChatMessageRepository();
@@ -16,6 +19,8 @@ export const POST_MATCH_CHAT_MESSAGE_UC = new PostMatchChatMessageUseCase(
   MATCH_READ_REPOSITORY,
   CHAT_THREAD_REPOSITORY,
   CHAT_MESSAGE_REPOSITORY,
+  MATCH_PARTICIPATION_REPOSITORY,
+  CREATE_CHAT_MESSAGE_NOTIFICATION_EVENT_UC,
 );
 
 export const LIST_MATCH_CHAT_MESSAGES_UC = new ListMatchChatMessagesUseCase(

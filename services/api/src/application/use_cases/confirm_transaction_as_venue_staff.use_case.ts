@@ -16,6 +16,8 @@ import {
   isReservationPaymentLedgerEnabledSV,
 } from '../../config/feature_flags.js';
 import type { RecordReservationLedgerEntryUseCase } from './record_reservation_ledger_entry.use_case.js';
+import type { TransactionReceiptNotifyContextRepository } from '../../domain/ports/transaction_receipt_notify_context_repository.js';
+import type { CreatePaymentConfirmedNotificationEventUseCase } from './create_payment_confirmed_notification_event.use_case.js';
 import { GetRateForReservationDayUseCase } from './get_rate_for_reservation_day.use_case.js';
 
 function majorToMinorSV(_major: string): bigint {
@@ -30,6 +32,8 @@ export class ConfirmTransactionAsVenueStaffUseCase {
     private readonly _moneyConversionService: MoneyConversionService,
     private readonly _getRateForReservationDayUseCase: GetRateForReservationDayUseCase,
     private readonly _recordReservationLedgerEntryUseCase?: RecordReservationLedgerEntryUseCase,
+    private readonly _notifyContextRepository: TransactionReceiptNotifyContextRepository | null = null,
+    private readonly _createPaymentConfirmedNotificationEvent: CreatePaymentConfirmedNotificationEventUseCase | null = null,
   ) {}
 
   async executeSV(_input: {
@@ -59,11 +63,12 @@ export class ConfirmTransactionAsVenueStaffUseCase {
       throw new AppError('TRANSACCION_NO_ENCONTRADA', 'La transacción indicada no existe.', 404);
     }
     if (TX.status === 'CONFIRMED') {
-      return {
+      const EARLY = {
         id: TX.id,
         status: TX.status,
         confirmedAt: TX.confirmedAt?.toISOString() ?? '',
       };
+      return EARLY;
     }
     if (TX.status !== 'PENDING') {
       throw new AppError(
@@ -205,7 +210,36 @@ export class ConfirmTransactionAsVenueStaffUseCase {
       };
     }
 
+    await this._notifyPayerOfConfirmationSV(_input.transactionId);
+
     return RESULT;
+  }
+
+  private async _notifyPayerOfConfirmationSV(_transactionId: string): Promise<void> {
+    if (
+      this._notifyContextRepository === null
+      || this._createPaymentConfirmedNotificationEvent === null
+    ) {
+      return;
+    }
+    try {
+      const CTX = await this._notifyContextRepository.getForTransactionSV(_transactionId);
+      if (CTX === null) {
+        return;
+      }
+      await this._createPaymentConfirmedNotificationEvent.executeSV({
+        matchId: CTX.matchId,
+        categoryId: CTX.categoryId,
+        userIds: [CTX.payerUserId],
+        payload: {
+          kind: 'PAYMENT_CONFIRMED',
+          transactionId: _transactionId,
+          payerUserId: CTX.payerUserId,
+        },
+      });
+    } catch {
+      // No bloquear la confirmación si falla la notificación.
+    }
   }
 
   private resolveVenueIdSV(_tx: StaffTransactionRow): string | null {

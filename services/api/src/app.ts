@@ -11,6 +11,9 @@ import { API_V1_ROUTER } from './presentation/routes/api.v1.router.js';
 export function createApp(): express.Express {
   const APP = express();
 
+  // Evita 304 con cuerpo vacío en clientes móviles (p. ej. bandeja de notificaciones).
+  APP.set('etag', false);
+
   APP.use(helmet());
   APP.use(cors());
   APP.use(express.json());

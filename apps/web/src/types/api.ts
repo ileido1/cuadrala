@@ -148,6 +148,8 @@ export interface VenuePendingTransaction {
   paymentMethodName: string | null;
   paymentMethodConfig: Record<string, unknown> | null;
   venuePaymentMethodId: string | null;
+  playerReportedSettlementMinor: string | null;
+  playerReportedSettlementCurrency: string | null;
 }
 
 export interface VenuePendingTransactionsResponse {

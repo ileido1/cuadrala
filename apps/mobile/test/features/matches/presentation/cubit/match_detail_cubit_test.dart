@@ -217,7 +217,9 @@ void main() {
         const MatchDetailLoading(),
         isA<MatchDetailLoaded>(),
         isA<MatchDetailLoaded>().having((s) => s.actionLoading, 'actionLoading', true),
-        isA<MatchDetailLoaded>().having((s) => s.actionMessage, 'actionMessage', 'Sin cupos.'),
+        isA<MatchDetailLoaded>()
+            .having((s) => s.actionMessage, 'actionMessage', 'Sin cupos.')
+            .having((s) => s.actionMessageIsError, 'actionMessageIsError', true),
       ],
     );
   });

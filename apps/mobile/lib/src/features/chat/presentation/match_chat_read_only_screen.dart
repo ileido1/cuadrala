@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../profile/data/profile_repository.dart';
 import '../data/chat_repository.dart';
 import 'chat_scroll_utils.dart';
 import 'cubit/match_chat_read_only_cubit.dart';
 import 'cubit/match_chat_state.dart';
-import 'widgets/chat_message_tile.dart';
+import 'widgets/group_chat_message_bubble.dart';
 
 final class MatchChatReadOnlyScreen extends StatelessWidget {
   const MatchChatReadOnlyScreen({super.key, required this.matchId});
@@ -18,6 +19,7 @@ final class MatchChatReadOnlyScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => MatchChatReadOnlyCubit(
         chatRepository: getIt<ChatRepository>(),
+        profileRepository: getIt<ProfileRepository>(),
         matchId: matchId,
       )..load(),
       child: const _MatchChatReadOnlyView(),
@@ -124,7 +126,15 @@ class _MatchChatReadOnlyViewState extends State<_MatchChatReadOnlyView> {
                   );
                 }
                 final msgIndex = loaded.isLoadingMore ? index - 1 : index;
-                return ChatMessageTile(message: loaded.items[msgIndex]);
+                final msg = loaded.items[msgIndex];
+                final showName = msgIndex == 0 ||
+                    loaded.items[msgIndex - 1].authorUserId !=
+                        msg.authorUserId;
+                return GroupChatMessageBubble(
+                  message: msg,
+                  viewerUserId: loaded.viewerUserId,
+                  showSenderName: showName,
+                );
               },
             ),
           );

@@ -69,6 +69,7 @@ export const RECORD_PLAYER_PAYMENT_SELECTION_BODY_SCHEMA = z
       .min(1)
       .max(32)
       .optional(),
+    reportedSettlement: MONEY_AMOUNT_SCHEMA.optional(),
   })
   .strict()
   .refine(

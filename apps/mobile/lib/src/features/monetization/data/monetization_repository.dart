@@ -85,12 +85,19 @@ class MonetizationRepository {
     required String transactionId,
     String? venuePaymentMethodId,
     String? paymentMethodType,
+    int? reportedSettlementMinor,
+    String? reportedSettlementCurrency,
   }) async {
     final body = <String, Object?>{
       if (venuePaymentMethodId != null && venuePaymentMethodId.isNotEmpty)
         'venuePaymentMethodId': venuePaymentMethodId,
       if (paymentMethodType != null && paymentMethodType.isNotEmpty)
         'paymentMethodType': paymentMethodType,
+      if (reportedSettlementMinor != null && reportedSettlementMinor > 0)
+        'reportedSettlement': {
+          'amountMinor': reportedSettlementMinor.toString(),
+          'currencyCode': reportedSettlementCurrency ?? 'BS',
+        },
     };
     if (body.isEmpty) {
       throw const AppFailure(

@@ -1,6 +1,8 @@
 import { CreateMatchCancelledNotificationEventUseCase } from '../../application/use_cases/create_match_cancelled_notification_event.use_case.js';
 import { CreateChatMessageNotificationEventUseCase } from '../../application/use_cases/create_chat_message_notification_event.use_case.js';
 import { CreatePaymentPendingNotificationEventUseCase } from '../../application/use_cases/create_payment_pending_notification_event.use_case.js';
+import { CreateMatchPlayerJoinedNotificationEventUseCase } from '../../application/use_cases/create_match_player_joined_notification_event.use_case.js';
+import { CreatePaymentConfirmedNotificationEventUseCase } from '../../application/use_cases/create_payment_confirmed_notification_event.use_case.js';
 import { DispatchNotificationsUseCase } from '../../application/use_cases/dispatch_notifications.use_case.js';
 import { DisableMyNotificationSubscriptionUseCase } from '../../application/use_cases/disable_my_notification_subscription.use_case.js';
 import { ListMyNotificationSubscriptionsUseCase } from '../../application/use_cases/list_my_notification_subscriptions.use_case.js';
@@ -80,4 +82,16 @@ export const CREATE_PAYMENT_PENDING_NOTIFICATION_EVENT_UC = new CreatePaymentPen
   NOTIFICATION_EVENT_REPOSITORY,
   NOTIFICATION_DELIVERY_REPOSITORY,
 );
+
+export const CREATE_MATCH_PLAYER_JOINED_NOTIFICATION_EVENT_UC =
+  new CreateMatchPlayerJoinedNotificationEventUseCase(
+    NOTIFICATION_EVENT_REPOSITORY,
+    NOTIFICATION_DELIVERY_REPOSITORY,
+  );
+
+export const CREATE_PAYMENT_CONFIRMED_NOTIFICATION_EVENT_UC =
+  new CreatePaymentConfirmedNotificationEventUseCase(
+    NOTIFICATION_EVENT_REPOSITORY,
+    NOTIFICATION_DELIVERY_REPOSITORY,
+  );
 

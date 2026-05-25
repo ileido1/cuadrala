@@ -6,16 +6,29 @@ import 'package:cuadrala_mobile/src/features/chat/data/chat_repository.dart';
 import 'package:cuadrala_mobile/src/features/chat/data/models/chat_message_dto.dart';
 import 'package:cuadrala_mobile/src/features/chat/presentation/cubit/tournament_chat_read_only_cubit.dart';
 import 'package:cuadrala_mobile/src/features/chat/presentation/cubit/tournament_chat_state.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 
 final class _MockChatRepository extends Mock implements ChatRepository {}
+final class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 void main() {
   group('TournamentChatReadOnlyCubit', () {
     late ChatRepository repo;
+    late _MockProfileRepository profileRepo;
 
     setUp(() async {
       await getIt.reset();
       repo = _MockChatRepository();
+      profileRepo = _MockProfileRepository();
+      when(() => profileRepo.getMe()).thenAnswer(
+        (_) async => const UserMeDto(
+          id: 'u1',
+          email: 'a@test.local',
+          name: 'Usuario',
+          subscriptionType: 'FREE',
+        ),
+      );
       getIt.registerSingleton<ChatRepository>(repo);
     });
 
@@ -25,6 +38,7 @@ void main() {
           id: 'm1',
           threadId: 't1',
           authorUserId: 'u1',
+          senderDisplayName: 'Jugador',
           text: 'Buena partida',
           createdAt: DateTime.utc(2026, 5, 5, 14),
         ),
@@ -40,6 +54,7 @@ void main() {
 
       final cubit = TournamentChatReadOnlyCubit(
         chatRepository: repo,
+        profileRepository: profileRepo,
         tournamentId: 'tournament-1',
       );
 
@@ -56,6 +71,7 @@ void main() {
           id: 'm1',
           threadId: 't1',
           authorUserId: 'u1',
+          senderDisplayName: 'Jugador',
           text: 'Reciente',
           createdAt: DateTime.utc(2026, 5, 5, 12),
         ),
@@ -65,6 +81,7 @@ void main() {
           id: 'm2',
           threadId: 't1',
           authorUserId: 'u2',
+          senderDisplayName: 'Jugador',
           text: 'Anterior',
           createdAt: DateTime.utc(2026, 5, 5, 11),
         ),
@@ -83,6 +100,7 @@ void main() {
 
       final cubit = TournamentChatReadOnlyCubit(
         chatRepository: repo,
+        profileRepository: profileRepo,
         tournamentId: 'tournament-1',
       );
       await cubit.load();

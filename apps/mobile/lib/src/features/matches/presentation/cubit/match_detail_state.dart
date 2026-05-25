@@ -24,6 +24,7 @@ final class MatchDetailLoaded extends MatchDetailState {
     this.viewerHasConfirmedPayment = false,
     this.actionLoading = false,
     this.actionMessage,
+    this.actionMessageIsError = false,
   });
 
   final MatchDetailDto match;
@@ -31,6 +32,7 @@ final class MatchDetailLoaded extends MatchDetailState {
   final bool viewerHasConfirmedPayment;
   final bool actionLoading;
   final String? actionMessage;
+  final bool actionMessageIsError;
 
   bool get isParticipant => match.participants.any((p) => p.userId == viewerUserId);
 
@@ -41,6 +43,7 @@ final class MatchDetailLoaded extends MatchDetailState {
         viewerHasConfirmedPayment,
         actionLoading,
         actionMessage,
+        actionMessageIsError,
       ];
 }
 

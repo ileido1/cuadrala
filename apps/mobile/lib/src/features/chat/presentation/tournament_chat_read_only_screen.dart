@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../profile/data/profile_repository.dart';
 import '../data/chat_repository.dart';
 import 'cubit/tournament_chat_read_only_cubit.dart';
 import 'cubit/tournament_chat_state.dart';
-import 'widgets/chat_message_tile.dart';
+import 'widgets/group_chat_message_bubble.dart';
 
 final class TournamentChatReadOnlyScreen extends StatelessWidget {
   const TournamentChatReadOnlyScreen({super.key, required this.tournamentId});
@@ -17,6 +18,7 @@ final class TournamentChatReadOnlyScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => TournamentChatReadOnlyCubit(
         chatRepository: getIt<ChatRepository>(),
+        profileRepository: getIt<ProfileRepository>(),
         tournamentId: tournamentId,
       )..load(),
       child: const _TournamentChatReadOnlyView(),
@@ -112,7 +114,14 @@ class _TournamentChatReadOnlyViewState extends State<_TournamentChatReadOnlyView
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                return ChatMessageTile(message: loaded.items[index]);
+                final msg = loaded.items[index];
+                final showName = index == 0 ||
+                    loaded.items[index - 1].authorUserId != msg.authorUserId;
+                return GroupChatMessageBubble(
+                  message: msg,
+                  viewerUserId: loaded.viewerUserId,
+                  showSenderName: showName,
+                );
               },
             ),
           );

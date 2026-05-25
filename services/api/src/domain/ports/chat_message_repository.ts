@@ -2,6 +2,7 @@ export type ChatMessageDTO = {
   id: string;
   threadId: string;
   senderUserId: string;
+  senderDisplayName: string;
   text: string;
   createdAt: Date;
 };

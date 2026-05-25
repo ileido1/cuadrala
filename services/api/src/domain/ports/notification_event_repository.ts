@@ -1,6 +1,12 @@
 export type NotificationEventDTO = {
   id: string;
-  type: 'MATCH_SLOT_OPENED' | 'MATCH_CANCELLED' | 'CHAT_MESSAGE' | 'PAYMENT_PENDING';
+  type:
+    | 'MATCH_SLOT_OPENED'
+    | 'MATCH_CANCELLED'
+    | 'CHAT_MESSAGE'
+    | 'PAYMENT_PENDING'
+    | 'MATCH_PLAYER_JOINED'
+    | 'PAYMENT_CONFIRMED';
   matchId: string;
   categoryId: string;
   payload: unknown;
@@ -32,11 +38,25 @@ export type CreatePaymentPendingEventDTO = {
   payload: unknown;
 };
 
+export type CreateMatchPlayerJoinedEventDTO = {
+  matchId: string;
+  categoryId: string;
+  payload: unknown;
+};
+
+export type CreatePaymentConfirmedEventDTO = {
+  matchId: string;
+  categoryId: string;
+  payload: unknown;
+};
+
 export interface NotificationEventRepository {
   createMatchSlotOpenedSV(_dto: CreateMatchSlotOpenedEventDTO): Promise<NotificationEventDTO>;
   createMatchCancelledSV(_dto: CreateMatchCancelledEventDTO): Promise<NotificationEventDTO>;
   createChatMessageSV(_dto: CreateChatMessageEventDTO): Promise<NotificationEventDTO>;
   createPaymentPendingSV(_dto: CreatePaymentPendingEventDTO): Promise<NotificationEventDTO>;
+  createMatchPlayerJoinedSV(_dto: CreateMatchPlayerJoinedEventDTO): Promise<NotificationEventDTO>;
+  createPaymentConfirmedSV(_dto: CreatePaymentConfirmedEventDTO): Promise<NotificationEventDTO>;
   listPendingSV(_limit: number): Promise<NotificationEventDTO[]>;
   countPendingSV(): Promise<number>;
   markProcessedSV(_eventId: string, _processedAt: Date): Promise<void>;

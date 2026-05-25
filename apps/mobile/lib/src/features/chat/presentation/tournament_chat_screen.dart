@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
-import '../../../core/formatting/scheduled_label.dart';
 import 'chat_scroll_utils.dart';
 import 'cubit/tournament_chat_cubit.dart';
 import 'cubit/tournament_chat_state.dart';
+import '../../profile/data/profile_repository.dart';
 import '../data/chat_repository.dart';
+import 'widgets/group_chat_message_bubble.dart';
 
 final class TournamentChatScreen extends StatelessWidget {
   const TournamentChatScreen({super.key, required this.tournamentId});
@@ -18,6 +19,7 @@ final class TournamentChatScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => TournamentChatCubit(
         chatRepository: getIt<ChatRepository>(),
+        profileRepository: getIt<ProfileRepository>(),
         tournamentId: tournamentId,
       )..load(),
       child: _TournamentChatView(tournamentId: tournamentId),
@@ -139,30 +141,13 @@ class _TournamentChatViewState extends State<_TournamentChatView> {
                       final msgIndex =
                           loaded.isLoadingMore ? index - 1 : index;
                       final msg = loaded.items[msgIndex];
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          color: scheme.surfaceContainerHighest,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              msg.text,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${shortDateLabel(msg.createdAt.toLocal())} · ${formatTimeHm(msg.createdAt.toLocal())}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
+                      final showName = msgIndex == 0 ||
+                          loaded.items[msgIndex - 1].authorUserId !=
+                              msg.authorUserId;
+                      return GroupChatMessageBubble(
+                        message: msg,
+                        viewerUserId: loaded.viewerUserId,
+                        showSenderName: showName,
                       );
                     },
                   ),

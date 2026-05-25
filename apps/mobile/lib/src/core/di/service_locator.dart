@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 
@@ -10,6 +11,9 @@ import '../data/exchange_rates_repository.dart';
 import '../network/api_client.dart';
 import '../network/auth_token_interceptor.dart';
 import '../network/inject_dio_extra_interceptor.dart';
+import '../push/fcm_push_token_sync_service.dart';
+import '../push/noop_push_token_sync_service.dart';
+import '../push/push_token_sync_service.dart';
 import '../storage/flutter_secure_token_storage.dart';
 import '../storage/saved_clubs_repository.dart';
 import '../../features/auth/data/auth_api.dart';
@@ -177,6 +181,16 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton<NotificationsRepository>(
     () => NotificationsRepository(api: getIt<NotificationsApi>()),
   );
+
+  getIt.registerLazySingleton<PushTokenSyncService>(
+    () => kIsWeb
+        ? NoopPushTokenSyncService()
+        : FcmPushTokenSyncService(
+            notificationsRepository: getIt<NotificationsRepository>(),
+            secureTokenStorage: getIt<SecureTokenStorage>(),
+            authRepository: getIt<AuthRepository>(),
+          ),
+  );
   getIt.registerFactory<NotificationsCubit>(
     () => NotificationsCubit(repository: getIt<NotificationsRepository>()),
   );
@@ -201,6 +215,7 @@ Future<void> setupDependencies() async {
     () => SessionCubit(
       authRepository: getIt<AuthRepository>(),
       onboardingRepository: getIt<OnboardingRepository>(),
+      pushTokenSyncService: getIt<PushTokenSyncService>(),
     ),
   );
   getIt.registerFactory<LoginCubit>(

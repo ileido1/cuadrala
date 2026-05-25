@@ -435,6 +435,7 @@ export class PrismaPaymentTransactionRepository
     actorUserId: string;
     venuePaymentMethodId?: string;
     paymentMethodType?: string;
+    reportedSettlement?: { amountMinor: bigint; currencyCode: string };
   }): Promise<void> {
     const TX = await PRISMA.transaction.findUnique({
       where: { id: _input.transactionId },
@@ -473,6 +474,14 @@ export class PrismaPaymentTransactionRepository
           type: METHOD.type,
           name: METHOD.name,
           config: METHOD.config,
+          ...(_input.reportedSettlement !== undefined
+            ? {
+                reportedSettlement: {
+                  amountMinor: _input.reportedSettlement.amountMinor.toString(),
+                  currencyCode: _input.reportedSettlement.currencyCode,
+                },
+              }
+            : {}),
         },
       };
     } else if (_input.paymentMethodType !== undefined && _input.paymentMethodType.length > 0) {
@@ -489,6 +498,14 @@ export class PrismaPaymentTransactionRepository
           type: TYPE,
           name: LEGACY_NAMES[TYPE] ?? TYPE,
           legacy: true,
+          ...(_input.reportedSettlement !== undefined
+            ? {
+                reportedSettlement: {
+                  amountMinor: _input.reportedSettlement.amountMinor.toString(),
+                  currencyCode: _input.reportedSettlement.currencyCode,
+                },
+              }
+            : {}),
         },
       };
     } else {

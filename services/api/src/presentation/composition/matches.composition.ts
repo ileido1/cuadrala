@@ -23,6 +23,7 @@ import { PrismaMatchStatusRepository } from '../../infrastructure/adapters/prism
 import { PrismaNotificationEventRepository } from '../../infrastructure/adapters/prisma_notification_event_repository.js';
 import { PrismaUserCategoryRepository } from '../../infrastructure/adapters/prisma_user_category_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { CREATE_MATCH_PLAYER_JOINED_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
 
 const MATCH_REPOSITORY = new PrismaMatchRepository();
 const MATCH_READ_REPOSITORY = new PrismaMatchReadRepository();
@@ -42,6 +43,7 @@ export const JOIN_MATCH_UC = new JoinMatchUseCase(
   MATCH_READ_REPOSITORY,
   MATCH_PARTICIPATION_REPOSITORY,
   USER_CATEGORY_REPOSITORY,
+  CREATE_MATCH_PLAYER_JOINED_NOTIFICATION_EVENT_UC,
 );
 
 export const LEAVE_MATCH_UC = new LeaveMatchUseCase(

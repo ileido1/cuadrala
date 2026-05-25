@@ -90,6 +90,7 @@ class NotificationsRepository {
   Future<void> registerPushToken({required String token, String? platform}) async {
     await _api.upsertDevicePushTokenEnvelope(body: {
       'token': token,
+      'enabled': true,
       if (platform != null) 'platform': platform,
     });
   }

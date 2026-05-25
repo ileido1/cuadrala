@@ -48,6 +48,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
     String viewerUserId, {
     bool actionLoading = false,
     String? actionMessage,
+    bool actionMessageIsError = false,
   }) async {
     final hasPaid = await _viewerHasConfirmedPayment(match, viewerUserId);
     return MatchDetailLoaded(
@@ -56,6 +57,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       viewerHasConfirmedPayment: hasPaid,
       actionLoading: actionLoading,
       actionMessage: actionMessage,
+      actionMessageIsError: actionMessageIsError,
     );
   }
 
@@ -109,6 +111,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           actionMessage: message,
+          actionMessageIsError: true,
         ),
       );
     }
@@ -146,6 +149,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           actionMessage: message,
+          actionMessageIsError: true,
         ),
       );
     }
@@ -211,6 +215,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           actionMessage: message,
+          actionMessageIsError: true,
         ),
       );
     }

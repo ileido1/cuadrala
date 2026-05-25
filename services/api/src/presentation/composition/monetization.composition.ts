@@ -22,7 +22,12 @@ import { GetRateForReservationDayUseCase } from '../../application/use_cases/get
 import { RecordReservationLedgerEntryUseCase } from '../../application/use_cases/record_reservation_ledger_entry.use_case.js';
 import { PrismaReservationLedgerRepository } from '../../infrastructure/adapters/prisma_reservation_ledger_repository.js';
 import { PrismaTransactionReceiptAccessRepository } from '../../infrastructure/adapters/prisma_transaction_receipt_access_repository.js';
+import { PrismaTransactionReceiptNotifyContextRepository } from '../../infrastructure/adapters/prisma_transaction_receipt_notify_context_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import {
+  CREATE_PAYMENT_CONFIRMED_NOTIFICATION_EVENT_UC,
+  CREATE_PAYMENT_PENDING_NOTIFICATION_EVENT_UC,
+} from './notifications.composition.js';
 
 const PAYMENT_TX_REPOSITORY = new PrismaPaymentTransactionRepository();
 const FEE_RULE_REPOSITORY = new PrismaVenueFeeRuleRepository();
@@ -72,6 +77,8 @@ export const UPDATE_USER_SUBSCRIPTION_UC = new UpdateUserSubscriptionUseCase(
   USER_SUBSCRIPTION_REPOSITORY,
 );
 
+const RECEIPT_NOTIFY_CONTEXT_REPOSITORY = new PrismaTransactionReceiptNotifyContextRepository(PRISMA);
+
 export const CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC = new ConfirmTransactionAsVenueStaffUseCase(
   VENUE_STAFF_REPOSITORY,
   PAYMENT_TX_REPOSITORY,
@@ -79,6 +86,8 @@ export const CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC = new ConfirmTransactionAsVen
   MONEY_CONVERSION_SERVICE,
   GET_RATE_FOR_RESERVATION_DAY_UC,
   RECORD_RESERVATION_LEDGER_ENTRY_UC,
+  RECEIPT_NOTIFY_CONTEXT_REPOSITORY,
+  CREATE_PAYMENT_CONFIRMED_NOTIFICATION_EVENT_UC,
 );
 
 export const LIST_VENUE_PENDING_TRANSACTIONS_UC = new ListVenuePendingTransactionsUseCase(
@@ -96,6 +105,8 @@ const RECEIPT_ACCESS_REPOSITORY = new PrismaTransactionReceiptAccessRepository(P
 export const RECORD_PLAYER_PAYMENT_SELECTION_UC = new RecordPlayerPaymentSelectionUseCase(
   PAYMENT_TX_REPOSITORY,
   RECEIPT_ACCESS_REPOSITORY,
+  RECEIPT_NOTIFY_CONTEXT_REPOSITORY,
+  CREATE_PAYMENT_PENDING_NOTIFICATION_EVENT_UC,
 );
 
 export const PAYMENT_ORCHESTRATOR = new PaymentOrchestrator(

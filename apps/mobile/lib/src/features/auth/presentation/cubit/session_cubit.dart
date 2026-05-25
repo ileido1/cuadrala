@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/push/push_token_sync_service.dart';
 import '../../../onboarding/data/onboarding_repository.dart';
 import '../../data/auth_repository.dart';
 import 'session_state.dart';
@@ -8,18 +9,22 @@ class SessionCubit extends Cubit<SessionState> {
   SessionCubit({
     required AuthRepository authRepository,
     required OnboardingRepository onboardingRepository,
+    required PushTokenSyncService pushTokenSyncService,
   })  : _authRepository = authRepository,
         _onboardingRepository = onboardingRepository,
+        _pushTokenSyncService = pushTokenSyncService,
         super(const SessionState.unauthenticated());
 
   final AuthRepository _authRepository;
   final OnboardingRepository _onboardingRepository;
+  final PushTokenSyncService _pushTokenSyncService;
 
   Future<void> bootstrap() async {
     emit(const SessionState.loading());
     try {
       await _authRepository.refresh();
       emit(const SessionState.authenticated());
+      await _pushTokenSyncService.syncTokenIfAuthenticated();
       await _refreshOnboardingFlag();
     } catch (_) {
       await _authRepository.logout();
@@ -29,6 +34,7 @@ class SessionCubit extends Cubit<SessionState> {
 
   Future<void> logout() async {
     emit(const SessionState.loading());
+    await _pushTokenSyncService.clearOnLogout();
     await _authRepository.logout();
     emit(const SessionState.unauthenticated());
   }
@@ -36,6 +42,7 @@ class SessionCubit extends Cubit<SessionState> {
   /// Útil después de login/register: los tokens ya se guardaron en storage.
   Future<void> markAuthenticated() async {
     emit(const SessionState.authenticated());
+    await _pushTokenSyncService.syncTokenIfAuthenticated();
     await _refreshOnboardingFlag();
   }
 

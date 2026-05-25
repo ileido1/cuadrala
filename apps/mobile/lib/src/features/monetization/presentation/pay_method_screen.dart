@@ -79,6 +79,7 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
   DateTime? _matchScheduledAt;
   List<ExchangeRateRow> _exchangeRates = const [];
   bool _fxMissingRate = false;
+  TransactionDto? _loadedTransaction;
   int? _settlementMinorCents;
   CurrencyCode? _obligationCurrency;
   CurrencyCode? _settlementCurrency;
@@ -179,6 +180,7 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
         if (!mounted) return;
         setState(() {
           _transactionId = pendingTx!.id;
+          _loadedTransaction = pendingTx;
           _methods = methods;
           _legacyPaymentInfo = legacyInfo;
           _resolvedPricingCurrency = pricingCurrency;
@@ -206,6 +208,18 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           if (!mounted) return;
           setState(() {
             _transactionId = first['id'] as String;
+            _loadedTransaction = TransactionDto(
+              id: first['id'] as String,
+              matchId: widget.matchId,
+              userId: me.id,
+              amountBase: (first['amountBase'] as String?) ?? '0',
+              feeAmount: (first['feeAmount'] as String?) ?? '0',
+              amountTotal: (first['amountTotal'] as String?) ?? '0',
+              status: (first['status'] as String?) ?? 'PENDING',
+              paymentMethod: 'MANUAL',
+              confirmedAt: null,
+              createdAt: DateTime.now(),
+            );
             _methods = methods;
             _legacyPaymentInfo = legacyInfo;
             _resolvedPricingCurrency = pricingCurrency;
@@ -238,7 +252,20 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     return _selectedMethodId ?? 'TRANSFER';
   }
 
+  /// Obligación en minor: total con comisión (`amountTotal`), no solo precio p/p.
+  int _obligationMinorForFx() {
+    final tx = _loadedTransaction;
+    if (tx != null) {
+      final total = double.tryParse(tx.amountTotal);
+      if (total != null && total > 0) {
+        return (total * 100).round();
+      }
+    }
+    return widget.amountPerPlayerCents;
+  }
+
   void _recomputeFx() {
+    final obligationMinor = _obligationMinorForFx();
     final obligation = CurrencyCode.fromApiValue(
       _resolvedPricingCurrency ?? widget.pricingCurrency ?? 'BS',
     );
@@ -253,7 +280,7 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     if (obligation == settlement) {
       setState(() {
         _fxMissingRate = false;
-        _settlementMinorCents = widget.amountPerPlayerCents;
+        _settlementMinorCents = obligationMinor;
       });
       return;
     }
@@ -272,7 +299,7 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     }
 
     final settlementMinor = convertMinorBetweenCurrenciesSV(
-      widget.amountPerPlayerCents,
+      obligationMinor,
       obligation,
       settlement,
       oblRate.rateToBs,
@@ -309,28 +336,40 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     try {
       final repo = getIt<MonetizationRepository>();
       final methodId = _selectedMethodId;
+      final pricing = _resolvedPricingCurrency ?? widget.pricingCurrency;
+      final reportedMinor = _isCash
+          ? _obligationMinorForFx()
+          : (_settlementMinorCents ?? _obligationMinorForFx());
+      final reportedCurrency =
+          (_isCash ? _obligationCurrency : _settlementCurrency)?.apiValue
+          ?? pricing
+          ?? widget.pricingCurrency
+          ?? 'BS';
+
       if (methodId != null && _uuidRe.hasMatch(methodId)) {
         await repo.recordPlayerPaymentSelection(
           transactionId: txId,
           venuePaymentMethodId: methodId,
+          reportedSettlementMinor: reportedMinor,
+          reportedSettlementCurrency: reportedCurrency,
         );
       } else if (methodId != null && methodId.isNotEmpty) {
         await repo.recordPlayerPaymentSelection(
           transactionId: txId,
           paymentMethodType: methodId,
+          reportedSettlementMinor: reportedMinor,
+          reportedSettlementCurrency: reportedCurrency,
         );
       }
       if (!mounted) return;
-
-      final pricing = _resolvedPricingCurrency ?? widget.pricingCurrency;
 
       if (_isCash) {
         context.push(
           WaitingConfirmationScreen.route(
             matchId: widget.matchId,
-            amountPerPersonCents: widget.amountPerPlayerCents,
+            amountPerPersonCents: reportedMinor,
             matchTitle: widget.matchTitle,
-            pricingCurrency: pricing,
+            pricingCurrency: reportedCurrency,
             transactionId: txId,
             venueId: widget.venueId,
           ),

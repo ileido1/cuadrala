@@ -121,6 +121,12 @@ final class _MatchDetailView extends StatelessWidget {
                 ),
               ),
 
+              if (loaded.actionMessage != null)
+                _ActionMessageBanner(
+                  message: loaded.actionMessage!,
+                  isError: loaded.actionMessageIsError,
+                ),
+
               // ── Sticky bottom bar ────────────────────────────────────────
               _BottomBar(
                 loaded: loaded,
@@ -748,6 +754,55 @@ class _DashedBorderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedBorderPainter old) => old.color != color;
+}
+
+// ─── Action feedback ─────────────────────────────────────────────────────────
+
+final class _ActionMessageBanner extends StatelessWidget {
+  const _ActionMessageBanner({
+    required this.message,
+    required this.isError,
+  });
+
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bg = isError
+        ? scheme.errorContainer
+        : scheme.primaryContainer;
+    final fg = isError ? scheme.error : scheme.onPrimaryContainer;
+    final icon = isError ? Icons.error_outline : Icons.check_circle_outline;
+
+    return Material(
+      color: bg,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: fg),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SelectableText.rich(
+                TextSpan(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: fg,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  children: [
+                    TextSpan(text: message),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Bottom Bar ──────────────────────────────────────────────────────────────
