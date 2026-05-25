@@ -94,24 +94,24 @@ export class ConfirmTransactionAsVenueStaffUseCase {
       );
     }
 
+    const HAS_MCP_CONTEXT =
+      TX.reservation !== undefined && TX.reservation !== null
+      || TX.match?.court?.venue !== undefined;
+
     if (
       isMultiCurrencyPaymentsEnabledSV()
-      && TX.reservationId !== null
+      && HAS_MCP_CONTEXT
       && _input.settlementAmount === undefined
     ) {
       throw new AppError(
         'SETTLEMENT_AMOUNT_REQUERIDO',
-        'settlementAmount es obligatorio para confirmar pagos de reserva con multi-moneda activo.',
+        'settlementAmount es obligatorio para confirmar pagos con multi-moneda activo.',
         400,
       );
     }
 
     let MCP: McpConfirmPayload | undefined;
-    if (
-      isMultiCurrencyPaymentsEnabledSV()
-      && TX.reservationId !== null
-      && TX.reservation !== undefined
-    ) {
+    if (isMultiCurrencyPaymentsEnabledSV() && HAS_MCP_CONTEXT) {
       try {
         MCP = await this.buildMcpConfirmPayloadSV(
           TX,
@@ -222,16 +222,63 @@ export class ConfirmTransactionAsVenueStaffUseCase {
     return null;
   }
 
+  private resolveMcpPricingContextSV(_tx: StaffTransactionRow): {
+    pricingCurrency: string;
+    scheduledAt: Date;
+    timezone: string;
+    countryCode: string;
+    capAppliedMinor: bigint | null;
+  } | null {
+    if (_tx.reservation !== undefined && _tx.reservation !== null) {
+      const RES = _tx.reservation;
+      let cap: bigint | null = null;
+      if (RES.totalAmountMinor !== null) {
+        const PENDING = RES.totalAmountMinor - RES.paidAmountMinor;
+        if (PENDING > 0n) {
+          cap = PENDING;
+        }
+      }
+      return {
+        pricingCurrency: RES.pricingCurrency,
+        scheduledAt: RES.scheduledAt,
+        timezone: RES.venue.monetizationSettings?.timezone ?? 'America/Caracas',
+        countryCode: RES.venue.countryCode,
+        capAppliedMinor: cap,
+      };
+    }
+
+    const MATCH = _tx.match;
+    const VENUE = MATCH?.court?.venue;
+    if (MATCH !== undefined && MATCH !== null && VENUE !== undefined) {
+      return {
+        pricingCurrency: VENUE.pricingCurrency,
+        scheduledAt: MATCH.scheduledAt ?? new Date(),
+        timezone: VENUE.monetizationSettings?.timezone ?? 'America/Caracas',
+        countryCode: VENUE.countryCode,
+        capAppliedMinor: majorToMinorSV(_tx.amountTotal.toString()),
+      };
+    }
+
+    return null;
+  }
+
   private async buildMcpConfirmPayloadSV(
     _tx: StaffTransactionRow,
     _venuePaymentMethodId?: string,
     _settlementAmount?: { amountMinor: bigint; currencyCode: CurrencyCode },
   ): Promise<McpConfirmPayload> {
-    const RESERVATION = _tx.reservation!;
-    const OBLIGATION_CURRENCY = parseCurrencyCode(RESERVATION.pricingCurrency);
-    const TIMEZONE =
-      RESERVATION.venue.monetizationSettings?.timezone ?? 'America/Caracas';
-    const COUNTRY_CODE = RESERVATION.venue.countryCode;
+    const CTX = this.resolveMcpPricingContextSV(_tx);
+    if (CTX === null) {
+      throw new AppError(
+        'CONTEXTO_PAGO_INCOMPLETO',
+        'No se pudo resolver la sede o la fecha del pago para conversión.',
+        400,
+      );
+    }
+
+    const OBLIGATION_CURRENCY = parseCurrencyCode(CTX.pricingCurrency);
+    const TIMEZONE = CTX.timezone;
+    const COUNTRY_CODE = CTX.countryCode;
 
     let SETTLEMENT_CURRENCY: CurrencyCode = OBLIGATION_CURRENCY;
     if (_venuePaymentMethodId !== undefined) {
@@ -273,7 +320,7 @@ export class ConfirmTransactionAsVenueStaffUseCase {
     const SETTLEMENT_RATE = await this._getRateForReservationDayUseCase.executeSV({
       countryCode: COUNTRY_CODE,
       currency: SETTLEMENT_CURRENCY,
-      scheduledAt: RESERVATION.scheduledAt,
+      scheduledAt: CTX.scheduledAt,
       timezone: TIMEZONE,
     });
 
@@ -282,7 +329,7 @@ export class ConfirmTransactionAsVenueStaffUseCase {
       OBLIGATION_RATE = await this._getRateForReservationDayUseCase.executeSV({
         countryCode: COUNTRY_CODE,
         currency: OBLIGATION_CURRENCY,
-        scheduledAt: RESERVATION.scheduledAt,
+        scheduledAt: CTX.scheduledAt,
         timezone: TIMEZONE,
       });
     }
@@ -297,11 +344,8 @@ export class ConfirmTransactionAsVenueStaffUseCase {
     );
 
     let APPLIED_MINOR = APPLIED_UNCAPPED.amountMinor;
-    if (RESERVATION.totalAmountMinor !== null) {
-      const PENDING = RESERVATION.totalAmountMinor - RESERVATION.paidAmountMinor;
-      if (PENDING > 0n && APPLIED_MINOR > PENDING) {
-        APPLIED_MINOR = PENDING;
-      }
+    if (CTX.capAppliedMinor !== null && APPLIED_MINOR > CTX.capAppliedMinor) {
+      APPLIED_MINOR = CTX.capAppliedMinor;
     }
 
     const APPLIED = MoneyAmount.fromMinor(OBLIGATION_CURRENCY, APPLIED_MINOR);

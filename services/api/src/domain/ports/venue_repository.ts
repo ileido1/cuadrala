@@ -67,6 +67,9 @@ export type VenueDetailDTO = {
   paymentNotes: string | null;
   /** IANA timezone de la sede (p. ej. America/Caracas). */
   timezone: string;
+  displayCurrency: string;
+  pricingCurrency: string;
+  countryCode: string;
 };
 
 export type VenuePaymentInfoWithNameDTO = VenuePaymentInfoDTO & {

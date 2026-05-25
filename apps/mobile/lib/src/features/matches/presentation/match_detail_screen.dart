@@ -108,10 +108,7 @@ final class _MatchDetailView extends StatelessWidget {
                               hasPrice: hasPrice,
                               hasConfirmedPayment:
                                   loaded.viewerHasConfirmedPayment,
-                              matchId: m.id,
-                              amountCents: m.pricePerPlayerCents,
-                              clubName: m.clubName,
-                              venueId: m.venueId,
+                              match: m,
                             ),
                           _MatchInfoSection(match: m),
                           const Divider(height: 1, indent: 20, endIndent: 20),
@@ -396,18 +393,12 @@ final class _ParticipantBanner extends StatelessWidget {
   const _ParticipantBanner({
     required this.hasPrice,
     required this.hasConfirmedPayment,
-    required this.matchId,
-    required this.amountCents,
-    required this.clubName,
-    this.venueId,
+    required this.match,
   });
 
   final bool hasPrice;
   final bool hasConfirmedPayment;
-  final String matchId;
-  final int amountCents;
-  final String? clubName;
-  final String? venueId;
+  final MatchDetailDto match;
 
   @override
   Widget build(BuildContext context) {
@@ -457,10 +448,13 @@ final class _ParticipantBanner extends StatelessWidget {
             TextButton(
               onPressed: () => context.push(
                 PayMethodScreen.route(
-                  matchId: matchId,
-                  amountPerPersonCents: amountCents,
-                  matchTitle: clubName ?? 'Partida',
-                  venueId: venueId,
+                  matchId: match.id,
+                  amountPerPersonCents: match.pricePerPlayerCents,
+                  matchTitle: match.clubName ?? 'Partida',
+                  venueId: match.venueId,
+                  pricingCurrency: match.pricingCurrency,
+                  displayCurrency: match.displayCurrency,
+                  scheduledAt: match.scheduledAt,
                 ),
               ),
               child: const Text('Pagar'),
@@ -793,6 +787,9 @@ final class _BottomBar extends StatelessWidget {
               amountPerPersonCents: m.pricePerPlayerCents,
               matchTitle: m.clubName ?? 'Partida',
               venueId: m.venueId,
+              pricingCurrency: m.pricingCurrency,
+              displayCurrency: m.displayCurrency,
+              scheduledAt: m.scheduledAt,
             ),
           );
     } else if (isParticipant && hasPrice && loaded.viewerHasConfirmedPayment) {

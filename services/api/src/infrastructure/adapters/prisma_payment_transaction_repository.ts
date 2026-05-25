@@ -302,7 +302,11 @@ export class PrismaPaymentTransactionRepository
           include: {
             court: {
               include: {
-                venue: true,
+                venue: {
+                  include: {
+                    monetizationSettings: true,
+                  },
+                },
               },
             },
           },

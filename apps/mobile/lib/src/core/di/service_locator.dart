@@ -5,6 +5,8 @@ import 'package:get_it/get_it.dart';
 import '../env/app_env.dart';
 import '../failures/app_failure_mapper.dart';
 import '../location/location_service.dart';
+import '../data/exchange_rates_api.dart';
+import '../data/exchange_rates_repository.dart';
 import '../network/api_client.dart';
 import '../network/auth_token_interceptor.dart';
 import '../network/inject_dio_extra_interceptor.dart';
@@ -93,6 +95,13 @@ Future<void> setupDependencies() async {
       dio: getIt<Dio>(),
       failureMapper: getIt<AppFailureMapper>(),
     ),
+  );
+
+  getIt.registerLazySingleton<ExchangeRatesApi>(
+    () => DioExchangeRatesApi(apiClient: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<ExchangeRatesRepository>(
+    () => ExchangeRatesRepository(exchangeRatesApi: getIt<ExchangeRatesApi>()),
   );
 
   getIt.registerLazySingleton<AuthApi>(

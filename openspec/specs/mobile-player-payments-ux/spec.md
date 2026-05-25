@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Programa** | `mobile-player-alignment` (archivado 2026-05-18) |
-| **Fase** | M3 (P0), M3b (P1) |
+| **Programa** | `mobile-player-alignment` (archivado 2026-05-18); ext. `mobile-match-payments-fx` (2026-05-25) |
+| **Fase** | M3 (P0), M3b (P1), MPFX (P0) |
 | **Paquetes** | `apps/mobile`, `services/api` (DTOs lectura jugador) |
 
 ## Propósito
@@ -220,6 +220,56 @@ MUST existir `money_format_test` (o equivalente) y tests de cubit/repository par
 **When** CI mobile  
 **Then** MUST pasar.
 
+### REQ-MPFX-001 — Efectivo sin comprobante (partida)
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P0 |
+| **Change** | `mobile-match-payments-fx` (2026-05-25) |
+
+**Given** jugador elige medio `CASH` en partida  
+**When** confirma método  
+**Then** MUST navegar a `WaitingConfirmationScreen` sin `UploadReceiptScreen`  
+**And** API MUST rechazar upload de comprobante con medio CASH (HTTP 400).
+
+---
+
+### REQ-MPFX-002 — Preview FX obligación → liquidación
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P0 |
+| **Change** | `mobile-match-payments-fx` |
+
+**Given** `pricingCurrency` ≠ `settlementCurrency` del medio y tasas del día del partido  
+**When** jugador elige transferencia o pago móvil  
+**Then** MUST mostrar monto a liquidar en moneda del medio usando `convertMinorBetweenCurrencies`  
+**And** MUST bloquear continuar si falta tasa (`missing_rate`).
+
+---
+
+### REQ-MPFX-003 — Paridad algoritmo con web
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P0 |
+| **Change** | `mobile-match-payments-fx` |
+
+Mobile MUST usar `pickExchangeRateForDate` sobre `GET /countries/:code/exchange-rates` y misma lógica que `apps/web/src/lib/money-conversion.ts`.
+
+---
+
+### REQ-MPFX-004 — Bootstrap datos de pago partida
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P0 |
+| **Change** | `mobile-match-payments-fx` |
+
+Flujo de pago MUST recibir `pricingCurrency`, `displayCurrency`, `countryCode`, `scheduledAt` (venue + partida) antes de calcular FX o registrar selección.
+
+---
+
 ## Criterios de aceptación verificables (M3)
 
 | ID | Verificación |
@@ -229,3 +279,5 @@ MUST existir `money_format_test` (o equivalente) y tests de cubit/repository par
 | AC-MPPU-03 | Flujo feliz usa payment-methods (test) |
 | AC-MPPU-04 | Waiting → CONFIRMED tras confirm staff web (integración doc o E2E) |
 | AC-MPPU-05 | `flutter test` monetización verde |
+| AC-MPFX-01 | `pay_flow_widget_test` CASH → waiting sin upload |
+| AC-MPFX-02 | `money_conversion_test` USD→BS |

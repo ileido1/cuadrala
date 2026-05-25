@@ -19,6 +19,7 @@ interface PendingPaymentDetailModalProps {
   venueId: string;
   pricingCurrency?: string | null;
   displayCurrency?: string | null;
+  countryCode?: string;
   venueTimezone?: string;
   onClose: () => void;
   onUpdated: () => void;
@@ -49,6 +50,7 @@ export function PendingPaymentDetailModal({
   venueId,
   pricingCurrency,
   displayCurrency,
+  countryCode = 'VE',
   venueTimezone = 'America/Caracas',
   onClose,
   onUpdated,
@@ -276,6 +278,7 @@ export function PendingPaymentDetailModal({
         venueId={venueId}
         pricingCurrency={pricingCurrency}
         displayCurrency={displayCurrency}
+        countryCode={countryCode}
         receiptUrl={receiptUrl}
         venueTimezone={venueTimezone}
         onClose={() => setShowConfirm(false)}

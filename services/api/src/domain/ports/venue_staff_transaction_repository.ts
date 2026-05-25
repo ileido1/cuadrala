@@ -7,7 +7,17 @@ export type StaffTransactionRow = {
   amountBase: { toString(): string };
   feeAmount: { toString(): string };
   amountTotal: { toString(): string };
-  match?: { court?: { venueId: string } | null } | null;
+  match?: {
+    scheduledAt: Date | null;
+    court?: {
+      venueId: string;
+      venue: {
+        countryCode: string;
+        pricingCurrency: string;
+        monetizationSettings: { timezone: string } | null;
+      };
+    } | null;
+  } | null;
   reservation?: {
     venueId: string;
     scheduledAt: Date;

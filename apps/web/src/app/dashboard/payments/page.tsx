@@ -158,6 +158,8 @@ export default function PaymentsPage() {
             venueId={currentVenue.id}
             pricingCurrency={currentVenue.pricingCurrency}
             displayCurrency={currentVenue.displayCurrency}
+            countryCode={currentVenue.countryCode ?? 'VE'}
+            venueTimezone={currentVenue.timezone ?? 'America/Caracas'}
             focusTransactionId={focusPendingId}
             onFocusConsumed={() => setFocusPendingId(null)}
             externalSelected={selectedPending}
@@ -173,6 +175,7 @@ export default function PaymentsPage() {
           venueId={currentVenue.id}
           pricingCurrency={currentVenue.pricingCurrency}
           displayCurrency={currentVenue.displayCurrency}
+          countryCode={currentVenue.countryCode ?? 'VE'}
           venueTimezone={currentVenue.timezone ?? 'America/Caracas'}
           onClose={() => setSelectedPending(null)}
           onUpdated={handlePendingUpdated}

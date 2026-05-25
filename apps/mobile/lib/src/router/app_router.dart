@@ -133,12 +133,21 @@ final class AppRouter {
                 final title = state.uri.queryParameters['title'] ?? 'Partida';
                 final venueId = state.uri.queryParameters['venueId'];
                 final currency = state.uri.queryParameters['currency'];
+                final displayCurrency =
+                    state.uri.queryParameters['displayCurrency'];
+                final scheduledRaw =
+                    state.uri.queryParameters['scheduledAt'];
+                final scheduledAt = scheduledRaw != null
+                    ? DateTime.tryParse(scheduledRaw)
+                    : null;
                 return PayMethodScreen(
                   matchId: matchId,
-                  amountPerPersonCents: amountCents,
+                  amountPerPlayerCents: amountCents,
                   matchTitle: title,
                   venueId: venueId,
                   pricingCurrency: currency,
+                  displayCurrency: displayCurrency,
+                  scheduledAt: scheduledAt,
                 );
               },
             ),

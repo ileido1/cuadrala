@@ -231,6 +231,7 @@ export function PaymentsList({
           venueId={venueId}
           pricingCurrency={pricingCurrency}
           displayCurrency={displayCurrency}
+          countryCode={countryCode ?? 'VE'}
           venueTimezone={venueTimezone}
           onClose={() => setSelected(null)}
           onUpdated={() => {

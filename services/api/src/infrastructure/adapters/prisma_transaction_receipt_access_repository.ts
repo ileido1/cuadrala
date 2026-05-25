@@ -53,5 +53,32 @@ export class PrismaTransactionReceiptAccessRepository implements TransactionRece
     if (ROW.match.organizerUserId === _userId) return true;
     return ROW.match.participants.length > 0;
   }
+
+  async getPlayerPaymentMethodTypeSV(_transactionId: string): Promise<string | null> {
+    const ROW = await this._prisma.transaction.findUnique({
+      where: { id: _transactionId },
+      select: {
+        venuePaymentMethod: { select: { type: true } },
+        paymentData: true,
+      },
+    });
+    if (ROW === null) {
+      return null;
+    }
+    if (ROW.venuePaymentMethod?.type !== undefined) {
+      return ROW.venuePaymentMethod.type;
+    }
+    const DATA = ROW.paymentData;
+    if (DATA !== null && typeof DATA === 'object' && !Array.isArray(DATA)) {
+      const SELECTION = (DATA as Record<string, unknown>).playerSelection;
+      if (SELECTION !== null && typeof SELECTION === 'object' && !Array.isArray(SELECTION)) {
+        const TYPE = (SELECTION as Record<string, unknown>).type;
+        if (typeof TYPE === 'string' && TYPE.length > 0) {
+          return TYPE;
+        }
+      }
+    }
+    return null;
+  }
 }
 

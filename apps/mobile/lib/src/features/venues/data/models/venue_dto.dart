@@ -11,6 +11,7 @@ final class VenueDto {
     this.displayCurrency,
     this.openingHours,
     this.timezone,
+    this.countryCode,
   });
 
   final String id;
@@ -22,6 +23,7 @@ final class VenueDto {
   final String? displayCurrency;
   final OpeningHoursMap? openingHours;
   final String? timezone;
+  final String? countryCode;
 
   static VenueDto fromJson(Map<String, Object?> json) {
     final latRaw = json['latitude'];
@@ -36,6 +38,7 @@ final class VenueDto {
       displayCurrency: json['displayCurrency'] as String?,
       openingHours: openingHoursFromJson(json['openingHours']),
       timezone: json['timezone'] as String?,
+      countryCode: json['countryCode'] as String?,
     );
   }
 }

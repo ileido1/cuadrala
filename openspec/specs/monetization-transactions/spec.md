@@ -150,3 +150,40 @@ Re-confirmación MUST responder `409 TRANSACCION_YA_CONFIRMADA`.
 **Given** build mobile post `mobile-player-alignment`  
 **When** búsqueda estática en `apps/mobile`  
 **Then** MUST NOT existir `confirm-manual` ni `confirmTransactionManual`.
+
+---
+
+### REQ-MCP-043 — Confirmación staff partida con MCP
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P0 |
+| **Change** | `mobile-match-payments-fx` (2026-05-25) |
+
+Con `MULTI_CURRENCY_PAYMENTS=true`, `ConfirmTransactionAsVenueStaffUseCase` MUST resolver contexto desde `match.court.venue` (`pricingCurrency`, `scheduledAt`, `countryCode`, `timezone`) y exigir `settlementAmount` igual que reservas.
+
+**Given** transacción PENDING de partida USD, medio liquida BS, tasa del día del partido  
+**When** staff confirma con `settlementAmount` en BS  
+**Then** MUST persistir MCP (`appliedToObligationMinor`, `CurrencyConversionRecord` si aplica).
+
+---
+
+### REQ-MCP-044 — Prohibir comprobante en efectivo
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P0 |
+| **Change** | `mobile-match-payments-fx` |
+
+`UploadTransactionReceiptUseCase` MUST rechazar upload cuando el medio del jugador es `CASH` (HTTP 400).
+
+---
+
+### REQ-MCP-045 — Cola web pendientes: FX y efectivo
+
+| Campo | Valor |
+|-------|-------|
+| **Prioridad** | P1 |
+| **Change** | `mobile-match-payments-fx` |
+
+`PendingPaymentReviewDialog` MUST cargar tasas por `countryCode`, calcular liquidación cross-currency, enviar `settlementAmount` en confirm manual para partidas y reservas, y mostrar copy distinto para `CASH` sin comprobante digital.

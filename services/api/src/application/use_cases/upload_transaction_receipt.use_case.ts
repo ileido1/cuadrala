@@ -59,6 +59,17 @@ export class UploadTransactionReceiptUseCase {
       throw new AppError('NO_AUTORIZADO', 'No tienes permisos para adjuntar comprobantes a esta transacción.', 403);
     }
 
+    const METHOD_TYPE = await this._receiptAccessRepository.getPlayerPaymentMethodTypeSV(
+      _input.transactionId,
+    );
+    if (METHOD_TYPE === 'CASH') {
+      throw new AppError(
+        'VALIDACION_FALLIDA',
+        'El pago en efectivo no requiere comprobante. Espera la confirmación del club.',
+        400,
+      );
+    }
+
     const RECEIPT_ID = randomUUID();
     let storageKey: string;
     try {

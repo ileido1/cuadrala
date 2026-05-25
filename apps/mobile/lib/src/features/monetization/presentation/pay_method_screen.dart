@@ -3,10 +3,14 @@ import 'package:go_router/go_router.dart';
 
 // ignore_for_file: deprecated_member_use
 
+import '../../../core/data/exchange_rates_repository.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/failures/app_failure.dart';
+import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
+import '../../matches/data/matches_repository.dart';
+import '../../matches/presentation/open_match_display.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../venues/data/venues_repository.dart';
 import '../data/monetization_repository.dart';
@@ -14,22 +18,27 @@ import '../data/models/match_payment_info_dto.dart';
 import '../data/models/transaction_dto.dart';
 import '../data/models/venue_payment_method_dto.dart';
 import 'upload_receipt_screen.dart';
+import 'waiting_confirmation_screen.dart';
 
 final class PayMethodScreen extends StatefulWidget {
   const PayMethodScreen({
     super.key,
     required this.matchId,
-    required this.amountPerPersonCents,
+    required this.amountPerPlayerCents,
     required this.matchTitle,
     this.venueId,
     this.pricingCurrency,
+    this.displayCurrency,
+    this.scheduledAt,
   });
 
   final String matchId;
-  final int amountPerPersonCents;
+  final int amountPerPlayerCents;
   final String matchTitle;
   final String? venueId;
   final String? pricingCurrency;
+  final String? displayCurrency;
+  final DateTime? scheduledAt;
 
   static String route({
     required String matchId,
@@ -37,12 +46,16 @@ final class PayMethodScreen extends StatefulWidget {
     required String matchTitle,
     String? venueId,
     String? pricingCurrency,
+    String? displayCurrency,
+    DateTime? scheduledAt,
   }) {
     final qp = <String, String>{
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
       if (venueId != null && venueId.isNotEmpty) 'venueId': venueId,
       if (pricingCurrency != null) 'currency': pricingCurrency,
+      if (displayCurrency != null) 'displayCurrency': displayCurrency,
+      if (scheduledAt != null) 'scheduledAt': scheduledAt.toUtc().toIso8601String(),
     };
     final query = Uri(queryParameters: qp).query;
     return '/matches/$matchId/pay/method?$query';
@@ -61,10 +74,21 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
   List<VenuePaymentMethodDto> _methods = const [];
   MatchPaymentInfoDto? _legacyPaymentInfo;
   String? _resolvedPricingCurrency;
+  String? _resolvedDisplayCurrency;
+  String? _countryCode;
+  DateTime? _matchScheduledAt;
+  List<ExchangeRateRow> _exchangeRates = const [];
+  bool _fxMissingRate = false;
+  int? _settlementMinorCents;
+  CurrencyCode? _obligationCurrency;
+  CurrencyCode? _settlementCurrency;
 
-  CurrencyCode get _currency => CurrencyCode.resolve(
+  CurrencyCode get _displayCurrencyCode => venueDisplayCurrency(
+        displayCurrency: _resolvedDisplayCurrency ?? widget.displayCurrency,
         pricingCurrency: _resolvedPricingCurrency ?? widget.pricingCurrency,
       );
+
+  bool get _isCash => _methodRouteValue == 'CASH';
 
   VenuePaymentMethodDto? get _selectedMethod {
     if (_selectedMethodId == null) return null;
@@ -90,14 +114,32 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
       final venueId = widget.venueId;
 
       var pricingCurrency = widget.pricingCurrency;
-      if ((pricingCurrency == null || pricingCurrency.isEmpty) &&
-          venueId != null &&
-          venueId.isNotEmpty) {
+      var displayCurrency = widget.displayCurrency;
+      var countryCode = 'VE';
+      if (venueId != null && venueId.isNotEmpty) {
         try {
           final venue =
               await getIt<VenuesRepository>().getVenueDetail(venueId: venueId);
-          pricingCurrency = venue.pricingCurrency ?? venue.displayCurrency;
+          pricingCurrency ??= venue.pricingCurrency ?? venue.displayCurrency;
+          displayCurrency ??= venue.displayCurrency ?? venue.pricingCurrency;
+          countryCode = venue.countryCode ?? 'VE';
         } catch (_) {}
+      }
+
+      DateTime? scheduledAt = widget.scheduledAt;
+      try {
+        final match =
+            await getIt<MatchesRepository>().getMatchById(widget.matchId);
+        scheduledAt ??= match.scheduledAt;
+      } catch (_) {}
+
+      var exchangeRates = const <ExchangeRateRow>[];
+      try {
+        exchangeRates = await getIt<ExchangeRatesRepository>().listByCountry(
+          countryCode: countryCode,
+        );
+      } catch (_) {
+        exchangeRates = const [];
       }
 
       List<VenuePaymentMethodDto> methods = const [];
@@ -140,13 +182,18 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           _methods = methods;
           _legacyPaymentInfo = legacyInfo;
           _resolvedPricingCurrency = pricingCurrency;
+          _resolvedDisplayCurrency = displayCurrency;
+          _countryCode = countryCode;
+          _matchScheduledAt = scheduledAt;
+          _exchangeRates = exchangeRates;
           _selectedMethodId = methods.isNotEmpty ? methods.first.id : 'TRANSFER';
           _loading = false;
         });
+        _recomputeFx();
         return;
       }
 
-      final amount = widget.amountPerPersonCents / 100.0;
+      final amount = widget.amountPerPlayerCents / 100.0;
       final created = await repo.createMatchObligations(
         matchId: widget.matchId,
         amountBasePerPerson: amount,
@@ -162,9 +209,14 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
             _methods = methods;
             _legacyPaymentInfo = legacyInfo;
             _resolvedPricingCurrency = pricingCurrency;
+            _resolvedDisplayCurrency = displayCurrency;
+            _countryCode = countryCode;
+            _matchScheduledAt = scheduledAt;
+            _exchangeRates = exchangeRates;
             _selectedMethodId = methods.isNotEmpty ? methods.first.id : 'TRANSFER';
             _loading = false;
           });
+          _recomputeFx();
           return;
         }
       }
@@ -183,7 +235,53 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
   String get _methodRouteValue {
     final selected = _selectedMethod;
     if (selected != null) return selected.type;
-    return 'TRANSFER';
+    return _selectedMethodId ?? 'TRANSFER';
+  }
+
+  void _recomputeFx() {
+    final obligation = CurrencyCode.fromApiValue(
+      _resolvedPricingCurrency ?? widget.pricingCurrency ?? 'BS',
+    );
+    final method = _selectedMethod;
+    final settlement = CurrencyCode.fromApiValue(
+      method?.settlementCurrency ?? obligation.apiValue,
+    );
+
+    _obligationCurrency = obligation;
+    _settlementCurrency = settlement;
+
+    if (obligation == settlement) {
+      setState(() {
+        _fxMissingRate = false;
+        _settlementMinorCents = widget.amountPerPlayerCents;
+      });
+      return;
+    }
+
+    final scheduled = _matchScheduledAt ?? DateTime.now();
+    final dateIso = localCalendarDateIsoSV(scheduled);
+    final oblRate = pickExchangeRateForDateSV(_exchangeRates, obligation, dateIso);
+    final setRate = pickExchangeRateForDateSV(_exchangeRates, settlement, dateIso);
+
+    if (oblRate == null || setRate == null) {
+      setState(() {
+        _fxMissingRate = true;
+        _settlementMinorCents = null;
+      });
+      return;
+    }
+
+    final settlementMinor = convertMinorBetweenCurrenciesSV(
+      widget.amountPerPlayerCents,
+      obligation,
+      settlement,
+      oblRate.rateToBs,
+      setRate.rateToBs,
+    );
+    setState(() {
+      _fxMissingRate = false;
+      _settlementMinorCents = settlementMinor;
+    });
   }
 
   static final RegExp _uuidRe = RegExp(
@@ -194,6 +292,19 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
   Future<void> _continue() async {
     final txId = _transactionId;
     if (txId == null || txId.isEmpty) return;
+
+    if (!_isCash && _fxMissingRate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No hay tasa de cambio para la fecha del partido. '
+            'Contacta al club.',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
     try {
       final repo = getIt<MonetizationRepository>();
@@ -210,14 +321,36 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
         );
       }
       if (!mounted) return;
+
+      final pricing = _resolvedPricingCurrency ?? widget.pricingCurrency;
+
+      if (_isCash) {
+        context.push(
+          WaitingConfirmationScreen.route(
+            matchId: widget.matchId,
+            amountPerPersonCents: widget.amountPerPlayerCents,
+            matchTitle: widget.matchTitle,
+            pricingCurrency: pricing,
+            transactionId: txId,
+            venueId: widget.venueId,
+          ),
+        );
+        return;
+      }
+
+      final amountForUpload =
+          _settlementMinorCents ?? widget.amountPerPlayerCents;
+      final currencyForUpload =
+          _settlementCurrency?.apiValue ?? pricing;
+
       context.push(
         UploadReceiptScreen.route(
           matchId: widget.matchId,
           transactionId: txId,
           method: _methodRouteValue,
-          amountPerPersonCents: widget.amountPerPersonCents,
+          amountPerPersonCents: amountForUpload,
           matchTitle: widget.matchTitle,
-          pricingCurrency: _resolvedPricingCurrency ?? widget.pricingCurrency,
+          pricingCurrency: currencyForUpload,
           venueId: widget.venueId,
         ),
       );
@@ -257,8 +390,8 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                     _MatchHeaderCard(
                       title: widget.matchTitle,
                       amount: formatMoneyCents(
-                        widget.amountPerPersonCents,
-                        _currency,
+                        widget.amountPerPlayerCents,
+                        _displayCurrencyCode,
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -275,8 +408,10 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                           child: RadioListTile<String>(
                             value: m.id,
                             groupValue: _selectedMethodId,
-                            onChanged: (v) =>
-                                setState(() => _selectedMethodId = v),
+                            onChanged: (v) {
+                              setState(() => _selectedMethodId = v);
+                              _recomputeFx();
+                            },
                             title: Text(m.displayLabel),
                             subtitle: Text(
                               '${m.name} · ${m.settlementCurrency}',
@@ -289,8 +424,10 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                         child: RadioListTile<String>(
                           value: 'TRANSFER',
                           groupValue: _selectedMethodId,
-                          onChanged: (v) =>
-                              setState(() => _selectedMethodId = v ?? 'TRANSFER'),
+                          onChanged: (v) {
+                            setState(() => _selectedMethodId = v ?? 'TRANSFER');
+                            _recomputeFx();
+                          },
                           title: const Text('Transferencia bancaria'),
                           subtitle: const Text('Recomendado'),
                         ),
@@ -299,8 +436,10 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                         child: RadioListTile<String>(
                           value: 'CASH',
                           groupValue: _selectedMethodId,
-                          onChanged: (v) =>
-                              setState(() => _selectedMethodId = v ?? 'CASH'),
+                          onChanged: (v) {
+                            setState(() => _selectedMethodId = v ?? 'CASH');
+                            _recomputeFx();
+                          },
                           title: const Text('Efectivo'),
                           subtitle: const Text('Coordina con el organizador'),
                         ),
@@ -311,11 +450,49 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                     else if (_selectedMethodId == 'TRANSFER' &&
                         _legacyPaymentInfo != null)
                       _BankInfoCard(paymentInfo: _legacyPaymentInfo!),
+                    if (!_isCash &&
+                        _settlementMinorCents != null &&
+                        _obligationCurrency != null &&
+                        _settlementCurrency != null &&
+                        _obligationCurrency != _settlementCurrency)
+                      _SettlementConversionCard(
+                        obligationMinor: widget.amountPerPlayerCents,
+                        obligationCurrency: _obligationCurrency!,
+                        settlementMinor: _settlementMinorCents!,
+                        settlementCurrency: _settlementCurrency!,
+                      ),
+                    if (!_isCash && _fxMissingRate)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          'Falta la tasa de cambio para esta fecha. '
+                          'No puedes continuar hasta que el club la cargue.',
+                          style: TextStyle(
+                            color: scheme.error,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    if (_isCash)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          'Pagarás en efectivo en el club. No necesitas subir '
+                          'comprobante; el staff confirmará tu pago.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
                     const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _submitting ? null : _continue,
+                        onPressed: (_submitting ||
+                                (!_isCash && _fxMissingRate))
+                            ? null
+                            : _continue,
                         style: FilledButton.styleFrom(
                           backgroundColor: scheme.primary,
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -498,6 +675,64 @@ final class _BankInfoCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             ...fields,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _SettlementConversionCard extends StatelessWidget {
+  const _SettlementConversionCard({
+    required this.obligationMinor,
+    required this.obligationCurrency,
+    required this.settlementMinor,
+    required this.settlementCurrency,
+  });
+
+  final int obligationMinor;
+  final CurrencyCode obligationCurrency;
+  final int settlementMinor;
+  final CurrencyCode settlementCurrency;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: scheme.secondaryContainer.withValues(alpha: 0.5),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Monto a transferir (${settlementCurrency.apiValue})',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              formatMoneyCents(settlementMinor, settlementCurrency),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: scheme.primary,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Equivale a ${formatMoneyCents(obligationMinor, obligationCurrency)} '
+              'en moneda de la partida.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
           ],
         ),
       ),
