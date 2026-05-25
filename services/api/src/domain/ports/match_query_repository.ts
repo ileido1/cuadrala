@@ -1,7 +1,16 @@
+export type MatchStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+
 export type ListMatchesFiltersDTO = {
   sportId?: string;
   categoryId?: string;
-  status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+  status?: MatchStatus;
+  scheduledFrom?: Date;
+  scheduledTo?: Date;
+};
+
+export type ListMyMatchesFiltersDTO = {
+  statuses?: MatchStatus[];
+  role?: 'CREATOR' | 'PARTICIPANT' | 'ANY';
   scheduledFrom?: Date;
   scheduledTo?: Date;
 };
@@ -62,5 +71,10 @@ export interface MatchQueryRepository {
     _filters: ListVenueMatchesFiltersDTO,
     _page: PageDTO,
   ): Promise<{ items: (MatchListItemDTO & { courtId: string | null; courtName: string | null })[]; total: number }>;
+  listMyMatchesSV(
+    _userId: string,
+    _filters: ListMyMatchesFiltersDTO,
+    _page: PageDTO,
+  ): Promise<{ items: MatchListItemDTO[]; total: number }>;
 }
 

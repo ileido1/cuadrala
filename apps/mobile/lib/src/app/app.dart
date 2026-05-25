@@ -19,6 +19,8 @@ final class App extends StatelessWidget {
           return MaterialApp.router(
             title: 'Cuádrala',
             theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: ThemeMode.system,
             routerConfig: router.router,
           );
         },

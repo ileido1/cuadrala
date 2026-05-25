@@ -35,6 +35,7 @@ import '../features/tournaments/presentation/tournament_detail_screen.dart';
 import 'auth_redirect.dart';
 import 'go_router_refresh_stream.dart';
 import 'routes.dart';
+import 'shell_branches.dart';
 
 final class AppRouter {
   AppRouter({required SessionCubit sessionCubit})
@@ -43,6 +44,9 @@ final class AppRouter {
           refreshListenable: GoRouterRefreshStream(sessionCubit.stream),
           redirect: (context, state) => authRedirect(sessionCubit.state, state),
           routes: [
+            // ------------------------------------------------------------------
+            // Auth / onboarding routes — outside the shell, no bottom nav
+            // ------------------------------------------------------------------
             GoRoute(
               path: '/',
               redirect: (_, __) => Routes.home,
@@ -69,10 +73,25 @@ final class AppRouter {
               path: Routes.onboarding,
               builder: (context, state) => const OnboardingFlowScreen(),
             ),
-            GoRoute(
-              path: Routes.home,
-              builder: (context, state) => const ShellScreen(),
+
+            // ------------------------------------------------------------------
+            // Shell — StatefulShellRoute.indexedStack
+            // Each tab is a StatefulShellBranch defined in shell_branches.dart.
+            // The builder receives a StatefulNavigationShell that acts as both
+            // the child widget and the tab-switch controller.
+            // ------------------------------------------------------------------
+            StatefulShellRoute.indexedStack(
+              builder: (context, state, navigationShell) => ShellScreen(
+                navigationShell: navigationShell,
+              ),
+              branches: shellBranches,
             ),
+
+            // ------------------------------------------------------------------
+            // Match routes — full-screen overlays OUTSIDE the shell.
+            // These push above the shell so the bottom nav is not visible.
+            // Deep links to these routes work without going through the shell.
+            // ------------------------------------------------------------------
             GoRoute(
               path: Routes.createMatch,
               builder: (context, state) => const CreateMatchScreen(),
@@ -89,13 +108,6 @@ final class AppRouter {
               builder: (context, state) {
                 final matchId = state.pathParameters['matchId'] ?? '';
                 return MatchLifecycleScreen(matchId: matchId);
-              },
-            ),
-            GoRoute(
-              path: '/matches/:matchId',
-              builder: (context, state) {
-                final matchId = state.pathParameters['matchId'] ?? '';
-                return MatchDetailScreen(matchId: matchId);
               },
             ),
             GoRoute(
@@ -169,41 +181,28 @@ final class AppRouter {
               },
             ),
             GoRoute(
-              path: Routes.createTournament,
-              builder: (context, state) => const CreateTournamentScreen(),
-            ),
-            GoRoute(
-              path: '/tournaments/:tournamentId',
-              builder: (context, state) {
-                final tournamentId = state.pathParameters['tournamentId'] ?? '';
-                return TournamentDetailScreen(tournamentId: tournamentId);
-              },
-            ),
-            GoRoute(
-              path: '/notifications/:notificationId',
-              builder: (context, state) {
-                final notificationId =
-                    state.pathParameters['notificationId'] ?? '';
-                return NotificationDetailScreen(notificationId: notificationId);
-              },
-            ),
-            GoRoute(
-              path: Routes.notificationPrefs,
-              builder: (context, state) => const NotificationPrefsScreen(),
-            ),
-            GoRoute(
-              path: Routes.availability,
-              builder: (context, state) => BlocProvider<AvailabilityCubit>(
-                create: (_) => getIt<AvailabilityCubit>(),
-                child: AvailabilityScreen(repository: getIt<AvailabilityRepository>()),
-              ),
-            ),
-            GoRoute(
               path: '/matches/:matchId/suggestions',
               builder: (context, state) {
                 final matchId = state.pathParameters['matchId'] ?? '';
                 return MatchmakingScreen(matchId: matchId);
               },
+            ),
+            // IMPORTANT: /matches/:matchId MUST be registered AFTER all
+            // /matches/:matchId/* sub-routes so GoRouter matches sub-paths first.
+            GoRoute(
+              path: '/matches/:matchId',
+              builder: (context, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                return MatchDetailScreen(matchId: matchId);
+              },
+            ),
+
+            // ------------------------------------------------------------------
+            // Tournament routes — full-screen overlays outside the shell
+            // ------------------------------------------------------------------
+            GoRoute(
+              path: Routes.createTournament,
+              builder: (context, state) => const CreateTournamentScreen(),
             ),
             GoRoute(
               path: '/tournaments/:tournamentId/chat',
@@ -220,6 +219,41 @@ final class AppRouter {
               },
             ),
             GoRoute(
+              path: '/tournaments/:tournamentId',
+              builder: (context, state) {
+                final tournamentId = state.pathParameters['tournamentId'] ?? '';
+                return TournamentDetailScreen(tournamentId: tournamentId);
+              },
+            ),
+
+            // ------------------------------------------------------------------
+            // Notification routes — outside the shell (full-screen detail)
+            // ------------------------------------------------------------------
+            GoRoute(
+              path: '/notifications/:notificationId',
+              builder: (context, state) {
+                final notificationId =
+                    state.pathParameters['notificationId'] ?? '';
+                return NotificationDetailScreen(notificationId: notificationId);
+              },
+            ),
+            GoRoute(
+              path: Routes.notificationPrefs,
+              builder: (context, state) => const NotificationPrefsScreen(),
+            ),
+
+            // ------------------------------------------------------------------
+            // Other top-level overlays
+            // ------------------------------------------------------------------
+            GoRoute(
+              path: Routes.availability,
+              builder: (context, state) => BlocProvider<AvailabilityCubit>(
+                create: (_) => getIt<AvailabilityCubit>(),
+                child:
+                    AvailabilityScreen(repository: getIt<AvailabilityRepository>()),
+              ),
+            ),
+            GoRoute(
               path: Routes.venues,
               builder: (context, state) => const VenuesScreen(),
             ),
@@ -227,7 +261,8 @@ final class AppRouter {
               path: '/venues/:venueId',
               builder: (context, state) {
                 final venueId = state.pathParameters['venueId'] ?? '';
-                final venueName = state.uri.queryParameters['name'] ?? 'Sede';
+                final venueName =
+                    state.uri.queryParameters['name'] ?? 'Sede';
                 return VenueDetailScreen(venueId: venueId, venueName: venueName);
               },
             ),
@@ -244,4 +279,3 @@ final class AppRouter {
 
   final GoRouter router;
 }
-

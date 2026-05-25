@@ -1,4 +1,5 @@
 import '../../../core/failures/app_failure.dart';
+import 'models/leaderboard_entry_dto.dart';
 import 'models/player_profile_dto.dart';
 import 'models/user_me_dto.dart';
 import 'models/user_rating_dto.dart';
@@ -95,6 +96,26 @@ class ProfileRepository {
       return (data['items'] as List)
           .whereType<Map<String, Object?>>()
           .map(UserRatingHistoryItemDto.fromJson)
+          .toList();
+    }
+    throw const AppFailure(
+      code: 'INVALID_RESPONSE',
+      message: 'Respuesta inválida del servidor.',
+    );
+  }
+
+  Future<List<LeaderboardEntryDto>> getLeaderboard(
+    String categoryId, {
+    int limit = 5,
+  }) async {
+    final data = await _profileApi.getRatingsLeaderboardEnvelope(
+      categoryId: categoryId,
+      limit: limit,
+    );
+    if (data['items'] is List) {
+      return (data['items'] as List)
+          .whereType<Map<String, Object?>>()
+          .map(LeaderboardEntryDto.fromJson)
           .toList();
     }
     throw const AppFailure(

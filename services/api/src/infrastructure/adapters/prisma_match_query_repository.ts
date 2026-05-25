@@ -1,5 +1,6 @@
 import type {
   ListMatchesFiltersDTO,
+  ListMyMatchesFiltersDTO,
   ListVenueMatchesFiltersDTO,
   MatchDetailDTO,
   MatchListItemDTO,
@@ -7,8 +8,7 @@ import type {
   PageDTO,
 } from '../../domain/ports/match_query_repository.js';
 
-import type { PrismaClient } from '../../generated/prisma/client.js';
-import type { MatchWhereInput } from '../../generated/prisma.js';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 
 function toListItemDTO(_row: {
   id: string;
@@ -161,6 +161,64 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
     };
   }
 
+  async listMyMatchesSV(
+    _userId: string,
+    _filters: ListMyMatchesFiltersDTO,
+    _page: PageDTO,
+  ): Promise<{ items: MatchListItemDTO[]; total: number }> {
+    const OR_CLAUSES: Prisma.MatchWhereInput[] = [];
+
+    const ROLE = _filters.role ?? 'ANY';
+    if (ROLE === 'CREATOR' || ROLE === 'ANY') {
+      OR_CLAUSES.push({ organizerUserId: _userId });
+    }
+    if (ROLE === 'PARTICIPANT' || ROLE === 'ANY') {
+      OR_CLAUSES.push({ participants: { some: { userId: _userId } } });
+    }
+
+    const WHERE: Prisma.MatchWhereInput = {
+      OR: OR_CLAUSES,
+      ...(_filters.statuses !== undefined && _filters.statuses.length > 0
+        ? { status: { in: _filters.statuses } }
+        : {}),
+      ...(_filters.scheduledFrom !== undefined || _filters.scheduledTo !== undefined
+        ? {
+            scheduledAt: {
+              ...(_filters.scheduledFrom !== undefined ? { gte: _filters.scheduledFrom } : {}),
+              ...(_filters.scheduledTo !== undefined ? { lte: _filters.scheduledTo } : {}),
+            },
+          }
+        : {}),
+    };
+
+    const SKIP = (_page.page - 1) * _page.limit;
+    const TAKE = _page.limit;
+
+    const [TOTAL, ROWS] = await this._prisma.$transaction([
+      this._prisma.match.count({ where: WHERE }),
+      this._prisma.match.findMany({
+        where: WHERE,
+        orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }],
+        skip: SKIP,
+        take: TAKE,
+        select: {
+          id: true,
+          sportId: true,
+          categoryId: true,
+          category: { select: { name: true } },
+          type: true,
+          status: true,
+          scheduledAt: true,
+          pricePerPlayerCents: true,
+          maxParticipants: true,
+          _count: { select: { participants: true } },
+        },
+      }),
+    ]);
+
+    return { items: ROWS.map(toListItemDTO), total: TOTAL };
+  }
+
   async listMatchesByVenueSV(
     _venueId: string,
     _filters: ListVenueMatchesFiltersDTO,
@@ -168,7 +226,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
   ): Promise<{ items: (MatchListItemDTO & { courtId: string | null; courtName: string | null })[]; total: number }> {
     const { courtId, from, to, date, status } = _filters;
 
-    const WHERE: MatchWhereInput = {
+    const WHERE: Prisma.MatchWhereInput = {
       court: { venueId: _venueId },
       ...(courtId !== undefined ? { courtId } : {}),
       ...(status !== undefined ? { status } : {}),

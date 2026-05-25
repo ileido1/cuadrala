@@ -8,6 +8,11 @@ abstract interface class MatchesApi {
     String? categoryId,
   });
 
+  Future<Map<String, Object?>> listMyMatchesEnvelope({
+    int page,
+    int limit,
+  });
+
   Future<Map<String, Object?>> getMatchEnvelope({required String matchId});
 
   Future<Map<String, Object?>> createMatchEnvelope({
@@ -59,6 +64,20 @@ final class DioMatchesApi implements MatchesApi {
         'page': page,
         'limit': limit,
         if (categoryId != null) 'categoryId': categoryId,
+      },
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> listMyMatchesEnvelope({
+    int page = 1,
+    int limit = 20,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/matches/mine',
+      queryParameters: {
+        'page': page,
+        'limit': limit,
       },
     );
   }

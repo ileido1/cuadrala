@@ -6,7 +6,7 @@ import 'package:cuadrala_mobile/src/features/notifications/data/models/notificat
 import '../../data/notifications_repository.dart';
 import 'notifications_state.dart';
 
-final class NotificationsCubit extends Cubit<NotificationsState> {
+class NotificationsCubit extends Cubit<NotificationsState> {
   NotificationsCubit({required NotificationsRepository repository})
       : _repository = repository,
         super(NotificationsState.initial());

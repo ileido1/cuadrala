@@ -9,6 +9,7 @@ import 'widgets/social_button.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/env/app_env.dart';
+import '../../../core/theme/brand_colors.dart';
 import '../data/models/social_login_request.dart';
 import '../data/auth_repository.dart';
 import 'cubit/session_cubit.dart';
@@ -130,7 +131,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       padding: const EdgeInsets.all(8),
                       child: ClipOval(
                         child: Container(
-                          color: Colors.white,
+                          color: scheme.surface,
                           child: const Padding(
                             padding: EdgeInsets.all(4),
                             child: Image(
@@ -176,9 +177,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   SocialButton(
                     icon: const Icon(Icons.apple),
                     label: 'Continuar con Apple',
-                    background: const Color(0xFF111111),
-                    foreground: Colors.white,
-                    border: const Color(0xFF111111),
+                    background: BrandColors.appleBlack,
+                    foreground: const Color(0xFFFFFFFF),
+                    border: BrandColors.appleBlack,
                     onPressed: _isLoading ? null : _socialLoginApple,
                   ),
                   const SizedBox(height: 22),

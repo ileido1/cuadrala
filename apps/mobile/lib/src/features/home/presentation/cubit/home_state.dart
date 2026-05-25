@@ -22,17 +22,21 @@ final class HomeLoaded extends HomeState {
     required this.greetingName,
     required this.sportId,
     required this.openMatches,
+    required this.myMatches,
   });
 
   final String greetingName;
   final String sportId;
   final List<OpenMatchDto> openMatches;
 
+  /// Matches where the current user is organizer or participant.
+  final List<OpenMatchDto> myMatches;
+
   OpenMatchDto? get nextMatch =>
       openMatches.isEmpty ? null : openMatches.first;
 
   @override
-  List<Object?> get props => [greetingName, sportId, openMatches];
+  List<Object?> get props => [greetingName, sportId, openMatches, myMatches];
 }
 
 final class HomeFailure extends HomeState {

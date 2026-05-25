@@ -8,6 +8,7 @@ import { CreateMatchUseCase } from '../../application/use_cases/create_match.use
 import { GetMatchUseCase } from '../../application/use_cases/get_match.use_case.js';
 import { GetMatchPaymentInfoUseCase } from '../../application/use_cases/get_match_payment_info.use_case.js';
 import { ListMatchesUseCase } from '../../application/use_cases/list_matches.use_case.js';
+import { ListMyMatchesUseCase } from '../../application/use_cases/list_my_matches.use_case.js';
 import { UpdateMatchUseCase } from '../../application/use_cases/update_match.use_case.js';
 import { PrismaMatchNotificationContextReadRepository } from '../../infrastructure/adapters/prisma_match_notification_context_read_repository.js';
 import { PrismaMatchRepository } from '../../infrastructure/adapters/prisma_match_repository.js';
@@ -62,6 +63,7 @@ export const FINISH_MATCH_UC = new FinishMatchUseCase(
 );
 
 export const LIST_MATCHES_UC = new ListMatchesUseCase(MATCH_QUERY_REPOSITORY);
+export const LIST_MY_MATCHES_UC = new ListMyMatchesUseCase(MATCH_QUERY_REPOSITORY);
 export const GET_MATCH_UC = new GetMatchUseCase(MATCH_QUERY_REPOSITORY);
 export const CREATE_MATCH_UC = new CreateMatchUseCase(
   MATCH_CRUD_REPOSITORY,

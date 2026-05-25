@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/brand_colors.dart';
+
 enum PasswordStrength { empty, weak, fair, good, strong }
 
 extension PasswordStrengthLabel on PasswordStrength {
@@ -47,8 +49,8 @@ class PasswordStrengthIndicator extends StatelessWidget {
     return switch (s) {
       PasswordStrength.empty => scheme.outlineVariant,
       PasswordStrength.weak => scheme.error,
-      PasswordStrength.fair => const Color(0xFFFB8C00),
-      PasswordStrength.good => const Color(0xFF8BC34A),
+      PasswordStrength.fair => BrandColors.warningAmber,
+      PasswordStrength.good => BrandColors.successGreen,
       PasswordStrength.strong => scheme.primary,
     };
   }

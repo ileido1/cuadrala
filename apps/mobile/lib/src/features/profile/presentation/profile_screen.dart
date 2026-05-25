@@ -3,22 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/presentation/cubit/session_cubit.dart';
-import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/sport/sport_classification.dart';
 import '../../../router/routes.dart';
-import '../../onboarding/data/models/onboarding_status_dto.dart';
 import '../../onboarding/data/models/player_sport_profile_dto.dart';
-import '../../onboarding/data/models/user_availability_dto.dart';
-import '../../onboarding/data/models/user_location_dto.dart';
-import '../../onboarding/data/onboarding_repository.dart';
-import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models/sport_dto.dart';
-import '../data/models/player_profile_dto.dart';
-import '../data/models/user_me_dto.dart';
-import '../data/models/user_rating_dto.dart';
-import '../data/models/user_stats_dto.dart';
-import '../data/profile_repository.dart';
+import 'cubit/profile_cubit.dart';
+import 'cubit/profile_state.dart';
 
 final class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -28,63 +19,30 @@ final class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late Future<_ProfileVm> _future;
-
   @override
   void initState() {
     super.initState();
-    _future = _load();
-  }
-
-  Future<_ProfileVm> _load() async {
-    final repo = getIt<ProfileRepository>();
-    final onboarding = getIt<OnboardingRepository>();
-    final catalog = getIt<CatalogRepository>();
-    final me = await repo.getMe();
-    final results = await Future.wait([
-      repo.getUserStats(me.id),
-      repo.getUserRatings(userId: me.id),
-      repo.getUserRatingHistory(userId: me.id, limit: 10),
-      repo.getPlayerProfile(),
-      onboarding.getStatus(),
-      onboarding.listSportProfiles(),
-      onboarding.getLocation(),
-      onboarding.listAvailability(),
-      catalog.listSports(),
-    ]);
-    return _ProfileVm(
-      me: me,
-      stats: results[0] as UserStatsDto,
-      ratings: results[1] as List<UserRatingDto>,
-      history: results[2] as List<UserRatingHistoryItemDto>,
-      playerProfile: results[3] as PlayerProfileDto,
-      onboardingStatus: results[4] as OnboardingStatusDto,
-      sportProfiles: results[5] as List<PlayerSportProfileDto>,
-      location: results[6] as UserLocationDto?,
-      availability: results[7] as List<UserAvailabilityDto>,
-      sports: results[8] as List<SportDto>,
-    );
+    context.read<ProfileCubit>().load();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
+    return BlocBuilder<ProfileCubit, ProfileState>(
+      builder: (context, state) {
+        if (state is ProfileInitial || state is ProfileLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.hasError) {
+        if (state is ProfileFailure) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('No se pudo cargar el perfil.'),
+                  Text(state.message),
                   const SizedBox(height: 12),
                   FilledButton(
-                    onPressed: () => setState(() => _future = _load()),
+                    onPressed: () => context.read<ProfileCubit>().load(),
                     child: const Text('Reintentar'),
                   ),
                 ],
@@ -93,11 +51,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        final vm = snapshot.data!;
+        final vm = state as ProfileLoaded;
         final scheme = Theme.of(context).colorScheme;
 
         return RefreshIndicator(
-          onRefresh: () async => setState(() => _future = _load()),
+          onRefresh: () => context.read<ProfileCubit>().load(),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
             children: [
@@ -149,32 +107,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-final class _ProfileVm {
-  const _ProfileVm({
-    required this.me,
-    required this.stats,
-    required this.ratings,
-    required this.history,
-    required this.playerProfile,
-    required this.onboardingStatus,
-    required this.sportProfiles,
-    required this.location,
-    required this.availability,
-    required this.sports,
-  });
-
-  final UserMeDto me;
-  final UserStatsDto stats;
-  final List<UserRatingDto> ratings;
-  final List<UserRatingHistoryItemDto> history;
-  final PlayerProfileDto playerProfile;
-  final OnboardingStatusDto onboardingStatus;
-  final List<PlayerSportProfileDto> sportProfiles;
-  final UserLocationDto? location;
-  final List<UserAvailabilityDto> availability;
-  final List<SportDto> sports;
-}
-
 final class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title});
   final String title;
@@ -193,7 +125,7 @@ final class _SectionTitle extends StatelessWidget {
 final class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({required this.vm});
 
-  final _ProfileVm vm;
+  final ProfileLoaded vm;
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +270,7 @@ final class _ProfileHeader extends StatelessWidget {
 final class _StatsStrip extends StatelessWidget {
   const _StatsStrip({required this.vm});
 
-  final _ProfileVm vm;
+  final ProfileLoaded vm;
 
   @override
   Widget build(BuildContext context) {
@@ -438,7 +370,7 @@ final class _MiniStat extends StatelessWidget {
 final class _Top5Card extends StatelessWidget {
   const _Top5Card({required this.vm});
 
-  final _ProfileVm vm;
+  final ProfileLoaded vm;
 
   @override
   Widget build(BuildContext context) {
@@ -466,26 +398,25 @@ final class _Top5Card extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            children: [
-              _TopRow(
-                pos: 1,
-                initials: 'LU',
-                name: 'Lucas P.',
-                elo: 1320,
-              ),
-              const Divider(height: 1),
-              _TopRow(
-                pos: 2,
-                initials: _ProfileHeader._initials(vm.me.name),
-                name: vm.me.name,
-                elo: vm.ratings.isNotEmpty ? vm.ratings.first.rating.round() : 1250,
-                highlighted: true,
-              ),
-              const Divider(height: 1),
-              _TopRow(pos: 3, initials: 'DI', name: 'Diego F.', elo: 1245),
-            ],
-          ),
+          child: vm.leaderboard.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: Text('Sin datos de clasificación')),
+                )
+              : Column(
+                  children: [
+                    for (int i = 0; i < vm.leaderboard.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      _TopRow(
+                        pos: vm.leaderboard[i].rank,
+                        initials: _ProfileHeader._initials(vm.leaderboard[i].displayName),
+                        name: vm.leaderboard[i].displayName,
+                        elo: vm.leaderboard[i].rating.round(),
+                        highlighted: vm.leaderboard[i].userId == vm.me.id,
+                      ),
+                    ],
+                  ],
+                ),
         ),
       ],
     );
@@ -556,7 +487,7 @@ final class _TopRow extends StatelessWidget {
 final class _SportProfileCards extends StatelessWidget {
   const _SportProfileCards({required this.vm});
 
-  final _ProfileVm vm;
+  final ProfileLoaded vm;
 
   SportDto? _sportFor(String sportId) {
     for (final s in vm.sports) {
@@ -679,11 +610,10 @@ final class _SportProfileCards extends StatelessWidget {
 final class _TechCards extends StatelessWidget {
   const _TechCards({required this.vm});
 
-  final _ProfileVm vm;
+  final ProfileLoaded vm;
 
   @override
   Widget build(BuildContext context) {
-    // Fallback: usamos el primer sport profile para sidePreference.
     final side = vm.sportProfiles.isNotEmpty ? vm.sportProfiles.first.sidePreference : SidePreference.any;
 
     String sideLabel(SidePreference s) => switch (s) {
@@ -808,4 +738,3 @@ final class _OnboardingBanner extends StatelessWidget {
     );
   }
 }
-

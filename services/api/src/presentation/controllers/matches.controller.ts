@@ -10,12 +10,14 @@ import {
   JOIN_MATCH_UC,
   LEAVE_MATCH_UC,
   LIST_MATCHES_UC,
+  LIST_MY_MATCHES_UC,
   LIST_OPEN_MATCHES_UC,
   START_MATCH_UC,
   UPDATE_MATCH_UC,
 } from '../composition/matches.composition.js';
 import {
   CREATE_MATCH_BODY_SCHEMA,
+  LIST_MY_MATCHES_QUERY_SCHEMA,
   LIST_OPEN_MATCHES_QUERY_SCHEMA,
   LIST_MATCHES_QUERY_SCHEMA,
   MATCH_ID_PARAM_SCHEMA,
@@ -226,6 +228,31 @@ export async function getMatchPaymentInfoCON(_req: Request, _res: Response): Pro
   _res.status(200).json({
     success: true,
     message: 'Informacion de pago obtenida correctamente.',
+    data: RESULT,
+  });
+}
+
+export async function getMyMatchesCON(_req: Request, _res: Response): Promise<void> {
+  const USER_ID = _req.authUser?.id;
+  if (USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const QUERY = LIST_MY_MATCHES_QUERY_SCHEMA.parse(_req.query);
+
+  const RESULT = await LIST_MY_MATCHES_UC.executeSV({
+    userId: USER_ID,
+    page: QUERY.page,
+    limit: QUERY.limit,
+    ...(QUERY.status !== undefined ? { statuses: [QUERY.status] } : {}),
+    ...(QUERY.role !== undefined ? { role: QUERY.role } : {}),
+    ...(QUERY.scheduledFrom !== undefined ? { scheduledFrom: new Date(QUERY.scheduledFrom) } : {}),
+    ...(QUERY.scheduledTo !== undefined ? { scheduledTo: new Date(QUERY.scheduledTo) } : {}),
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Tus partidas se obtuvieron correctamente.',
     data: RESULT,
   });
 }

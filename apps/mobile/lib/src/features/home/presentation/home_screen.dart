@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../../core/theme/brand_gradients.dart';
 import '../../../router/routes.dart';
 import '../../matches/data/models/open_match_dto.dart';
-import '../../shell/presentation/cubit/shell_cubit.dart';
+import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/skeleton_list.dart';
 import 'cubit/home_cubit.dart';
 import 'cubit/home_state.dart';
 
@@ -27,17 +29,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    return BlocBuilder<HomeCubit, HomeState>(
+      builder: (context, state) {
+        if (state is HomeLoading || state is HomeInitial) {
+          return const Scaffold(body: SafeArea(child: SkeletonList(itemCount: 5)));
+        }
 
-    return Scaffold(
-      body: SafeArea(
-        child: BlocBuilder<HomeCubit, HomeState>(
-          builder: (context, state) {
-            if (state is HomeLoading || state is HomeInitial) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is HomeFailure) {
-              return Center(
+        if (state is HomeFailure) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Inicio')),
+            body: RefreshIndicator(
+              onRefresh: () => context.read<HomeCubit>().load(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -52,12 +56,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-              );
-            }
+              ),
+            ),
+          );
+        }
 
-            final loaded = state as HomeLoaded;
+        final loaded = state as HomeLoaded;
+        final showLiveBadge = _hasLiveMatch(loaded.myMatches);
 
-            return RefreshIndicator(
+        return Scaffold(
+          body: SafeArea(
+            child: RefreshIndicator(
               onRefresh: () => context.read<HomeCubit>().load(),
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
@@ -65,124 +74,203 @@ class _HomeScreenState extends State<HomeScreen> {
                   _HomeHeader(greetingName: loaded.greetingName),
                   const SizedBox(height: 18),
                   _SearchHeroCard(
-                    onTap: () => context.read<ShellCubit>().selectTab(1),
+                    showLiveBadge: showLiveBadge,
+                    onTap: () => StatefulNavigationShell.of(context).goBranch(1),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () => context.push(Routes.createMatch),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Crear Partida'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: scheme.secondary,
-                            foregroundColor: scheme.onSecondary,
-                          ),
-                          onPressed: () => context.push(Routes.createTournament),
-                          icon: const Icon(Icons.emoji_events),
-                          label: const Text('Nuevo Torneo'),
-                        ),
-                      ),
-                    ],
+                  _CtaRow(
+                    onBuscar: () => StatefulNavigationShell.of(context).goBranch(1),
+                    onCrear: () => context.push(Routes.createMatch),
                   ),
                   const SizedBox(height: 18),
-                  _SectionTitle(
-                    title: 'Próxima partida',
-                    trailing: loaded.nextMatch?.scheduledAt == null
-                        ? null
-                        : _SoonBadge(target: loaded.nextMatch!.scheduledAt!),
+                  _MyMatchesSection(
+                    myMatches: loaded.myMatches,
+                    onVerTodas: () => StatefulNavigationShell.of(context).goBranch(1),
+                    onMatchTap: (id) => context.push(Routes.matchDetail(id)),
                   ),
-                  const SizedBox(height: 10),
-                  _NextMatchCard(match: loaded.nextMatch),
                   const SizedBox(height: 18),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          'Abiertas cerca de ti',
+                          'Actividad cerca de ti',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.read<ShellCubit>().selectTab(1),
+                        onPressed: () => StatefulNavigationShell.of(context).goBranch(1),
                         child: const Text('Ver todas'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  ...loaded.openMatches.take(3).map(
-                        (m) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _OpenMatchPreviewTile(
-                            match: m,
-                            onTap: () => context.push(Routes.matchDetail(m.id)),
+                  if (loaded.openMatches.isEmpty)
+                    EmptyState(
+                      title: 'Sin partidas cercanas',
+                      message: 'No hay partidas abiertas por ahora. ¡Explorá nuevas!',
+                      ctaLabel: 'Buscar partidas',
+                      onCtaPressed: () => StatefulNavigationShell.of(context).goBranch(1),
+                    )
+                  else
+                    ...loaded.openMatches.take(3).map(
+                          (m) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _OpenMatchPreviewTile(
+                              match: m,
+                              onTap: () => context.push(Routes.matchDetail(m.id)),
+                            ),
                           ),
                         ),
-                      ),
-                  if (loaded.openMatches.isEmpty)
-                    Text(
-                      'No hay partidas abiertas por ahora.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                    ),
                 ],
               ),
-            );
-          },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Returns true when [myMatches] contains at least one match whose
+  /// [scheduledAt] is within the next 30 minutes and whose status is either
+  /// SCHEDULED or IN_PROGRESS.
+  bool _hasLiveMatch(List<OpenMatchDto> myMatches) {
+    if (myMatches.isEmpty) return false;
+    final now = DateTime.now();
+    final threshold = now.add(const Duration(minutes: 30));
+    return myMatches.any((m) {
+      final scheduled = m.scheduledAt;
+      if (scheduled == null) return false;
+      final isUpcoming = scheduled.isAfter(now.subtract(const Duration(seconds: 1))) &&
+          scheduled.isBefore(threshold);
+      final status = m.status.toUpperCase();
+      return isUpcoming && (status == 'SCHEDULED' || status == 'IN_PROGRESS');
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CTA row — primary "Buscar partida" + secondary "Crear partida"
+// ---------------------------------------------------------------------------
+
+final class _CtaRow extends StatelessWidget {
+  const _CtaRow({required this.onBuscar, required this.onCrear});
+
+  final VoidCallback onBuscar;
+  final VoidCallback onCrear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: onBuscar,
+            icon: const Icon(Icons.search),
+            label: const Text('Buscar partida'),
+          ),
         ),
-      ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onCrear,
+            icon: const Icon(Icons.add),
+            label: const Text('Crear partida'),
+          ),
+        ),
+      ],
     );
   }
 }
 
-final class _SoonBadge extends StatelessWidget {
-  const _SoonBadge({required this.target});
+// ---------------------------------------------------------------------------
+// "Mis partidas" section
+// ---------------------------------------------------------------------------
 
-  final DateTime target;
+final class _MyMatchesSection extends StatelessWidget {
+  const _MyMatchesSection({
+    required this.myMatches,
+    required this.onVerTodas,
+    required this.onMatchTap,
+  });
+
+  final List<OpenMatchDto> myMatches;
+  final VoidCallback onVerTodas;
+  final void Function(String matchId) onMatchTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final now = DateTime.now();
-    final diff = target.difference(now);
-    final minutes = diff.inMinutes;
-    String label;
-    if (minutes <= 0) {
-      label = 'Pronto';
-    } else if (minutes < 60) {
-      label = 'En ${minutes}m';
-    } else {
-      final hours = (minutes / 60).floor();
-      label = 'En ${hours}h';
+
+    if (myMatches.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'No tenés partidas. ¡Buscá una!',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            TextButton(
+              onPressed: onVerTodas,
+              child: const Text('Explorar'),
+            ),
+          ],
+        ),
+      );
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: scheme.primary,
-          fontWeight: FontWeight.w800,
-          fontSize: 12,
+    final visible = myMatches.take(2).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Mis partidas',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+            ),
+            TextButton(
+              onPressed: onVerTodas,
+              child: const Text('Ver todas'),
+            ),
+          ],
         ),
-      ),
+        const SizedBox(height: 8),
+        ...visible.map(
+          (m) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _OpenMatchPreviewTile(
+              match: m,
+              onTap: () => onMatchTap(m.id),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
 
 final class _HomeHeader extends StatelessWidget {
   const _HomeHeader({required this.greetingName});
@@ -209,7 +297,7 @@ final class _HomeHeader extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Tu resumen',
+                'Actividad cerca de ti',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: scheme.onSurface,
@@ -247,38 +335,23 @@ final class _HomeHeader extends StatelessWidget {
   }
 }
 
-final class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, this.trailing});
-
-  final String title;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ],
-    );
-  }
-}
+// ---------------------------------------------------------------------------
+// Search hero card — with conditional "En vivo" badge
+// ---------------------------------------------------------------------------
 
 final class _SearchHeroCard extends StatelessWidget {
-  const _SearchHeroCard({required this.onTap});
+  const _SearchHeroCard({required this.onTap, required this.showLiveBadge});
 
   final VoidCallback onTap;
+  final bool showLiveBadge;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final gradients = Theme.of(context).extension<BrandGradients>()!;
+    // Text on the hero card is always white — the card background is always
+    // navy/navyMid regardless of system theme, so this is intentional.
+    const heroCardText = Color(0xFFFFFFFF);
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(20),
@@ -288,14 +361,10 @@ final class _SearchHeroCard extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [Color(0xFF0F1729), Color(0xFF172340)],
-            ),
+            gradient: gradients.heroCard,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F1729).withValues(alpha: 0.35),
+                color: gradients.heroCard.colors.first.withValues(alpha: 0.35),
                 blurRadius: 22,
                 offset: const Offset(0, 12),
               ),
@@ -338,7 +407,7 @@ final class _SearchHeroCard extends StatelessWidget {
                       const Text(
                         'Buscar Partida',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: heroCardText,
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
                           letterSpacing: -0.2,
@@ -348,7 +417,7 @@ final class _SearchHeroCard extends StatelessWidget {
                       Text(
                         'Matchmaking por horario y nivel',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.55),
+                          color: heroCardText.withValues(alpha: 0.55),
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
                         ),
@@ -356,33 +425,34 @@ final class _SearchHeroCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    color: scheme.tertiary.withValues(alpha: 0.12),
-                    border: Border.all(color: scheme.tertiary.withValues(alpha: 0.30)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(color: scheme.tertiary, shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'En vivo',
-                        style: TextStyle(
-                          color: scheme.tertiary,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 10,
-                          letterSpacing: 0.8,
+                if (showLiveBadge)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: scheme.tertiary.withValues(alpha: 0.12),
+                      border: Border.all(color: scheme.tertiary.withValues(alpha: 0.30)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(color: scheme.tertiary, shape: BoxShape.circle),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          'En vivo',
+                          style: TextStyle(
+                            color: scheme.tertiary,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -392,160 +462,9 @@ final class _SearchHeroCard extends StatelessWidget {
   }
 }
 
-final class _NextMatchCard extends StatelessWidget {
-  const _NextMatchCard({required this.match});
-
-  final OpenMatchDto? match;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    if (match == null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: scheme.outlineVariant),
-        ),
-        child: Text(
-          'Aún no tienes una próxima partida.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-      );
-    }
-
-    final m = match!;
-    final scheduled = m.scheduledAt;
-    final timeText = scheduled == null
-        ? 'Horario por confirmar'
-        : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            scheme.primary,
-            scheme.primary.withValues(alpha: 0.85),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Partida abierta',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: scheme.onPrimary,
-                  fontWeight: FontWeight.w900,
-                ),
-          ),
-          const SizedBox(height: 6),
-          if (m.categoryName != null)
-            Text(
-              m.categoryName!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onPrimary.withValues(alpha: 0.92),
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(Icons.location_on, color: scheme.onPrimary, size: 18),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  m.clubName != null || m.courtName != null
-                      ? [
-                          if (m.clubName != null) m.clubName!,
-                          if (m.courtName != null) m.courtName!,
-                        ].join(' • ')
-                      : 'Cancha: ${idPreview(m.id)}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ),
-            ],
-          ),
-          if (m.locationLabel != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              m.locationLabel!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onPrimary.withValues(alpha: 0.92),
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_month, color: scheme.onPrimary, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    timeText,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onPrimary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ),
-                Text(
-                  '${m.participantCount}/${m.maxParticipants}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onPrimary,
-                        fontWeight: FontWeight.w900,
-                      ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: scheme.onPrimary,
-                foregroundColor: scheme.primary,
-              ),
-              onPressed: () => context.push(Routes.matchDetail(m.id)),
-              child: const Text('Ver detalle'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ---------------------------------------------------------------------------
+// Open match preview tile (unchanged structure)
+// ---------------------------------------------------------------------------
 
 final class _OpenMatchPreviewTile extends StatelessWidget {
   const _OpenMatchPreviewTile({required this.match, required this.onTap});
@@ -633,12 +552,12 @@ final class _OpenMatchPreviewTile extends StatelessWidget {
                             ),
                       )
                     else
-                    Text(
-                      'Partida ${idPreview(match.id)}',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                    ),
+                      Text(
+                        'Partida ${idPreview(match.id)}',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
                     if (match.locationLabel != null) ...[
                       const SizedBox(height: 4),
                       Text(

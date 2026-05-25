@@ -56,6 +56,46 @@ class MatchesRepository {
     );
   }
 
+  /// Returns the authenticated user's own matches (as organizer or participant).
+  /// Named with the SV suffix to align with the backend route convention.
+  Future<OpenMatchesPage> listMyMatchesSV({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final data = await _matchesApi.listMyMatchesEnvelope(
+      page: page,
+      limit: limit,
+    );
+
+    final itemsRaw = data['items'];
+    if (itemsRaw is! List) {
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
+    }
+
+    final pageInfoRaw = data['pageInfo'];
+    if (pageInfoRaw is! Map<String, Object?>) {
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
+    }
+
+    final items = itemsRaw
+        .whereType<Map<String, Object?>>()
+        .map(OpenMatchDto.fromJson)
+        .toList();
+
+    return OpenMatchesPage(
+      items: items,
+      page: (pageInfoRaw['page'] as num).toInt(),
+      limit: (pageInfoRaw['limit'] as num).toInt(),
+      total: (pageInfoRaw['total'] as num).toInt(),
+    );
+  }
+
   Future<MatchDetailDto> getMatchById(String matchId) async {
     final data = await _matchesApi.getMatchEnvelope(matchId: matchId);
     final matchRaw = data['match'] ?? data['matchDetail'] ?? data['item'];

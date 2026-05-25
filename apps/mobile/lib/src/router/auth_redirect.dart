@@ -15,6 +15,10 @@ String? authRedirectForLocation(SessionState session, String location) {
   final isOnboardingRoute = location.startsWith(Routes.onboarding);
 
   final isProtected = location.startsWith(Routes.home) ||
+      location.startsWith(Routes.partidas) ||
+      location.startsWith(Routes.avisos) ||
+      location.startsWith(Routes.perfil) ||
+      location.startsWith(Routes.torneos) ||
       location.startsWith(Routes.matches) ||
       location.startsWith(Routes.tournaments) ||
       location.startsWith(Routes.notifications);

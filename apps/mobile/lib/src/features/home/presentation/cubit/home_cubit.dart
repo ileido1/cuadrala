@@ -2,10 +2,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
 import '../../../matches/data/matches_repository.dart';
+import '../../../matches/data/models/open_match_dto.dart';
 import '../../../profile/data/profile_repository.dart';
 import 'home_state.dart';
 
-final class HomeCubit extends Cubit<HomeState> {
+class HomeCubit extends Cubit<HomeState> {
   HomeCubit({
     required ProfileRepository profileRepository,
     required MatchesRepository matchesRepository,
@@ -21,22 +22,41 @@ final class HomeCubit extends Cubit<HomeState> {
     try {
       final me = await _profileRepository.getMe();
       final sportId = await _matchesRepository.resolveDefaultSportId();
-      final page = await _matchesRepository.listOpenMatches(
-        sportId: sportId,
-        page: 1,
-        limit: 20,
-      );
+
+      // Run both match list calls in parallel. If myMatches fails we degrade
+      // gracefully to an empty list rather than failing the whole home screen.
+      final results = await Future.wait([
+        _matchesRepository.listOpenMatches(
+          sportId: sportId,
+          page: 1,
+          limit: 20,
+        ),
+        _safeListMyMatches(),
+      ]);
+
+      final openMatchesPage = results[0];
+      final myMatchesPage = results[1];
 
       emit(
         HomeLoaded(
           greetingName: _firstName(me.name),
           sportId: sportId,
-          openMatches: page.items,
+          openMatches: openMatchesPage.items,
+          myMatches: myMatchesPage.items,
         ),
       );
     } catch (e) {
       final message = e is AppFailure ? e.message : 'No se pudo cargar el inicio.';
       emit(HomeFailure(message: message));
+    }
+  }
+
+  /// Calls [listMyMatchesSV] and silently returns an empty page on any error.
+  Future<OpenMatchesPage> _safeListMyMatches() async {
+    try {
+      return await _matchesRepository.listMyMatchesSV(page: 1, limit: 20);
+    } catch (_) {
+      return const OpenMatchesPage(items: [], page: 1, limit: 20, total: 0);
     }
   }
 

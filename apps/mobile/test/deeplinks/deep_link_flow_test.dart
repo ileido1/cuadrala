@@ -33,7 +33,7 @@ final class _FakeCatalogApi implements CatalogApi {
       };
 
   @override
-  Future<Map<String, Object?>> listCategoriesEnvelope() async => {
+  Future<Map<String, Object?>> listCategoriesEnvelope({String? sportId}) async => {
         'categories': <Map<String, Object?>>[
           {'id': 'cat_1', 'name': 'Primera', 'slug': 'primera'},
         ],
@@ -124,6 +124,17 @@ final class _FakeMatchesApi implements MatchesApi {
 
   @override
   Future<void> startMatch({required String matchId}) async {}
+
+  @override
+  Future<Map<String, Object?>> listMyMatchesEnvelope({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    return {
+      'items': <Object?>[],
+      'pageInfo': <String, Object?>{'page': page, 'limit': limit, 'total': 0},
+    };
+  }
 
   @override
   Future<Map<String, Object?>> upsertResultDraftEnvelope({

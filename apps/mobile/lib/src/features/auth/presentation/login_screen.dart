@@ -17,6 +17,7 @@ import 'widgets/google_g_logo.dart';
 import 'widgets/social_button.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/env/app_env.dart';
+import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/primary_button.dart';
 
@@ -185,9 +186,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   SocialButton(
                     icon: const Icon(Icons.apple),
                     label: 'Continuar con Apple',
-                    background: const Color(0xFF111111),
-                    foreground: Colors.white,
-                    border: const Color(0xFF111111),
+                    background: BrandColors.appleBlack,
+                    foreground: const Color(0xFFFFFFFF),
+                    border: BrandColors.appleBlack,
                     onPressed: isBusy ? null : _socialLoginApple,
                   ),
                   const SizedBox(height: 18),

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
 import 'package:cuadrala_mobile/src/features/auth/data/models/login_request.dart';
 import 'package:cuadrala_mobile/src/features/auth/presentation/cubit/login_cubit.dart';
 import 'package:cuadrala_mobile/src/features/auth/presentation/cubit/login_state.dart';
@@ -25,8 +26,11 @@ void main() {
       loginCubit = _MockLoginCubit();
     });
 
-    Widget wrap() {
+    Widget wrap({ThemeMode themeMode = ThemeMode.light}) {
       return MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: themeMode,
         home: BlocProvider<LoginCubit>.value(
           value: loginCubit,
           child: const LoginScreen(),

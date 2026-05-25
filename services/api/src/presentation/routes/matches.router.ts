@@ -4,6 +4,7 @@ import {
   getMatchByIdCON,
   getMatchPaymentInfoCON,
   getMatchesCON,
+  getMyMatchesCON,
   getOpenMatchesCON,
   postFinishMatchCON,
   postLeaveMatchCON,
@@ -25,6 +26,9 @@ export const MATCHES_ROUTER = Router();
 
 MATCHES_ROUTER.get('/matches', asyncHandler(getMatchesCON));
 MATCHES_ROUTER.get('/matches/open', asyncHandler(getOpenMatchesCON));
+// NOTE: /matches/mine MUST be registered before /matches/:matchId — Express matches routes in order.
+// "mine" is not a UUID; placing it after /:matchId would cause Zod UUID validation to throw 400.
+MATCHES_ROUTER.get('/matches/mine', requireAuth, asyncHandler(getMyMatchesCON));
 MATCHES_ROUTER.get('/matches/:matchId', asyncHandler(getMatchByIdCON));
 MATCHES_ROUTER.post('/matches', requireAuth, asyncHandler(postCreateMatchCON));
 MATCHES_ROUTER.patch('/matches/:matchId', requireAuth, asyncHandler(patchUpdateMatchCON));

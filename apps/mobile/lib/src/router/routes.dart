@@ -4,6 +4,13 @@ final class Routes {
   static const register = '/register';
   static const onboarding = '/onboarding';
   static const home = '/home';
+
+  // Shell branch roots (StatefulShellRoute tabs)
+  static const partidas = '/partidas';
+  static const avisos = '/avisos';
+  static const perfil = '/perfil';
+  static const torneos = '/torneos';
+
   static const matches = '/matches';
   static const createMatch = '/matches/create';
   static String matchLifecycle(String matchId) => '/matches/$matchId/lifecycle';

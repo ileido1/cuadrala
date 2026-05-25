@@ -21,6 +21,7 @@ import '../../features/availability/presentation/cubit/availability_cubit.dart';
 import '../../features/catalog/data/catalog_api.dart';
 import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/home/presentation/cubit/home_cubit.dart';
+import '../../features/profile/presentation/cubit/profile_cubit.dart';
 import '../../features/chat/data/chat_api.dart';
 import '../../features/chat/data/chat_repository.dart';
 import '../../features/matches/data/matches_api.dart';
@@ -204,6 +205,14 @@ Future<void> setupDependencies() async {
     () => HomeCubit(
       profileRepository: getIt<ProfileRepository>(),
       matchesRepository: getIt<MatchesRepository>(),
+    ),
+  );
+
+  getIt.registerFactory<ProfileCubit>(
+    () => ProfileCubit(
+      profileRepository: getIt<ProfileRepository>(),
+      onboardingRepository: getIt<OnboardingRepository>(),
+      catalogRepository: getIt<CatalogRepository>(),
     ),
   );
 

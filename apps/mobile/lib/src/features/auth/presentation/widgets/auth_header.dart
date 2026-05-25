@@ -28,7 +28,7 @@ class AuthHeader extends StatelessWidget {
           ),
           child: ClipOval(
             child: Container(
-              color: Colors.white,
+              color: scheme.surface,
               child: const Padding(
                 padding: EdgeInsets.all(4),
                 child: Image(

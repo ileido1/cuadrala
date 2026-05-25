@@ -95,4 +95,14 @@ export const CONFIRM_MATCH_RESULT_DRAFT_BODY_SCHEMA = z
   })
   .strict();
 
+export const LIST_MY_MATCHES_QUERY_SCHEMA = z
+  .object({
+    status: z.enum(['SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED']).optional(),
+    role: z.enum(['CREATOR', 'PARTICIPANT', 'ANY']).optional(),
+    scheduledFrom: z.string().datetime({ offset: true }).optional(),
+    scheduledTo: z.string().datetime({ offset: true }).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
 
