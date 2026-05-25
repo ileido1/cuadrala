@@ -41,6 +41,8 @@ final class MatchDetailDto {
     required this.participants,
     required this.createdAt,
     required this.updatedAt,
+    this.pricingCurrency,
+    this.displayCurrency,
   });
 
   final String id;
@@ -63,6 +65,8 @@ final class MatchDetailDto {
   final List<MatchParticipantDto> participants;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? pricingCurrency;
+  final String? displayCurrency;
 
   static MatchDetailDto fromJson(Map<String, Object?> json) {
     final participantsRaw = json['participants'];
@@ -107,6 +111,8 @@ final class MatchDetailDto {
       participants: participants,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      pricingCurrency: json['pricingCurrency'] as String?,
+      displayCurrency: json['displayCurrency'] as String?,
     );
   }
 }

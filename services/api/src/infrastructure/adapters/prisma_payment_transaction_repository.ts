@@ -21,6 +21,7 @@ import { PRISMA } from '../prisma_client.js';
 import {
   mapPrismaTransactionToPaymentRowSV,
   mapPrismaTransactionToPendingStaffRowSV,
+  type PendingTransactionPrismaRow,
   mapPrismaTransactionToStaffRowSV,
 } from './prisma_payment_transaction_mapper.js';
 
@@ -362,6 +363,12 @@ export class PrismaPaymentTransactionRepository
     const ROWS = await PRISMA.transaction.findMany({
       where: WHERE,
       include: {
+        user: { select: { name: true, email: true } },
+        receipts: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { id: true, mimeType: true },
+        },
         match: {
           include: {
             court: { include: { venue: true } },
@@ -372,9 +379,124 @@ export class PrismaPaymentTransactionRepository
             court: { include: { venue: true } },
           },
         },
+        venuePaymentMethod: {
+          select: { type: true, name: true, config: true },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
-    return ROWS.map(mapPrismaTransactionToPendingStaffRowSV);
+    const MATCH_IDS_WITHOUT_RES = ROWS.filter(
+      (_r) => _r.reservationId === null && _r.matchId !== null,
+    ).map((_r) => _r.matchId as string);
+
+    const RES_BY_MATCH =
+      MATCH_IDS_WITHOUT_RES.length > 0
+        ? await PRISMA.reservation.findMany({
+            where: { matchId: { in: MATCH_IDS_WITHOUT_RES } },
+            select: {
+              id: true,
+              matchId: true,
+              scheduledAt: true,
+              durationMinutes: true,
+              sportId: true,
+              categoryId: true,
+              type: true,
+              court: { select: { id: true, name: true, venueId: true } },
+            },
+          })
+        : [];
+
+    const RESERVATION_BY_MATCH_ID = new Map(
+      RES_BY_MATCH.filter((_r) => _r.matchId !== null).map((_r) => [_r.matchId!, _r]),
+    );
+
+    return ROWS.map((_r) => {
+      let row = _r as PendingTransactionPrismaRow;
+      if (row.reservationId === null && row.matchId !== null) {
+        const LINKED = RESERVATION_BY_MATCH_ID.get(row.matchId);
+        if (LINKED !== undefined) {
+          row = {
+            ...row,
+            reservationId: LINKED.id,
+            reservation: LINKED,
+          };
+        }
+      }
+      return mapPrismaTransactionToPendingStaffRowSV(row);
+    });
+  }
+
+  async recordPlayerPaymentSelectionSV(_input: {
+    transactionId: string;
+    actorUserId: string;
+    venuePaymentMethodId?: string;
+    paymentMethodType?: string;
+  }): Promise<void> {
+    const TX = await PRISMA.transaction.findUnique({
+      where: { id: _input.transactionId },
+      select: { id: true, userId: true, status: true },
+    });
+
+    if (TX === null) {
+      throw new Error('TRANSACCION_NO_ENCONTRADA');
+    }
+    if (TX.userId !== _input.actorUserId) {
+      throw new Error('NO_AUTORIZADO');
+    }
+    if (TX.status !== 'PENDING') {
+      throw new Error('TRANSACCION_NO_PENDIENTE');
+    }
+
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    let venuePaymentMethodId: string | null = null;
+    let paymentData: PrismaTypes.InputJsonValue;
+
+    if (
+      _input.venuePaymentMethodId !== undefined
+      && _input.venuePaymentMethodId.length > 0
+      && UUID_RE.test(_input.venuePaymentMethodId)
+    ) {
+      const METHOD = await PRISMA.venuePaymentMethod.findUnique({
+        where: { id: _input.venuePaymentMethodId },
+        select: { id: true, type: true, name: true, config: true },
+      });
+      if (METHOD === null) {
+        throw new Error('MEDIO_PAGO_NO_ENCONTRADO');
+      }
+      venuePaymentMethodId = METHOD.id;
+      paymentData = {
+        playerSelection: {
+          type: METHOD.type,
+          name: METHOD.name,
+          config: METHOD.config,
+        },
+      };
+    } else if (_input.paymentMethodType !== undefined && _input.paymentMethodType.length > 0) {
+      const TYPE = _input.paymentMethodType.toUpperCase();
+      const LEGACY_NAMES: Record<string, string> = {
+        TRANSFER: 'Transferencia bancaria',
+        BANK_TRANSFER: 'Transferencia bancaria',
+        CASH: 'Efectivo',
+        PAGO_MOVIL: 'Pago móvil',
+        POS: 'POS',
+      };
+      paymentData = {
+        playerSelection: {
+          type: TYPE,
+          name: LEGACY_NAMES[TYPE] ?? TYPE,
+          legacy: true,
+        },
+      };
+    } else {
+      throw new Error('SELECCION_PAGO_REQUERIDA');
+    }
+
+    await PRISMA.transaction.update({
+      where: { id: _input.transactionId },
+      data: {
+        venuePaymentMethodId,
+        paymentData,
+      },
+    });
   }
 }

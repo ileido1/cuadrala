@@ -50,7 +50,7 @@ final class MatchChatReadOnlyCubit extends Cubit<MatchChatState> {
       );
       emit(
         MatchChatLoaded(
-          items: [...current.items, ...page.items],
+          items: [...page.items, ...current.items],
           nextCursorCreatedAt: page.nextCursorCreatedAt,
           isLoadingMore: false,
           sending: current.sending,

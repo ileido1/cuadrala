@@ -50,7 +50,7 @@ final class TournamentChatReadOnlyCubit extends Cubit<TournamentChatState> {
       );
       emit(
         TournamentChatLoaded(
-          items: [...current.items, ...page.items],
+          items: [...page.items, ...current.items],
           nextCursorCreatedAt: page.nextCursorCreatedAt,
           isLoadingMore: false,
           sending: current.sending,

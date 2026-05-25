@@ -6,6 +6,7 @@ import {
   getReservationPaymentSummaryCON,
   getUserTransactionsCON,
   patchConfirmTransactionManualCON,
+  patchRecordPlayerPaymentSelectionCON,
   patchRejectTransactionManualCON,
   patchUserSubscriptionCON,
   postCreateMatchObligationsCON,
@@ -41,6 +42,11 @@ MONETIZATION_ROUTER.post(
 MONETIZATION_ROUTER.get(
   '/matches/:matchId/transactions/summary',
   asyncHandler(getMatchTransactionsSummaryCON),
+);
+MONETIZATION_ROUTER.patch(
+  '/transactions/:transactionId/player-payment-selection',
+  requireAuth,
+  asyncHandler(patchRecordPlayerPaymentSelectionCON),
 );
 MONETIZATION_ROUTER.patch(
   '/transactions/:transactionId/confirm-manual',

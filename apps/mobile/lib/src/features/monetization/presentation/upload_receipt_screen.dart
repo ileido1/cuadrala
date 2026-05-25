@@ -19,6 +19,7 @@ final class UploadReceiptScreen extends StatefulWidget {
     required this.amountPerPersonCents,
     required this.matchTitle,
     this.pricingCurrency,
+    this.venueId,
   });
 
   final String matchId;
@@ -27,6 +28,7 @@ final class UploadReceiptScreen extends StatefulWidget {
   final int amountPerPersonCents;
   final String matchTitle;
   final String? pricingCurrency;
+  final String? venueId;
 
   static String route({
     required String matchId,
@@ -35,6 +37,7 @@ final class UploadReceiptScreen extends StatefulWidget {
     required int amountPerPersonCents,
     required String matchTitle,
     String? pricingCurrency,
+    String? venueId,
   }) {
     final qp = <String, String>{
       'tx': transactionId,
@@ -42,6 +45,7 @@ final class UploadReceiptScreen extends StatefulWidget {
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
       if (pricingCurrency != null) 'currency': pricingCurrency,
+      if (venueId != null && venueId.isNotEmpty) 'venueId': venueId,
     };
     final query = Uri(queryParameters: qp).query;
     return '/matches/$matchId/pay/upload-receipt?$query';
@@ -92,6 +96,7 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
           matchTitle: widget.matchTitle,
           pricingCurrency: widget.pricingCurrency,
           transactionId: widget.transactionId,
+          venueId: widget.venueId,
         ),
       );
     } catch (e) {

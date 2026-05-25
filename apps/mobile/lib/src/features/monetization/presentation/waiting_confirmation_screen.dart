@@ -8,6 +8,7 @@ import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
 import '../../../router/routes.dart';
 import '../data/monetization_repository.dart';
+import 'pay_method_screen.dart';
 
 final class WaitingConfirmationScreen extends StatefulWidget {
   const WaitingConfirmationScreen({
@@ -17,6 +18,7 @@ final class WaitingConfirmationScreen extends StatefulWidget {
     required this.matchTitle,
     this.pricingCurrency,
     this.transactionId,
+    this.venueId,
   });
 
   final String matchId;
@@ -24,6 +26,7 @@ final class WaitingConfirmationScreen extends StatefulWidget {
   final String matchTitle;
   final String? pricingCurrency;
   final String? transactionId;
+  final String? venueId;
 
   static String route({
     required String matchId,
@@ -31,12 +34,14 @@ final class WaitingConfirmationScreen extends StatefulWidget {
     required String matchTitle,
     String? pricingCurrency,
     String? transactionId,
+    String? venueId,
   }) {
     final qp = <String, String>{
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
       if (pricingCurrency != null) 'currency': pricingCurrency,
       if (transactionId != null) 'tx': transactionId,
+      if (venueId != null && venueId.isNotEmpty) 'venueId': venueId,
     };
     final query = Uri(queryParameters: qp).query;
     return '/matches/$matchId/pay/waiting?$query';
@@ -251,9 +256,22 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
                   Expanded(
                     child: FilledButton(
                       onPressed: isRejected
-                          ? () => context.pop()
-                          : () => context.go(Routes.matchDetail(widget.matchId)),
-                      child: Text(isRejected ? 'Volver a pagar' : 'Ver mi partida'),
+                          ? () => context.go(
+                                PayMethodScreen.route(
+                                  matchId: widget.matchId,
+                                  amountPerPersonCents:
+                                      widget.amountPerPersonCents,
+                                  matchTitle: widget.matchTitle,
+                                  pricingCurrency: widget.pricingCurrency,
+                                  venueId: widget.venueId,
+                                ),
+                              )
+                          : () => context.go(
+                                Routes.matchDetail(widget.matchId),
+                              ),
+                      child: Text(
+                        isRejected ? 'Volver a pagar' : 'Ver mi partida',
+                      ),
                     ),
                   ),
                 ],

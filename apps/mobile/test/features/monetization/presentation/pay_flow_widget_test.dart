@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
@@ -137,5 +138,105 @@ void main() {
       expect(find.text('¡Pago confirmado!'), findsOneWidget);
       expect(find.text('Confirmado'), findsOneWidget);
     });
+
+    testWidgets(
+      'Volver a pagar navega al formulario de método tras rechazo',
+      (tester) async {
+        when(() => monetizationRepo.listMyTransactions(limit: any(named: 'limit')))
+            .thenAnswer(
+          (_) async => UserTransactionsResult(
+            userId: 'u1',
+            transactions: [
+              TransactionDto(
+                id: 'tx1',
+                matchId: 'm1',
+                userId: 'u1',
+                amountBase: '50',
+                feeAmount: '5',
+                amountTotal: '55',
+                status: 'CANCELLED',
+                paymentMethod: 'MANUAL',
+                confirmedAt: null,
+                createdAt: DateTime.utc(2026, 5, 5),
+              ),
+            ],
+          ),
+        );
+        when(() => monetizationRepo.createMatchObligations(
+              matchId: any(named: 'matchId'),
+              amountBasePerPerson: any(named: 'amountBasePerPerson'),
+              participantUserIds: any(named: 'participantUserIds'),
+            )).thenAnswer(
+          (_) async => {
+            'created': [
+              {'id': 'tx-new'},
+            ],
+          },
+        );
+
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, __) => const SizedBox(key: Key('home.stub')),
+            ),
+            GoRoute(
+              path: '/matches/:matchId/pay/waiting',
+              builder: (_, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                final amountCents = int.tryParse(
+                      state.uri.queryParameters['amountCents'] ?? '',
+                    ) ??
+                    0;
+                final title = state.uri.queryParameters['title'] ?? 'Partida';
+                final currency = state.uri.queryParameters['currency'];
+                final tx = state.uri.queryParameters['tx'];
+                final venueId = state.uri.queryParameters['venueId'];
+                return WaitingConfirmationScreen(
+                  matchId: matchId,
+                  amountPerPersonCents: amountCents,
+                  matchTitle: title,
+                  pricingCurrency: currency,
+                  transactionId: tx,
+                  venueId: venueId,
+                );
+              },
+            ),
+            GoRoute(
+              path: '/matches/:matchId/pay/method',
+              builder: (_, state) {
+                final matchId = state.pathParameters['matchId'] ?? '';
+                final amountCents = int.tryParse(
+                      state.uri.queryParameters['amountCents'] ?? '',
+                    ) ??
+                    0;
+                final title = state.uri.queryParameters['title'] ?? 'Partida';
+                final venueId = state.uri.queryParameters['venueId'];
+                final currency = state.uri.queryParameters['currency'];
+                return PayMethodScreen(
+                  matchId: matchId,
+                  amountPerPersonCents: amountCents,
+                  matchTitle: title,
+                  venueId: venueId,
+                  pricingCurrency: currency,
+                );
+              },
+            ),
+          ],
+          initialLocation:
+              '/matches/m1/pay/waiting?amountCents=5000&title=Club&tx=tx1&venueId=venue-1',
+        );
+
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Pago no aceptado'), findsOneWidget);
+
+        await tester.tap(find.text('Volver a pagar'));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('pay.method.screen')), findsOneWidget);
+      },
+    );
   });
 }

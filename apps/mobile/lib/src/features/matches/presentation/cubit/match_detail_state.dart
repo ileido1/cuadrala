@@ -21,19 +21,27 @@ final class MatchDetailLoaded extends MatchDetailState {
   const MatchDetailLoaded({
     required this.match,
     required this.viewerUserId,
+    this.viewerHasConfirmedPayment = false,
     this.actionLoading = false,
     this.actionMessage,
   });
 
   final MatchDetailDto match;
   final String viewerUserId;
+  final bool viewerHasConfirmedPayment;
   final bool actionLoading;
   final String? actionMessage;
 
   bool get isParticipant => match.participants.any((p) => p.userId == viewerUserId);
 
   @override
-  List<Object?> get props => [match, viewerUserId, actionLoading, actionMessage];
+  List<Object?> get props => [
+        match,
+        viewerUserId,
+        viewerHasConfirmedPayment,
+        actionLoading,
+        actionMessage,
+      ];
 }
 
 final class MatchDetailFailure extends MatchDetailState {

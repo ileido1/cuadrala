@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -18,6 +19,7 @@ import '../../monetization/presentation/pay_method_screen.dart';
 import '../../profile/data/profile_repository.dart';
 import 'cubit/match_detail_cubit.dart';
 import 'cubit/match_detail_state.dart';
+import 'open_match_display.dart';
 
 // ─── Entry Point ────────────────────────────────────────────────────────────
 
@@ -32,6 +34,7 @@ final class MatchDetailScreen extends StatelessWidget {
       create: (_) => MatchDetailCubit(
         matchesRepository: getIt<MatchesRepository>(),
         profileRepository: getIt<ProfileRepository>(),
+        monetizationRepository: getIt<MonetizationRepository>(),
         matchId: matchId,
       )..load(),
       child: const _MatchDetailView(),
@@ -60,9 +63,7 @@ final class _MatchDetailView extends StatelessWidget {
               title: 'Partida no encontrada',
               subtitle: 'Es posible que haya sido eliminada.',
               action: TextButton(
-                onPressed: () {
-                  if (context.canPop()) context.pop();
-                },
+                onPressed: () => Routes.popOrGoPartidas(context),
                 child: const Text('Volver'),
               ),
             );
@@ -105,6 +106,8 @@ final class _MatchDetailView extends StatelessWidget {
                           if (isParticipant)
                             _ParticipantBanner(
                               hasPrice: hasPrice,
+                              hasConfirmedPayment:
+                                  loaded.viewerHasConfirmedPayment,
                               matchId: m.id,
                               amountCents: m.pricePerPlayerCents,
                               clubName: m.clubName,
@@ -161,11 +164,7 @@ final class _HeroSliverAppBar extends StatelessWidget {
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          if (context.canPop()) {
-            context.pop();
-          }
-        },
+        onPressed: () => Routes.popOrGoPartidas(context),
       ),
       actions: [
         if (isOrganizer)
@@ -396,6 +395,7 @@ final class _HeroBanner extends StatelessWidget {
 final class _ParticipantBanner extends StatelessWidget {
   const _ParticipantBanner({
     required this.hasPrice,
+    required this.hasConfirmedPayment,
     required this.matchId,
     required this.amountCents,
     required this.clubName,
@@ -403,6 +403,7 @@ final class _ParticipantBanner extends StatelessWidget {
   });
 
   final bool hasPrice;
+  final bool hasConfirmedPayment;
   final String matchId;
   final int amountCents;
   final String? clubName;
@@ -433,9 +434,17 @@ final class _ParticipantBanner extends StatelessWidget {
                     color: scheme.onPrimaryContainer,
                   ),
                 ),
-                if (hasPrice)
+                if (hasPrice && !hasConfirmedPayment)
                   Text(
                     'Recuerda pagar tu cuota antes del partido',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onPrimaryContainer.withValues(alpha: 0.75),
+                    ),
+                  ),
+                if (hasPrice && hasConfirmedPayment)
+                  Text(
+                    'Tu pago está confirmado',
                     style: TextStyle(
                       fontSize: 12,
                       color: scheme.onPrimaryContainer.withValues(alpha: 0.75),
@@ -444,7 +453,7 @@ final class _ParticipantBanner extends StatelessWidget {
               ],
             ),
           ),
-          if (hasPrice)
+          if (hasPrice && !hasConfirmedPayment)
             TextButton(
               onPressed: () => context.push(
                 PayMethodScreen.route(
@@ -495,7 +504,7 @@ final class _MatchInfoSection extends StatelessWidget {
               icon: Icons.payments_outlined,
               label: 'PRECIO',
               value: hasPrice
-                  ? '${formatMoneyLabel(m.pricePerPlayerCents)} p/p'
+                  ? '${formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m))} p/p'
                   : 'Gratis',
               highlight: hasPrice,
             ),
@@ -776,7 +785,7 @@ final class _BottomBar extends StatelessWidget {
     if (isFinished) {
       primaryLabel = 'Cargar resultado';
       primaryAction = () => context.push(Routes.matchResult(m.id));
-    } else if (isParticipant && hasPrice) {
+    } else if (isParticipant && hasPrice && !loaded.viewerHasConfirmedPayment) {
       primaryLabel = 'Pagar ahora';
       primaryAction = () => context.push(
             PayMethodScreen.route(
@@ -786,6 +795,9 @@ final class _BottomBar extends StatelessWidget {
               venueId: m.venueId,
             ),
           );
+    } else if (isParticipant && hasPrice && loaded.viewerHasConfirmedPayment) {
+      primaryLabel = 'Compartir partida';
+      primaryAction = () => _shareMatchInvite(context, m);
     } else if (isParticipant) {
       primaryLabel = 'Salir de la partida';
       primaryBg = scheme.errorContainer;
@@ -852,6 +864,43 @@ final class _BottomBar extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _shareMatchInvite(BuildContext context, MatchDetailDto match) {
+    final scheduled = match.scheduledAt;
+    final when = scheduled == null
+        ? 'Fecha por confirmar'
+        : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';
+    final whereParts = <String>[
+      if (match.clubName != null && match.clubName!.trim().isNotEmpty)
+        match.clubName!.trim(),
+      if (match.courtName != null && match.courtName!.trim().isNotEmpty)
+        match.courtName!.trim(),
+      if (match.locationLabel != null &&
+          match.locationLabel!.trim().isNotEmpty)
+        match.locationLabel!.trim(),
+    ];
+    final where =
+        whereParts.isEmpty ? '' : ' en ${whereParts.join(' · ')}';
+    final spotsLine = match.openSpots > 0
+        ? '\nQuedan ${match.openSpots} lugares.'
+        : '';
+
+    final text = StringBuffer()
+      ..writeln('¡Sumate a mi partida de pádel$where!')
+      ..writeln(when)
+      ..write(spotsLine)
+      ..writeln()
+      ..writeln('Buscá la partida en Cuadrala.');
+
+    Clipboard.setData(ClipboardData(text: text.toString().trim()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Invitación copiada. Pegala en WhatsApp o donde quieras.',
         ),
       ),
     );

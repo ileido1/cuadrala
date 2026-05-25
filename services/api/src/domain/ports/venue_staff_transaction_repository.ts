@@ -70,6 +70,25 @@ export type PendingStaffTransactionRow = {
   amountTotal: { toString(): string };
   status: string;
   createdAt: Date;
+  payerName: string;
+  payerEmail: string | null;
+  obligationAmountMinor: string | null;
+  obligationCurrency: string | null;
+  pricingCurrency: string | null;
+  contextLabel: string;
+  bookingType: 'MATCH' | 'DIRECT';
+  courtId: string;
+  courtName: string;
+  sportId: string;
+  categoryId: string;
+  scheduledAt: Date;
+  durationMinutes: number;
+  receiptId: string | null;
+  receiptMimeType: string | null;
+  paymentMethodType: string | null;
+  paymentMethodName: string | null;
+  paymentMethodConfig: Record<string, unknown> | null;
+  venuePaymentMethodId: string | null;
 };
 
 export interface VenueStaffTransactionRepository {

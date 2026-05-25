@@ -1,3 +1,5 @@
+import '../../../../core/venue/court_pricing.dart';
+
 final class CourtDto {
   const CourtDto({
     required this.id,
@@ -11,6 +13,7 @@ final class CourtDto {
     required this.createdAt,
     required this.pricePerHourCents,
     required this.durationMinutes,
+    this.pricingTiers = const [],
   });
 
   final String id;
@@ -24,6 +27,7 @@ final class CourtDto {
   final DateTime createdAt;
   final int pricePerHourCents;
   final int durationMinutes;
+  final List<CourtPricingTierDto> pricingTiers;
 
   static CourtDto fromJson(Map<String, Object?> json) {
     return CourtDto(
@@ -38,7 +42,16 @@ final class CourtDto {
       createdAt: DateTime.parse(json['createdAt'] as String),
       pricePerHourCents: (json['pricePerHourCents'] as num?)?.toInt() ?? 0,
       durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 60,
+      pricingTiers: _parsePricingTiers(json['pricingTiers']),
     );
+  }
+
+  static List<CourtPricingTierDto> _parsePricingTiers(Object? raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map(CourtPricingTierDto.fromJson)
+        .whereType<CourtPricingTierDto>()
+        .toList(growable: false);
   }
 }
 

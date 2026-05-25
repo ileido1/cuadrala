@@ -24,34 +24,24 @@ void ensureOpeningHoursTimezoneData() {
   _timezoneDataLoaded = true;
 }
 
-final class _dayKeys {
-  static const sunday = 'sunday';
-  static const monday = 'monday';
-  static const tuesday = 'tuesday';
-  static const wednesday = 'wednesday';
-  static const thursday = 'thursday';
-  static const friday = 'friday';
-  static const saturday = 'saturday';
-}
-
 const _dayKeysList = [
-  _dayKeys.sunday,
-  _dayKeys.monday,
-  _dayKeys.tuesday,
-  _dayKeys.wednesday,
-  _dayKeys.thursday,
-  _dayKeys.friday,
-  _dayKeys.saturday,
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
 ];
 
 const _dayLabelsEs = {
-  _dayKeys.sunday: 'Domingo',
-  _dayKeys.monday: 'Lunes',
-  _dayKeys.tuesday: 'Martes',
-  _dayKeys.wednesday: 'Miércoles',
-  _dayKeys.thursday: 'Jueves',
-  _dayKeys.friday: 'Viernes',
-  _dayKeys.saturday: 'Sábado',
+  'sunday': 'Domingo',
+  'monday': 'Lunes',
+  'tuesday': 'Martes',
+  'wednesday': 'Miércoles',
+  'thursday': 'Jueves',
+  'friday': 'Viernes',
+  'saturday': 'Sábado',
 };
 
 int parseTimeToMinutes(String time) {
@@ -99,7 +89,7 @@ OpeningHoursMap? openingHoursFromJson(Object? json) {
   final dayKey = dayKeyFromIsoDate(isoDate);
 
   if (openingHours == null) {
-    if (dayKey == _dayKeys.sunday) return null;
+    if (dayKey == 'sunday') return null;
     return (openMinutes: _defaultOpenMinutes, closeMinutes: _defaultCloseMinutes);
   }
 
@@ -195,4 +185,67 @@ tz.TZDateTime _tzAtMinutes(
   final fromLocal = _tzAtMinutes(location, y, m, d, hours.openMinutes);
   final toLocal = _tzAtMinutes(location, y, m, d, hours.closeMinutes);
   return (fromUtc: fromLocal.toUtc(), toUtc: toLocal.toUtc());
+}
+
+/// Primer inicio de bloque seleccionable (UTC) si la fecha es hoy en sede.
+DateTime earliestSelectableSlotUtc({
+  required DateTime localDate,
+  OpeningHoursMap? openingHours,
+  required String venueTimezone,
+  required int blockDurationMinutes,
+}) {
+  final window = availabilityWindowUtcForLocalDate(
+    localDate: localDate,
+    openingHours: openingHours,
+    venueTimezone: venueTimezone,
+  );
+
+  if (blockDurationMinutes <= 0) return window.fromUtc;
+
+  final location = _venueLocation(venueTimezone);
+  final now = tz.TZDateTime.now(location);
+  final isToday = localDate.year == now.year &&
+      localDate.month == now.month &&
+      localDate.day == now.day;
+
+  if (!isToday) return window.fromUtc;
+
+  final iso = '${localDate.year.toString().padLeft(4, '0')}-'
+      '${localDate.month.toString().padLeft(2, '0')}-'
+      '${localDate.day.toString().padLeft(2, '0')}';
+  final hours = getDayHoursForDate(iso, openingHours);
+  final openMinutes = hours?.openMinutes ?? _defaultOpenMinutes;
+  final closeMinutes = hours?.closeMinutes ?? _defaultCloseMinutes;
+
+  final nowMinutes = now.hour * 60 + now.minute;
+  if (nowMinutes <= openMinutes) return window.fromUtc;
+
+  final elapsed = nowMinutes - openMinutes;
+  final blocksPassed = (elapsed / blockDurationMinutes).ceil();
+  var nextStartMinutes = openMinutes + blocksPassed * blockDurationMinutes;
+
+  if (nextStartMinutes + blockDurationMinutes > closeMinutes) {
+    nextStartMinutes = closeMinutes;
+  }
+
+  final nextLocal = _tzAtMinutes(
+    location,
+    localDate.year,
+    localDate.month,
+    localDate.day,
+    nextStartMinutes,
+  );
+  final nextUtc = nextLocal.toUtc();
+  return nextUtc.isAfter(window.fromUtc) ? nextUtc : window.fromUtc;
+}
+
+/// Hora del slot en timezone de la sede (para etiquetas en UI).
+String formatSlotTimeInVenueTimezone(
+  DateTime scheduledAtUtc, {
+  String venueTimezone = _defaultVenueTimezone,
+}) {
+  final location = _venueLocation(venueTimezone);
+  final local = tz.TZDateTime.from(scheduledAtUtc.toUtc(), location);
+  return '${local.hour.toString().padLeft(2, '0')}:'
+      '${local.minute.toString().padLeft(2, '0')}';
 }

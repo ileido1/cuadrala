@@ -1,24 +1,63 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../../monetization/data/monetization_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/matches_repository.dart';
+import '../../data/models/match_detail_dto.dart';
 import 'match_detail_state.dart';
 
 final class MatchDetailCubit extends Cubit<MatchDetailState> {
   MatchDetailCubit({
     required MatchesRepository matchesRepository,
     required ProfileRepository profileRepository,
+    required MonetizationRepository monetizationRepository,
     required String matchId,
   })  : _matchesRepository = matchesRepository,
         _profileRepository = profileRepository,
+        _monetizationRepository = monetizationRepository,
         _matchId = matchId,
         super(const MatchDetailInitial());
 
   final MatchesRepository _matchesRepository;
   final ProfileRepository _profileRepository;
+  final MonetizationRepository _monetizationRepository;
   final String _matchId;
   String? _viewerUserId;
+
+  Future<bool> _viewerHasConfirmedPayment(
+    MatchDetailDto match,
+    String viewerUserId,
+  ) async {
+    if (match.pricePerPlayerCents <= 0) return false;
+    if (!match.participants.any((p) => p.userId == viewerUserId)) {
+      return false;
+    }
+    try {
+      final txs = await _monetizationRepository.listMyTransactions(limit: 100);
+      return txs.transactions.any(
+        (t) => t.matchId == _matchId && t.status == 'CONFIRMED',
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<MatchDetailLoaded> _loadedFromMatch(
+    MatchDetailDto match,
+    String viewerUserId, {
+    bool actionLoading = false,
+    String? actionMessage,
+  }) async {
+    final hasPaid = await _viewerHasConfirmedPayment(match, viewerUserId);
+    return MatchDetailLoaded(
+      match: match,
+      viewerUserId: viewerUserId,
+      viewerHasConfirmedPayment: hasPaid,
+      actionLoading: actionLoading,
+      actionMessage: actionMessage,
+    );
+  }
 
   Future<void> load() async {
     emit(const MatchDetailLoading());
@@ -26,12 +65,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       final me = await _profileRepository.getMe();
       _viewerUserId = me.id;
       final match = await _matchesRepository.getMatchById(_matchId);
-      emit(
-        MatchDetailLoaded(
-          match: match,
-          viewerUserId: _viewerUserId!,
-        ),
-      );
+      emit(await _loadedFromMatch(match, _viewerUserId!));
     } catch (e) {
       if (e is AppFailure && e.code == 'HTTP_404') {
         emit(const MatchDetailNotFound());
@@ -52,6 +86,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       MatchDetailLoaded(
         match: current.match,
         viewerUserId: current.viewerUserId,
+        viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         actionLoading: true,
       ),
     );
@@ -60,10 +95,9 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       await _matchesRepository.joinMatch(_matchId);
       final match = await _matchesRepository.getMatchById(_matchId);
       emit(
-        MatchDetailLoaded(
-          match: match,
-          viewerUserId: current.viewerUserId,
-          actionLoading: false,
+        await _loadedFromMatch(
+          match,
+          current.viewerUserId,
           actionMessage: 'Te uniste a la partida.',
         ),
       );
@@ -73,7 +107,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         MatchDetailLoaded(
           match: current.match,
           viewerUserId: current.viewerUserId,
-          actionLoading: false,
+          viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           actionMessage: message,
         ),
       );
@@ -89,6 +123,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       MatchDetailLoaded(
         match: current.match,
         viewerUserId: current.viewerUserId,
+        viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         actionLoading: true,
       ),
     );
@@ -97,10 +132,9 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       await _matchesRepository.leaveMatch(_matchId);
       final match = await _matchesRepository.getMatchById(_matchId);
       emit(
-        MatchDetailLoaded(
-          match: match,
-          viewerUserId: current.viewerUserId,
-          actionLoading: false,
+        await _loadedFromMatch(
+          match,
+          current.viewerUserId,
           actionMessage: 'Saliste de la partida.',
         ),
       );
@@ -110,7 +144,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         MatchDetailLoaded(
           match: current.match,
           viewerUserId: current.viewerUserId,
-          actionLoading: false,
+          viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           actionMessage: message,
         ),
       );
@@ -154,6 +188,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       MatchDetailLoaded(
         match: current.match,
         viewerUserId: current.viewerUserId,
+        viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         actionLoading: true,
       ),
     );
@@ -162,10 +197,9 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       await action();
       final match = await _matchesRepository.getMatchById(_matchId);
       emit(
-        MatchDetailLoaded(
-          match: match,
-          viewerUserId: current.viewerUserId,
-          actionLoading: false,
+        await _loadedFromMatch(
+          match,
+          current.viewerUserId,
           actionMessage: successMessage,
         ),
       );
@@ -175,7 +209,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         MatchDetailLoaded(
           match: current.match,
           viewerUserId: current.viewerUserId,
-          actionLoading: false,
+          viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           actionMessage: message,
         ),
       );

@@ -60,4 +60,10 @@ export interface PaymentTransactionRepository {
     _venueId: string,
     _filters?: ListPendingStaffTransactionsFilters,
   ): Promise<PendingStaffTransactionRow[]>;
+  recordPlayerPaymentSelectionSV(_input: {
+    transactionId: string;
+    actorUserId: string;
+    venuePaymentMethodId?: string;
+    paymentMethodType?: string;
+  }): Promise<void>;
 }

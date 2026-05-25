@@ -5,6 +5,7 @@ import { GetMatchTransactionsSummaryUseCase } from '../../application/use_cases/
 import { GetReservationPaymentSummaryUseCase } from '../../application/use_cases/get_reservation_payment_summary.use_case.js';
 import { ListUserTransactionsUseCase } from '../../application/use_cases/list_user_transactions.use_case.js';
 import { ListVenuePendingTransactionsUseCase } from '../../application/use_cases/list_venue_pending_transactions.use_case.js';
+import { RecordPlayerPaymentSelectionUseCase } from '../../application/use_cases/record_player_payment_selection.use_case.js';
 import { RejectTransactionAsVenueStaffUseCase } from '../../application/use_cases/reject_transaction_as_venue_staff.use_case.js';
 import { UpdateUserSubscriptionUseCase } from '../../application/use_cases/update_user_subscription.use_case.js';
 import { PaymentOrchestrator } from '../../application/payment/payment_orchestrator.js';
@@ -20,6 +21,7 @@ import { DefaultMoneyConversionService } from '../../domain/services/money/money
 import { GetRateForReservationDayUseCase } from '../../application/use_cases/get_rate_for_reservation_day.use_case.js';
 import { RecordReservationLedgerEntryUseCase } from '../../application/use_cases/record_reservation_ledger_entry.use_case.js';
 import { PrismaReservationLedgerRepository } from '../../infrastructure/adapters/prisma_reservation_ledger_repository.js';
+import { PrismaTransactionReceiptAccessRepository } from '../../infrastructure/adapters/prisma_transaction_receipt_access_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 const PAYMENT_TX_REPOSITORY = new PrismaPaymentTransactionRepository();
@@ -87,6 +89,13 @@ export const LIST_VENUE_PENDING_TRANSACTIONS_UC = new ListVenuePendingTransactio
 export const REJECT_TRANSACTION_AS_VENUE_STAFF_UC = new RejectTransactionAsVenueStaffUseCase(
   VENUE_STAFF_REPOSITORY,
   PAYMENT_TX_REPOSITORY,
+);
+
+const RECEIPT_ACCESS_REPOSITORY = new PrismaTransactionReceiptAccessRepository(PRISMA);
+
+export const RECORD_PLAYER_PAYMENT_SELECTION_UC = new RecordPlayerPaymentSelectionUseCase(
+  PAYMENT_TX_REPOSITORY,
+  RECEIPT_ACCESS_REPOSITORY,
 );
 
 export const PAYMENT_ORCHESTRATOR = new PaymentOrchestrator(

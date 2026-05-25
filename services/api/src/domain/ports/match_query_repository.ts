@@ -40,6 +40,11 @@ export type MatchListItemDTO = {
   maxParticipants: number;
   participantCount: number;
   openSpots: number;
+  clubName?: string;
+  courtName?: string;
+  locationLabel?: string;
+  pricingCurrency?: string;
+  displayCurrency?: string;
 };
 
 export type MatchParticipantDTO = {

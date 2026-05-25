@@ -55,5 +55,16 @@ const _hours = {
         expect(window.toUtc.hour, 3);
       },
     );
+
+    test('should format slot label in venue timezone', () {
+      final utc = DateTime.utc(2026, 5, 18, 12, 0);
+      expect(
+        formatSlotTimeInVenueTimezone(
+          utc,
+          venueTimezone: 'America/Caracas',
+        ),
+        '08:00',
+      );
+    });
   });
 }

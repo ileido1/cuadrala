@@ -8,6 +8,7 @@ import '../../../core/formatting/scheduled_label.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../data/models/open_match_dto.dart';
+import 'open_match_display.dart';
 import 'cubit/open_matches_cubit.dart';
 import 'cubit/open_matches_state.dart';
 
@@ -327,7 +328,10 @@ final class _OpenMatchListTile extends StatelessWidget {
                         ),
                       const Spacer(),
                       Text(
-                        formatMoneyLabel(match.pricePerPlayerCents),
+                        formatMoneyLabel(
+                          match.pricePerPlayerCents,
+                          openMatchDisplayCurrency(match),
+                        ),
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           color: scheme.onSurface,
@@ -337,15 +341,7 @@ final class _OpenMatchListTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    [
-                      if (match.clubName != null) match.clubName!,
-                      if (match.courtName != null) match.courtName!,
-                    ].isEmpty
-                        ? 'Partida ${idPreview(match.id)}'
-                        : [
-                            if (match.clubName != null) match.clubName!,
-                            if (match.courtName != null) match.courtName!,
-                          ].join(' • '),
+                    openMatchTitleLine(match),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w900),

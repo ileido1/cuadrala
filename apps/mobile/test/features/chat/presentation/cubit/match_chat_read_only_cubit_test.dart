@@ -67,13 +67,13 @@ void main() {
       await cubit.close();
     });
 
-    test('loadMore() appends items al cursor', () async {
+    test('loadMore() antepone mensajes más antiguos', () async {
       final messages1 = [
         ChatMessageDto(
           id: 'm1',
           threadId: 't1',
           authorUserId: 'u1',
-          text: 'Primero',
+          text: 'Reciente',
           createdAt: DateTime.utc(2026, 5, 5, 12),
         ),
       ];
@@ -82,8 +82,8 @@ void main() {
           id: 'm2',
           threadId: 't1',
           authorUserId: 'u2',
-          text: 'Segundo',
-          createdAt: DateTime.utc(2026, 5, 5, 13),
+          text: 'Anterior',
+          createdAt: DateTime.utc(2026, 5, 5, 11),
         ),
       ];
       when(() => repo.listMatchMessages(
@@ -107,7 +107,8 @@ void main() {
 
       final state = cubit.state as MatchChatLoaded;
       expect(state.items.length, 2);
-      expect(state.items.last.text, 'Segundo');
+      expect(state.items.first.text, 'Anterior');
+      expect(state.items.last.text, 'Reciente');
       expect(state.isLoadingMore, false);
       await cubit.close();
     });

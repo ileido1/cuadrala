@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../data/chat_messages_order.dart';
 import '../../data/chat_repository.dart';
 import 'match_chat_state.dart';
 
@@ -50,7 +51,7 @@ final class MatchChatCubit extends Cubit<MatchChatState> {
       );
       emit(
         MatchChatLoaded(
-          items: [...current.items, ...page.items],
+          items: [...page.items, ...current.items],
           nextCursorCreatedAt: page.nextCursorCreatedAt,
           isLoadingMore: false,
           sending: current.sending,
@@ -87,12 +88,18 @@ final class MatchChatCubit extends Cubit<MatchChatState> {
     );
 
     try {
-      await _repo.postMatchMessage(matchId: _matchId, text: trimmed);
-      final refreshed = await _repo.listMatchMessages(matchId: _matchId);
+      final created = await _repo.postMatchMessage(
+        matchId: _matchId,
+        text: trimmed,
+      );
+      final merged = mergeChatMessageChronological(
+        current: current.items,
+        created: created,
+      );
       emit(
         MatchChatLoaded(
-          items: refreshed.items,
-          nextCursorCreatedAt: refreshed.nextCursorCreatedAt,
+          items: merged,
+          nextCursorCreatedAt: current.nextCursorCreatedAt,
           isLoadingMore: false,
           sending: false,
         ),

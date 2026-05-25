@@ -186,11 +186,29 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     return 'TRANSFER';
   }
 
+  static final RegExp _uuidRe = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
   Future<void> _continue() async {
     final txId = _transactionId;
     if (txId == null || txId.isEmpty) return;
     setState(() => _submitting = true);
     try {
+      final repo = getIt<MonetizationRepository>();
+      final methodId = _selectedMethodId;
+      if (methodId != null && _uuidRe.hasMatch(methodId)) {
+        await repo.recordPlayerPaymentSelection(
+          transactionId: txId,
+          venuePaymentMethodId: methodId,
+        );
+      } else if (methodId != null && methodId.isNotEmpty) {
+        await repo.recordPlayerPaymentSelection(
+          transactionId: txId,
+          paymentMethodType: methodId,
+        );
+      }
       if (!mounted) return;
       context.push(
         UploadReceiptScreen.route(
@@ -200,6 +218,7 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           amountPerPersonCents: widget.amountPerPersonCents,
           matchTitle: widget.matchTitle,
           pricingCurrency: _resolvedPricingCurrency ?? widget.pricingCurrency,
+          venueId: widget.venueId,
         ),
       );
     } finally {

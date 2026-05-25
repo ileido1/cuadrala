@@ -13,6 +13,8 @@ final class OpenMatchDto {
     required this.clubName,
     required this.courtName,
     required this.locationLabel,
+    this.pricingCurrency,
+    this.displayCurrency,
   });
 
   final String id;
@@ -28,6 +30,8 @@ final class OpenMatchDto {
   final String? clubName;
   final String? courtName;
   final String? locationLabel;
+  final String? pricingCurrency;
+  final String? displayCurrency;
 
   static OpenMatchDto fromJson(Map<String, Object?> json) {
     return OpenMatchDto(
@@ -44,6 +48,8 @@ final class OpenMatchDto {
       clubName: json['clubName'] as String?,
       courtName: json['courtName'] as String?,
       locationLabel: json['locationLabel'] as String?,
+      pricingCurrency: json['pricingCurrency'] as String?,
+      displayCurrency: json['displayCurrency'] as String?,
     );
   }
 

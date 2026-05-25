@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../data/chat_messages_order.dart';
 import '../../data/chat_repository.dart';
 import 'tournament_chat_state.dart';
 
@@ -50,7 +51,7 @@ final class TournamentChatCubit extends Cubit<TournamentChatState> {
       );
       emit(
         TournamentChatLoaded(
-          items: [...current.items, ...page.items],
+          items: [...page.items, ...current.items],
           nextCursorCreatedAt: page.nextCursorCreatedAt,
           isLoadingMore: false,
           sending: current.sending,
@@ -87,12 +88,18 @@ final class TournamentChatCubit extends Cubit<TournamentChatState> {
     );
 
     try {
-      await _repo.postTournamentMessage(tournamentId: _tournamentId, text: trimmed);
-      final refreshed = await _repo.listTournamentMessages(tournamentId: _tournamentId);
+      final created = await _repo.postTournamentMessage(
+        tournamentId: _tournamentId,
+        text: trimmed,
+      );
+      final merged = mergeChatMessageChronological(
+        current: current.items,
+        created: created,
+      );
       emit(
         TournamentChatLoaded(
-          items: refreshed.items,
-          nextCursorCreatedAt: refreshed.nextCursorCreatedAt,
+          items: merged,
+          nextCursorCreatedAt: current.nextCursorCreatedAt,
           isLoadingMore: false,
           sending: false,
         ),

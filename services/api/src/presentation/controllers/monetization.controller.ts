@@ -8,6 +8,7 @@ import {
   GET_MATCH_TRANSACTIONS_SUMMARY_UC,
   GET_RESERVATION_PAYMENT_SUMMARY_UC,
   LIST_USER_TRANSACTIONS_UC,
+  RECORD_PLAYER_PAYMENT_SELECTION_UC,
   REJECT_TRANSACTION_AS_VENUE_STAFF_UC,
   UPDATE_USER_SUBSCRIPTION_UC,
 } from '../composition/monetization.composition.js';
@@ -16,6 +17,7 @@ import {
   CONFIRM_TRANSACTION_BODY_SCHEMA,
   CREATE_OBLIGATIONS_BODY_SCHEMA,
   MATCH_ID_PARAM_SCHEMA,
+  RECORD_PLAYER_PAYMENT_SELECTION_BODY_SCHEMA,
   REJECT_TRANSACTION_BODY_SCHEMA,
   RESERVATION_ID_PARAM_SCHEMA,
   TRANSACTION_ID_PARAM_SCHEMA,
@@ -40,6 +42,32 @@ export async function postCreateMatchObligationsCON(_req: Request, _res: Respons
     success: true,
     message: 'Obligaciones registradas correctamente.',
     data: RESULT,
+  });
+}
+
+export async function patchRecordPlayerPaymentSelectionCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = TRANSACTION_ID_PARAM_SCHEMA.parse(_req.params);
+  const BODY = RECORD_PLAYER_PAYMENT_SELECTION_BODY_SCHEMA.parse(_req.body ?? {});
+
+  await RECORD_PLAYER_PAYMENT_SELECTION_UC.executeSV({
+    transactionId: PARAMS.transactionId,
+    actorUserId: ACTOR_USER_ID,
+    venuePaymentMethodId: BODY.venuePaymentMethodId,
+    paymentMethodType: BODY.paymentMethodType,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Medio de pago registrado correctamente.',
+    data: { recorded: true },
   });
 }
 

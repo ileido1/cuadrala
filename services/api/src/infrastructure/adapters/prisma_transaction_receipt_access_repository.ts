@@ -22,13 +22,34 @@ export class PrismaTransactionReceiptAccessRepository implements TransactionRece
         match: {
           select: {
             organizerUserId: true,
+            court: { select: { venueId: true } },
             participants: { where: { userId: _userId }, select: { id: true } },
+          },
+        },
+        reservation: {
+          select: {
+            venueId: true,
+            court: { select: { venueId: true } },
           },
         },
       },
     });
     if (ROW === null) return false;
+
+    const VENUE_ID =
+      ROW.reservation?.venueId ??
+      ROW.reservation?.court?.venueId ??
+      ROW.match?.court?.venueId;
+    if (VENUE_ID !== undefined) {
+      const STAFF = await this._prisma.venueStaff.findFirst({
+        where: { venueId: VENUE_ID, userId: _userId },
+        select: { id: true },
+      });
+      if (STAFF !== null) return true;
+    }
+
     if (ROW.userId === _userId) return true;
+    if (ROW.match === null) return false;
     if (ROW.match.organizerUserId === _userId) return true;
     return ROW.match.participants.length > 0;
   }

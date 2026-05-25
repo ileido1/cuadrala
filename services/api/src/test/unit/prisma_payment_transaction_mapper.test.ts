@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   mapPrismaTransactionToPaymentRowSV,
   mapPrismaTransactionToPendingStaffRowSV,
+  type PendingTransactionPrismaRow,
 } from '../../infrastructure/adapters/prisma_payment_transaction_mapper.js';
 
 function sampleTransaction() {
@@ -34,6 +35,7 @@ function sampleTransaction() {
     settlementAmountMinor: null,
     appliedToObligationMinor: null,
     amountBsMinor: null,
+    needsReview: false,
   };
 }
 
@@ -48,11 +50,40 @@ describe('prisma_payment_transaction_mapper', () => {
   });
 
   it('mapPrismaTransactionToPendingStaffRowSV maps pending staff list fields', () => {
-    const ROW = mapPrismaTransactionToPendingStaffRowSV(sampleTransaction());
+    const BASE = sampleTransaction();
+    const PENDING_ROW = {
+      ...BASE,
+      user: { name: 'Ana Pérez', email: 'ana@test.com' },
+      receipts: [{ id: 'rcpt-1', mimeType: 'image/jpeg' }],
+      match: {
+        scheduledAt: new Date('2026-05-15T14:00:00.000Z'),
+        sportId: 'sport-1',
+        categoryId: 'cat-1',
+        court: { id: 'court-1', name: 'Cancha 1', venueId: 'venue-1' },
+      },
+      reservation: null,
+      obligationAmountMinor: BigInt(850),
+      obligationCurrency: 'USD',
+      pricingCurrency: 'USD',
+    } as PendingTransactionPrismaRow;
+
+    const ROW = mapPrismaTransactionToPendingStaffRowSV({
+      ...PENDING_ROW,
+      venuePaymentMethodId: '550e8400-e29b-41d4-a716-446655440000',
+      venuePaymentMethod: {
+        type: 'PAGO_MOVIL',
+        name: 'Pago móvil sede',
+        config: { bank: 'Banesco', phoneNumber: '04141234567' },
+      },
+      paymentData: null,
+    } as PendingTransactionPrismaRow);
 
     expect(ROW.id).toBe('tx-1');
-    expect(ROW.userId).toBe('user-1');
-    expect(ROW.amountTotal.toString()).toBe('8.5');
-    expect(ROW.createdAt).toEqual(sampleTransaction().createdAt);
+    expect(ROW.payerName).toBe('Ana Pérez');
+    expect(ROW.receiptId).toBe('rcpt-1');
+    expect(ROW.courtName).toBe('Cancha 1');
+    expect(ROW.obligationAmountMinor).toBe('850');
+    expect(ROW.paymentMethodName).toBe('Pago móvil sede');
+    expect(ROW.venuePaymentMethodId).toBe('550e8400-e29b-41d4-a716-446655440000');
   });
 });

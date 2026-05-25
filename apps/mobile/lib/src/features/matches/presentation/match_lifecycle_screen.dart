@@ -5,10 +5,12 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../monetization/data/monetization_repository.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/matches_repository.dart';
 import 'cubit/match_detail_cubit.dart';
 import 'cubit/match_detail_state.dart';
+import 'open_match_display.dart';
 
 final class MatchLifecycleScreen extends StatelessWidget {
   const MatchLifecycleScreen({super.key, required this.matchId});
@@ -21,6 +23,7 @@ final class MatchLifecycleScreen extends StatelessWidget {
       create: (_) => MatchDetailCubit(
         matchesRepository: getIt<MatchesRepository>(),
         profileRepository: getIt<ProfileRepository>(),
+        monetizationRepository: getIt<MonetizationRepository>(),
         matchId: matchId,
       )..load(),
       child: const _MatchLifecycleView(),
@@ -219,7 +222,10 @@ final class _MatchLifecycleView extends StatelessWidget {
                                   size: 16, color: scheme.onPrimary),
                               const SizedBox(width: 6),
                               Text(
-                                formatMoneyCents(m.pricePerPlayerCents),
+                                formatMoneyCents(
+                                  m.pricePerPlayerCents,
+                                  matchDetailDisplayCurrency(m),
+                                ),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium

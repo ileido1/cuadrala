@@ -25,6 +25,25 @@ export class ListVenuePendingTransactionsUseCase {
       amountTotal: string;
       status: string;
       createdAt: string;
+      payerName: string;
+      payerEmail: string | null;
+      obligationAmountMinor: string | null;
+      obligationCurrency: string | null;
+      pricingCurrency: string | null;
+      contextLabel: string;
+      bookingType: 'MATCH' | 'DIRECT';
+      courtId: string;
+      courtName: string;
+      sportId: string;
+      categoryId: string;
+      scheduledAt: string;
+      durationMinutes: number;
+      receiptId: string | null;
+      receiptMimeType: string | null;
+      paymentMethodType: string | null;
+      paymentMethodName: string | null;
+      paymentMethodConfig: Record<string, unknown> | null;
+      venuePaymentMethodId: string | null;
     }>;
   }> {
     const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
@@ -59,6 +78,25 @@ export class ListVenuePendingTransactionsUseCase {
         amountTotal: tx.amountTotal.toString(),
         status: tx.status,
         createdAt: tx.createdAt.toISOString(),
+        payerName: tx.payerName,
+        payerEmail: tx.payerEmail,
+        obligationAmountMinor: tx.obligationAmountMinor,
+        obligationCurrency: tx.obligationCurrency,
+        pricingCurrency: tx.pricingCurrency,
+        contextLabel: tx.contextLabel,
+        bookingType: tx.bookingType,
+        courtId: tx.courtId,
+        courtName: tx.courtName,
+        sportId: tx.sportId,
+        categoryId: tx.categoryId,
+        scheduledAt: tx.scheduledAt.toISOString(),
+        durationMinutes: tx.durationMinutes,
+        receiptId: tx.receiptId,
+        receiptMimeType: tx.receiptMimeType,
+        paymentMethodType: tx.paymentMethodType,
+        paymentMethodName: tx.paymentMethodName,
+        paymentMethodConfig: tx.paymentMethodConfig,
+        venuePaymentMethodId: tx.venuePaymentMethodId,
       })),
     };
   }

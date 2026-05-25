@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/failures/app_failure.dart';
+import '../../../core/failures/app_failure_mapper.dart';
+import '../../../core/formatting/money_format.dart';
+import '../../../core/models/currency_code.dart';
+import '../../../core/venue/court_pricing.dart';
 import '../../../core/venue/opening_hours.dart';
 import '../../../router/routes.dart';
 import '../../catalog/data/catalog_repository.dart';
@@ -27,7 +31,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   final _courtController = TextEditingController();
   final _notesController = TextEditingController();
   late final TextEditingController _priceController =
-      TextEditingController(text: _pricePerPlayer.toString());
+      TextEditingController(text: _pricePerPlayerCentsInputLabel());
 
   List<VenueDto> _venues = const [];
   VenueDto? _selectedVenue;
@@ -40,7 +44,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   List<PlayerSportProfileDto> _sportProfiles = const [];
   String? _categoryId;
   int _players = 4;
-  int _pricePerPlayer = 4500;
+  int _pricePerPlayerCents = 0;
 
   DateTime _selectedDate = DateTime.now();
   DateTime? _selectedSlotUtc;
@@ -152,16 +156,75 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     }
   }
 
-  int? _computedPricePerPlayer() {
+  int? _blockTotalCents() {
     final court = _selectedCourt;
-    if (court == null) return null;
-    if (court.pricePerHourCents <= 0) return null;
-    if (court.durationMinutes <= 0) return null;
-    if (_players <= 0) return null;
-    final totalCents =
-        court.pricePerHourCents * court.durationMinutes / 60;
-    final perPlayerCents = totalCents / _players;
-    return (perPlayerCents / 100).round();
+    final slotUtc = _selectedSlotUtc;
+    if (court == null || slotUtc == null || court.durationMinutes <= 0) {
+      return null;
+    }
+
+    final baseCents = court.pricePerHourCents > 0 ? court.pricePerHourCents : null;
+    if (baseCents == null && court.pricingTiers.isEmpty) return null;
+
+    return calculateReservationTotalCents(
+      basePricePerHourCents: baseCents,
+      pricingTiers: court.pricingTiers,
+      scheduledAtUtc: slotUtc,
+      durationMinutes: court.durationMinutes,
+      venueTimezone: _venueTimezone,
+    );
+  }
+
+  CurrencyCode get _venueCurrency => CurrencyCode.resolve(
+        pricingCurrency: _selectedVenue?.pricingCurrency,
+      );
+
+  /// Centavos por jugador: reparto con redondeo hacia arriba (no cobrar de menos).
+  int? _computedPricePerPlayerCents() {
+    final totalCents = _blockTotalCents();
+    if (totalCents == null || _players <= 0) return null;
+    return splitBlockTotalPerPlayerCents(
+      blockTotalCents: totalCents,
+      playerCount: _players,
+    );
+  }
+
+  String _pricePerPlayerCentsInputLabel() {
+    if (_pricePerPlayerCents <= 0) return '';
+    return (_pricePerPlayerCents / 100).toStringAsFixed(2);
+  }
+
+  List<_AvailabilitySlot> _filterDisplaySlots(List<_AvailabilitySlot> slots) {
+    final court = _selectedCourt;
+    if (court == null) return slots;
+
+    final earliest = earliestSelectableSlotUtc(
+      localDate: _selectedDate,
+      openingHours: _openingHours,
+      venueTimezone: _venueTimezone,
+      blockDurationMinutes: court.durationMinutes,
+    );
+
+    return slots.where((slot) {
+      if (!slot.isAvailable && slot.reason == 'OUT_OF_RANGE') return false;
+      if (slot.scheduledAtUtc.isBefore(earliest)) return false;
+      return true;
+    }).toList(growable: false);
+  }
+
+  String _slotChipLabel(_AvailabilitySlot slot) {
+    final start = formatSlotTimeInVenueTimezone(
+      slot.scheduledAtUtc,
+      venueTimezone: _venueTimezone,
+    );
+    final duration = _selectedCourt?.durationMinutes ?? 60;
+    final endUtc =
+        slot.scheduledAtUtc.add(Duration(minutes: duration));
+    final end = formatSlotTimeInVenueTimezone(
+      endUtc,
+      venueTimezone: _venueTimezone,
+    );
+    return '$start – $end';
   }
 
   Widget _buildCategoryReadOnly(ColorScheme scheme) {
@@ -389,7 +452,23 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       _courtController.text = selectedCourt.name;
       _selectedSlotUtc = null;
     });
+    _applyComputedPrice();
     await _refreshAvailability();
+  }
+
+  void _applyComputedPrice() {
+    final perPlayerCents = _computedPricePerPlayerCents();
+    if (perPlayerCents == null || !mounted) return;
+    setState(() {
+      _pricePerPlayerCents = perPlayerCents;
+      _priceController.text = (perPlayerCents / 100).toStringAsFixed(2);
+    });
+  }
+
+  String _availabilityErrorLabel(Object? error) {
+    if (error is AppFailure) return error.message;
+    if (error is String) return error;
+    return 'No se pudo cargar horarios';
   }
 
   Future<void> _pickDate() async {
@@ -445,6 +524,22 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       return;
     }
 
+    final sportId = _selectedSportId;
+    final categoryId = _categoryId;
+    if (sportId == null ||
+        sportId.isEmpty ||
+        categoryId == null ||
+        categoryId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _availabilityLoading = false;
+        _availabilityError =
+            'Completa tu categoría en el perfil para ver horarios.';
+        _slots = const [];
+      });
+      return;
+    }
+
     final isoDate = _isoDateForSelected();
     if (!isVenueOpenOnDate(isoDate, _openingHours)) {
       if (!mounted) return;
@@ -463,16 +558,15 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     });
 
     try {
-      final sportId = _selectedSportId;
-      final categoryId = _categoryId;
       final durationMinutes = _selectedCourt?.durationMinutes ?? 60;
+      final stepMinutes = durationMinutes;
       final data = await getIt<VenuesRepository>().getVenueAvailability(
         venueId: venueId,
         courtId: courtId,
         from: _availabilityFromUtc(),
         to: _availabilityToUtc(),
         durationMinutes: durationMinutes,
-        stepMinutes: durationMinutes,
+        stepMinutes: stepMinutes,
         sportId: sportId,
         categoryId: categoryId,
       );
@@ -508,13 +602,16 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       setState(() {
         _availabilityLoading = false;
         _availabilityError = null;
-        _slots = slots;
+        _slots = _filterDisplaySlots(slots);
       });
     } catch (e) {
       if (!mounted) return;
+      final failure = e is AppFailure
+          ? e
+          : getIt<AppFailureMapper>().fromException(e);
       setState(() {
         _availabilityLoading = false;
-        _availabilityError = e;
+        _availabilityError = failure;
         _slots = const [];
       });
     }
@@ -566,7 +663,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         courtId: courtId,
         venueId: venueId,
         maxParticipants: _players,
-        pricePerPlayerCents: _pricePerPlayer * 100,
+        pricePerPlayerCents: _pricePerPlayerCents,
         durationMinutes: _selectedCourt!.durationMinutes,
         notes: _notesController.text.trim().isEmpty
             ? null
@@ -766,9 +863,9 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                           )
                                         : _availabilityError != null
                                             ? Text(
-                                                _availabilityError is String
-                                                    ? _availabilityError as String
-                                                    : 'No disponible',
+                                                _availabilityErrorLabel(
+                                                  _availabilityError,
+                                                ),
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.w700,
                                                   color: scheme.error,
@@ -786,11 +883,8 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                                     spacing: 8,
                                                     runSpacing: 8,
                                                     children: _slots.map((slot) {
-                                                      final local =
-                                                          slot.scheduledAtUtc
-                                                              .toLocal();
                                                       final label =
-                                                          '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+                                                          _slotChipLabel(slot);
                                                       final selected =
                                                           _selectedSlotUtc ==
                                                               slot
@@ -820,11 +914,14 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                                         selected:
                                                             selected && enabled,
                                                         onSelected: enabled
-                                                            ? (_) => setState(
+                                                            ? (_) {
+                                                                setState(
                                                                   () =>
                                                                       _selectedSlotUtc =
                                                                           slot.scheduledAtUtc,
-                                                                )
+                                                                );
+                                                                _applyComputedPrice();
+                                                              }
                                                             : null,
                                                         selectedColor:
                                                             scheme.primary,
@@ -863,7 +960,10 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                     IconButton(
                                       onPressed: _players <= 2
                                           ? null
-                                          : () => setState(() => _players--),
+                                          : () {
+                                              setState(() => _players--);
+                                              _applyComputedPrice();
+                                            },
                                       icon: const Icon(Icons.remove_circle_outline),
                                     ),
                                     Text(
@@ -875,7 +975,10 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                     IconButton(
                                       onPressed: _players >= 10
                                           ? null
-                                          : () => setState(() => _players++),
+                                          : () {
+                                              setState(() => _players++);
+                                              _applyComputedPrice();
+                                            },
                                       icon: const Icon(Icons.add_circle_outline),
                                     ),
                                   ],
@@ -889,22 +992,83 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                           title: 'Precio por persona',
                           child: Builder(
                             builder: (context) {
-                              final hint = _computedPricePerPlayer();
+                              final blockCents = _blockTotalCents();
+                              final perPlayerCents =
+                                  _computedPricePerPlayerCents();
+                              final court = _selectedCourt;
+                              final hasPricing = court != null &&
+                                  (court.pricePerHourCents > 0 ||
+                                      court.pricingTiers.isNotEmpty);
+                              if (perPlayerCents == null &&
+                                  hasPricing &&
+                                  _selectedSlotUtc == null) {
+                                return Text(
+                                  'Seleccioná un horario para ver el precio.',
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                );
+                              }
+                              if (perPlayerCents != null &&
+                                  blockCents != null) {
+                                final duration =
+                                    court?.durationMinutes ?? 60;
+                                final hoursLabel = duration % 60 == 0
+                                    ? '${duration ~/ 60} h'
+                                    : '${duration ~/ 60} h ${duration % 60} min';
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      formatMoneyLabel(
+                                        perPlayerCents,
+                                        _venueCurrency,
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'por persona · $_players jugadores',
+                                      style: TextStyle(
+                                        color: scheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Bloque $hoursLabel: '
+                                      '${formatMoneyLabel(blockCents, _venueCurrency)} '
+                                      'total (tarifa del horario)',
+                                      style: TextStyle(
+                                        color: scheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
                               return TextField(
                                 controller: _priceController,
                                 keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.attach_money),
-                                  hintText:
-                                      hint == null ? null : '~\$$hint',
-                                  helperText: hint == null
-                                      ? null
-                                      : 'Sugerido según la cancha y la '
-                                          'cantidad de jugadores',
+                                decoration: const InputDecoration(
+                                  prefixIcon: Icon(Icons.attach_money),
+                                  helperText:
+                                      'La cancha no tiene precio configurado; '
+                                      'ingresá un monto manual.',
                                 ),
                                 onChanged: (v) => setState(() {
-                                  _pricePerPlayer =
-                                      int.tryParse(v) ?? _pricePerPlayer;
+                                  _pricePerPlayerCents =
+                                      parseMoneyInputToMinor(v) ??
+                                          _pricePerPlayerCents;
                                 }),
                               );
                             },

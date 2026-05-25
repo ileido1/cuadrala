@@ -1,3 +1,6 @@
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
+
 final class Routes {
   static const welcome = '/welcome';
   static const login = '/login';
@@ -32,4 +35,13 @@ final class Routes {
   static String tournamentDetail(String tournamentId) => '/tournaments/$tournamentId';
   static String notificationDetail(String notificationId) =>
       '/notifications/$notificationId';
+
+  /// Rutas de partida fuera del shell: tras `go` desde pago no hay stack previo.
+  static void popOrGoPartidas(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(partidas);
+    }
+  }
 }

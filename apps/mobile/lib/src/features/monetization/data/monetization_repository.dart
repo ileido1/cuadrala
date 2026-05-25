@@ -81,6 +81,29 @@ class MonetizationRepository {
         .toList();
   }
 
+  Future<void> recordPlayerPaymentSelection({
+    required String transactionId,
+    String? venuePaymentMethodId,
+    String? paymentMethodType,
+  }) async {
+    final body = <String, Object?>{
+      if (venuePaymentMethodId != null && venuePaymentMethodId.isNotEmpty)
+        'venuePaymentMethodId': venuePaymentMethodId,
+      if (paymentMethodType != null && paymentMethodType.isNotEmpty)
+        'paymentMethodType': paymentMethodType,
+    };
+    if (body.isEmpty) {
+      throw const AppFailure(
+        code: 'VALIDACION',
+        message: 'Seleccioná un medio de pago.',
+      );
+    }
+    await _api.recordPlayerPaymentSelectionEnvelope(
+      transactionId: transactionId,
+      body: body,
+    );
+  }
+
   Future<Map<String, Object?>> uploadReceipt({
     required String transactionId,
     required List<int> fileBytes,

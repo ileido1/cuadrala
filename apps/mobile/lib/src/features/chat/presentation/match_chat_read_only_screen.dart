@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../data/chat_repository.dart';
+import 'chat_scroll_utils.dart';
 import 'cubit/match_chat_read_only_cubit.dart';
 import 'cubit/match_chat_state.dart';
 import 'widgets/chat_message_tile.dart';
@@ -53,7 +54,17 @@ class _MatchChatReadOnlyViewState extends State<_MatchChatReadOnlyView> {
           ),
         ],
       ),
-      body: BlocBuilder<MatchChatReadOnlyCubit, MatchChatState>(
+      body: BlocListener<MatchChatReadOnlyCubit, MatchChatState>(
+        listenWhen: (prev, curr) =>
+            curr is MatchChatLoaded &&
+            curr.items.isNotEmpty &&
+            prev is MatchChatLoading,
+        listener: (_, __) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            scrollChatToBottom(_scroll);
+          });
+        },
+        child: BlocBuilder<MatchChatReadOnlyCubit, MatchChatState>(
         builder: (context, state) {
           if (state is MatchChatLoading || state is MatchChatInitial) {
             return const Center(child: CircularProgressIndicator());
@@ -95,7 +106,7 @@ class _MatchChatReadOnlyViewState extends State<_MatchChatReadOnlyView> {
           }
           return NotificationListener<ScrollNotification>(
             onNotification: (n) {
-              if (n.metrics.pixels >= n.metrics.maxScrollExtent - 120) {
+              if (n.metrics.pixels <= 120) {
                 context.read<MatchChatReadOnlyCubit>().loadMore();
               }
               return false;
@@ -106,17 +117,19 @@ class _MatchChatReadOnlyViewState extends State<_MatchChatReadOnlyView> {
               itemCount: loaded.items.length + (loaded.isLoadingMore ? 1 : 0),
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
-                if (index >= loaded.items.length) {
+                if (loaded.isLoadingMore && index == 0) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                return ChatMessageTile(message: loaded.items[index]);
+                final msgIndex = loaded.isLoadingMore ? index - 1 : index;
+                return ChatMessageTile(message: loaded.items[msgIndex]);
               },
             ),
           );
         },
+      ),
       ),
     );
   }

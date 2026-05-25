@@ -8,6 +8,7 @@ import '../../../core/formatting/scheduled_label.dart';
 import '../../../core/theme/brand_gradients.dart';
 import '../../../router/routes.dart';
 import '../../matches/data/models/open_match_dto.dart';
+import '../../matches/presentation/open_match_display.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/skeleton_list.dart';
 import 'cubit/home_cubit.dart';
@@ -539,25 +540,14 @@ final class _OpenMatchPreviewTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    if (match.clubName != null || match.courtName != null)
-                      Text(
-                        [
-                          if (match.clubName != null) match.clubName!,
-                          if (match.courtName != null) match.courtName!,
-                        ].join(' • '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
-                      )
-                    else
-                      Text(
-                        'Partida ${idPreview(match.id)}',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
+                    Text(
+                      openMatchTitleLine(match),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
                     if (match.locationLabel != null) ...[
                       const SizedBox(height: 4),
                       Text(
@@ -572,7 +562,7 @@ final class _OpenMatchPreviewTile extends StatelessWidget {
                     ],
                     const SizedBox(height: 4),
                     Text(
-                      '${formatMoneyLabel(match.pricePerPlayerCents)} p/p',
+                      '${formatMoneyLabel(match.pricePerPlayerCents, openMatchDisplayCurrency(match))} p/p',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.primary,
                             fontWeight: FontWeight.w900,

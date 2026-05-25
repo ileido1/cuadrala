@@ -10,7 +10,7 @@ import type {
 
 import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 
-function toListItemDTO(_row: {
+type MatchListRow = {
   id: string;
   sportId: string;
   categoryId: string;
@@ -21,9 +21,32 @@ function toListItemDTO(_row: {
   pricePerPlayerCents: number;
   maxParticipants: number;
   _count: { participants: number };
-}): MatchListItemDTO {
+  court?: null | {
+    name: string;
+    venue: {
+      name: string;
+      pricingCurrency: string;
+      displayCurrency: string;
+      addressLine1: string | null;
+      addressCity: string | null;
+      formattedAddress: string | null;
+      address: string | null;
+    };
+  };
+};
+
+function toListItemDTO(_row: MatchListRow): MatchListItemDTO {
   const PARTICIPANT_COUNT = _row._count.participants;
   const OPEN_SPOTS = Math.max(0, _row.maxParticipants - PARTICIPANT_COUNT);
+  const CLUB_NAME = _row.court?.venue.name;
+  const COURT_NAME = _row.court?.name;
+  const LOCATION_LABEL =
+    _row.court?.venue.addressLine1 ??
+    _row.court?.venue.formattedAddress ??
+    _row.court?.venue.address ??
+    _row.court?.venue.addressCity ??
+    undefined;
+
   return {
     id: _row.id,
     sportId: _row.sportId,
@@ -36,6 +59,15 @@ function toListItemDTO(_row: {
     maxParticipants: _row.maxParticipants,
     participantCount: PARTICIPANT_COUNT,
     openSpots: OPEN_SPOTS,
+    ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
+    ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
+    ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
+    ...(_row.court?.venue.pricingCurrency !== undefined
+      ? { pricingCurrency: _row.court.venue.pricingCurrency }
+      : {}),
+    ...(_row.court?.venue.displayCurrency !== undefined
+      ? { displayCurrency: _row.court.venue.displayCurrency }
+      : {}),
   };
 }
 
@@ -108,6 +140,8 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
               select: {
                 id: true,
                 name: true,
+                pricingCurrency: true,
+                displayCurrency: true,
                 addressLine1: true,
                 addressCity: true,
                 formattedAddress: true,
@@ -212,6 +246,22 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
           pricePerPlayerCents: true,
           maxParticipants: true,
           _count: { select: { participants: true } },
+          court: {
+            select: {
+              name: true,
+              venue: {
+                select: {
+                  name: true,
+                  pricingCurrency: true,
+                  displayCurrency: true,
+                  addressLine1: true,
+                  addressCity: true,
+                  formattedAddress: true,
+                  address: true,
+                },
+              },
+            },
+          },
         },
       }),
     ]);

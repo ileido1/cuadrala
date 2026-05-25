@@ -265,6 +265,21 @@ class ApiClient {
   readonly transactions = {
     confirm: (venueId: string, transactionId: string) =>
       this.client.patch(`/venues/${venueId}/transactions/${transactionId}/confirm`),
+    getReceipt: (transactionId: string, receiptId: string) =>
+      this.client.get(`/transactions/${transactionId}/receipt/${receiptId}`, {
+        responseType: 'blob',
+      }),
+    confirmManual: (
+      transactionId: string,
+      body: {
+        venuePaymentMethodId?: string;
+        settlementAmount?: { amountMinor: string; currencyCode: string };
+        referenceNumber?: string;
+        paymentData?: Record<string, unknown>;
+      },
+    ) => this.client.patch(`/transactions/${transactionId}/confirm-manual`, body),
+    rejectManual: (transactionId: string, body?: { reason?: string }) =>
+      this.client.patch(`/transactions/${transactionId}/reject-manual`, body),
   };
 
   readonly exchangeRates = {

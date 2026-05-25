@@ -82,7 +82,6 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
             tournamentId: _input.tournamentId ?? null,
             pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
             maxParticipants: _input.maxParticipants,
-            notes: _input.notes ?? null,
             participants: {
               create: [{ userId: _creatorUserId }],
             },
@@ -107,6 +106,7 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
             createdByUserId: _creatorUserId,
             maxParticipants: _input.maxParticipants,
             pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
+            notes: _input.notes ?? null,
             ...reservationMoneyCreateFieldsSV(PRICING_CURRENCY, null),
           },
         });
@@ -129,7 +129,6 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
         tournamentId: _input.tournamentId ?? null,
         pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
         maxParticipants: _input.maxParticipants,
-        notes: _input.notes ?? null,
         participants: {
           create: [{ userId: _creatorUserId }],
         },

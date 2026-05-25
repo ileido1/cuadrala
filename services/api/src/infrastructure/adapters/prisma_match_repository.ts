@@ -21,6 +21,8 @@ function computeOpenMatchDTO(_row: {
     name: string;
     venue: {
       name: string;
+      pricingCurrency: string;
+      displayCurrency: string;
       addressLine1: string | null;
       addressCity: string | null;
       formattedAddress: string | null;
@@ -54,6 +56,8 @@ function computeOpenMatchDTO(_row: {
     ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
     ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
     ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
+    pricingCurrency: _row.court?.venue.pricingCurrency,
+    displayCurrency: _row.court?.venue.displayCurrency,
   };
 }
 
@@ -137,6 +141,8 @@ export class PrismaMatchRepository implements MatchRepository {
               venue: {
                 select: {
                   name: true,
+                  pricingCurrency: true,
+                  displayCurrency: true,
                   addressLine1: true,
                   addressCity: true,
                   formattedAddress: true,

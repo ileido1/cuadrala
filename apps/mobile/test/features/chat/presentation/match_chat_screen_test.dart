@@ -11,9 +11,11 @@ final class _MockChatRepository extends Mock implements ChatRepository {}
 
 void main() {
   group('MatchChatScreen', () {
+    late _MockChatRepository repo;
+
     setUp(() async {
       await getIt.reset();
-      final repo = _MockChatRepository();
+      repo = _MockChatRepository();
       when(() => repo.listMatchMessages(
             matchId: any(named: 'matchId'),
             limit: any(named: 'limit'),
@@ -34,11 +36,11 @@ void main() {
       );
       when(() => repo.postMatchMessage(matchId: any(named: 'matchId'), text: any(named: 'text')))
           .thenAnswer(
-        (_) async => ChatMessageDto(
+        (invocation) async => ChatMessageDto(
           id: 'c2',
           threadId: 't',
           authorUserId: 'u1',
-          text: 'ok',
+          text: invocation.namedArguments[#text] as String,
           createdAt: DateTime.utc(2026, 5, 5, 12, 1),
         ),
       );
@@ -55,6 +57,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('match.chat')), findsOneWidget);
       expect(find.text('Hola'), findsOneWidget);
+    });
+
+    testWidgets('muestra el mensaje enviado sin recargar la pantalla', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: MatchChatScreen(matchId: 'm1'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Mensaje nuevo');
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mensaje nuevo'), findsOneWidget);
+      verify(() => repo.postMatchMessage(matchId: 'm1', text: 'Mensaje nuevo')).called(1);
     });
   });
 }

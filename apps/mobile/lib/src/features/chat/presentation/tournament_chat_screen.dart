@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import 'chat_scroll_utils.dart';
 import 'cubit/tournament_chat_cubit.dart';
 import 'cubit/tournament_chat_state.dart';
 import '../data/chat_repository.dart';
@@ -61,7 +62,22 @@ class _TournamentChatViewState extends State<_TournamentChatView> {
       body: Column(
         children: [
           Expanded(
-            child: BlocBuilder<TournamentChatCubit, TournamentChatState>(
+            child: BlocListener<TournamentChatCubit, TournamentChatState>(
+              listenWhen: (prev, curr) {
+                if (curr is! TournamentChatLoaded || curr.items.isEmpty) {
+                  return false;
+                }
+                if (prev is TournamentChatLoading) return true;
+                if (prev is! TournamentChatLoaded) return false;
+                return (prev.sending && !curr.sending) ||
+                    curr.items.length > prev.items.length;
+              },
+              listener: (_, __) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  scrollChatToBottom(_scroll);
+                });
+              },
+              child: BlocBuilder<TournamentChatCubit, TournamentChatState>(
               builder: (context, state) {
                 if (state is TournamentChatLoading || state is TournamentChatInitial) {
                   return const Center(child: CircularProgressIndicator());
@@ -103,7 +119,7 @@ class _TournamentChatViewState extends State<_TournamentChatView> {
                 }
                 return NotificationListener<ScrollNotification>(
                   onNotification: (n) {
-                    if (n.metrics.pixels >= n.metrics.maxScrollExtent - 120) {
+                    if (n.metrics.pixels <= 120) {
                       context.read<TournamentChatCubit>().loadMore();
                     }
                     return false;
@@ -114,13 +130,15 @@ class _TournamentChatViewState extends State<_TournamentChatView> {
                     itemCount: loaded.items.length + (loaded.isLoadingMore ? 1 : 0),
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      if (index >= loaded.items.length) {
+                      if (loaded.isLoadingMore && index == 0) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8),
                           child: Center(child: CircularProgressIndicator()),
                         );
                       }
-                      final msg = loaded.items[index];
+                      final msgIndex =
+                          loaded.isLoadingMore ? index - 1 : index;
+                      final msg = loaded.items[msgIndex];
                       return Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -150,6 +168,7 @@ class _TournamentChatViewState extends State<_TournamentChatView> {
                   ),
                 );
               },
+            ),
             ),
           ),
           BlocBuilder<TournamentChatCubit, TournamentChatState>(

@@ -1,16 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { PendingPaymentDetailModal } from '~/components/payments/pending-payment-detail-modal';
+import { PaymentsList } from '~/components/payments/payments-list';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
 import {
   formatMoneyFromMajor,
   resolveCurrencyCode,
 } from '~/lib/format-money';
-import type { TransactionStatsResponse, TransactionHistoryItem } from '~/types/api';
+import {
+  formatTransactionStatusLabel,
+  isPendingApiStatus,
+  transactionStatusBadgeClass,
+} from '~/lib/transaction-status';
+import type {
+  TransactionStatsResponse,
+  TransactionHistoryItem,
+  VenuePendingTransaction,
+  VenuePendingTransactionsResponse,
+} from '~/types/api';
+
+type PaymentsTab = 'overview' | 'pending';
 
 export default function PaymentsPage() {
   const { currentVenue } = useVenue();
+  const [activeTab, setActiveTab] = useState<PaymentsTab>('overview');
   const venueCurrency = resolveCurrencyCode(
     currentVenue?.pricingCurrency,
     currentVenue?.displayCurrency,
@@ -23,25 +38,68 @@ export default function PaymentsPage() {
   const [error, setError] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [page, setPage] = useState(1);
+  const [selectedPending, setSelectedPending] =
+    useState<VenuePendingTransaction | null>(null);
+  const [focusPendingId, setFocusPendingId] = useState<string | null>(null);
+  const [historyActionError, setHistoryActionError] = useState<string | null>(
+    null,
+  );
+
+  const loadOverview = useCallback(async () => {
+    if (!currentVenue) return;
+    const venueId = currentVenue.id;
+    setLoading(true);
+    setError(false);
+    try {
+      const [statsRes, historyRes] = await Promise.all([
+        apiClient.venues.transactions.stats(venueId),
+        apiClient.venues.transactions.history(venueId, 1),
+      ]);
+      setStats(statsRes.data.data as TransactionStatsResponse);
+      const historyData = historyRes.data.data as {
+        items: TransactionHistoryItem[];
+      };
+      setTransactions(historyData.items);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentVenue]);
 
   useEffect(() => {
+    void loadOverview();
+  }, [loadOverview]);
+
+  const openPendingFromHistory = async (_transactionId: string) => {
     if (!currentVenue) return;
+    setHistoryActionError(null);
+    try {
+      const response = await apiClient.venues.pendingTransactions(
+        currentVenue.id,
+      );
+      const body = response.data as { data?: VenuePendingTransactionsResponse };
+      const items = body.data?.items ?? [];
+      const found = items.find((item) => item.id === _transactionId);
+      if (!found) {
+        setHistoryActionError(
+          'Este pago ya no está pendiente. Actualizá la página.',
+        );
+        return;
+      }
+      setSelectedPending(found);
+      setFocusPendingId(_transactionId);
+      setActiveTab('pending');
+    } catch {
+      setHistoryActionError('No se pudo abrir el detalle del pago.');
+    }
+  };
 
-    const venueId = currentVenue.id;
-
-    // Fetch stats and first page of transactions in parallel
-    Promise.all([
-      apiClient.venues.transactions.stats(venueId),
-      apiClient.venues.transactions.history(venueId, 1),
-    ])
-      .then(([statsRes, historyRes]) => {
-        setStats(statsRes.data.data as TransactionStatsResponse);
-        const historyData = historyRes.data.data as { items: TransactionHistoryItem[] };
-        setTransactions(historyData.items);
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, [currentVenue]);
+  const handlePendingUpdated = () => {
+    setSelectedPending(null);
+    setFocusPendingId(null);
+    void loadOverview();
+  };
 
   const displayedTransactions = showAll ? transactions : transactions.slice(0, 5);
   const maxBarHeight = 120;
@@ -68,6 +126,61 @@ export default function PaymentsPage() {
         <p className="text-body mt-1">Resumen de ingresos y transacciones</p>
       </div>
 
+      <div className="flex gap-2 border-b border-[#E5E7EB]">
+        <button
+          type="button"
+          onClick={() => setActiveTab('overview')}
+          className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px ${
+            activeTab === 'overview'
+              ? 'border-primary-600 text-primary-700'
+              : 'border-transparent text-[#64748b]'
+          }`}
+        >
+          Resumen
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px ${
+            activeTab === 'pending'
+              ? 'border-primary-600 text-primary-700'
+              : 'border-transparent text-[#64748b]'
+          }`}
+        >
+          Pendientes
+        </button>
+      </div>
+
+      {activeTab === 'pending' && currentVenue ? (
+        <div className="card p-5 sm:p-6 animate-fade-in">
+          <h2 className="section-heading mb-4">Pagos por confirmar</h2>
+          <PaymentsList
+            venueId={currentVenue.id}
+            pricingCurrency={currentVenue.pricingCurrency}
+            displayCurrency={currentVenue.displayCurrency}
+            focusTransactionId={focusPendingId}
+            onFocusConsumed={() => setFocusPendingId(null)}
+            externalSelected={selectedPending}
+            onExternalSelect={setSelectedPending}
+          />
+        </div>
+      ) : null}
+
+      {currentVenue ? (
+        <PendingPaymentDetailModal
+          open={selectedPending !== null}
+          transaction={selectedPending}
+          venueId={currentVenue.id}
+          pricingCurrency={currentVenue.pricingCurrency}
+          displayCurrency={currentVenue.displayCurrency}
+          venueTimezone={currentVenue.timezone ?? 'America/Caracas'}
+          onClose={() => setSelectedPending(null)}
+          onUpdated={handlePendingUpdated}
+        />
+      ) : null}
+
+      {activeTab === 'overview' ? (
+        <>
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in stagger-1">
         {/* Weekly Income Card */}
@@ -232,6 +345,9 @@ export default function PaymentsPage() {
       <div className="card overflow-hidden animate-fade-in stagger-3">
         <div className="p-5 sm:p-6 border-b border-[#E5E7EB]">
           <h2 className="section-heading">Historial de transacciones</h2>
+          {historyActionError ? (
+            <p className="mt-2 text-sm text-red-600">{historyActionError}</p>
+          ) : null}
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#E5E7EB]">
@@ -266,8 +382,32 @@ export default function PaymentsPage() {
                   </tr>
                 ))
               ) : (
-                displayedTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-[#F9FAFB] transition-colors">
+                displayedTransactions.map((transaction) => {
+                  const isPending = isPendingApiStatus(transaction.status);
+                  return (
+                  <tr
+                    key={transaction.id}
+                    className={`hover:bg-[#F9FAFB] transition-colors ${
+                      isPending ? 'cursor-pointer' : ''
+                    }`}
+                    onClick={
+                      isPending
+                        ? () => void openPendingFromHistory(transaction.id)
+                        : undefined
+                    }
+                    onKeyDown={
+                      isPending
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              void openPendingFromHistory(transaction.id);
+                            }
+                          }
+                        : undefined
+                    }
+                    tabIndex={isPending ? 0 : undefined}
+                    role={isPending ? 'button' : undefined}
+                  >
                     <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-[#475569]">
                       {transaction.date}
                     </td>
@@ -282,15 +422,19 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
                       <span
-                        className={`badge ${
-                          transaction.status === 'Pagado' ? 'badge-success' : 'badge-warning'
-                        }`}
+                        className={`badge ${transactionStatusBadgeClass(transaction.status)}`}
                       >
-                        {transaction.status}
+                        {formatTransactionStatusLabel(transaction.status)}
                       </span>
+                      {isPending ? (
+                        <span className="ml-2 text-xs text-primary-600 font-semibold">
+                          Revisar →
+                        </span>
+                      ) : null}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -306,6 +450,8 @@ export default function PaymentsPage() {
           </div>
         )}
       </div>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -12,6 +12,8 @@ export interface Venue {
   courtsCount?: number;
   displayCurrency?: string;
   pricingCurrency?: string;
+  countryCode?: string;
+  timezone?: string;
 }
 
 export interface VenueSummary {
@@ -59,7 +61,7 @@ export interface TransactionHistoryItem {
   clientName: string;
   courtName: string;
   amount: number;
-  status: 'Pagado' | 'Pendiente' | 'Cancelled';
+  status: string;
 }
 
 export interface TransactionHistoryResponse {
@@ -116,6 +118,40 @@ export interface PendingPayment {
   status: PaymentStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Ítem de GET /venues/:venueId/transactions/pending (staff). */
+export interface VenuePendingTransaction {
+  id: string;
+  matchId: string | null;
+  reservationId: string | null;
+  userId: string;
+  amountTotal: string;
+  status: string;
+  createdAt: string;
+  payerName: string;
+  payerEmail: string | null;
+  obligationAmountMinor: string | null;
+  obligationCurrency: string | null;
+  pricingCurrency: string | null;
+  contextLabel: string;
+  bookingType: 'MATCH' | 'DIRECT';
+  courtId: string;
+  courtName: string;
+  sportId: string;
+  categoryId: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  receiptId: string | null;
+  receiptMimeType: string | null;
+  paymentMethodType: string | null;
+  paymentMethodName: string | null;
+  paymentMethodConfig: Record<string, unknown> | null;
+  venuePaymentMethodId: string | null;
+}
+
+export interface VenuePendingTransactionsResponse {
+  items: VenuePendingTransaction[];
 }
 
 export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'refunded';

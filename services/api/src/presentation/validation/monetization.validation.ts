@@ -60,6 +60,24 @@ function optionalPaymentMethodIdField() {
   );
 }
 
+/** Body: jugador registra el medio de pago elegido antes de subir comprobante. */
+export const RECORD_PLAYER_PAYMENT_SELECTION_BODY_SCHEMA = z
+  .object({
+    venuePaymentMethodId: optionalPaymentMethodIdField(),
+    paymentMethodType: z
+      .string()
+      .min(1)
+      .max(32)
+      .optional(),
+  })
+  .strict()
+  .refine(
+    (body) =>
+      body.venuePaymentMethodId !== undefined
+      || body.paymentMethodType !== undefined,
+    { message: 'Indicá venuePaymentMethodId o paymentMethodType.' },
+  );
+
 /** Body para confirmar una transacción manualmente con datos de pago. */
 export const CONFIRM_TRANSACTION_BODY_SCHEMA = z
   .object({

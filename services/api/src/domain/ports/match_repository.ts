@@ -30,6 +30,8 @@ export type OpenMatchDTO = {
   clubName?: string;
   courtName?: string;
   locationLabel?: string;
+  pricingCurrency?: string;
+  displayCurrency?: string;
 };
 
 export interface MatchRepository {

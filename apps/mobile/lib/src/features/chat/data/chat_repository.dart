@@ -1,5 +1,6 @@
 import '../../../core/failures/app_failure.dart';
 import 'chat_api.dart';
+import 'chat_messages_order.dart';
 import 'models/chat_message_dto.dart';
 
 final class ChatMessagesPage {
@@ -38,13 +39,16 @@ class ChatRepository {
       );
     }
 
-    final items = itemsRaw
+    final newestFirst = itemsRaw
         .whereType<Map<String, Object?>>()
         .map(ChatMessageDto.fromJson)
         .toList();
 
-    final nextCursor = raw['nextCursorCreatedAt'] as String?;
-    return ChatMessagesPage(items: items, nextCursorCreatedAt: nextCursor);
+    return chronologicalChatPage(
+      newestFirst: newestFirst,
+      limit: limit,
+      apiNextCursor: raw['nextCursorCreatedAt'] as String?,
+    );
   }
 
   Future<ChatMessageDto> postMatchMessage({
@@ -55,17 +59,7 @@ class ChatRepository {
       matchId: matchId,
       body: {'text': text},
     );
-    final data = json['data'];
-    if (data is Map<String, Object?>) {
-      return ChatMessageDto.fromJson(data);
-    }
-    if (json['id'] is String) {
-      return ChatMessageDto.fromJson(json);
-    }
-    throw const AppFailure(
-      code: 'INVALID_RESPONSE',
-      message: 'Respuesta inválida del servidor.',
-    );
+    return _parsePostedMessage(json);
   }
 
   Future<ChatMessagesPage> listTournamentMessages({
@@ -89,13 +83,16 @@ class ChatRepository {
       );
     }
 
-    final items = itemsRaw
+    final newestFirst = itemsRaw
         .whereType<Map<String, Object?>>()
         .map(ChatMessageDto.fromJson)
         .toList();
 
-    final nextCursor = raw['nextCursorCreatedAt'] as String?;
-    return ChatMessagesPage(items: items, nextCursorCreatedAt: nextCursor);
+    return chronologicalChatPage(
+      newestFirst: newestFirst,
+      limit: limit,
+      apiNextCursor: raw['nextCursorCreatedAt'] as String?,
+    );
   }
 
   Future<ChatMessageDto> postTournamentMessage({
@@ -106,11 +103,21 @@ class ChatRepository {
       tournamentId: tournamentId,
       body: {'text': text},
     );
+    return _parsePostedMessage(json);
+  }
+
+  ChatMessageDto _parsePostedMessage(Map<String, Object?> json) {
     final data = json['data'];
     if (data is Map<String, Object?>) {
-      return ChatMessageDto.fromJson(data);
+      final nested = data['message'];
+      if (nested is Map<String, Object?>) {
+        return ChatMessageDto.fromJson(nested);
+      }
+      if (data['id'] is String && data['text'] is String) {
+        return ChatMessageDto.fromJson(data);
+      }
     }
-    if (json['id'] is String) {
+    if (json['id'] is String && json['text'] is String) {
       return ChatMessageDto.fromJson(json);
     }
     throw const AppFailure(

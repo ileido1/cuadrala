@@ -152,6 +152,7 @@ final class AppRouter {
                     int.tryParse(state.uri.queryParameters['amountCents'] ?? '') ?? 0;
                 final title = state.uri.queryParameters['title'] ?? 'Partida';
                 final currency = state.uri.queryParameters['currency'];
+                final venueId = state.uri.queryParameters['venueId'];
                 return UploadReceiptScreen(
                   matchId: matchId,
                   transactionId: tx,
@@ -159,6 +160,7 @@ final class AppRouter {
                   amountPerPersonCents: amountCents,
                   matchTitle: title,
                   pricingCurrency: currency,
+                  venueId: venueId,
                 );
               },
             ),
@@ -171,12 +173,14 @@ final class AppRouter {
                 final title = state.uri.queryParameters['title'] ?? 'Partida';
                 final currency = state.uri.queryParameters['currency'];
                 final tx = state.uri.queryParameters['tx'];
+                final venueId = state.uri.queryParameters['venueId'];
                 return WaitingConfirmationScreen(
                   matchId: matchId,
                   amountPerPersonCents: amountCents,
                   matchTitle: title,
                   pricingCurrency: currency,
                   transactionId: tx,
+                  venueId: venueId,
                 );
               },
             ),
