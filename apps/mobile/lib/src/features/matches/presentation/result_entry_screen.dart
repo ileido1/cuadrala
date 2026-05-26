@@ -66,7 +66,7 @@ class _ResultEntryViewState extends State<_ResultEntryView> {
         ),
         BlocListener<ResultEntryCubit, ResultEntryState>(
           listenWhen: (prev, curr) =>
-              prev.error != curr.error && curr.error != null && curr.step == 3,
+              prev.error != curr.error && curr.error != null && curr.step == 2,
           listener: (context, state) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error!)),
@@ -121,8 +121,7 @@ class _ResultEntryViewState extends State<_ResultEntryView> {
                       controller: _pageController,
                       physics: const NeverScrollableScrollPhysics(),
                       children: const [
-                        _TeamAssignStep(),
-                        _SideSelectStep(),
+                        _CourtAssignStep(),
                         _ScoreEntryStep(),
                         _ConfirmStep(),
                       ],
@@ -149,8 +148,7 @@ class _ResultHeader extends StatelessWidget {
   final int step;
 
   static const _titles = [
-    'Asignar equipos',
-    'Seleccionar lado',
+    'Asignar posiciones',
     'Resultado',
     'Resumen',
   ];
@@ -205,7 +203,7 @@ class _ResultHeader extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Paso ${step + 1} de 4 — ${_titles[step]}',
+                    'Paso ${step + 1} de 3 — ${_titles[step]}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -227,7 +225,7 @@ class _ResultHeader extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// _StepProgressBar — 4 labeled segments
+// _StepProgressBar — 3 labeled segments
 // ---------------------------------------------------------------------------
 
 class _StepProgressBar extends StatelessWidget {
@@ -235,7 +233,7 @@ class _StepProgressBar extends StatelessWidget {
 
   final int step;
 
-  static const _labels = ['Equipos', 'Posición', 'Sets', 'Resumen'];
+  static const _labels = ['Cancha', 'Sets', 'Resumen'];
 
   @override
   Widget build(BuildContext context) {
@@ -243,11 +241,11 @@ class _StepProgressBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
       child: Row(
-        children: List.generate(4, (i) {
+        children: List.generate(3, (i) {
           final active = i <= step;
           return Expanded(
             child: Container(
-              margin: EdgeInsets.only(right: i < 3 ? 6 : 0),
+              margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -291,9 +289,8 @@ class _BottomNavBar extends StatelessWidget {
   final ResultEntryState state;
 
   bool get _continueEnabled => switch (step) {
-        0 => state.isTeamAssignmentComplete,
-        1 => state.isSideSelectionComplete,
-        2 => state.isScoreEntryComplete,
+        0 => state.isCourtComplete,
+        1 => state.isScoreEntryComplete,
         _ => false,
       };
 
@@ -304,7 +301,7 @@ class _BottomNavBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: SizedBox(
         width: double.infinity,
-        child: step == 3
+        child: step == 2
             ? FilledButton(
                 onPressed: state.submitting ? null : cubit.submit,
                 child: state.submitting
@@ -325,150 +322,11 @@ class _BottomNavBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// T-08: _TeamAssignStep
+// Step 0: _CourtAssignStep — drag-and-drop court assignment
 // ---------------------------------------------------------------------------
 
-class _TeamAssignStep extends StatelessWidget {
-  const _TeamAssignStep();
-
-  String _initials(String? displayName) {
-    if (displayName == null || displayName.trim().isEmpty) return '?';
-    final words = displayName.trim().split(RegExp(r'\s+'));
-    return words.map((w) => w.isNotEmpty ? w[0].toUpperCase() : '').join();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return BlocBuilder<ResultEntryCubit, ResultEntryState>(
-      builder: (context, state) {
-        final cubit = context.read<ResultEntryCubit>();
-        final participants = state.match?.participants ?? [];
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(
-              'Asignar equipos',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Tocá cada jugador para asignarlo a un equipo',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            ...participants.map((p) {
-              final inTeamA = state.teamA.contains(p.userId);
-              final inTeamB = state.teamB.contains(p.userId);
-
-              Color chipColor;
-              String badge;
-              if (inTeamA) {
-                chipColor = scheme.primaryContainer;
-                badge = 'A';
-              } else if (inTeamB) {
-                chipColor = scheme.tertiaryContainer;
-                badge = 'B';
-              } else {
-                chipColor = scheme.surfaceContainerHighest;
-                badge = '';
-              }
-
-              return GestureDetector(
-                key: Key('player.chip.${p.userId}'),
-                onTap: () => cubit.cyclePlayerTeam(p.userId),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: chipColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: scheme.surface,
-                        child: Text(
-                          _initials(p.displayName),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          p.displayName ?? p.userId,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      if (badge.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: scheme.surface.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Equipo $badge',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        )
-                      else
-                        Text(
-                          'Sin equipo',
-                          style: TextStyle(
-                            color: scheme.onSurfaceVariant,
-                            fontSize: 12,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-            if (!state.isTeamAssignmentComplete) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${state.unassigned.length} jugador${state.unassigned.length == 1 ? '' : 'es'} sin equipo',
-                style: TextStyle(
-                  color: scheme.error,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// T-09: _SideSelectStep
-// ---------------------------------------------------------------------------
-
-class _SideSelectStep extends StatelessWidget {
-  const _SideSelectStep();
+class _CourtAssignStep extends StatelessWidget {
+  const _CourtAssignStep();
 
   @override
   Widget build(BuildContext context) {
@@ -476,101 +334,28 @@ class _SideSelectStep extends StatelessWidget {
       builder: (context, state) {
         final cubit = context.read<ResultEntryCubit>();
         final scheme = Theme.of(context).colorScheme;
-        final participants = state.match?.participants ?? [];
-
-        Widget playerRow(MatchParticipantDto p) {
-          final selected = state.sideByUserId[p.userId];
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: scheme.surfaceContainerHighest,
-                  child: Text(
-                    (p.displayName?.isNotEmpty == true)
-                        ? p.displayName![0].toUpperCase()
-                        : '?',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    p.displayName ?? p.userId,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-                ChoiceChip(
-                  label: const Text('Drive'),
-                  selected: selected == 'DRIVE',
-                  onSelected: (_) => cubit.setSide(p.userId, 'DRIVE'),
-                ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('Revés'),
-                  selected: selected == 'REVES',
-                  onSelected: (_) => cubit.setSide(p.userId, 'REVES'),
-                ),
-              ],
-            ),
-          );
-        }
-
-        Widget teamSection(String label, List<String> teamIds) {
-          final teamParticipants = teamIds
-              .map(
-                (uid) => participants.where((p) => p.userId == uid).firstOrNull,
-              )
-              .whereType<MatchParticipantDto>()
-              .toList();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.primary,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              ...teamParticipants.map(playerRow),
-            ],
-          );
-        }
 
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
             Text(
-              'Seleccionar lado',
+              'Asignar posiciones',
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Esta información es para uso interno del partido.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-              ),
+            Text(
+              'Arrastrá cada jugador a su posición en la cancha',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
             ),
-            const SizedBox(height: 20),
-            teamSection('Equipo A', state.teamA),
-            const SizedBox(height: 20),
-            teamSection('Equipo B', state.teamB),
+            const SizedBox(height: 16),
+            _CourtWidget(state: state, cubit: cubit),
+            const SizedBox(height: 16),
+            _UnassignedPool(state: state, cubit: cubit),
           ],
         );
       },
@@ -578,8 +363,298 @@ class _SideSelectStep extends StatelessWidget {
   }
 }
 
+class _CourtWidget extends StatelessWidget {
+  const _CourtWidget({required this.state, required this.cubit});
+
+  final ResultEntryState state;
+  final ResultEntryCubit cubit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      height: 240,
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(12),
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      ),
+      child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Equipo A',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: _CourtZone(
+                      position: CourtPosition.teamADrive,
+                      label: 'Drive',
+                      state: state,
+                      cubit: cubit,
+                    ),
+                  ),
+                  Expanded(
+                    child: _CourtZone(
+                      position: CourtPosition.teamAReves,
+                      label: 'Revés',
+                      state: state,
+                      cubit: cubit,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            VerticalDivider(
+              width: 1,
+              color: scheme.outline.withValues(alpha: 0.5),
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Equipo B',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.tertiary,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: _CourtZone(
+                      position: CourtPosition.teamBDrive,
+                      label: 'Drive',
+                      state: state,
+                      cubit: cubit,
+                    ),
+                  ),
+                  Expanded(
+                    child: _CourtZone(
+                      position: CourtPosition.teamBReves,
+                      label: 'Revés',
+                      state: state,
+                      cubit: cubit,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+      ),
+    );
+  }
+}
+
+class _CourtZone extends StatelessWidget {
+  const _CourtZone({
+    required this.position,
+    required this.label,
+    required this.state,
+    required this.cubit,
+  });
+
+  final CourtPosition position;
+  final String label;
+  final ResultEntryState state;
+  final ResultEntryCubit cubit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final occupiedUserId = state.courtPositions[position];
+    final participants = state.match?.participants ?? [];
+
+    MatchParticipantDto? participant;
+    if (occupiedUserId != null) {
+      participant = participants
+          .where((p) => p.userId == occupiedUserId)
+          .firstOrNull;
+    }
+
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) =>
+          !state.courtPositions.containsKey(position),
+      onAcceptWithDetails: (details) {
+        cubit.assignToPosition(position, details.data);
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHighlighted = candidateData.isNotEmpty;
+        return Container(
+          margin: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: isHighlighted
+                ? scheme.primaryContainer.withValues(alpha: 0.5)
+                : scheme.surface.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isHighlighted
+                  ? scheme.primary
+                  : scheme.outlineVariant.withValues(alpha: 0.5),
+              width: isHighlighted ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 4),
+              if (occupiedUserId != null && participant != null)
+                LongPressDraggable<String>(
+                  data: occupiedUserId,
+                  onDragStarted: () {
+                    cubit.removeFromPosition(position);
+                  },
+                  feedback: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(16),
+                    child: _PlayerChip(
+                      displayName: participant.displayName ?? occupiedUserId,
+                      scheme: scheme,
+                    ),
+                  ),
+                  child: _PlayerChip(
+                    displayName: participant.displayName ?? occupiedUserId,
+                    scheme: scheme,
+                  ),
+                )
+              else
+                Icon(
+                  Icons.person_add_alt_1_outlined,
+                  size: 20,
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _UnassignedPool extends StatelessWidget {
+  const _UnassignedPool({required this.state, required this.cubit});
+
+  final ResultEntryState state;
+  final ResultEntryCubit cubit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final participants = state.match?.participants ?? [];
+    final unassignedParticipants = participants
+        .where((p) => !state.courtPositions.values.contains(p.userId))
+        .toList();
+
+    if (unassignedParticipants.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle_outline, color: scheme.primary, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              'Todos asignados',
+              style: TextStyle(
+                color: scheme.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Sin asignar',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: unassignedParticipants.map((p) {
+            return LongPressDraggable<String>(
+              data: p.userId,
+              feedback: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(16),
+                child: _PlayerChip(
+                  displayName: p.displayName ?? p.userId,
+                  scheme: scheme,
+                ),
+              ),
+              childWhenDragging: Opacity(
+                opacity: 0.3,
+                child: _PlayerChip(
+                  displayName: p.displayName ?? p.userId,
+                  scheme: scheme,
+                ),
+              ),
+              child: _PlayerChip(
+                displayName: p.displayName ?? p.userId,
+                scheme: scheme,
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayerChip extends StatelessWidget {
+  const _PlayerChip({required this.displayName, required this.scheme});
+
+  final String displayName;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        displayName,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
-// T-10: _ScoreEntryStep — StatefulWidget for draft row
+// Step 1: _ScoreEntryStep — StatefulWidget for draft row
 // ---------------------------------------------------------------------------
 
 class _ScoreEntryStep extends StatefulWidget {
@@ -859,7 +934,7 @@ class _ScoreSpinner extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// T-11: _ConfirmStep
+// Step 2: _ConfirmStep
 // ---------------------------------------------------------------------------
 
 class _ConfirmStep extends StatelessWidget {
@@ -876,7 +951,6 @@ class _ConfirmStep extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return BlocBuilder<ResultEntryCubit, ResultEntryState>(
       builder: (context, state) {
-        final cubit = context.read<ResultEntryCubit>();
         final participants = state.match?.participants ?? [];
         final config = state.scoringConfig;
 
@@ -1033,30 +1107,6 @@ class _ConfirmStep extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            if (state.error != null && state.step == 3) ...[
-              Text(
-                state.error!,
-                style: TextStyle(color: scheme.error, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-            ],
-
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: state.submitting ? null : cubit.submit,
-                child: state.submitting
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Enviar propuesta'),
               ),
             ),
           ],

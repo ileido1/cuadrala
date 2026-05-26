@@ -4,6 +4,8 @@ import '../../data/models/match_detail_dto.dart';
 import '../../domain/scoring/scoring_config.dart';
 import '../../domain/scoring/set_score.dart';
 
+enum CourtPosition { teamADrive, teamAReves, teamBDrive, teamBReves }
+
 final class ResultEntryState extends Equatable {
   const ResultEntryState({
     this.loading = true,
@@ -13,9 +15,7 @@ final class ResultEntryState extends Equatable {
     this.match,
     this.scoringConfig,
     this.step = 0,
-    this.teamA = const [],
-    this.teamB = const [],
-    this.sideByUserId = const {},
+    this.courtPositions = const {},
     this.sets = const [],
   });
 
@@ -26,24 +26,48 @@ final class ResultEntryState extends Equatable {
   final MatchDetailDto? match;
   final ScoringConfig? scoringConfig;
   final int step;
-  final List<String> teamA;
-  final List<String> teamB;
-  final Map<String, String> sideByUserId;
+  final Map<CourtPosition, String> courtPositions;
   final List<SetScore> sets;
+
+  // ---------------------------------------------------------------------------
+  // Derived getters (backward-compatible with submit())
+  // ---------------------------------------------------------------------------
+
+  List<String> get teamA => courtPositions.entries
+      .where(
+        (e) =>
+            e.key == CourtPosition.teamADrive ||
+            e.key == CourtPosition.teamAReves,
+      )
+      .map((e) => e.value)
+      .toList();
+
+  List<String> get teamB => courtPositions.entries
+      .where(
+        (e) =>
+            e.key == CourtPosition.teamBDrive ||
+            e.key == CourtPosition.teamBReves,
+      )
+      .map((e) => e.value)
+      .toList();
+
+  Map<String, String> get sideByUserId => courtPositions.map(
+        (pos, uid) => MapEntry(uid, pos.name.contains('Drive') ? 'DRIVE' : 'REVES'),
+      );
+
+  bool get isCourtComplete => courtPositions.length == 4;
+
+  // ---------------------------------------------------------------------------
+  // Remaining getters
+  // ---------------------------------------------------------------------------
 
   List<String> get unassigned {
     if (match == null) return [];
     return match!.participants
         .map((p) => p.userId)
-        .where((uid) => !teamA.contains(uid) && !teamB.contains(uid))
+        .where((uid) => !courtPositions.values.contains(uid))
         .toList();
   }
-
-  bool get isTeamAssignmentComplete => teamA.length == 2 && teamB.length == 2;
-
-  bool get isSideSelectionComplete =>
-      isTeamAssignmentComplete &&
-      [...teamA, ...teamB].every(sideByUserId.containsKey);
 
   bool get isScoreEntryComplete =>
       scoringConfig != null &&
@@ -66,7 +90,7 @@ final class ResultEntryState extends Equatable {
   }
 
   bool get canSubmit =>
-      !loading && !submitting && isScoreEntryComplete && isTeamAssignmentComplete && isSideSelectionComplete;
+      !loading && !submitting && isScoreEntryComplete && isCourtComplete;
 
   ResultEntryState copyWith({
     bool? loading,
@@ -77,9 +101,7 @@ final class ResultEntryState extends Equatable {
     MatchDetailDto? match,
     ScoringConfig? scoringConfig,
     int? step,
-    List<String>? teamA,
-    List<String>? teamB,
-    Map<String, String>? sideByUserId,
+    Map<CourtPosition, String>? courtPositions,
     List<SetScore>? sets,
   }) {
     return ResultEntryState(
@@ -90,9 +112,7 @@ final class ResultEntryState extends Equatable {
       match: match ?? this.match,
       scoringConfig: scoringConfig ?? this.scoringConfig,
       step: step ?? this.step,
-      teamA: teamA ?? this.teamA,
-      teamB: teamB ?? this.teamB,
-      sideByUserId: sideByUserId ?? this.sideByUserId,
+      courtPositions: courtPositions ?? this.courtPositions,
       sets: sets ?? this.sets,
     );
   }
@@ -106,9 +126,7 @@ final class ResultEntryState extends Equatable {
         match,
         scoringConfig,
         step,
-        teamA,
-        teamB,
-        sideByUserId,
+        courtPositions,
         sets,
       ];
 }

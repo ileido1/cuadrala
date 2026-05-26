@@ -44,37 +44,22 @@ final class ResultEntryCubit extends Cubit<ResultEntryState> {
     }
   }
 
-  void cyclePlayerTeam(String userId) {
-    final teamA = List<String>.from(state.teamA);
-    final teamB = List<String>.from(state.teamB);
-
-    if (teamA.contains(userId)) {
-      teamA.remove(userId);
-      if (teamB.length < 2) {
-        teamB.add(userId);
-      }
-      emit(state.copyWith(teamA: teamA, teamB: teamB));
-      return;
+  void assignToPosition(CourtPosition pos, String userId) {
+    final updated = Map<CourtPosition, String>.from(state.courtPositions);
+    // If player already placed elsewhere, remove first (re-drag support)
+    updated.removeWhere((_, v) => v == userId);
+    // Only assign if slot is still empty after removal
+    if (!updated.containsKey(pos)) {
+      updated[pos] = userId;
     }
-
-    if (teamB.contains(userId)) {
-      teamB.remove(userId);
-      emit(state.copyWith(teamA: teamA, teamB: teamB));
-      return;
-    }
-
-    if (teamA.length < 2) {
-      teamA.add(userId);
-    } else if (teamB.length < 2) {
-      teamB.add(userId);
-    }
-    emit(state.copyWith(teamA: teamA, teamB: teamB));
+    emit(state.copyWith(courtPositions: updated));
   }
 
-  void setSide(String userId, String side) {
-    final updated = Map<String, String>.from(state.sideByUserId);
-    updated[userId] = side;
-    emit(state.copyWith(sideByUserId: updated));
+  void removeFromPosition(CourtPosition pos) {
+    if (!state.courtPositions.containsKey(pos)) return;
+    final updated = Map<CourtPosition, String>.from(state.courtPositions);
+    updated.remove(pos);
+    emit(state.copyWith(courtPositions: updated));
   }
 
   void addSet(SetScore set) {
@@ -93,12 +78,11 @@ final class ResultEntryCubit extends Cubit<ResultEntryState> {
 
   void nextStep() {
     final current = state.step;
-    if (current >= 3) return;
+    if (current >= 2) return;
 
     final canAdvance = switch (current) {
-      0 => state.isTeamAssignmentComplete,
-      1 => state.isSideSelectionComplete,
-      2 => state.isScoreEntryComplete,
+      0 => state.isCourtComplete,
+      1 => state.isScoreEntryComplete,
       _ => false,
     };
 

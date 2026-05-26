@@ -108,6 +108,102 @@ void main() {
     catalogRepository = CatalogRepository(catalogApi: catalogApi);
   });
 
+  group('ResultEntryState', () {
+    test('CourtPosition enum has exactly 4 values', () {
+      expect(CourtPosition.values.length, equals(4));
+      expect(
+        CourtPosition.values,
+        containsAll([
+          CourtPosition.teamADrive,
+          CourtPosition.teamAReves,
+          CourtPosition.teamBDrive,
+          CourtPosition.teamBReves,
+        ]),
+      );
+    });
+
+    test('courtPositions starts empty in initial state', () {
+      const state = ResultEntryState();
+      expect(state.courtPositions, isEmpty);
+    });
+
+    test('teamA getter returns userIds from teamA positions', () {
+      const state = ResultEntryState(
+        courtPositions: {
+          CourtPosition.teamADrive: 'u1',
+          CourtPosition.teamAReves: 'u2',
+          CourtPosition.teamBDrive: 'u3',
+          CourtPosition.teamBReves: 'u4',
+        },
+      );
+      expect(state.teamA, containsAll(['u1', 'u2']));
+      expect(state.teamA.length, equals(2));
+    });
+
+    test('teamB getter returns userIds from teamB positions', () {
+      const state = ResultEntryState(
+        courtPositions: {
+          CourtPosition.teamADrive: 'u1',
+          CourtPosition.teamAReves: 'u2',
+          CourtPosition.teamBDrive: 'u3',
+          CourtPosition.teamBReves: 'u4',
+        },
+      );
+      expect(state.teamB, containsAll(['u3', 'u4']));
+      expect(state.teamB.length, equals(2));
+    });
+
+    test('sideByUserId maps each player to DRIVE or REVES', () {
+      const state = ResultEntryState(
+        courtPositions: {
+          CourtPosition.teamADrive: 'u1',
+          CourtPosition.teamAReves: 'u2',
+          CourtPosition.teamBDrive: 'u3',
+          CourtPosition.teamBReves: 'u4',
+        },
+      );
+      expect(state.sideByUserId['u1'], equals('DRIVE'));
+      expect(state.sideByUserId['u2'], equals('REVES'));
+      expect(state.sideByUserId['u3'], equals('DRIVE'));
+      expect(state.sideByUserId['u4'], equals('REVES'));
+    });
+
+    test('isCourtComplete is false when less than 4 positions filled', () {
+      const state = ResultEntryState(
+        courtPositions: {
+          CourtPosition.teamADrive: 'u1',
+          CourtPosition.teamAReves: 'u2',
+          CourtPosition.teamBDrive: 'u3',
+        },
+      );
+      expect(state.isCourtComplete, isFalse);
+    });
+
+    test('isCourtComplete is true when all 4 positions are filled', () {
+      const state = ResultEntryState(
+        courtPositions: {
+          CourtPosition.teamADrive: 'u1',
+          CourtPosition.teamAReves: 'u2',
+          CourtPosition.teamBDrive: 'u3',
+          CourtPosition.teamBReves: 'u4',
+        },
+      );
+      expect(state.isCourtComplete, isTrue);
+    });
+
+    test('partial assignment returns partial derived values', () {
+      const state = ResultEntryState(
+        courtPositions: {
+          CourtPosition.teamADrive: 'u1',
+          CourtPosition.teamBReves: 'u4',
+        },
+      );
+      expect(state.teamA, equals(['u1']));
+      expect(state.teamB, equals(['u4']));
+      expect(state.sideByUserId.length, equals(2));
+    });
+  });
+
   group('ResultEntryCubit', () {
     group('load()', () {
       blocTest<ResultEntryCubit, ResultEntryState>(
@@ -147,9 +243,9 @@ void main() {
       );
     });
 
-    group('cyclePlayerTeam()', () {
+    group('assignToPosition()', () {
       blocTest<ResultEntryCubit, ResultEntryState>(
-        'primer ciclo: no asignado → teamA',
+        'places player in empty slot',
         setUp: () {
           when(() => matchesApi.getMatchEnvelope(matchId: matchId))
               .thenAnswer((_) async => buildMatchJson(buildMatch()));
@@ -159,91 +255,68 @@ void main() {
         build: buildCubit,
         act: (cubit) async {
           await cubit.load();
-          cubit.cyclePlayerTeam('u1');
-        },
-        expect: () => [
-          isA<ResultEntryState>().having((s) => s.loading, 'loading', isFalse),
-          isA<ResultEntryState>()
-              .having((s) => s.teamA, 'teamA', contains('u1')),
-        ],
-      );
-
-      blocTest<ResultEntryCubit, ResultEntryState>(
-        'segundo ciclo: teamA → teamB',
-        setUp: () {
-          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
-              .thenAnswer((_) async => buildMatchJson(buildMatch()));
-          when(() => catalogApi.listSportsEnvelope())
-              .thenAnswer((_) async => padelSportsResponse);
-        },
-        build: buildCubit,
-        act: (cubit) async {
-          await cubit.load();
-          cubit.cyclePlayerTeam('u1');
-          cubit.cyclePlayerTeam('u1');
-        },
-        expect: () => [
-          isA<ResultEntryState>().having((s) => s.loading, 'loading', isFalse),
-          isA<ResultEntryState>()
-              .having((s) => s.teamA, 'teamA', contains('u1'))
-              .having((s) => s.teamB, 'teamB', isNot(contains('u1'))),
-          isA<ResultEntryState>()
-              .having((s) => s.teamB, 'teamB', contains('u1'))
-              .having((s) => s.teamA, 'teamA', isNot(contains('u1'))),
-        ],
-      );
-
-      blocTest<ResultEntryCubit, ResultEntryState>(
-        'tercer ciclo: teamB → no asignado',
-        setUp: () {
-          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
-              .thenAnswer((_) async => buildMatchJson(buildMatch()));
-          when(() => catalogApi.listSportsEnvelope())
-              .thenAnswer((_) async => padelSportsResponse);
-        },
-        build: buildCubit,
-        act: (cubit) async {
-          await cubit.load();
-          cubit.cyclePlayerTeam('u1');
-          cubit.cyclePlayerTeam('u1');
-          cubit.cyclePlayerTeam('u1');
-        },
-        expect: () => [
-          isA<ResultEntryState>().having((s) => s.loading, 'loading', isFalse),
-          isA<ResultEntryState>()
-              .having((s) => s.teamA, 'teamA', contains('u1')),
-          isA<ResultEntryState>()
-              .having((s) => s.teamB, 'teamB', contains('u1')),
-          isA<ResultEntryState>()
-              .having((s) => s.teamA, 'teamA', isNot(contains('u1')))
-              .having((s) => s.teamB, 'teamB', isNot(contains('u1'))),
-        ],
-      );
-
-      blocTest<ResultEntryCubit, ResultEntryState>(
-        'no agrega tercer jugador a teamA',
-        setUp: () {
-          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
-              .thenAnswer((_) async => buildMatchJson(buildMatch()));
-          when(() => catalogApi.listSportsEnvelope())
-              .thenAnswer((_) async => padelSportsResponse);
-        },
-        build: buildCubit,
-        act: (cubit) async {
-          await cubit.load();
-          cubit.cyclePlayerTeam('u1');
-          cubit.cyclePlayerTeam('u2');
-          cubit.cyclePlayerTeam('u3');
+          cubit.assignToPosition(CourtPosition.teamBReves, 'u3');
         },
         verify: (cubit) {
-          expect(cubit.state.teamA.length, lessThanOrEqualTo(2));
+          expect(
+            cubit.state.courtPositions[CourtPosition.teamBReves],
+            equals('u3'),
+          );
+        },
+      );
+
+      blocTest<ResultEntryCubit, ResultEntryState>(
+        'on occupied slot does nothing',
+        setUp: () {
+          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
+              .thenAnswer((_) async => buildMatchJson(buildMatch()));
+          when(() => catalogApi.listSportsEnvelope())
+              .thenAnswer((_) async => padelSportsResponse);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u2');
+        },
+        verify: (cubit) {
+          expect(
+            cubit.state.courtPositions[CourtPosition.teamADrive],
+            equals('u1'),
+          );
+        },
+      );
+
+      blocTest<ResultEntryCubit, ResultEntryState>(
+        'auto-removes player from previous position (re-drag)',
+        setUp: () {
+          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
+              .thenAnswer((_) async => buildMatchJson(buildMatch()));
+          when(() => catalogApi.listSportsEnvelope())
+              .thenAnswer((_) async => padelSportsResponse);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+          cubit.assignToPosition(CourtPosition.teamAReves, 'u1');
+        },
+        verify: (cubit) {
+          expect(
+            cubit.state.courtPositions.containsKey(CourtPosition.teamADrive),
+            isFalse,
+          );
+          expect(
+            cubit.state.courtPositions[CourtPosition.teamAReves],
+            equals('u1'),
+          );
         },
       );
     });
 
-    group('setSide()', () {
+    group('removeFromPosition()', () {
       blocTest<ResultEntryCubit, ResultEntryState>(
-        'actualiza sideByUserId correctamente',
+        'clears an occupied slot',
         setUp: () {
           when(() => matchesApi.getMatchEnvelope(matchId: matchId))
               .thenAnswer((_) async => buildMatchJson(buildMatch()));
@@ -253,12 +326,32 @@ void main() {
         build: buildCubit,
         act: (cubit) async {
           await cubit.load();
-          cubit.setSide('u1', 'DRIVE');
-          cubit.setSide('u2', 'REVES');
+          cubit.assignToPosition(CourtPosition.teamAReves, 'u4');
+          cubit.removeFromPosition(CourtPosition.teamAReves);
         },
         verify: (cubit) {
-          expect(cubit.state.sideByUserId['u1'], equals('DRIVE'));
-          expect(cubit.state.sideByUserId['u2'], equals('REVES'));
+          expect(
+            cubit.state.courtPositions.containsKey(CourtPosition.teamAReves),
+            isFalse,
+          );
+        },
+      );
+
+      blocTest<ResultEntryCubit, ResultEntryState>(
+        'on empty slot is a no-op',
+        setUp: () {
+          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
+              .thenAnswer((_) async => buildMatchJson(buildMatch()));
+          when(() => catalogApi.listSportsEnvelope())
+              .thenAnswer((_) async => padelSportsResponse);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.removeFromPosition(CourtPosition.teamBDrive);
+        },
+        verify: (cubit) {
+          expect(cubit.state.courtPositions, isEmpty);
         },
       );
     });
@@ -366,7 +459,7 @@ void main() {
 
     group('nextStep() / prevStep()', () {
       blocTest<ResultEntryCubit, ResultEntryState>(
-        'avanza de paso 0 a 1 cuando isTeamAssignmentComplete',
+        'avanza de paso 0 a 1 cuando isCourtComplete',
         setUp: () {
           when(() => matchesApi.getMatchEnvelope(matchId: matchId))
               .thenAnswer((_) async => buildMatchJson(buildMatch()));
@@ -376,10 +469,10 @@ void main() {
         build: buildCubit,
         act: (cubit) async {
           await cubit.load();
-          cubit.cyclePlayerTeam('u1');
-          cubit.cyclePlayerTeam('u2');
-          cubit.cyclePlayerTeam('u3');
-          cubit.cyclePlayerTeam('u4');
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+          cubit.assignToPosition(CourtPosition.teamAReves, 'u2');
+          cubit.assignToPosition(CourtPosition.teamBDrive, 'u3');
+          cubit.assignToPosition(CourtPosition.teamBReves, 'u4');
           cubit.nextStep();
         },
         verify: (cubit) {
@@ -388,7 +481,7 @@ void main() {
       );
 
       blocTest<ResultEntryCubit, ResultEntryState>(
-        'bloquea avance cuando isTeamAssignmentComplete es false',
+        'bloquea avance cuando isCourtComplete es false',
         setUp: () {
           when(() => matchesApi.getMatchEnvelope(matchId: matchId))
               .thenAnswer((_) async => buildMatchJson(buildMatch()));
@@ -402,6 +495,57 @@ void main() {
         },
         verify: (cubit) {
           expect(cubit.state.step, equals(0));
+        },
+      );
+
+      blocTest<ResultEntryCubit, ResultEntryState>(
+        'avanza de paso 1 a 2 cuando isScoreEntryComplete',
+        setUp: () {
+          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
+              .thenAnswer((_) async => buildMatchJson(buildMatch()));
+          when(() => catalogApi.listSportsEnvelope())
+              .thenAnswer((_) async => padelSportsResponse);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+          cubit.assignToPosition(CourtPosition.teamAReves, 'u2');
+          cubit.assignToPosition(CourtPosition.teamBDrive, 'u3');
+          cubit.assignToPosition(CourtPosition.teamBReves, 'u4');
+          cubit.nextStep(); // 0 → 1
+          cubit.addSet(const SetScore(teamA: 6, teamB: 4));
+          cubit.addSet(const SetScore(teamA: 6, teamB: 3));
+          cubit.nextStep(); // 1 → 2
+        },
+        verify: (cubit) {
+          expect(cubit.state.step, equals(2));
+        },
+      );
+
+      blocTest<ResultEntryCubit, ResultEntryState>(
+        'no avanza más allá del paso 2',
+        setUp: () {
+          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
+              .thenAnswer((_) async => buildMatchJson(buildMatch()));
+          when(() => catalogApi.listSportsEnvelope())
+              .thenAnswer((_) async => padelSportsResponse);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+          cubit.assignToPosition(CourtPosition.teamAReves, 'u2');
+          cubit.assignToPosition(CourtPosition.teamBDrive, 'u3');
+          cubit.assignToPosition(CourtPosition.teamBReves, 'u4');
+          cubit.nextStep(); // 0 → 1
+          cubit.addSet(const SetScore(teamA: 6, teamB: 4));
+          cubit.addSet(const SetScore(teamA: 6, teamB: 3));
+          cubit.nextStep(); // 1 → 2
+          cubit.nextStep(); // stays at 2
+        },
+        verify: (cubit) {
+          expect(cubit.state.step, equals(2));
         },
       );
 
@@ -442,14 +586,11 @@ void main() {
         build: buildCubit,
         act: (cubit) async {
           await cubit.load();
-          cubit.cyclePlayerTeam('u1');
-          cubit.cyclePlayerTeam('u2');
-          cubit.cyclePlayerTeam('u3');
-          cubit.cyclePlayerTeam('u4');
-          cubit.setSide('u1', 'DRIVE');
-          cubit.setSide('u2', 'REVES');
-          cubit.setSide('u3', 'DRIVE');
-          cubit.setSide('u4', 'REVES');
+          // u1=teamADrive(DRIVE), u2=teamAReves(REVES), u3=teamBDrive(DRIVE), u4=teamBReves(REVES)
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+          cubit.assignToPosition(CourtPosition.teamAReves, 'u2');
+          cubit.assignToPosition(CourtPosition.teamBDrive, 'u3');
+          cubit.assignToPosition(CourtPosition.teamBReves, 'u4');
           cubit.addSet(const SetScore(teamA: 6, teamB: 4));
           cubit.addSet(const SetScore(teamA: 6, teamB: 3));
           await cubit.submit();
@@ -512,14 +653,10 @@ void main() {
         build: buildCubit,
         act: (cubit) async {
           await cubit.load();
-          cubit.cyclePlayerTeam('u1');
-          cubit.cyclePlayerTeam('u2');
-          cubit.cyclePlayerTeam('u3');
-          cubit.cyclePlayerTeam('u4');
-          cubit.setSide('u1', 'DRIVE');
-          cubit.setSide('u2', 'REVES');
-          cubit.setSide('u3', 'DRIVE');
-          cubit.setSide('u4', 'REVES');
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+          cubit.assignToPosition(CourtPosition.teamAReves, 'u2');
+          cubit.assignToPosition(CourtPosition.teamBDrive, 'u3');
+          cubit.assignToPosition(CourtPosition.teamBReves, 'u4');
           cubit.addSet(const SetScore(teamA: 6, teamB: 4));
           cubit.addSet(const SetScore(teamA: 6, teamB: 3));
           await cubit.submit();

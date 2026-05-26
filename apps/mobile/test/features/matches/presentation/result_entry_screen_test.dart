@@ -9,6 +9,7 @@ import 'package:cuadrala_mobile/src/features/matches/data/matches_api.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/domain/scoring/set_score.dart';
 import 'package:cuadrala_mobile/src/features/matches/presentation/cubit/result_entry_cubit.dart';
+import 'package:cuadrala_mobile/src/features/matches/presentation/cubit/result_entry_state.dart';
 import 'package:cuadrala_mobile/src/features/matches/presentation/result_entry_screen.dart';
 
 class _MockMatchesApi extends Mock implements MatchesApi {}
@@ -114,25 +115,14 @@ Future<void> _pumpToScoreStep(WidgetTester tester) async {
 
   final cubit = _lastCubit!;
 
-  // Assign players: u1, u2 → A; u3, u4 → B
-  cubit.cyclePlayerTeam('u1'); // → A
-  cubit.cyclePlayerTeam('u2'); // → A
-  cubit.cyclePlayerTeam('u3'); // → B (A is full)
-  cubit.cyclePlayerTeam('u4'); // → B (A is full)
+  // Assign all 4 court positions
+  cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+  cubit.assignToPosition(CourtPosition.teamAReves, 'u2');
+  cubit.assignToPosition(CourtPosition.teamBDrive, 'u3');
+  cubit.assignToPosition(CourtPosition.teamBReves, 'u4');
   await tester.pump();
 
-  // Assign sides
-  cubit.setSide('u1', 'DRIVE');
-  cubit.setSide('u2', 'REVES');
-  cubit.setSide('u3', 'DRIVE');
-  cubit.setSide('u4', 'REVES');
-  await tester.pump();
-
-  // Advance to step 1 (sides)
-  cubit.nextStep();
-  await tester.pumpAndSettle();
-
-  // Advance to step 2 (score)
+  // Advance to step 1 (score entry)
   cubit.nextStep();
   await tester.pumpAndSettle();
 }
@@ -161,10 +151,10 @@ void main() {
   });
 
   // --------------------------------------------------------------------------
-  // T-08: Team assignment step
+  // T-08: Court assignment step
   // --------------------------------------------------------------------------
 
-  group('T-08 — Team assignment step', () {
+  group('T-08 — Court assignment step', () {
     testWidgets('shows loading spinner then populates all 4 players',
         (tester) async {
       await _setupGetIt(matchesApi, catalogApi);
@@ -180,42 +170,16 @@ void main() {
       expect(find.text('Diana Ruiz'), findsOneWidget);
     });
 
-    testWidgets('tapping a player chip cycles assignment (unassigned → Team A)',
-        (tester) async {
+    testWidgets('court step renders 4 DragTarget zones', (tester) async {
       await _setupGetIt(matchesApi, catalogApi);
       await tester.pumpWidget(_buildTestApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('Sin equipo'), findsNWidgets(4));
-
-      await tester.tap(find.byKey(const Key('player.chip.u1')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Equipo A'), findsOneWidget);
-      expect(find.text('Sin equipo'), findsNWidgets(3));
+      expect(find.byType(DragTarget<String>), findsNWidgets(4));
     });
 
-    testWidgets('cyclePlayerTeam a second time moves player from A to B',
-        (tester) async {
-      await _setupGetIt(matchesApi, catalogApi);
-      await tester.pumpWidget(_buildTestApp());
-      await tester.pumpAndSettle();
-
-      // First tap: u1 → A
-      await tester.tap(find.byKey(const Key('player.chip.u1')));
-      await tester.pumpAndSettle();
-      expect(find.text('Equipo A'), findsOneWidget);
-
-      // Second tap: u1 → B (since A has only 1 spot still open but we want to
-      // test the B badge; tap again to cycle A→B)
-      await tester.tap(find.byKey(const Key('player.chip.u1')));
-      await tester.pumpAndSettle();
-
-      // u1 should now be in Team B
-      expect(find.text('Equipo B'), findsOneWidget);
-    });
-
-    testWidgets('Continuar is disabled until all 4 players are assigned',
+    testWidgets(
+        'Continuar is disabled until all 4 positions are assigned via cubit',
         (tester) async {
       await _setupGetIt(matchesApi, catalogApi);
       await tester.pumpWidget(_buildTestApp());
@@ -230,14 +194,10 @@ void main() {
 
       expect(findContinuar().onPressed, isNull);
 
-      // Assign u1 → A, u2 → A, u3 → B, u4 → B
-      await tester.tap(find.byKey(const Key('player.chip.u1')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('player.chip.u2')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('player.chip.u3')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('player.chip.u4')));
+      _lastCubit!.assignToPosition(CourtPosition.teamADrive, 'u1');
+      _lastCubit!.assignToPosition(CourtPosition.teamAReves, 'u2');
+      _lastCubit!.assignToPosition(CourtPosition.teamBDrive, 'u3');
+      _lastCubit!.assignToPosition(CourtPosition.teamBReves, 'u4');
       await tester.pumpAndSettle();
 
       expect(findContinuar().onPressed, isNotNull);
