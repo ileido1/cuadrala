@@ -127,11 +127,13 @@ export class PrismaMatchResultDraftRepository implements MatchResultDraftReposit
     matchId: string;
     draftId: string;
     scores: Array<{ userId: string; points: number }>;
+    payload?: unknown;
   }): Promise<{ resultId: string }> {
     const CREATED = await PRISMA.$transaction(async (_tx) => {
       const RESULT = await _tx.matchResult.create({
         data: {
           matchId: _input.matchId,
+          ...(_input.payload !== undefined ? { payload: _input.payload as never } : {}),
           scores: {
             create: _input.scores.map((_s) => ({
               userId: _s.userId,

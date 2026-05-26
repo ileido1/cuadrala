@@ -36,6 +36,7 @@ export interface MatchResultDraftRepository {
     matchId: string;
     draftId: string;
     scores: Array<{ userId: string; points: number }>;
+    payload?: unknown;
   }): Promise<{ resultId: string }>;
 }
 

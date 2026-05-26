@@ -5,6 +5,9 @@ import type { MatchResultDraftDTO, MatchResultDraftRepository } from '../../doma
 
 type DraftPayload = {
   scores: Array<{ userId: string; points: number }>;
+  teams?: Array<{ label: 'A' | 'B'; userIds: string[] }>;
+  sets?: Array<{ teamA: number; teamB: number }>;
+  sideByUserId?: Record<string, 'DRIVE' | 'REVES'>;
 };
 
 function normalizeScoresSV(_scores: Array<{ userId: string; points: number }>): Array<{ userId: string; points: number }> {
@@ -39,6 +42,9 @@ export class UpsertMatchResultDraftUseCase {
     matchId: string;
     actorUserId: string;
     scores: Array<{ userId: string; points: number }>;
+    teams?: Array<{ label: 'A' | 'B'; userIds: string[] }>;
+    sets?: Array<{ teamA: number; teamB: number }>;
+    sideByUserId?: Record<string, 'DRIVE' | 'REVES'>;
   }): Promise<{ draft: MatchResultDraftDTO; created: boolean }> {
     const MATCH = await this._matchReadRepository.findByIdSV(_input.matchId);
     if (MATCH === null) {
@@ -69,7 +75,12 @@ export class UpsertMatchResultDraftUseCase {
       throw new AppError('VALIDACION_FALLIDA', 'scores debe incluir exactamente 4 jugadores.', 400);
     }
 
-    const NEW_PAYLOAD: DraftPayload = { scores: normalizeScoresSV(_input.scores) };
+    const NEW_PAYLOAD: DraftPayload = {
+      scores: normalizeScoresSV(_input.scores),
+      ...(_input.teams !== undefined ? { teams: _input.teams } : {}),
+      ...(_input.sets !== undefined ? { sets: _input.sets } : {}),
+      ...(_input.sideByUserId !== undefined ? { sideByUserId: _input.sideByUserId } : {}),
+    };
     const LATEST = await this._matchResultDraftRepository.findLatestByMatchIdSV(_input.matchId);
 
     if (LATEST === null) {

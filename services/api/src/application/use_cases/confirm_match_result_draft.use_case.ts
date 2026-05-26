@@ -6,6 +6,9 @@ import type { ApplyEloAfterMatchResultUseCase } from './apply_elo_after_match_re
 
 type DraftPayload = {
   scores: Array<{ userId: string; points: number }>;
+  teams?: Array<{ label: 'A' | 'B'; userIds: string[] }>;
+  sets?: Array<{ teamA: number; teamB: number }>;
+  sideByUserId?: Record<string, 'DRIVE' | 'REVES'>;
 };
 
 function normalizeScoresSV(_scores: Array<{ userId: string; points: number }>): Array<{ userId: string; points: number }> {
@@ -101,6 +104,7 @@ export class ConfirmMatchResultDraftUseCase {
       matchId: _input.matchId,
       draftId: DRAFT.id,
       scores: SCORES,
+      payload: DRAFT.payload,
     });
 
     await this._applyEloAfterMatchResultUseCase.executeSV({

@@ -25,6 +25,9 @@ export async function putMatchResultDraftCON(_req: Request, _res: Response): Pro
     matchId: PARAMS.matchId,
     actorUserId: USER_ID,
     scores: BODY.scores,
+    ...(BODY.teams !== undefined ? { teams: BODY.teams } : {}),
+    ...(BODY.sets !== undefined ? { sets: BODY.sets } : {}),
+    ...(BODY.sideByUserId !== undefined ? { sideByUserId: BODY.sideByUserId } : {}),
   });
 
   _res.status(RESULT.created ? 201 : 200).json({
@@ -87,6 +90,9 @@ export async function postReproposeMatchResultDraftCON(_req: Request, _res: Resp
     matchId: PARAMS.matchId,
     actorUserId: USER_ID,
     scores: BODY.scores,
+    ...(BODY.teams !== undefined ? { teams: BODY.teams } : {}),
+    ...(BODY.sets !== undefined ? { sets: BODY.sets } : {}),
+    ...(BODY.sideByUserId !== undefined ? { sideByUserId: BODY.sideByUserId } : {}),
   });
 
   _res.status(201).json({

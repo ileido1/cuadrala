@@ -21,10 +21,10 @@ function expectedScoreSV(_ra: number, _rb: number): number {
   return 1 / (1 + 10 ** ((_rb - _ra) / 400));
 }
 
-function actualScoreFromPointsSV(_aPoints: number, _bPoints: number): EloGameResult {
-  if (_aPoints > _bPoints) return 1;
-  if (_aPoints < _bPoints) return 0;
-  return 0.5;
+export function performanceScoreFromPointsSV(_aPoints: number, _bPoints: number): number {
+  const TOTAL = _aPoints + _bPoints;
+  if (TOTAL === 0) return 0.5;
+  return _aPoints / TOTAL;
 }
 
 /**
@@ -47,8 +47,8 @@ export function applyEloForFreeForAllSV(
 
       const EA = expectedScoreSV(A.rating, B.rating);
       const EB = 1 - EA;
-      const SA = actualScoreFromPointsSV(A.score, B.score);
-      const SB: EloGameResult = (1 - SA) as EloGameResult;
+      const SA = performanceScoreFromPointsSV(A.score, B.score);
+      const SB = 1 - SA;
 
       DELTAS.set(A.userId, (DELTAS.get(A.userId) ?? 0) + (SA - EA));
       DELTAS.set(B.userId, (DELTAS.get(B.userId) ?? 0) + (SB - EB));
@@ -92,8 +92,8 @@ export function applyEloForFreeForAllPerPlayerKSV(
 
       const EA = expectedScoreSV(A.rating, B.rating);
       const EB = 1 - EA;
-      const SA = actualScoreFromPointsSV(A.score, B.score);
-      const SB: EloGameResult = (1 - SA) as EloGameResult;
+      const SA = performanceScoreFromPointsSV(A.score, B.score);
+      const SB = 1 - SA;
 
       DELTAS.set(A.userId, (DELTAS.get(A.userId) ?? 0) + (SA - EA));
       DELTAS.set(B.userId, (DELTAS.get(B.userId) ?? 0) + (SB - EB));

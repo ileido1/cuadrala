@@ -175,10 +175,18 @@ class MatchesRepository {
   Future<void> upsertResultDraft({
     required String matchId,
     required List<Map<String, Object?>> scores,
+    List<Map<String, Object?>>? teams,
+    List<Map<String, Object?>>? sets,
+    Map<String, String>? sideByUserId,
   }) async {
     await _matchesApi.upsertResultDraftEnvelope(
       matchId: matchId,
-      body: {'scores': scores},
+      body: {
+        'scores': scores,
+        if (teams != null) 'teams': teams,
+        if (sets != null) 'sets': sets,
+        if (sideByUserId != null) 'sideByUserId': sideByUserId,
+      },
     );
   }
 
@@ -201,10 +209,18 @@ class MatchesRepository {
   Future<void> reproposeResultDraft({
     required String matchId,
     required List<Map<String, Object?>> scores,
+    List<Map<String, Object?>>? teams,
+    List<Map<String, Object?>>? sets,
+    Map<String, String>? sideByUserId,
   }) async {
     await _matchesApi.reproposeResultDraftEnvelope(
       matchId: matchId,
-      body: {'scores': scores},
+      body: {
+        'scores': scores,
+        if (teams != null) 'teams': teams,
+        if (sets != null) 'sets': sets,
+        if (sideByUserId != null) 'sideByUserId': sideByUserId,
+      },
     );
   }
 

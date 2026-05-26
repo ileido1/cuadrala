@@ -5,6 +5,9 @@ import type { MatchResultDraftDTO, MatchResultDraftRepository } from '../../doma
 
 type DraftPayload = {
   scores: Array<{ userId: string; points: number }>;
+  teams?: Array<{ label: 'A' | 'B'; userIds: string[] }>;
+  sets?: Array<{ teamA: number; teamB: number }>;
+  sideByUserId?: Record<string, 'DRIVE' | 'REVES'>;
 };
 
 function normalizeScoresSV(_scores: Array<{ userId: string; points: number }>): Array<{ userId: string; points: number }> {
@@ -28,6 +31,9 @@ export class ReproposeMatchResultDraftUseCase {
     matchId: string;
     actorUserId: string;
     scores: Array<{ userId: string; points: number }>;
+    teams?: Array<{ label: 'A' | 'B'; userIds: string[] }>;
+    sets?: Array<{ teamA: number; teamB: number }>;
+    sideByUserId?: Record<string, 'DRIVE' | 'REVES'>;
   }): Promise<MatchResultDraftDTO> {
     const MATCH = await this._matchReadRepository.findByIdSV(_input.matchId);
     if (MATCH === null) {
@@ -69,7 +75,12 @@ export class ReproposeMatchResultDraftUseCase {
       throw new AppError('BORRADOR_NO_RECHAZADO', 'Solo se puede reproponer después de un rechazo.', 409);
     }
 
-    const NEW_PAYLOAD: DraftPayload = { scores: normalizeScoresSV(_input.scores) };
+    const NEW_PAYLOAD: DraftPayload = {
+      scores: normalizeScoresSV(_input.scores),
+      ...(_input.teams !== undefined ? { teams: _input.teams } : {}),
+      ...(_input.sets !== undefined ? { sets: _input.sets } : {}),
+      ...(_input.sideByUserId !== undefined ? { sideByUserId: _input.sideByUserId } : {}),
+    };
     const NEW_VERSION = LATEST.version + 1;
 
     return this._matchResultDraftRepository.createDraftSV({

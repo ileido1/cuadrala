@@ -77,6 +77,16 @@ export const UPDATE_MATCH_BODY_SCHEMA = z
   })
   .strict();
 
+const _TEAM_ENTRY_SCHEMA = z.object({
+  label: z.enum(['A', 'B']),
+  userIds: z.array(z.string().uuid()).min(1).max(2),
+});
+
+const _SET_SCORE_SCHEMA = z.object({
+  teamA: z.coerce.number().int().min(0).max(10),
+  teamB: z.coerce.number().int().min(0).max(10),
+});
+
 export const UPSERT_MATCH_RESULT_DRAFT_BODY_SCHEMA = z
   .object({
     scores: z
@@ -87,6 +97,10 @@ export const UPSERT_MATCH_RESULT_DRAFT_BODY_SCHEMA = z
         }),
       )
       .min(1, 'scores debe tener al menos 1 item.'),
+    teams: z.array(_TEAM_ENTRY_SCHEMA).min(2).max(2).optional(),
+    sets: z.array(_SET_SCORE_SCHEMA).optional(),
+    // Note: z.record does not validate key format at runtime — string keys only
+    sideByUserId: z.record(z.string(), z.enum(['DRIVE', 'REVES'])).optional(),
   })
   .strict();
 
