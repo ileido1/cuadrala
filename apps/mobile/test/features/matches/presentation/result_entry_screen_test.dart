@@ -164,10 +164,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Ana Pérez'), findsOneWidget);
-      expect(find.text('Bruno López'), findsOneWidget);
-      expect(find.text('Carlos Díaz'), findsOneWidget);
-      expect(find.text('Diana Ruiz'), findsOneWidget);
+      expect(find.text('Ana'), findsOneWidget);
+      expect(find.text('Bruno'), findsOneWidget);
+      expect(find.text('Carlos'), findsOneWidget);
+      expect(find.text('Diana'), findsOneWidget);
     });
 
     testWidgets('court step renders 4 DragTarget zones', (tester) async {

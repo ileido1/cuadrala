@@ -346,9 +346,9 @@ class _CourtAssignStep extends StatelessWidget {
                       color: scheme.onSurfaceVariant,
                     ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _CourtWidget(state: state, cubit: cubit),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Text(
                 'Sin asignar',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -356,7 +356,7 @@ class _CourtAssignStep extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               _UnassignedPool(state: state, cubit: cubit),
             ],
           ),
@@ -570,7 +570,7 @@ class _CourtZone extends StatelessWidget {
 
             if (occupiedUserId != null && participant != null) {
               final displayName = participant.displayName ?? occupiedUserId;
-              return LongPressDraggable<String>(
+              return Draggable<String>(
                 data: occupiedUserId,
                 onDragCompleted: () {
                   cubit.removeFromPosition(position);
@@ -602,15 +602,13 @@ class _CourtZone extends StatelessWidget {
                   child: Row(
                     children: [
                       CircleAvatar(
-                        radius: 14,
+                        radius: 16,
                         backgroundColor: teamColor,
                         child: Text(
-                          displayName.isNotEmpty
-                              ? displayName[0].toUpperCase()
-                              : '?',
+                          _initials(displayName),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -665,6 +663,14 @@ class _CourtZone extends StatelessWidget {
 // _UnassignedPool — horizontally scrollable row of draggable player chips
 // ---------------------------------------------------------------------------
 
+String _initials(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  if (parts.length >= 2 && parts[1].isNotEmpty) {
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+  return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '?';
+}
+
 class _UnassignedPool extends StatelessWidget {
   const _UnassignedPool({required this.state, required this.cubit});
 
@@ -705,20 +711,56 @@ class _UnassignedPool extends StatelessWidget {
       child: Row(
         children: unassignedParticipants.map((p) {
           final displayName = p.displayName ?? p.userId;
+          final initials = _initials(displayName);
+          final firstName = displayName.split(' ').first;
+          final avatar = CircleAvatar(
+            radius: 22,
+            backgroundColor: scheme.primaryContainer,
+            child: Text(
+              initials,
+              style: TextStyle(
+                color: scheme.onPrimaryContainer,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          );
+          final label = SizedBox(
+            width: 64,
+            child: Text(
+              firstName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          );
+          final chip = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [avatar, const SizedBox(height: 4), label],
+          );
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: LongPressDraggable<String>(
+            padding: const EdgeInsets.only(right: 12),
+            child: Draggable<String>(
               data: p.userId,
               feedback: Material(
-                elevation: 4,
-                borderRadius: BorderRadius.circular(16),
-                child: _PlayerChip(displayName: displayName),
+                elevation: 6,
+                shape: const CircleBorder(),
+                child: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: scheme.primary,
+                  child: Text(
+                    initials,
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
-              childWhenDragging: Opacity(
-                opacity: 0.3,
-                child: _PlayerChip(displayName: displayName),
-              ),
-              child: _PlayerChip(displayName: displayName),
+              childWhenDragging: Opacity(opacity: 0.3, child: chip),
+              child: chip,
             ),
           );
         }).toList(),
