@@ -57,6 +57,7 @@ import '../../features/venues/presentation/cubit/venue_detail_cubit.dart';
 import '../../features/matchmaking/data/matchmaking_api.dart';
 import '../../features/matchmaking/data/matchmaking_repository.dart';
 import '../../features/matchmaking/presentation/cubit/matchmaking_cubit.dart';
+import '../../features/matches/presentation/cubit/result_entry_cubit.dart';
 import '../../features/notifications/presentation/cubit/notification_prefs_cubit.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -280,6 +281,14 @@ Future<void> setupDependencies() async {
   getIt.registerFactoryParam<MatchmakingCubit, String, void>(
     (matchId, _) => MatchmakingCubit(
       repository: getIt<MatchmakingRepository>(),
+      matchId: matchId,
+    ),
+  );
+
+  getIt.registerFactoryParam<ResultEntryCubit, String, void>(
+    (matchId, _) => ResultEntryCubit(
+      matchesRepository: getIt<MatchesRepository>(),
+      catalogRepository: getIt<CatalogRepository>(),
       matchId: matchId,
     ),
   );

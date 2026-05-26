@@ -15,7 +15,7 @@ import '../features/availability/data/availability_repository.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
 import '../features/matches/presentation/create_match_screen.dart';
 import '../features/matches/presentation/match_lifecycle_screen.dart';
-import '../features/matches/presentation/result_draft_screen.dart';
+import '../features/matches/presentation/result_entry_screen.dart';
 import '../features/chat/presentation/match_chat_screen.dart';
 import '../features/chat/presentation/match_chat_read_only_screen.dart';
 import '../features/chat/presentation/tournament_chat_screen.dart';
@@ -100,7 +100,7 @@ final class AppRouter {
               path: '/matches/:matchId/result',
               builder: (context, state) {
                 final matchId = state.pathParameters['matchId'] ?? '';
-                return ResultDraftScreen(matchId: matchId);
+                return ResultEntryScreen(matchId: matchId);
               },
             ),
             GoRoute(
