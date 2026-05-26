@@ -2,6 +2,8 @@ import 'package:equatable/equatable.dart';
 
 import '../../data/models/open_match_dto.dart';
 
+enum TimeBucket { morning, afternoon, evening }
+
 sealed class OpenMatchesState extends Equatable {
   const OpenMatchesState();
 
@@ -21,7 +23,9 @@ final class OpenMatchesLoaded extends OpenMatchesState {
   const OpenMatchesLoaded({
     required this.sportId,
     required this.query,
-    required this.onlyToday,
+    required this.selectedDate,
+    required this.activeTimeBuckets,
+    required this.onlyAvailable,
     required this.categoryId,
     required this.items,
     required this.visibleItems,
@@ -34,7 +38,9 @@ final class OpenMatchesLoaded extends OpenMatchesState {
 
   final String sportId;
   final String query;
-  final bool onlyToday;
+  final DateTime? selectedDate;
+  final Set<TimeBucket> activeTimeBuckets;
+  final bool onlyAvailable;
   final String? categoryId;
   final List<OpenMatchDto> items;
   final List<OpenMatchDto> visibleItems;
@@ -44,11 +50,45 @@ final class OpenMatchesLoaded extends OpenMatchesState {
   final bool isLoadingMore;
   final bool hasReachedEnd;
 
+  OpenMatchesLoaded copyWith({
+    String? sportId,
+    String? query,
+    Object? selectedDate = _sentinel,
+    Set<TimeBucket>? activeTimeBuckets,
+    bool? onlyAvailable,
+    Object? categoryId = _sentinel,
+    List<OpenMatchDto>? items,
+    List<OpenMatchDto>? visibleItems,
+    int? page,
+    int? limit,
+    int? total,
+    bool? isLoadingMore,
+    bool? hasReachedEnd,
+  }) {
+    return OpenMatchesLoaded(
+      sportId: sportId ?? this.sportId,
+      query: query ?? this.query,
+      selectedDate: selectedDate == _sentinel ? this.selectedDate : selectedDate as DateTime?,
+      activeTimeBuckets: activeTimeBuckets ?? this.activeTimeBuckets,
+      onlyAvailable: onlyAvailable ?? this.onlyAvailable,
+      categoryId: categoryId == _sentinel ? this.categoryId : categoryId as String?,
+      items: items ?? this.items,
+      visibleItems: visibleItems ?? this.visibleItems,
+      page: page ?? this.page,
+      limit: limit ?? this.limit,
+      total: total ?? this.total,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      hasReachedEnd: hasReachedEnd ?? this.hasReachedEnd,
+    );
+  }
+
   @override
   List<Object?> get props => [
         sportId,
         query,
-        onlyToday,
+        selectedDate,
+        activeTimeBuckets,
+        onlyAvailable,
         categoryId,
         items,
         visibleItems,
@@ -68,3 +108,6 @@ final class OpenMatchesFailure extends OpenMatchesState {
   @override
   List<Object?> get props => [message];
 }
+
+// Sentinel object for nullable copyWith parameters
+const Object _sentinel = Object();

@@ -22,16 +22,22 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         page: 1,
         limit: _pageLimit,
       );
+      final today = DateTime.now();
+      final selectedDate = DateTime(today.year, today.month, today.day);
       final visible = _applyClientFilters(
         items: page.items,
         query: '',
-        onlyToday: false,
+        selectedDate: selectedDate,
+        activeTimeBuckets: const {},
+        onlyAvailable: false,
       );
       emit(
         OpenMatchesLoaded(
           sportId: sportId,
           query: '',
-          onlyToday: false,
+          selectedDate: selectedDate,
+          activeTimeBuckets: const {},
+          onlyAvailable: false,
           categoryId: null,
           items: page.items,
           visibleItems: visible,
@@ -56,49 +62,57 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
     final visible = _applyClientFilters(
       items: current.items,
       query: q,
-      onlyToday: current.onlyToday,
+      selectedDate: current.selectedDate,
+      activeTimeBuckets: current.activeTimeBuckets,
+      onlyAvailable: current.onlyAvailable,
     );
-    emit(
-      OpenMatchesLoaded(
-        sportId: current.sportId,
-        query: q,
-        onlyToday: current.onlyToday,
-        categoryId: current.categoryId,
-        items: current.items,
-        visibleItems: visible,
-        page: current.page,
-        limit: current.limit,
-        total: current.total,
-        isLoadingMore: current.isLoadingMore,
-        hasReachedEnd: current.hasReachedEnd,
-      ),
-    );
+    emit(current.copyWith(query: q, visibleItems: visible));
   }
 
-  void toggleOnlyToday() {
+  void selectDate(DateTime? date) {
     final current = state;
     if (current is! OpenMatchesLoaded) return;
-    final onlyToday = !current.onlyToday;
+    final normalized = date != null ? DateTime(date.year, date.month, date.day) : null;
     final visible = _applyClientFilters(
       items: current.items,
       query: current.query,
-      onlyToday: onlyToday,
+      selectedDate: normalized,
+      activeTimeBuckets: current.activeTimeBuckets,
+      onlyAvailable: current.onlyAvailable,
     );
-    emit(
-      OpenMatchesLoaded(
-        sportId: current.sportId,
-        query: current.query,
-        onlyToday: onlyToday,
-        categoryId: current.categoryId,
-        items: current.items,
-        visibleItems: visible,
-        page: current.page,
-        limit: current.limit,
-        total: current.total,
-        isLoadingMore: current.isLoadingMore,
-        hasReachedEnd: current.hasReachedEnd,
-      ),
+    emit(current.copyWith(selectedDate: normalized, visibleItems: visible));
+  }
+
+  void toggleTimeBucket(TimeBucket bucket) {
+    final current = state;
+    if (current is! OpenMatchesLoaded) return;
+    final updated = Set<TimeBucket>.from(current.activeTimeBuckets);
+    if (updated.contains(bucket)) {
+      updated.remove(bucket);
+    } else {
+      updated.add(bucket);
+    }
+    final visible = _applyClientFilters(
+      items: current.items,
+      query: current.query,
+      selectedDate: current.selectedDate,
+      activeTimeBuckets: updated,
+      onlyAvailable: current.onlyAvailable,
     );
+    emit(current.copyWith(activeTimeBuckets: updated, visibleItems: visible));
+  }
+
+  void setOnlyAvailable(bool value) {
+    final current = state;
+    if (current is! OpenMatchesLoaded) return;
+    final visible = _applyClientFilters(
+      items: current.items,
+      query: current.query,
+      selectedDate: current.selectedDate,
+      activeTimeBuckets: current.activeTimeBuckets,
+      onlyAvailable: value,
+    );
+    emit(current.copyWith(onlyAvailable: value, visibleItems: visible));
   }
 
   Future<void> setCategoryId(String? categoryId) async {
@@ -115,13 +129,17 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
       final visible = _applyClientFilters(
         items: page.items,
         query: current.query,
-        onlyToday: current.onlyToday,
+        selectedDate: current.selectedDate,
+        activeTimeBuckets: current.activeTimeBuckets,
+        onlyAvailable: current.onlyAvailable,
       );
       emit(
         OpenMatchesLoaded(
           sportId: current.sportId,
           query: current.query,
-          onlyToday: current.onlyToday,
+          selectedDate: current.selectedDate,
+          activeTimeBuckets: current.activeTimeBuckets,
+          onlyAvailable: current.onlyAvailable,
           categoryId: categoryId,
           items: page.items,
           visibleItems: visible,
@@ -144,21 +162,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
     if (current is! OpenMatchesLoaded) return;
     if (current.isLoadingMore || current.hasReachedEnd) return;
 
-    emit(
-      OpenMatchesLoaded(
-        sportId: current.sportId,
-        query: current.query,
-        onlyToday: current.onlyToday,
-        categoryId: current.categoryId,
-        items: current.items,
-        visibleItems: current.visibleItems,
-        page: current.page,
-        limit: current.limit,
-        total: current.total,
-        isLoadingMore: true,
-        hasReachedEnd: current.hasReachedEnd,
-      ),
-    );
+    emit(current.copyWith(isLoadingMore: true));
 
     try {
       final nextPage = current.page + 1;
@@ -172,13 +176,17 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
       final visible = _applyClientFilters(
         items: merged,
         query: current.query,
-        onlyToday: current.onlyToday,
+        selectedDate: current.selectedDate,
+        activeTimeBuckets: current.activeTimeBuckets,
+        onlyAvailable: current.onlyAvailable,
       );
       emit(
         OpenMatchesLoaded(
           sportId: current.sportId,
           query: current.query,
-          onlyToday: current.onlyToday,
+          selectedDate: current.selectedDate,
+          activeTimeBuckets: current.activeTimeBuckets,
+          onlyAvailable: current.onlyAvailable,
           categoryId: current.categoryId,
           items: merged,
           visibleItems: visible,
@@ -190,34 +198,27 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         ),
       );
     } catch (e) {
-      emit(
-        OpenMatchesLoaded(
-          sportId: current.sportId,
-          query: current.query,
-          onlyToday: current.onlyToday,
-          categoryId: current.categoryId,
-          items: current.items,
-          visibleItems: current.visibleItems,
-          page: current.page,
-          limit: current.limit,
-          total: current.total,
-          isLoadingMore: false,
-          hasReachedEnd: current.hasReachedEnd,
-        ),
-      );
+      emit(current.copyWith(isLoadingMore: false));
     }
   }
 
   static List<OpenMatchDto> _applyClientFilters({
     required List<OpenMatchDto> items,
     required String query,
-    required bool onlyToday,
+    required DateTime? selectedDate,
+    required Set<TimeBucket> activeTimeBuckets,
+    required bool onlyAvailable,
   }) {
     final q = query.toLowerCase();
-    final now = DateTime.now();
 
     bool sameDay(DateTime a, DateTime b) =>
         a.year == b.year && a.month == b.month && a.day == b.day;
+
+    TimeBucket bucketFor(DateTime dt) {
+      if (dt.hour < 12) return TimeBucket.morning;
+      if (dt.hour < 19) return TimeBucket.afternoon;
+      return TimeBucket.evening;
+    }
 
     bool matchesQuery(OpenMatchDto m) {
       if (q.isEmpty) return true;
@@ -230,13 +231,31 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
       return haystack.contains(q);
     }
 
-    bool matchesToday(OpenMatchDto m) {
-      if (!onlyToday) return true;
+    bool matchesDate(OpenMatchDto m) {
+      if (selectedDate == null) return true;
       final s = m.scheduledAt;
-      if (s == null) return false;
-      return sameDay(s.toLocal(), now);
+      if (s == null) return true;
+      return sameDay(s.toLocal(), selectedDate);
     }
 
-    return items.where((m) => matchesQuery(m) && matchesToday(m)).toList();
+    bool matchesTimeBucket(OpenMatchDto m) {
+      if (activeTimeBuckets.isEmpty) return true;
+      final s = m.scheduledAt;
+      if (s == null) return true;
+      return activeTimeBuckets.contains(bucketFor(s.toLocal()));
+    }
+
+    bool matchesAvailability(OpenMatchDto m) {
+      if (!onlyAvailable) return true;
+      return m.openSpots > 0;
+    }
+
+    return items
+        .where((m) =>
+            matchesQuery(m) &&
+            matchesDate(m) &&
+            matchesTimeBucket(m) &&
+            matchesAvailability(m))
+        .toList();
   }
 }

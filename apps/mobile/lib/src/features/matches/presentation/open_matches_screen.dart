@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../data/matches_repository.dart';
 import '../data/models/open_match_dto.dart';
 import 'open_match_display.dart';
 import 'cubit/open_matches_cubit.dart';
@@ -84,35 +86,53 @@ class _OpenMatchesScreenState extends State<OpenMatchesScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   BlocBuilder<OpenMatchesCubit, OpenMatchesState>(
                     buildWhen: (prev, next) => next is OpenMatchesLoaded,
                     builder: (context, state) {
                       if (state is! OpenMatchesLoaded) return const SizedBox.shrink();
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _FilterChip(
-                              label: 'Hoy',
-                              selected: state.onlyToday,
-                              onSelected: (_) => context.read<OpenMatchesCubit>().toggleOnlyToday(),
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _DateStrip(
+                            selectedDate: state.selectedDate,
+                            onDateSelected: (d) =>
+                                context.read<OpenMatchesCubit>().selectDate(d),
+                          ),
+                          const SizedBox(height: 8),
+                          _TimePills(
+                            active: state.activeTimeBuckets,
+                            onToggle: (b) =>
+                                context.read<OpenMatchesCubit>().toggleTimeBucket(b),
+                          ),
+                          const SizedBox(height: 8),
+                          _AvailabilityToggle(
+                            value: state.onlyAvailable,
+                            onChanged: (v) =>
+                                context.read<OpenMatchesCubit>().setOnlyAvailable(v),
+                          ),
+                          if (state.categoryId != null) ...[
+                            const SizedBox(height: 8),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _FilterChip(
+                                    label: 'Categoría',
+                                    selected: true,
+                                    onSelected: (_) => _showFiltersSheet(context),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ActionChip(
+                                    label: const Text('Limpiar filtros'),
+                                    onPressed: () =>
+                                        context.read<OpenMatchesCubit>().setCategoryId(null),
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(width: 8),
-                            if (state.categoryId != null) ...[
-                              _FilterChip(
-                                label: 'Categoría',
-                                selected: true,
-                                onSelected: (_) => _showFiltersSheet(context),
-                              ),
-                              const SizedBox(width: 8),
-                              ActionChip(
-                                label: const Text('Limpiar filtros'),
-                                onPressed: () => context.read<OpenMatchesCubit>().setCategoryId(null),
-                              ),
-                            ],
                           ],
-                        ),
+                        ],
                       );
                     },
                   ),
@@ -158,7 +178,7 @@ class _OpenMatchesScreenState extends State<OpenMatchesScreen> {
                       controller: _scrollController,
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                       itemCount: loaded.visibleItems.length + (loaded.isLoadingMore ? 1 : 0),
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         if (index >= loaded.visibleItems.length) {
                           return const Padding(
@@ -170,6 +190,14 @@ class _OpenMatchesScreenState extends State<OpenMatchesScreen> {
                         return _OpenMatchListTile(
                           match: m,
                           onTap: () => context.push(Routes.matchDetail(m.id)),
+                          onJoin: m.openSpots > 0
+                              ? () => showModalBottomSheet<void>(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    useSafeArea: true,
+                                    builder: (_) => _JoinConfirmSheet(match: m),
+                                  )
+                              : null,
                         );
                       },
                     ),
@@ -235,6 +263,194 @@ class _OpenMatchesScreenState extends State<OpenMatchesScreen> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _DateStrip — horizontally scrollable strip of 7 day chips
+// ---------------------------------------------------------------------------
+
+final class _DateStrip extends StatelessWidget {
+  const _DateStrip({
+    required this.selectedDate,
+    required this.onDateSelected,
+  });
+
+  final DateTime? selectedDate;
+  final ValueChanged<DateTime> onDateSelected;
+
+  static const _weekdayLabels = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+
+  String _weekdayLabel(DateTime dt) => _weekdayLabels[dt.weekday - 1];
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final days = List.generate(
+      7,
+      (i) {
+        final d = today.add(Duration(days: i));
+        return DateTime(d.year, d.month, d.day);
+      },
+    );
+
+    return SizedBox(
+      height: 72,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: days.length,
+        itemBuilder: (context, index) {
+          final day = days[index];
+          final isSelected = selectedDate != null &&
+              selectedDate!.year == day.year &&
+              selectedDate!.month == day.month &&
+              selectedDate!.day == day.day;
+          return _DayChip(
+            weekdayLabel: _weekdayLabel(day),
+            dayNumber: day.day,
+            selected: isSelected,
+            onTap: () => onDateSelected(day),
+          );
+        },
+      ),
+    );
+  }
+}
+
+final class _DayChip extends StatelessWidget {
+  const _DayChip({
+    required this.weekdayLabel,
+    required this.dayNumber,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String weekdayLabel;
+  final int dayNumber;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final bgColor = selected ? scheme.onSurface : Colors.transparent;
+    final textColor = selected ? scheme.surface : scheme.onSurfaceVariant;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              weekdayLabel,
+              style: textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '$dayNumber',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _TimePills — 3 FilterChip buttons for time-of-day buckets
+// ---------------------------------------------------------------------------
+
+final class _TimePills extends StatelessWidget {
+  const _TimePills({
+    required this.active,
+    required this.onToggle,
+  });
+
+  final Set<TimeBucket> active;
+  final ValueChanged<TimeBucket> onToggle;
+
+  static const _labels = {
+    TimeBucket.morning: 'Mañana',
+    TimeBucket.afternoon: 'Tarde',
+    TimeBucket.evening: 'Noche',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: TimeBucket.values.map((bucket) {
+        final isSelected = active.contains(bucket);
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: FilterChip(
+            label: Text(_labels[bucket]!),
+            selected: isSelected,
+            onSelected: (_) => onToggle(bucket),
+            selectedColor: scheme.primary.withValues(alpha: 0.15),
+            checkmarkColor: scheme.primary,
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _AvailabilityToggle — row with label and switch
+// ---------------------------------------------------------------------------
+
+final class _AvailabilityToggle extends StatelessWidget {
+  const _AvailabilityToggle({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          'Solo disponibles',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const Spacer(),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _FilterChip — reusable chip for category filters
+// ---------------------------------------------------------------------------
+
 final class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
@@ -259,11 +475,20 @@ final class _FilterChip extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _OpenMatchListTile — match card
+// ---------------------------------------------------------------------------
+
 final class _OpenMatchListTile extends StatelessWidget {
-  const _OpenMatchListTile({required this.match, required this.onTap});
+  const _OpenMatchListTile({
+    required this.match,
+    required this.onTap,
+    required this.onJoin,
+  });
 
   final OpenMatchDto match;
   final VoidCallback onTap;
+  final VoidCallback? onJoin;
 
   @override
   Widget build(BuildContext context) {
@@ -405,7 +630,7 @@ final class _OpenMatchListTile extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: onTap,
+                      onPressed: onJoin,
                       child: const Text(
                         'Unirse',
                         style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
@@ -442,6 +667,194 @@ final class _TinyAvatar extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: scheme.surface, width: 2),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _JoinConfirmSheet — confirmation bottom sheet before joining a match
+// ---------------------------------------------------------------------------
+
+final class _JoinConfirmSheet extends StatefulWidget {
+  const _JoinConfirmSheet({required this.match});
+
+  final OpenMatchDto match;
+
+  @override
+  State<_JoinConfirmSheet> createState() => _JoinConfirmSheetState();
+}
+
+class _JoinConfirmSheetState extends State<_JoinConfirmSheet> {
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _join() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await getIt<MatchesRepository>().joinMatch(widget.match.id);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      context.push(Routes.matchDetail(widget.match.id));
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final match = widget.match;
+    final scheduled = match.scheduledAt;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Club + court name
+          Text(
+            openMatchTitleLine(match),
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+
+          // Date/time
+          if (scheduled != null)
+            Text(
+              '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)}',
+              style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          const SizedBox(height: 12),
+
+          // Price row
+          Row(
+            children: [
+              Icon(Icons.payments_outlined, size: 18, color: scheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                formatMoneyLabel(match.pricePerPlayerCents, openMatchDisplayCurrency(match)),
+                style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              Text(
+                ' por jugador',
+                style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Participant slots
+          Text(
+            'Jugadores',
+            style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(match.maxParticipants, (i) {
+              final isFilled = i < match.participantCount;
+              return CircleAvatar(
+                radius: 20,
+                backgroundColor: isFilled
+                    ? scheme.primary.withValues(alpha: 0.15)
+                    : scheme.surfaceContainerHighest,
+                child: isFilled
+                    ? Text(
+                        'P${i + 1}',
+                        style: TextStyle(
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                        ),
+                      )
+                    : Icon(
+                        Icons.person_add_outlined,
+                        size: 18,
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      ),
+              );
+            }),
+          ),
+          const SizedBox(height: 16),
+
+          // Error banner
+          if (_error != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.errorContainer,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: scheme.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: textTheme.bodySmall?.copyWith(color: scheme.onErrorContainer),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Action buttons
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: _loading ? null : () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _loading ? null : _join,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          'Unirme',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
