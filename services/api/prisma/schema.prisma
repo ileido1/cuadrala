@@ -78,6 +78,12 @@ enum LedgerEntryType {
   REVERSAL
 }
 
+enum MatchGender {
+  MALE
+  FEMALE
+  MIXED
+}
+
 enum LedgerDirection {
   DEBIT
   CREDIT
@@ -703,6 +709,8 @@ model Match {
   maxParticipants     Int                     @default(4)
   /// Whether this match affects players' Elo ratings.
   affectsElo          Boolean                 @default(true)
+  /// Optional gender filter for the match (null = open to all).
+  gender              MatchGender?
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
 
@@ -721,6 +729,7 @@ model Match {
   @@index([scheduledAt])
   @@index([pricePerPlayerCents])
   @@index([organizerUserId])
+  @@index([gender])
 }
 
 model Reservation {

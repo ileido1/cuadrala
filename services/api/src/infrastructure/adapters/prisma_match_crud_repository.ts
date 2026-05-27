@@ -23,6 +23,7 @@ const MATCH_SELECT = {
   pricePerPlayerCents: true,
   maxParticipants: true,
   affectsElo: true,
+  gender: true,
   createdAt: true,
   updatedAt: true,
   _count: { select: { participants: true } },
@@ -40,6 +41,7 @@ export function computeDetailDTOSV(_row: {
   pricePerPlayerCents: number;
   maxParticipants: number;
   affectsElo: boolean;
+  gender?: 'MALE' | 'FEMALE' | 'MIXED' | null;
   createdAt: Date;
   updatedAt: Date;
   _count: { participants: number };
@@ -57,6 +59,7 @@ export function computeDetailDTOSV(_row: {
     maxParticipants: _row.maxParticipants,
     participantCount: _row._count.participants,
     affectsElo: _row.affectsElo,
+    ...(_row.gender != null ? { gender: _row.gender } : {}),
     createdAt: _row.createdAt,
     updatedAt: _row.updatedAt,
   };
@@ -86,6 +89,7 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
             pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
             maxParticipants: _input.maxParticipants,
             affectsElo: _input.affectsElo ?? true,
+            ...(_input.gender !== undefined ? { gender: _input.gender } : {}),
             participants: {
               create: [{ userId: _creatorUserId }],
             },
@@ -134,6 +138,7 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
         pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
         maxParticipants: _input.maxParticipants,
         affectsElo: _input.affectsElo ?? true,
+        ...(_input.gender !== undefined ? { gender: _input.gender } : {}),
         participants: {
           create: [{ userId: _creatorUserId }],
         },

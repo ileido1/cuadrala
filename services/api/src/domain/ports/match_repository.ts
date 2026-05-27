@@ -9,6 +9,7 @@ export type MatchListFiltersDTO = {
   nearLat?: number;
   nearLng?: number;
   radiusKm?: number;
+  gender?: 'MALE' | 'FEMALE' | 'MIXED';
 };
 
 export type PageDTO = {
@@ -35,6 +36,7 @@ export type OpenMatchDTO = {
   participantPreview?: { userId: string; displayName: string }[];
   affectsElo: boolean;
   venueImageUrl?: string;
+  gender?: 'MALE' | 'FEMALE' | 'MIXED';
 };
 
 export interface MatchRepository {

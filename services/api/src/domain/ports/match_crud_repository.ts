@@ -11,6 +11,7 @@ export type CreateMatchInputDTO = {
   maxParticipants: number;
   notes?: string;
   affectsElo?: boolean;
+  gender?: 'MALE' | 'FEMALE' | 'MIXED';
 };
 
 export type UpdateMatchPatchDTO = {
@@ -33,6 +34,7 @@ export type MatchDetailDTO = {
   maxParticipants: number;
   participantCount: number;
   affectsElo: boolean;
+  gender?: 'MALE' | 'FEMALE' | 'MIXED';
   createdAt: Date;
   updatedAt: Date;
 };

@@ -51,6 +51,7 @@ export async function getOpenMatchesCON(_req: Request, _res: Response): Promise<
     ...(QUERY.radiusKm !== undefined ? { radiusKm: QUERY.radiusKm } : {}),
     ...(QUERY.scheduledFrom !== undefined ? { scheduledFrom: new Date(QUERY.scheduledFrom) } : {}),
     ...(QUERY.scheduledTo !== undefined ? { scheduledTo: new Date(QUERY.scheduledTo) } : {}),
+    ...(QUERY.gender !== undefined ? { gender: QUERY.gender } : {}),
   });
 
   _res.status(200).json({
@@ -112,6 +113,7 @@ export async function postCreateMatchCON(_req: Request, _res: Response): Promise
     ...(BODY.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: BODY.pricePerPlayerCents } : {}),
     ...(BODY.maxParticipants !== undefined ? { maxParticipants: BODY.maxParticipants } : {}),
     ...(BODY.notes !== undefined ? { notes: BODY.notes } : {}),
+    ...(BODY.gender !== undefined ? { gender: BODY.gender } : {}),
   });
 
   _res.status(201).json({

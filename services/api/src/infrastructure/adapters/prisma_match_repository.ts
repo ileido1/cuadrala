@@ -16,6 +16,7 @@ export function computeOpenMatchDTOSV(_row: {
   pricePerPlayerCents: number;
   maxParticipants: number;
   affectsElo: boolean;
+  gender?: 'MALE' | 'FEMALE' | 'MIXED' | null;
   _count: { participants: number };
   category: { name: string } | null;
   participants: { userId: string; user: { name: string } }[];
@@ -67,6 +68,7 @@ export function computeOpenMatchDTOSV(_row: {
     })),
     affectsElo: _row.affectsElo,
     ...(_row.court?.venue.imageUrl != null ? { venueImageUrl: _row.court.venue.imageUrl } : {}),
+    ...(_row.gender != null ? { gender: _row.gender } : {}),
   };
 }
 
@@ -89,6 +91,7 @@ export class PrismaMatchRepository implements MatchRepository {
       sportId: _filters.sportId,
       status: _filters.status ?? 'SCHEDULED',
       ...(_filters.categoryId !== undefined ? { categoryId: _filters.categoryId } : {}),
+      ...(_filters.gender !== undefined ? { gender: _filters.gender } : {}),
       ...(_filters.minPricePerPlayerCents !== undefined || _filters.maxPricePerPlayerCents !== undefined
         ? {
             pricePerPlayerCents: {
@@ -144,6 +147,7 @@ export class PrismaMatchRepository implements MatchRepository {
           pricePerPlayerCents: true,
           maxParticipants: true,
           affectsElo: true,
+          gender: true,
           _count: { select: { participants: true } },
           participants: {
             take: 4,

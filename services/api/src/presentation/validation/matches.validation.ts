@@ -12,6 +12,7 @@ export const LIST_OPEN_MATCHES_QUERY_SCHEMA = z
     limit: z.coerce.number().int().min(1).max(100).default(20),
     scheduledFrom: z.string().datetime({ offset: true }).optional(),
     scheduledTo: z.string().datetime({ offset: true }).optional(),
+    gender: z.enum(['MALE', 'FEMALE', 'MIXED']).optional(),
   })
   .strict();
 
@@ -47,6 +48,7 @@ export const CREATE_MATCH_BODY_SCHEMA = z
     maxParticipants: z.coerce.number().int().min(2).max(100).optional(),
     notes: z.string().trim().min(1).max(500).optional(),
     affectsElo: z.boolean().optional(),
+    gender: z.enum(['MALE', 'FEMALE', 'MIXED']).optional(),
   })
   .strict()
   .superRefine((_data, _ctx) => {

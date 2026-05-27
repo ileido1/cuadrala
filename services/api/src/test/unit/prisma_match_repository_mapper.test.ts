@@ -154,6 +154,26 @@ describe('computeOpenMatchDTOSV — venueImageUrl', () => {
 });
 
 // ---------------------------------------------------------------------------
+// computeOpenMatchDTOSV — gender (F3 gender filter)
+// ---------------------------------------------------------------------------
+
+describe('computeOpenMatchDTOSV — gender', () => {
+  it('returns gender when present in row', () => {
+    const ROW = { ...baseOpenMatchRow(), gender: 'MALE' as const };
+    const DTO = computeOpenMatchDTOSV(ROW);
+
+    expect(DTO.gender).toBe('MALE');
+  });
+
+  it('returns undefined gender when null in row', () => {
+    const ROW = { ...baseOpenMatchRow(), gender: null };
+    const DTO = computeOpenMatchDTOSV(ROW);
+
+    expect(DTO.gender).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // computeDetailDTOSV — affectsElo (AC-F2.4 / AC-F2.7)
 // ---------------------------------------------------------------------------
 
