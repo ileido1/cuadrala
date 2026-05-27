@@ -489,25 +489,40 @@ final class _MatchInfoSection extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: _InfoTile(
-              icon: Icons.calendar_month_outlined,
-              label: 'FECHA',
-              value: scheduleText,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _InfoTile(
+                  icon: Icons.calendar_month_outlined,
+                  label: 'FECHA',
+                  value: scheduleText,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _InfoTile(
+                  icon: Icons.payments_outlined,
+                  label: 'PRECIO',
+                  value: hasPrice
+                      ? '${formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m))} p/p'
+                      : 'Gratis',
+                  highlight: hasPrice,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _InfoTile(
-              icon: Icons.payments_outlined,
-              label: 'PRECIO',
-              value: hasPrice
-                  ? '${formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m))} p/p'
-                  : 'Gratis',
-              highlight: hasPrice,
+          const SizedBox(height: 12),
+          Chip(
+            label: Text(m.affectsElo ? 'Ranked' : 'Amistoso'),
+            avatar: Icon(
+              m.affectsElo ? Icons.emoji_events : Icons.handshake_outlined,
+              size: 14,
             ),
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
           ),
         ],
       ),

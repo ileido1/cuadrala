@@ -43,6 +43,7 @@ final class MatchDetailDto {
     required this.updatedAt,
     this.pricingCurrency,
     this.displayCurrency,
+    this.affectsElo = true,
   });
 
   final String id;
@@ -67,6 +68,7 @@ final class MatchDetailDto {
   final DateTime updatedAt;
   final String? pricingCurrency;
   final String? displayCurrency;
+  final bool affectsElo;
 
   static MatchDetailDto fromJson(Map<String, Object?> json) {
     final participantsRaw = json['participants'];
@@ -113,6 +115,7 @@ final class MatchDetailDto {
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       pricingCurrency: json['pricingCurrency'] as String?,
       displayCurrency: json['displayCurrency'] as String?,
+      affectsElo: json['affectsElo'] as bool? ?? true,
     );
   }
 }

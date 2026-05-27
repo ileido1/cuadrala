@@ -1,3 +1,20 @@
+final class ParticipantPreviewDto {
+  const ParticipantPreviewDto({
+    required this.userId,
+    required this.displayName,
+  });
+
+  final String userId;
+  final String displayName;
+
+  static ParticipantPreviewDto fromJson(Map<String, Object?> json) {
+    return ParticipantPreviewDto(
+      userId: json['userId'] as String,
+      displayName: json['displayName'] as String,
+    );
+  }
+}
+
 final class OpenMatchDto {
   const OpenMatchDto({
     required this.id,
@@ -15,6 +32,9 @@ final class OpenMatchDto {
     required this.locationLabel,
     this.pricingCurrency,
     this.displayCurrency,
+    this.participantPreview = const [],
+    this.affectsElo = true,
+    this.venueImageUrl,
   });
 
   final String id;
@@ -32,8 +52,17 @@ final class OpenMatchDto {
   final String? locationLabel;
   final String? pricingCurrency;
   final String? displayCurrency;
+  final List<ParticipantPreviewDto> participantPreview;
+  final bool affectsElo;
+  final String? venueImageUrl;
 
   static OpenMatchDto fromJson(Map<String, Object?> json) {
+    final previewRaw = json['participantPreview'] as List<dynamic>? ?? [];
+    final participantPreview = previewRaw
+        .whereType<Map<String, Object?>>()
+        .map(ParticipantPreviewDto.fromJson)
+        .toList();
+
     return OpenMatchDto(
       id: json['id'] as String,
       sportId: json['sportId'] as String,
@@ -50,6 +79,9 @@ final class OpenMatchDto {
       locationLabel: json['locationLabel'] as String?,
       pricingCurrency: json['pricingCurrency'] as String?,
       displayCurrency: json['displayCurrency'] as String?,
+      participantPreview: participantPreview,
+      affectsElo: json['affectsElo'] as bool? ?? true,
+      venueImageUrl: json['venueImageUrl'] as String?,
     );
   }
 

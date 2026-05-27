@@ -511,6 +511,17 @@ final class _OpenMatchListTile extends StatelessWidget {
         onTap: onTap,
         child: Column(
           children: [
+            if (match.venueImageUrl != null)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                child: Image.network(
+                  match.venueImageUrl!,
+                  width: double.infinity,
+                  height: 120,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -613,16 +624,7 @@ final class _OpenMatchListTile extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    SizedBox(
-                      width: 56,
-                      height: 28,
-                      child: Stack(
-                        children: [
-                          _TinyAvatar(x: 0, color: Colors.grey.shade300),
-                          _TinyAvatar(x: 18, color: Colors.grey.shade400),
-                        ],
-                      ),
-                    ),
+                    _ParticipantAvatarRow(participants: match.participantPreview),
                     const Spacer(),
                     FilledButton(
                       style: FilledButton.styleFrom(
@@ -646,27 +648,68 @@ final class _OpenMatchListTile extends StatelessWidget {
   }
 }
 
-final class _TinyAvatar extends StatelessWidget {
-  const _TinyAvatar({required this.x, required this.color});
+// ---------------------------------------------------------------------------
+// _ParticipantAvatarRow — up to 4 overlapping CircleAvatars with initials
+// ---------------------------------------------------------------------------
 
-  final double x;
-  final Color color;
+final class _ParticipantAvatarRow extends StatelessWidget {
+  const _ParticipantAvatarRow({required this.participants});
+
+  final List<ParticipantPreviewDto> participants;
+
+  static String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts[1].isNotEmpty) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '?';
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Positioned(
-      left: x,
-      top: 0,
-      bottom: 0,
-      child: Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: scheme.surface, width: 2),
-        ),
+    const avatarRadius = 12.0;
+    const overlap = 16.0; // centre-to-centre distance
+
+    if (participants.isEmpty) {
+      return CircleAvatar(
+        radius: avatarRadius,
+        backgroundColor: Colors.grey.shade300,
+        child: Icon(Icons.person, size: 14, color: scheme.onSurfaceVariant),
+      );
+    }
+
+    final items = participants.take(4).toList();
+    final totalWidth = avatarRadius * 2 + (items.length - 1) * overlap;
+
+    return SizedBox(
+      width: totalWidth,
+      height: avatarRadius * 2,
+      child: Stack(
+        children: [
+          for (int i = 0; i < items.length; i++)
+            Positioned(
+              left: i * overlap,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: scheme.surface, width: 1.5),
+                ),
+                child: CircleAvatar(
+                  radius: avatarRadius,
+                  backgroundColor: scheme.primaryContainer,
+                  child: Text(
+                    _initials(items[i].displayName),
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
