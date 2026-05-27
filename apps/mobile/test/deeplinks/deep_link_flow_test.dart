@@ -12,6 +12,8 @@ import 'package:cuadrala_mobile/src/features/catalog/data/catalog_api.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_api.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_repository.dart';
+import 'package:cuadrala_mobile/src/features/monetization/data/monetization_api.dart';
+import 'package:cuadrala_mobile/src/features/monetization/data/monetization_repository.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
 import 'package:cuadrala_mobile/src/router/app_router.dart';
@@ -146,6 +148,43 @@ final class _FakeMatchesApi implements MatchesApi {
   }
 }
 
+final class _FakeMonetizationApi implements MonetizationApi {
+  @override
+  Future<Map<String, Object?>> createMatchObligationsEnvelope(
+          {required String matchId, required Map<String, Object?> body}) async =>
+      {'data': <String, Object?>{}};
+  @override
+  Future<Map<String, Object?>> getMatchTransactionsSummaryEnvelope(
+          {required String matchId}) async =>
+      {'data': <String, Object?>{'transactions': <Object?>[]}};
+  @override
+  Future<Map<String, Object?>> recordPlayerPaymentSelectionEnvelope(
+          {required String transactionId, required Map<String, Object?> body}) async =>
+      {'data': <String, Object?>{}};
+  @override
+  Future<Map<String, Object?>> uploadTransactionReceiptEnvelope(
+          {required String transactionId,
+          required List<int> fileBytes,
+          required String fileName}) async =>
+      {'data': <String, Object?>{}};
+  @override
+  Future<Map<String, Object?>> listUserTransactionsEnvelope(
+          {required String userId, int? limit}) async =>
+      {'data': <String, Object?>{'transactions': <Object?>[]}};
+  @override
+  Future<Map<String, Object?>> getVenuePaymentInfoEnvelope(
+          {required String venueId}) async =>
+      {'data': <String, Object?>{}};
+  @override
+  Future<Map<String, Object?>> getMatchPaymentInfoEnvelope(
+          {required String matchId}) async =>
+      {'data': <String, Object?>{}};
+  @override
+  Future<Map<String, Object?>> listVenuePaymentMethodsEnvelope(
+          {required String venueId}) async =>
+      {'data': <String, Object?>{'methods': <Object?>[]}};
+}
+
 void main() {
   group('Deep links (go_router)', () {
     setUp(() async {
@@ -165,6 +204,12 @@ void main() {
         MatchesRepository(
           matchesApi: _FakeMatchesApi(),
           catalogRepository: CatalogRepository(catalogApi: _FakeCatalogApi()),
+        ),
+      );
+      getIt.registerSingleton<MonetizationRepository>(
+        MonetizationRepository(
+          monetizationApi: _FakeMonetizationApi(),
+          profileRepository: getIt<ProfileRepository>(),
         ),
       );
       getIt.registerFactory<LoginCubit>(
