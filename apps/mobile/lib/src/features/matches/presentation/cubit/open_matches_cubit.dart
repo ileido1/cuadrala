@@ -21,6 +21,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         sportId: sportId,
         page: 1,
         limit: _pageLimit,
+        gender: null,
       );
       final today = DateTime.now();
       final selectedDate = DateTime(today.year, today.month, today.day);
@@ -39,6 +40,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
           activeTimeBuckets: const {},
           onlyAvailable: false,
           categoryId: null,
+          gender: null,
           items: page.items,
           visibleItems: visible,
           page: page.page,
@@ -125,6 +127,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         page: 1,
         limit: current.limit,
         categoryId: categoryId,
+        gender: current.gender,
       );
       final visible = _applyClientFilters(
         items: page.items,
@@ -141,6 +144,51 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
           activeTimeBuckets: current.activeTimeBuckets,
           onlyAvailable: current.onlyAvailable,
           categoryId: categoryId,
+          gender: current.gender,
+          items: page.items,
+          visibleItems: visible,
+          page: page.page,
+          limit: page.limit,
+          total: page.total,
+          isLoadingMore: false,
+          hasReachedEnd: page.items.length >= page.total,
+        ),
+      );
+    } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo cargar el listado.';
+      emit(OpenMatchesFailure(message: message));
+    }
+  }
+
+  Future<void> setGender(String? gender) async {
+    final current = state;
+    if (current is! OpenMatchesLoaded) return;
+    emit(const OpenMatchesLoading());
+    try {
+      final page = await _matchesRepository.listOpenMatches(
+        sportId: current.sportId,
+        page: 1,
+        limit: current.limit,
+        categoryId: current.categoryId,
+        gender: gender,
+      );
+      final visible = _applyClientFilters(
+        items: page.items,
+        query: current.query,
+        selectedDate: current.selectedDate,
+        activeTimeBuckets: current.activeTimeBuckets,
+        onlyAvailable: current.onlyAvailable,
+      );
+      emit(
+        OpenMatchesLoaded(
+          sportId: current.sportId,
+          query: current.query,
+          selectedDate: current.selectedDate,
+          activeTimeBuckets: current.activeTimeBuckets,
+          onlyAvailable: current.onlyAvailable,
+          categoryId: current.categoryId,
+          gender: gender,
           items: page.items,
           visibleItems: visible,
           page: page.page,
@@ -171,6 +219,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         page: nextPage,
         limit: current.limit,
         categoryId: current.categoryId,
+        gender: current.gender,
       );
       final merged = [...current.items, ...page.items];
       final visible = _applyClientFilters(
@@ -188,6 +237,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
           activeTimeBuckets: current.activeTimeBuckets,
           onlyAvailable: current.onlyAvailable,
           categoryId: current.categoryId,
+          gender: current.gender,
           items: merged,
           visibleItems: visible,
           page: page.page,

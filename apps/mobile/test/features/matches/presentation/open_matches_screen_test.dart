@@ -131,6 +131,7 @@ void main() {
         page: any(named: 'page'),
         limit: any(named: 'limit'),
         categoryId: any(named: 'categoryId'),
+        gender: any(named: 'gender'),
       ),
     ).thenAnswer((_) async => _defaultPageResponse);
   });
@@ -308,6 +309,7 @@ void main() {
           page: any(named: 'page'),
           limit: any(named: 'limit'),
           categoryId: any(named: 'categoryId'),
+          gender: any(named: 'gender'),
         ),
       ).thenAnswer((_) async => {
             'items': [fullItem],
@@ -325,6 +327,7 @@ void main() {
           page: any(named: 'page'),
           limit: any(named: 'limit'),
           categoryId: any(named: 'categoryId'),
+          gender: any(named: 'gender'),
         ),
       ).thenAnswer((_) async => {
             'items': [fullItem],

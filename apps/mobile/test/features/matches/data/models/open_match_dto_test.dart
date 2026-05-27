@@ -75,5 +75,21 @@ void main() {
         expect(dto.venueImageUrl, 'https://example.com/image.jpg');
       });
     });
+
+    group('gender', () {
+      test('parses gender from JSON', () {
+        final json = Map<String, Object?>.from(_baseJson)..['gender'] = 'MALE';
+
+        final dto = OpenMatchDto.fromJson(json);
+
+        expect(dto.gender, 'MALE');
+      });
+
+      test('gender is null when absent from JSON', () {
+        final dto = OpenMatchDto.fromJson(_baseJson);
+
+        expect(dto.gender, isNull);
+      });
+    });
   });
 }

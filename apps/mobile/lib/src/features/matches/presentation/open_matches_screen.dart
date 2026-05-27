@@ -106,6 +106,8 @@ class _OpenMatchesScreenState extends State<OpenMatchesScreen> {
                                 context.read<OpenMatchesCubit>().toggleTimeBucket(b),
                           ),
                           const SizedBox(height: 8),
+                          const _GenderPills(),
+                          const SizedBox(height: 8),
                           _AvailabilityToggle(
                             value: state.onlyAvailable,
                             onChanged: (v) =>
@@ -448,6 +450,38 @@ final class _AvailabilityToggle extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// _GenderPills — single-select FilterChip row for gender filter
+// ---------------------------------------------------------------------------
+
+class _GenderPills extends StatelessWidget {
+  const _GenderPills();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<OpenMatchesCubit>().state;
+    if (state is! OpenMatchesLoaded) return const SizedBox.shrink();
+    final cubit = context.read<OpenMatchesCubit>();
+    final current = state.gender;
+
+    Widget chip(String label, String value) => FilterChip(
+          label: Text(label),
+          selected: current == value,
+          onSelected: (_) => cubit.setGender(current == value ? null : value),
+        );
+
+    return Row(
+      children: [
+        chip('Masculino', 'MALE'),
+        const SizedBox(width: 8),
+        chip('Femenino', 'FEMALE'),
+        const SizedBox(width: 8),
+        chip('Mixto', 'MIXED'),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // _FilterChip — reusable chip for category filters
 // ---------------------------------------------------------------------------
 
@@ -519,7 +553,7 @@ final class _OpenMatchListTile extends StatelessWidget {
                   width: double.infinity,
                   height: 120,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),
             Padding(

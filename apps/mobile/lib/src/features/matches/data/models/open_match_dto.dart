@@ -35,6 +35,7 @@ final class OpenMatchDto {
     this.participantPreview = const [],
     this.affectsElo = true,
     this.venueImageUrl,
+    this.gender,
   });
 
   final String id;
@@ -55,6 +56,7 @@ final class OpenMatchDto {
   final List<ParticipantPreviewDto> participantPreview;
   final bool affectsElo;
   final String? venueImageUrl;
+  final String? gender;
 
   static OpenMatchDto fromJson(Map<String, Object?> json) {
     final previewRaw = json['participantPreview'] as List<dynamic>? ?? [];
@@ -82,6 +84,7 @@ final class OpenMatchDto {
       participantPreview: participantPreview,
       affectsElo: json['affectsElo'] as bool? ?? true,
       venueImageUrl: json['venueImageUrl'] as String?,
+      gender: json['gender'] as String?,
     );
   }
 

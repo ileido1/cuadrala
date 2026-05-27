@@ -6,6 +6,7 @@ abstract interface class MatchesApi {
     int page,
     int limit,
     String? categoryId,
+    String? gender,
   });
 
   Future<Map<String, Object?>> listMyMatchesEnvelope({
@@ -56,6 +57,7 @@ final class DioMatchesApi implements MatchesApi {
     int page = 1,
     int limit = 20,
     String? categoryId,
+    String? gender,
   }) {
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/matches/open',
@@ -64,6 +66,7 @@ final class DioMatchesApi implements MatchesApi {
         'page': page,
         'limit': limit,
         if (categoryId != null) 'categoryId': categoryId,
+        if (gender != null) 'gender': gender,
       },
     );
   }

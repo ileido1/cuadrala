@@ -27,6 +27,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
     required this.activeTimeBuckets,
     required this.onlyAvailable,
     required this.categoryId,
+    required this.gender,
     required this.items,
     required this.visibleItems,
     required this.page,
@@ -42,6 +43,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
   final Set<TimeBucket> activeTimeBuckets;
   final bool onlyAvailable;
   final String? categoryId;
+  final String? gender;
   final List<OpenMatchDto> items;
   final List<OpenMatchDto> visibleItems;
   final int page;
@@ -57,6 +59,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
     Set<TimeBucket>? activeTimeBuckets,
     bool? onlyAvailable,
     Object? categoryId = _sentinel,
+    Object? gender = _sentinel,
     List<OpenMatchDto>? items,
     List<OpenMatchDto>? visibleItems,
     int? page,
@@ -72,6 +75,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
       activeTimeBuckets: activeTimeBuckets ?? this.activeTimeBuckets,
       onlyAvailable: onlyAvailable ?? this.onlyAvailable,
       categoryId: categoryId == _sentinel ? this.categoryId : categoryId as String?,
+      gender: gender == _sentinel ? this.gender : gender as String?,
       items: items ?? this.items,
       visibleItems: visibleItems ?? this.visibleItems,
       page: page ?? this.page,
@@ -90,6 +94,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
         activeTimeBuckets,
         onlyAvailable,
         categoryId,
+        gender,
         items,
         visibleItems,
         page,

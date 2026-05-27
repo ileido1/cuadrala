@@ -47,6 +47,7 @@ final class _FakeMatchesApi implements MatchesApi {
     int page = 1,
     int limit = 20,
     String? categoryId,
+    String? gender,
   }) async {
     return {
       'items': <Object?>[],
