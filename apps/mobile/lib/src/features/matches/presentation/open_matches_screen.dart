@@ -197,7 +197,10 @@ class _OpenMatchesScreenState extends State<OpenMatchesScreen> {
                                     context: context,
                                     isScrollControlled: true,
                                     useSafeArea: true,
-                                    builder: (_) => _JoinConfirmSheet(match: m),
+                                    builder: (_) => _JoinConfirmSheet(
+                          match: m,
+                          matchesRepository: getIt<MatchesRepository>(),
+                        ),
                                   )
                               : null,
                         );
@@ -754,9 +757,13 @@ final class _ParticipantAvatarRow extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 final class _JoinConfirmSheet extends StatefulWidget {
-  const _JoinConfirmSheet({required this.match});
+  const _JoinConfirmSheet({
+    required this.match,
+    required this.matchesRepository,
+  });
 
   final OpenMatchDto match;
+  final MatchesRepository matchesRepository;
 
   @override
   State<_JoinConfirmSheet> createState() => _JoinConfirmSheetState();
@@ -772,7 +779,7 @@ class _JoinConfirmSheetState extends State<_JoinConfirmSheet> {
       _error = null;
     });
     try {
-      await getIt<MatchesRepository>().joinMatch(widget.match.id);
+      await widget.matchesRepository.joinMatch(widget.match.id);
       if (!mounted) return;
       Navigator.of(context).pop();
       context.push(Routes.matchDetail(widget.match.id));
