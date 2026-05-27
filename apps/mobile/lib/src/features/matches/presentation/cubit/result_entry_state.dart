@@ -90,7 +90,7 @@ final class ResultEntryState extends Equatable {
   }
 
   bool get canSubmit =>
-      !loading && !submitting && isScoreEntryComplete && isCourtComplete;
+      !loading && !submitting && !submitted && isScoreEntryComplete && isCourtComplete;
 
   ResultEntryState copyWith({
     bool? loading,

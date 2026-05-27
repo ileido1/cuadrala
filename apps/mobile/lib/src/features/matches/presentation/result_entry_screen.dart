@@ -303,7 +303,7 @@ class _BottomNavBar extends StatelessWidget {
         width: double.infinity,
         child: step == 2
             ? FilledButton(
-                onPressed: state.submitting ? null : cubit.submit,
+                onPressed: state.canSubmit ? cubit.submit : null,
                 child: state.submitting
                     ? const SizedBox(
                         height: 18,
