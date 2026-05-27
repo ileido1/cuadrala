@@ -62,7 +62,13 @@ class _ResultEntryViewState extends State<_ResultEntryView> {
         ),
         BlocListener<ResultEntryCubit, ResultEntryState>(
           listenWhen: (prev, curr) => !prev.submitted && curr.submitted,
-          listener: (context, state) => context.pop(),
+          listener: (context, state) {
+            _pageController.animateToPage(
+              3,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOut,
+            );
+          },
         ),
         BlocListener<ResultEntryCubit, ResultEntryState>(
           listenWhen: (prev, curr) =>
@@ -115,7 +121,7 @@ class _ResultEntryViewState extends State<_ResultEntryView> {
               child: Column(
                 children: [
                   _ResultHeader(step: state.step),
-                  _StepProgressBar(step: state.step),
+                  if (state.step < 3) _StepProgressBar(step: state.step),
                   Expanded(
                     child: PageView(
                       controller: _pageController,
@@ -124,6 +130,7 @@ class _ResultEntryViewState extends State<_ResultEntryView> {
                         _CourtAssignStep(),
                         _ScoreEntryStep(),
                         _ConfirmStep(),
+                        _ResultSummaryStep(),
                       ],
                     ),
                   ),
@@ -151,6 +158,7 @@ class _ResultHeader extends StatelessWidget {
     'Asignar posiciones',
     'Resultado',
     'Resumen',
+    'Propuesta enviada',
   ];
 
   @override
@@ -173,19 +181,21 @@ class _ResultHeader extends StatelessWidget {
           children: [
             SizedBox(
               width: 56,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  icon: const Icon(Icons.chevron_left, size: 28),
-                  onPressed: () {
-                    if (step == 0) {
-                      context.pop();
-                    } else {
-                      cubit.prevStep();
-                    }
-                  },
-                ),
-              ),
+              child: step == 3
+                  ? const SizedBox.shrink()
+                  : Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.chevron_left, size: 28),
+                        onPressed: () {
+                          if (step == 0) {
+                            context.pop();
+                          } else {
+                            cubit.prevStep();
+                          }
+                        },
+                      ),
+                    ),
             ),
             Expanded(
               child: Column(
@@ -203,7 +213,7 @@ class _ResultHeader extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Paso ${step + 1} de 3 — ${_titles[step]}',
+                    step == 3 ? _titles[3] : 'Paso ${step + 1} de 3 — ${_titles[step]}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -301,21 +311,26 @@ class _BottomNavBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: SizedBox(
         width: double.infinity,
-        child: step == 2
-            ? FilledButton(
-                onPressed: state.canSubmit ? cubit.submit : null,
-                child: state.submitting
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Enviar propuesta'),
-              )
-            : FilledButton(
-                onPressed: _continueEnabled ? cubit.nextStep : null,
-                child: const Text('Continuar'),
-              ),
+        child: switch (step) {
+              3 => FilledButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('Volver al partido'),
+                ),
+              2 => FilledButton(
+                  onPressed: state.canSubmit ? cubit.submit : null,
+                  child: state.submitting
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Enviar propuesta'),
+                ),
+              _ => FilledButton(
+                  onPressed: _continueEnabled ? cubit.nextStep : null,
+                  child: const Text('Continuar'),
+                ),
+            },
       ),
     );
   }
@@ -1280,6 +1295,179 @@ class _ConfirmStep extends StatelessWidget {
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 3: _ResultSummaryStep — post-submit result card
+// ---------------------------------------------------------------------------
+
+class _ResultSummaryStep extends StatelessWidget {
+  const _ResultSummaryStep();
+
+  String _nameFor(String userId, MatchDetailDto? match) {
+    if (match == null) return userId;
+    final p = match.participants.where((p) => p.userId == userId).firstOrNull;
+    return p?.displayName ?? userId;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ResultEntryCubit, ResultEntryState>(
+      builder: (context, state) {
+        final scheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+        final match = state.match;
+        final sets = state.sets;
+        final winnerIndex = state.winnerTeamIndex;
+
+        final teamANames = state.teamA.map((id) => _nameFor(id, match)).toList();
+        final teamBNames = state.teamB.map((id) => _nameFor(id, match)).toList();
+
+        int setsA = 0;
+        int setsB = 0;
+        for (final s in sets) {
+          if (s.teamA > s.teamB) {
+            setsA++;
+          } else {
+            setsB++;
+          }
+        }
+
+        Widget teamRow({
+          required String label,
+          required List<String> names,
+          required int setsWon,
+          required bool isWinner,
+        }) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+              border: isWinner
+                  ? Border.all(color: scheme.primary, width: 2)
+                  : null,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            label,
+                            style: textTheme.labelSmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          if (isWinner) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.emoji_events_rounded,
+                              size: 14,
+                              color: scheme.primary,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ...names.map(
+                        (n) => Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            n,
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$setsWon',
+                  style: textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: isWinner ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(Icons.check_circle_rounded, size: 52, color: scheme.primary),
+              const SizedBox(height: 8),
+              Text(
+                'Propuesta enviada',
+                textAlign: TextAlign.center,
+                style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'El resultado quedará confirmado cuando ambos equipos acepten.',
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 28),
+              teamRow(
+                label: 'EQUIPO A',
+                names: teamANames,
+                setsWon: setsA,
+                isWinner: winnerIndex == 0,
+              ),
+              const SizedBox(height: 8),
+              if (sets.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: sets
+                        .asMap()
+                        .entries
+                        .map(
+                          (e) => Container(
+                            margin: EdgeInsets.only(
+                                right: e.key < sets.length - 1 ? 8 : 0),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${e.value.teamA}–${e.value.teamB}',
+                              style: textTheme.labelMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              teamRow(
+                label: 'EQUIPO B',
+                names: teamBNames,
+                setsWon: setsB,
+                isWinner: winnerIndex == 1,
+              ),
+            ],
+          ),
         );
       },
     );
