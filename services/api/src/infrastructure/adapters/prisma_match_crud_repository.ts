@@ -22,12 +22,13 @@ const MATCH_SELECT = {
   tournamentId: true,
   pricePerPlayerCents: true,
   maxParticipants: true,
+  affectsElo: true,
   createdAt: true,
   updatedAt: true,
   _count: { select: { participants: true } },
 } as const;
 
-function computeDetailDTO(_row: {
+export function computeDetailDTOSV(_row: {
   id: string;
   sportId: string;
   categoryId: string;
@@ -38,6 +39,7 @@ function computeDetailDTO(_row: {
   tournamentId: string | null;
   pricePerPlayerCents: number;
   maxParticipants: number;
+  affectsElo: boolean;
   createdAt: Date;
   updatedAt: Date;
   _count: { participants: number };
@@ -54,6 +56,7 @@ function computeDetailDTO(_row: {
     pricePerPlayerCents: _row.pricePerPlayerCents,
     maxParticipants: _row.maxParticipants,
     participantCount: _row._count.participants,
+    affectsElo: _row.affectsElo,
     createdAt: _row.createdAt,
     updatedAt: _row.updatedAt,
   };
@@ -82,6 +85,7 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
             tournamentId: _input.tournamentId ?? null,
             pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
             maxParticipants: _input.maxParticipants,
+            affectsElo: _input.affectsElo ?? true,
             participants: {
               create: [{ userId: _creatorUserId }],
             },
@@ -114,7 +118,7 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
         return MATCH;
       });
 
-      return computeDetailDTO(ROW);
+      return computeDetailDTOSV(ROW);
     }
 
     const ROW = await PRISMA.match.create({
@@ -129,6 +133,7 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
         tournamentId: _input.tournamentId ?? null,
         pricePerPlayerCents: _input.pricePerPlayerCents ?? 0,
         maxParticipants: _input.maxParticipants,
+        affectsElo: _input.affectsElo ?? true,
         participants: {
           create: [{ userId: _creatorUserId }],
         },
@@ -136,7 +141,7 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
       select: MATCH_SELECT,
     });
 
-    return computeDetailDTO(ROW);
+    return computeDetailDTOSV(ROW);
   }
 
   async updateMatchSV(_matchId: string, _patch: UpdateMatchPatchDTO): Promise<MatchDetailDTO> {
@@ -148,24 +153,10 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
         ...(_patch.pricePerPlayerCents !== undefined ? { pricePerPlayerCents: _patch.pricePerPlayerCents } : {}),
         ...(_patch.maxParticipants !== undefined ? { maxParticipants: _patch.maxParticipants } : {}),
       },
-      select: {
-        id: true,
-        sportId: true,
-        categoryId: true,
-        type: true,
-        status: true,
-        scheduledAt: true,
-        courtId: true,
-        tournamentId: true,
-        pricePerPlayerCents: true,
-        maxParticipants: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { participants: true } },
-      },
+      select: MATCH_SELECT,
     });
 
-    return computeDetailDTO(ROW);
+    return computeDetailDTOSV(ROW);
   }
 
   async cancelMatchSV(_matchId: string): Promise<MatchDetailDTO> {
@@ -183,25 +174,11 @@ export class PrismaMatchCrudRepository implements MatchCrudRepository {
       return _tx.match.update({
         where: { id: _matchId },
         data: { status: 'CANCELLED' },
-        select: {
-          id: true,
-          sportId: true,
-          categoryId: true,
-          type: true,
-          status: true,
-          scheduledAt: true,
-          courtId: true,
-          tournamentId: true,
-          pricePerPlayerCents: true,
-          maxParticipants: true,
-          createdAt: true,
-          updatedAt: true,
-          _count: { select: { participants: true } },
-        },
+        select: MATCH_SELECT,
       });
     });
 
-    return computeDetailDTO(ROW);
+    return computeDetailDTOSV(ROW);
   }
 }
 

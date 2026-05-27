@@ -32,6 +32,9 @@ export type OpenMatchDTO = {
   locationLabel?: string;
   pricingCurrency?: string;
   displayCurrency?: string;
+  participantPreview?: { userId: string; displayName: string }[];
+  affectsElo: boolean;
+  venueImageUrl?: string;
 };
 
 export interface MatchRepository {

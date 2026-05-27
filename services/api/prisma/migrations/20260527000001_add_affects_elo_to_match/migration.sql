@@ -1,0 +1,1 @@
+ALTER TABLE "Match" ADD COLUMN "affectsElo" BOOLEAN NOT NULL DEFAULT true;

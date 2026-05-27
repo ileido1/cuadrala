@@ -528,6 +528,8 @@ model Venue {
   /// Usuario propietario de la sede (nullable para compatibilidad hacia atrás).
   ownerUserId       String?   @unique
   owner             User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  /// URL to venue photo/image. Nullable — populated via admin or future upload.
+  imageUrl          String?
   phone             String?
   email             String?
   description       String?
@@ -699,6 +701,8 @@ model Match {
   pricePerPlayerCents Int                     @default(0)
   /// Cupo máximo de participantes (MVP). Para Americano suele ser 4, pero se deja configurable.
   maxParticipants     Int                     @default(4)
+  /// Whether this match affects players' Elo ratings.
+  affectsElo          Boolean                 @default(true)
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
 

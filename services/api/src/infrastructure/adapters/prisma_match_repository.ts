@@ -7,7 +7,7 @@ import type {
 
 import { PRISMA } from '../prisma_client.js';
 
-function computeOpenMatchDTO(_row: {
+export function computeOpenMatchDTOSV(_row: {
   id: string;
   sportId: string;
   categoryId: string;
@@ -15,8 +15,10 @@ function computeOpenMatchDTO(_row: {
   scheduledAt: Date | null;
   pricePerPlayerCents: number;
   maxParticipants: number;
+  affectsElo: boolean;
   _count: { participants: number };
   category: { name: string } | null;
+  participants: { userId: string; user: { name: string } }[];
   court: null | {
     name: string;
     venue: {
@@ -27,6 +29,7 @@ function computeOpenMatchDTO(_row: {
       addressCity: string | null;
       formattedAddress: string | null;
       address: string | null;
+      imageUrl: string | null;
     };
   };
 }): OpenMatchDTO {
@@ -58,6 +61,12 @@ function computeOpenMatchDTO(_row: {
     ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
     pricingCurrency: _row.court?.venue.pricingCurrency,
     displayCurrency: _row.court?.venue.displayCurrency,
+    participantPreview: _row.participants.map((_p) => ({
+      userId: _p.userId,
+      displayName: _p.user.name,
+    })),
+    affectsElo: _row.affectsElo,
+    ...(_row.court?.venue.imageUrl != null ? { venueImageUrl: _row.court.venue.imageUrl } : {}),
   };
 }
 
@@ -134,7 +143,15 @@ export class PrismaMatchRepository implements MatchRepository {
           scheduledAt: true,
           pricePerPlayerCents: true,
           maxParticipants: true,
+          affectsElo: true,
           _count: { select: { participants: true } },
+          participants: {
+            take: 4,
+            select: {
+              userId: true,
+              user: { select: { name: true } },
+            },
+          },
           court: {
             select: {
               name: true,
@@ -147,6 +164,7 @@ export class PrismaMatchRepository implements MatchRepository {
                   addressCity: true,
                   formattedAddress: true,
                   address: true,
+                  imageUrl: true,
                 },
               },
             },
@@ -156,7 +174,7 @@ export class PrismaMatchRepository implements MatchRepository {
     ]);
 
     // Solo abiertas con cupos vacíos (openSpots > 0)
-    const ITEMS = ROWS.map(computeOpenMatchDTO).filter((_m) => _m.openSpots > 0);
+    const ITEMS = ROWS.map(computeOpenMatchDTOSV).filter((_m) => _m.openSpots > 0);
 
     return { items: ITEMS, total: TOTAL };
   }

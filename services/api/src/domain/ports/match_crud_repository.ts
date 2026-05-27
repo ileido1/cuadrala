@@ -10,6 +10,7 @@ export type CreateMatchInputDTO = {
   pricePerPlayerCents?: number;
   maxParticipants: number;
   notes?: string;
+  affectsElo?: boolean;
 };
 
 export type UpdateMatchPatchDTO = {
@@ -31,6 +32,7 @@ export type MatchDetailDTO = {
   pricePerPlayerCents: number;
   maxParticipants: number;
   participantCount: number;
+  affectsElo: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
