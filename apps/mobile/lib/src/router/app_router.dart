@@ -15,7 +15,6 @@ import '../features/availability/presentation/availability_screen.dart';
 import '../features/availability/presentation/cubit/availability_cubit.dart';
 import '../features/availability/data/availability_repository.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
-import '../features/matches/presentation/create_match_screen.dart';
 import '../features/matches/presentation/match_lifecycle_screen.dart';
 import '../features/matches/presentation/result_entry_screen.dart';
 import '../features/chat/presentation/match_chat_screen.dart';
@@ -30,9 +29,9 @@ import '../features/notifications/presentation/notification_detail_screen.dart';
 import '../features/notifications/presentation/notification_prefs_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
-import '../features/venues/presentation/venues_screen.dart';
-import '../features/venues/presentation/venue_detail_screen.dart';
+import '../features/venues/presentation/venue_map_screen.dart';
 import '../features/venues/presentation/venue_match_creation_screen.dart';
+import '../features/venues/presentation/cubit/venue_map_cubit.dart';
 import '../features/tournaments/presentation/create_tournament_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
 import 'auth_redirect.dart';
@@ -97,7 +96,10 @@ final class AppRouter {
             // ------------------------------------------------------------------
             GoRoute(
               path: Routes.createMatch,
-              builder: (context, state) => const CreateMatchScreen(),
+              builder: (context, state) => BlocProvider<VenueMapCubit>(
+                create: (_) => getIt<VenueMapCubit>()..load(),
+                child: const VenueMapScreen(),
+              ),
             ),
             GoRoute(
               path: '/matches/:matchId/result',
@@ -268,19 +270,6 @@ final class AppRouter {
                 child:
                     AvailabilityScreen(repository: getIt<AvailabilityRepository>()),
               ),
-            ),
-            GoRoute(
-              path: Routes.venues,
-              builder: (context, state) => const VenuesScreen(),
-            ),
-            GoRoute(
-              path: '/venues/:venueId',
-              builder: (context, state) {
-                final venueId = state.pathParameters['venueId'] ?? '';
-                final venueName =
-                    state.uri.queryParameters['name'] ?? 'Sede';
-                return VenueDetailScreen(venueId: venueId, venueName: venueName);
-              },
             ),
             GoRoute(
               path: '/venues/:venueId/create-match',

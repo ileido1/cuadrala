@@ -52,8 +52,7 @@ import '../../features/tournaments/presentation/cubit/tournament_scoreboard_cubi
 import '../../features/tournaments/presentation/cubit/tournament_registrations_cubit.dart';
 import '../../features/venues/data/venues_api.dart';
 import '../../features/venues/data/venues_repository.dart';
-import '../../features/venues/presentation/cubit/venues_cubit.dart';
-import '../../features/venues/presentation/cubit/venue_detail_cubit.dart';
+import '../../features/venues/presentation/cubit/venue_map_cubit.dart';
 import '../../features/matchmaking/data/matchmaking_api.dart';
 import '../../features/matchmaking/data/matchmaking_repository.dart';
 import '../../features/matchmaking/presentation/cubit/matchmaking_cubit.dart';
@@ -145,17 +144,10 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton<VenuesApi>(() => DioVenuesApi(apiClient: getIt<ApiClient>()));
   getIt.registerLazySingleton<VenuesRepository>(() => VenuesRepository(venuesApi: getIt<VenuesApi>()));
 
-  getIt.registerFactory<VenuesCubit>(
-    () => VenuesCubit(
+  getIt.registerFactory<VenueMapCubit>(
+    () => VenueMapCubit(
       repository: getIt<VenuesRepository>(),
       locationService: getIt<LocationService>(),
-    ),
-  );
-
-  getIt.registerFactoryParam<VenueDetailCubit, String, void>(
-    (venueId, _) => VenueDetailCubit(
-      repository: getIt<VenuesRepository>(),
-      venueId: venueId,
     ),
   );
 

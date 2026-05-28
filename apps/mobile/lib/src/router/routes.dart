@@ -28,8 +28,6 @@ final class Routes {
   static const notifications = '/notifications';
   static const notificationPrefs = '/notifications/prefs';
   static const availability = '/availability';
-  static const venues = '/venues';
-  static String venueDetail(String venueId) => '/venues/$venueId';
   static String venueCreateMatch(String venueId) =>
       '/venues/$venueId/create-match';
 
