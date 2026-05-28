@@ -10,6 +10,7 @@ export type MatchListFiltersDTO = {
   nearLng?: number;
   radiusKm?: number;
   gender?: 'MALE' | 'FEMALE' | 'MIXED';
+  venueId?: string;
 };
 
 export type PageDTO = {

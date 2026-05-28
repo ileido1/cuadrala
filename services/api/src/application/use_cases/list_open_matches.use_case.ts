@@ -38,6 +38,7 @@ export class ListOpenMatchesUseCase {
         ...(_input.nearLng !== undefined ? { nearLng: _input.nearLng } : {}),
         ...(_input.radiusKm !== undefined ? { radiusKm: _input.radiusKm } : {}),
         ...(_input.gender !== undefined ? { gender: _input.gender } : {}),
+        ...(_input.venueId !== undefined ? { venueId: _input.venueId } : {}),
       },
       { page: _input.page, limit: _input.limit },
     );

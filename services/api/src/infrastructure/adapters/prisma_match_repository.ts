@@ -108,23 +108,41 @@ export class PrismaMatchRepository implements MatchRepository {
             },
           }
         : {}),
-      ...(_filters.nearLat !== undefined &&
-      _filters.nearLng !== undefined &&
-      _filters.radiusKm !== undefined &&
-      _filters.radiusKm > 0
-        ? (() => {
-            const LAT_DELTA = kmToLatitudeDeltaSV(_filters.radiusKm as number);
-            const LNG_DELTA = kmToLongitudeDeltaSV(_filters.radiusKm as number, _filters.nearLat as number);
-            return {
-              court: {
-                venue: {
-                  latitude: { gte: (_filters.nearLat as number) - LAT_DELTA, lte: (_filters.nearLat as number) + LAT_DELTA },
-                  longitude: { gte: (_filters.nearLng as number) - LNG_DELTA, lte: (_filters.nearLng as number) + LNG_DELTA },
-                },
-              },
-            };
-          })()
-        : {}),
+      ...(() => {
+        const HAS_NEAR =
+          _filters.nearLat !== undefined &&
+          _filters.nearLng !== undefined &&
+          _filters.radiusKm !== undefined &&
+          _filters.radiusKm > 0;
+        const HAS_VENUE = _filters.venueId !== undefined;
+
+        if (!HAS_NEAR && !HAS_VENUE) return {};
+
+        const LAT_DELTA = HAS_NEAR ? kmToLatitudeDeltaSV(_filters.radiusKm as number) : 0;
+        const LNG_DELTA = HAS_NEAR
+          ? kmToLongitudeDeltaSV(_filters.radiusKm as number, _filters.nearLat as number)
+          : 0;
+
+        return {
+          court: {
+            ...(HAS_VENUE ? { venueId: _filters.venueId } : {}),
+            ...(HAS_NEAR
+              ? {
+                  venue: {
+                    latitude: {
+                      gte: (_filters.nearLat as number) - LAT_DELTA,
+                      lte: (_filters.nearLat as number) + LAT_DELTA,
+                    },
+                    longitude: {
+                      gte: (_filters.nearLng as number) - LNG_DELTA,
+                      lte: (_filters.nearLng as number) + LNG_DELTA,
+                    },
+                  },
+                }
+              : {}),
+          },
+        };
+      })(),
     };
 
     const SKIP = (_page.page - 1) * _page.limit;

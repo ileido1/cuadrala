@@ -20,6 +20,7 @@ const VENUE_LIST_SELECT = {
   displayCurrency: true,
   pricingCurrency: true,
   createdAt: true,
+  imageUrl: true,
 } as const;
 
 function kmToLatitudeDeltaSV(_radiusKm: number): number {
@@ -64,8 +65,10 @@ function mapVenueDetailSV(_venue: {
   displayCurrency: string;
   pricingCurrency: string;
   countryCode: string;
+  imageUrl: string | null;
   monetizationSettings: { timezone: string } | null;
   _count: { courts: number };
+  courts: { sportType: string }[];
 }): VenueDetailDTO {
   const OPENING_HOURS = _venue.openingHours as Record<string, { open: string; close: string }> | null;
 
@@ -94,6 +97,8 @@ function mapVenueDetailSV(_venue: {
     pricingCurrency: _venue.pricingCurrency,
     countryCode: _venue.countryCode,
     timezone: _venue.monetizationSettings?.timezone ?? 'America/Caracas',
+    imageUrl: _venue.imageUrl,
+    sports: [...new Set(_venue.courts.map((_c) => _c.sportType))],
   };
 }
 
@@ -122,8 +127,8 @@ export class PrismaVenueRepository implements VenueRepository {
   async updateSV(_venueId: string, _data: UpdateVenueDataDTO): Promise<VenueSettingsDTO> {
     const UPDATED = await this._prisma.venue.update({
       where: { id: _venueId },
-      data: {
-        ...(_data.name !== undefined ? { name: _data.name } : {}),
+      data: ({
+        ...(_data.name != null ? { name: _data.name } : {}),
         ...(_data.address !== undefined ? { address: _data.address } : {}),
         ...(_data.latitude !== undefined ? { latitude: _data.latitude } : {}),
         ...(_data.longitude !== undefined ? { longitude: _data.longitude } : {}),
@@ -133,13 +138,13 @@ export class PrismaVenueRepository implements VenueRepository {
         ...(_data.openingHours !== undefined
           ? { openingHours: _data.openingHours as object }
           : {}),
-        ...(_data.pricingCurrency !== undefined
+        ...(_data.pricingCurrency != null
           ? { pricingCurrency: _data.pricingCurrency }
           : {}),
-        ...(_data.displayCurrency !== undefined
+        ...(_data.displayCurrency != null
           ? { displayCurrency: _data.displayCurrency }
           : {}),
-      },
+      }) as Parameters<typeof this._prisma.venue.update>[0]['data'],
       select: {
         id: true,
         name: true,
@@ -298,8 +303,10 @@ export class PrismaVenueRepository implements VenueRepository {
         displayCurrency: true,
         pricingCurrency: true,
         countryCode: true,
+        imageUrl: true,
         monetizationSettings: { select: { timezone: true } },
         _count: { select: { courts: true } },
+        courts: { where: { status: 'ACTIVE' }, select: { sportType: true } },
       },
     });
 

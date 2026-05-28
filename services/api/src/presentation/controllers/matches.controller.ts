@@ -52,6 +52,7 @@ export async function getOpenMatchesCON(_req: Request, _res: Response): Promise<
     ...(QUERY.scheduledFrom !== undefined ? { scheduledFrom: new Date(QUERY.scheduledFrom) } : {}),
     ...(QUERY.scheduledTo !== undefined ? { scheduledTo: new Date(QUERY.scheduledTo) } : {}),
     ...(QUERY.gender !== undefined ? { gender: QUERY.gender } : {}),
+    ...(QUERY.venueId !== undefined ? { venueId: QUERY.venueId } : {}),
   });
 
   _res.status(200).json({

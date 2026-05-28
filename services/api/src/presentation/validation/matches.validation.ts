@@ -13,6 +13,7 @@ export const LIST_OPEN_MATCHES_QUERY_SCHEMA = z
     scheduledFrom: z.string().datetime({ offset: true }).optional(),
     scheduledTo: z.string().datetime({ offset: true }).optional(),
     gender: z.enum(['MALE', 'FEMALE', 'MIXED']).optional(),
+    venueId: z.string().uuid('venueId debe ser un UUID valido.').optional(),
   })
   .strict();
 

@@ -43,6 +43,7 @@ export type VenueListItemDTO = {
   pricingCurrency: string;
   createdAt: Date;
   distanceKm?: number | null;
+  imageUrl?: string | null;
 };
 
 export type VenueDetailDTO = {
@@ -70,6 +71,8 @@ export type VenueDetailDTO = {
   displayCurrency: string;
   pricingCurrency: string;
   countryCode: string;
+  imageUrl?: string | null;
+  sports: string[];
 };
 
 export type VenuePaymentInfoWithNameDTO = VenuePaymentInfoDTO & {
