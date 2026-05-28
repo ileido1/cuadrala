@@ -78,6 +78,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     showLiveBadge: showLiveBadge,
                     onTap: () => StatefulNavigationShell.of(context).goBranch(1),
                   ),
+                  const SizedBox(height: 10),
+                  _VenuesHeroCard(
+                    onTap: () => context.push(Routes.venues),
+                  ),
                   const SizedBox(height: 12),
                   _CtaRow(
                     onBuscar: () => StatefulNavigationShell.of(context).goBranch(1),
@@ -454,6 +458,75 @@ final class _SearchHeroCard extends StatelessWidget {
                       ],
                     ),
                   ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Venues hero card — secondary call-to-action
+// ---------------------------------------------------------------------------
+
+final class _VenuesHeroCard extends StatelessWidget {
+  const _VenuesHeroCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: scheme.surfaceContainerHighest,
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: scheme.secondaryContainer,
+                  ),
+                  child: Icon(Icons.location_on_outlined, color: scheme.onSecondaryContainer),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Reservar cancha',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Elegí sede, horario y creá tu partida',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
               ],
             ),
           ),
