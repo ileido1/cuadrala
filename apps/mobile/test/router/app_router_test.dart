@@ -62,6 +62,7 @@ final class _FakeMatchesApi implements MatchesApi {
     int limit = 20,
     String? categoryId,
     String? gender,
+    String? venueId,
   }) async =>
       {
         'items': <Object?>[],

@@ -28,6 +28,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
     required this.onlyAvailable,
     required this.categoryId,
     required this.gender,
+    required this.venueId,
     required this.items,
     required this.visibleItems,
     required this.page,
@@ -44,6 +45,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
   final bool onlyAvailable;
   final String? categoryId;
   final String? gender;
+  final String? venueId;
   final List<OpenMatchDto> items;
   final List<OpenMatchDto> visibleItems;
   final int page;
@@ -60,6 +62,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
     bool? onlyAvailable,
     Object? categoryId = _sentinel,
     Object? gender = _sentinel,
+    Object? venueId = _sentinel,
     List<OpenMatchDto>? items,
     List<OpenMatchDto>? visibleItems,
     int? page,
@@ -76,6 +79,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
       onlyAvailable: onlyAvailable ?? this.onlyAvailable,
       categoryId: categoryId == _sentinel ? this.categoryId : categoryId as String?,
       gender: gender == _sentinel ? this.gender : gender as String?,
+      venueId: venueId == _sentinel ? this.venueId : venueId as String?,
       items: items ?? this.items,
       visibleItems: visibleItems ?? this.visibleItems,
       page: page ?? this.page,
@@ -95,6 +99,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
         onlyAvailable,
         categoryId,
         gender,
+        venueId,
         items,
         visibleItems,
         page,

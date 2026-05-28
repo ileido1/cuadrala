@@ -30,6 +30,7 @@ import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
 import '../features/venues/presentation/venues_screen.dart';
 import '../features/venues/presentation/venue_detail_screen.dart';
+import '../features/venues/presentation/venue_match_creation_screen.dart';
 import '../features/tournaments/presentation/create_tournament_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
 import 'auth_redirect.dart';
@@ -277,6 +278,20 @@ final class AppRouter {
                 final venueName =
                     state.uri.queryParameters['name'] ?? 'Sede';
                 return VenueDetailScreen(venueId: venueId, venueName: venueName);
+              },
+            ),
+            GoRoute(
+              path: '/venues/:venueId/create-match',
+              builder: (context, state) {
+                final venueId = state.pathParameters['venueId'] ?? '';
+                final extra = state.extra as Map<String, Object?>?;
+                final courtId = extra?['courtId'] as String?;
+                final scheduledAt = extra?['scheduledAt'] as String?;
+                return VenueMatchCreationScreen(
+                  venueId: venueId,
+                  courtId: courtId,
+                  scheduledAt: scheduledAt,
+                );
               },
             ),
           ],

@@ -20,6 +20,7 @@ class MatchesRepository {
     int limit = 20,
     String? categoryId,
     String? gender,
+    String? venueId,
   }) async {
     final data = await _matchesApi.listOpenMatchesEnvelope(
       sportId: sportId,
@@ -27,6 +28,7 @@ class MatchesRepository {
       limit: limit,
       categoryId: categoryId,
       gender: gender,
+      venueId: venueId,
     );
 
     final itemsRaw = data['items'];

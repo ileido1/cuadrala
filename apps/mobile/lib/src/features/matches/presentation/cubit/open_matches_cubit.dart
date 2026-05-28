@@ -6,11 +6,15 @@ import '../../data/models/open_match_dto.dart';
 import 'open_matches_state.dart';
 
 final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
-  OpenMatchesCubit({required MatchesRepository matchesRepository})
-      : _matchesRepository = matchesRepository,
+  OpenMatchesCubit({
+    required MatchesRepository matchesRepository,
+    String? venueId,
+  })  : _matchesRepository = matchesRepository,
+        _venueId = venueId,
         super(const OpenMatchesInitial());
 
   final MatchesRepository _matchesRepository;
+  final String? _venueId;
   static const _pageLimit = 20;
 
   Future<void> load() async {
@@ -22,6 +26,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         page: 1,
         limit: _pageLimit,
         gender: null,
+        venueId: _venueId,
       );
       final today = DateTime.now();
       final selectedDate = DateTime(today.year, today.month, today.day);
@@ -41,6 +46,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
           onlyAvailable: false,
           categoryId: null,
           gender: null,
+          venueId: _venueId,
           items: page.items,
           visibleItems: visible,
           page: page.page,
@@ -128,6 +134,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         limit: current.limit,
         categoryId: categoryId,
         gender: current.gender,
+        venueId: current.venueId,
       );
       final visible = _applyClientFilters(
         items: page.items,
@@ -145,6 +152,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
           onlyAvailable: current.onlyAvailable,
           categoryId: categoryId,
           gender: current.gender,
+          venueId: current.venueId,
           items: page.items,
           visibleItems: visible,
           page: page.page,
@@ -172,6 +180,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         limit: current.limit,
         categoryId: current.categoryId,
         gender: gender,
+        venueId: current.venueId,
       );
       final visible = _applyClientFilters(
         items: page.items,
@@ -189,6 +198,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
           onlyAvailable: current.onlyAvailable,
           categoryId: current.categoryId,
           gender: gender,
+          venueId: current.venueId,
           items: page.items,
           visibleItems: visible,
           page: page.page,
@@ -220,6 +230,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
         limit: current.limit,
         categoryId: current.categoryId,
         gender: current.gender,
+        venueId: current.venueId,
       );
       final merged = [...current.items, ...page.items];
       final visible = _applyClientFilters(
@@ -238,6 +249,7 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
           onlyAvailable: current.onlyAvailable,
           categoryId: current.categoryId,
           gender: current.gender,
+          venueId: current.venueId,
           items: merged,
           visibleItems: visible,
           page: page.page,
