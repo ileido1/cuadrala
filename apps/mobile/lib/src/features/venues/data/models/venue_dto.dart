@@ -12,6 +12,11 @@ final class VenueDto {
     this.openingHours,
     this.timezone,
     this.countryCode,
+    this.imageUrl,
+    this.distanceKm,
+    this.phone,
+    this.description,
+    this.sports = const [],
   });
 
   final String id;
@@ -24,10 +29,17 @@ final class VenueDto {
   final OpeningHoursMap? openingHours;
   final String? timezone;
   final String? countryCode;
+  final String? imageUrl;
+  final double? distanceKm;
+  final String? phone;
+  final String? description;
+  final List<String> sports;
 
   static VenueDto fromJson(Map<String, Object?> json) {
     final latRaw = json['latitude'];
     final lngRaw = json['longitude'];
+    final distRaw = json['distanceKm'];
+    final sportsRaw = json['sports'];
     return VenueDto(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -39,6 +51,13 @@ final class VenueDto {
       openingHours: openingHoursFromJson(json['openingHours']),
       timezone: json['timezone'] as String?,
       countryCode: json['countryCode'] as String?,
+      imageUrl: json['imageUrl'] as String?,
+      distanceKm: distRaw is num ? distRaw.toDouble() : null,
+      phone: json['phone'] as String?,
+      description: json['description'] as String?,
+      sports: sportsRaw is List
+          ? sportsRaw.whereType<String>().toList(growable: false)
+          : const [],
     );
   }
 }

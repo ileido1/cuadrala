@@ -3,7 +3,7 @@ import 'models/court_dto.dart';
 import 'models/venue_dto.dart';
 import 'venues_api.dart';
 
-final class VenuesRepository {
+class VenuesRepository {
   VenuesRepository({required VenuesApi venuesApi}) : _venuesApi = venuesApi;
 
   final VenuesApi _venuesApi;

@@ -146,7 +146,10 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton<VenuesRepository>(() => VenuesRepository(venuesApi: getIt<VenuesApi>()));
 
   getIt.registerFactory<VenuesCubit>(
-    () => VenuesCubit(repository: getIt<VenuesRepository>()),
+    () => VenuesCubit(
+      repository: getIt<VenuesRepository>(),
+      locationService: getIt<LocationService>(),
+    ),
   );
 
   getIt.registerFactoryParam<VenueDetailCubit, String, void>(

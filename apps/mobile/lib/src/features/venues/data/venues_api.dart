@@ -68,8 +68,8 @@ final class DioVenuesApi implements VenuesApi {
       queryParameters: {
         'page': page,
         'limit': limit,
-        if (near != null) 'near': near,
-        if (radiusKm != null) 'radiusKm': radiusKm,
+        'near': ?near,
+        'radiusKm': ?radiusKm,
       },
     );
   }
@@ -101,10 +101,10 @@ final class DioVenuesApi implements VenuesApi {
       method: 'POST',
       body: {
         'name': name,
-        if (sportType != null) 'sportType': sportType,
-        if (indoor != null) 'indoor': indoor,
-        if (lighting != null) 'lighting': lighting,
-        if (surfaceType != null) 'surfaceType': surfaceType,
+        'sportType': ?sportType,
+        'indoor': ?indoor,
+        'lighting': ?lighting,
+        'surfaceType': ?surfaceType,
       },
     );
   }
@@ -123,11 +123,11 @@ final class DioVenuesApi implements VenuesApi {
       '/api/v1/venues/$venueId/courts/$courtId',
       method: 'PUT',
       body: {
-        if (name != null) 'name': name,
-        if (sportType != null) 'sportType': sportType,
-        if (indoor != null) 'indoor': indoor,
-        if (lighting != null) 'lighting': lighting,
-        if (surfaceType != null) 'surfaceType': surfaceType,
+        'name': ?name,
+        'sportType': ?sportType,
+        'indoor': ?indoor,
+        'lighting': ?lighting,
+        'surfaceType': ?surfaceType,
       },
     );
   }
@@ -157,13 +157,13 @@ final class DioVenuesApi implements VenuesApi {
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/venues/$venueId/availability',
       queryParameters: {
-        if (courtId != null) 'courtId': courtId,
+        'courtId': ?courtId,
         'from': fromIso,
         'to': toIso,
-        if (durationMinutes != null) 'durationMinutes': durationMinutes,
-        if (stepMinutes != null) 'stepMinutes': stepMinutes,
-        if (sportId != null) 'sportId': sportId,
-        if (categoryId != null) 'categoryId': categoryId,
+        'durationMinutes': ?durationMinutes,
+        'stepMinutes': ?stepMinutes,
+        'sportId': ?sportId,
+        'categoryId': ?categoryId,
       },
     );
   }
