@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/di/service_locator.dart';
-import '../features/catalog/data/catalog_repository.dart';
-import '../features/matches/data/matches_repository.dart';
 import '../features/auth/presentation/cubit/login_cubit.dart';
 import '../features/auth/presentation/cubit/register_cubit.dart';
 import '../features/auth/presentation/cubit/session_cubit.dart';
@@ -29,8 +27,10 @@ import '../features/notifications/presentation/notification_detail_screen.dart';
 import '../features/notifications/presentation/notification_prefs_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
+import '../features/venues/data/models/venue_dto.dart';
+import '../features/venues/presentation/venue_booking_screen.dart';
 import '../features/venues/presentation/venue_map_screen.dart';
-import '../features/venues/presentation/venue_match_creation_screen.dart';
+import '../features/venues/presentation/cubit/venue_booking_cubit.dart';
 import '../features/venues/presentation/cubit/venue_map_cubit.dart';
 import '../features/tournaments/presentation/create_tournament_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
@@ -274,16 +274,21 @@ final class AppRouter {
             GoRoute(
               path: '/venues/:venueId/create-match',
               builder: (context, state) {
-                final venueId = state.pathParameters['venueId'] ?? '';
-                final extra = state.extra as Map<String, Object?>?;
-                final courtId = extra?['courtId'] as String?;
-                final scheduledAt = extra?['scheduledAt'] as String?;
-                return VenueMatchCreationScreen(
-                  venueId: venueId,
-                  courtId: courtId,
-                  scheduledAt: scheduledAt,
-                  matchesRepository: getIt<MatchesRepository>(),
-                  catalogRepository: getIt<CatalogRepository>(),
+                final venue = state.extra as VenueDto?;
+                if (venue == null) {
+                  return Scaffold(
+                    appBar: AppBar(),
+                    body: const Center(child: Text('Sede no disponible')),
+                  );
+                }
+                return BlocProvider<VenueBookingCubit>(
+                  create: (_) => VenueBookingCubit(
+                    venue: venue,
+                    venuesRepository: getIt(),
+                    matchesRepository: getIt(),
+                    catalogRepository: getIt(),
+                  )..load(),
+                  child: const VenueBookingScreen(),
                 );
               },
             ),
