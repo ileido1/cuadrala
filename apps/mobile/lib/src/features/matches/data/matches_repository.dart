@@ -130,6 +130,8 @@ class MatchesRepository {
     int? maxParticipants,
     int? durationMinutes,
     String? notes,
+    bool? affectsElo,
+    String? gender,
   }) async {
     final json = await _matchesApi.createMatchEnvelope(
       body: {
@@ -144,6 +146,8 @@ class MatchesRepository {
         'maxParticipants': ?maxParticipants,
         'durationMinutes': ?durationMinutes,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
+        'affectsElo': ?affectsElo,
+        'gender': ?gender,
       },
     );
     final data = json['data'];

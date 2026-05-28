@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/di/service_locator.dart';
+import '../features/catalog/data/catalog_repository.dart';
+import '../features/matches/data/matches_repository.dart';
 import '../features/auth/presentation/cubit/login_cubit.dart';
 import '../features/auth/presentation/cubit/register_cubit.dart';
 import '../features/auth/presentation/cubit/session_cubit.dart';
@@ -50,7 +52,7 @@ final class AppRouter {
             // ------------------------------------------------------------------
             GoRoute(
               path: '/',
-              redirect: (_, __) => Routes.home,
+              redirect: (_, _) => Routes.home,
             ),
             GoRoute(
               path: Routes.welcome,
@@ -291,6 +293,8 @@ final class AppRouter {
                   venueId: venueId,
                   courtId: courtId,
                   scheduledAt: scheduledAt,
+                  matchesRepository: getIt<MatchesRepository>(),
+                  catalogRepository: getIt<CatalogRepository>(),
                 );
               },
             ),
