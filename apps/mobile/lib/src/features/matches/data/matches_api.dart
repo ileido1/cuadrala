@@ -65,8 +65,8 @@ final class DioMatchesApi implements MatchesApi {
         'sportId': sportId,
         'page': page,
         'limit': limit,
-        if (categoryId != null) 'categoryId': categoryId,
-        if (gender != null) 'gender': gender,
+        'categoryId': ?categoryId,
+        'gender': ?gender,
       },
     );
   }

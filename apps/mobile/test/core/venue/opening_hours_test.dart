@@ -5,7 +5,7 @@ import 'package:cuadrala_mobile/src/core/venue/opening_hours.dart';
 void main() {
   setUpAll(ensureOpeningHoursTimezoneData);
 
-const _hours = {
+const hours = {
   'monday': OpeningHoursDay(open: '08:00', close: '23:00'),
   'tuesday': OpeningHoursDay(open: '08:00', close: '23:00'),
   'wednesday': OpeningHoursDay(open: '08:00', close: '23:00'),
@@ -17,9 +17,9 @@ const _hours = {
   group('opening_hours', () {
     test('should treat sunday as closed when absent from openingHours', () {
       expect(dayKeyFromIsoDate('2026-05-17'), 'sunday');
-      expect(isVenueOpenOnDate('2026-05-17', _hours), isFalse);
-      expect(getDayHoursForDate('2026-05-17', _hours), isNull);
-      expect(closedDayMessage('2026-05-17', _hours), contains('Domingo'));
+      expect(isVenueOpenOnDate('2026-05-17', hours), isFalse);
+      expect(getDayHoursForDate('2026-05-17', hours), isNull);
+      expect(closedDayMessage('2026-05-17', hours), contains('Domingo'));
     });
 
     test('should close sunday when openingHours is null', () {
@@ -28,7 +28,7 @@ const _hours = {
     });
 
     test('should validate time within day hours', () {
-      final h = getDayHoursForDate('2026-05-18', _hours)!;
+      final h = getDayHoursForDate('2026-05-18', hours)!;
       expect(
         validateTimeWithinDayHours('10:00', 90, h.openMinutes, h.closeMinutes),
         isNull,
@@ -44,7 +44,7 @@ const _hours = {
       () {
         final window = availabilityWindowUtcForLocalDate(
           localDate: DateTime(2026, 5, 18),
-          openingHours: _hours,
+          openingHours: hours,
           venueTimezone: 'America/Caracas',
         );
         // 08:00 America/Caracas (UTC-4) => 12:00 UTC

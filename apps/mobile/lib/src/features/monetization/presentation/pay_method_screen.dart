@@ -53,8 +53,8 @@ final class PayMethodScreen extends StatefulWidget {
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
       if (venueId != null && venueId.isNotEmpty) 'venueId': venueId,
-      if (pricingCurrency != null) 'currency': pricingCurrency,
-      if (displayCurrency != null) 'displayCurrency': displayCurrency,
+      'currency': ?pricingCurrency,
+      'displayCurrency': ?displayCurrency,
       if (scheduledAt != null) 'scheduledAt': scheduledAt.toUtc().toIso8601String(),
     };
     final query = Uri(queryParameters: qp).query;

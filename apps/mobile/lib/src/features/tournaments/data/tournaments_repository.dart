@@ -73,8 +73,8 @@ class TournamentsRepository {
     try {
       final body = <String, Object?>{
         'participantUserIds': participantUserIds,
-        if (doubleRound != null) 'doubleRound': doubleRound,
-        if (thirdPlaceMatch != null) 'thirdPlaceMatch': thirdPlaceMatch,
+        'doubleRound': ?doubleRound,
+        'thirdPlaceMatch': ?thirdPlaceMatch,
       };
       final data = await _tournamentsApi.generateTournamentScheduleEnvelope(
         tournamentId: tournamentId,

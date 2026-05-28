@@ -33,6 +33,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _socialLoading = false;
+  Future<void>? _googleInit;
+
+  Future<void> _ensureGoogleInitialized() {
+    final init = _googleInit;
+    if (init != null) return init;
+    final env = getIt<AppEnv>();
+    final future = GoogleSignIn.instance.initialize(
+      clientId: env.googleWebClientId,
+      serverClientId: env.googleWebClientId,
+    );
+    _googleInit = future;
+    return future;
+  }
 
   @override
   void dispose() {
@@ -44,15 +57,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _socialLoginGoogle() async {
     setState(() => _socialLoading = true);
     try {
-      final env = getIt<AppEnv>();
-      final googleSignIn = GoogleSignIn(
-        scopes: const ['email', 'profile'],
-        clientId: env.googleWebClientId,
-        serverClientId: env.googleWebClientId,
+      await _ensureGoogleInitialized();
+      final account = await GoogleSignIn.instance.authenticate(
+        scopeHint: const ['email', 'profile'],
       );
-      final account = await googleSignIn.signIn();
-      final auth = await account?.authentication;
-      final idToken = auth?.idToken;
+      final idToken = account.authentication.idToken;
       if (idToken == null || idToken.isEmpty) {
         throw Exception('No se pudo obtener idToken de Google.');
       }
@@ -60,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
         SocialLoginRequest(
           provider: 'google',
           idToken: idToken,
-          name: account?.displayName,
+          name: account.displayName,
         ),
       );
       if (!mounted) return;

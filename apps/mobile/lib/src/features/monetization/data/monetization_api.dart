@@ -103,7 +103,7 @@ final class DioMonetizationApi implements MonetizationApi {
     return _apiClient.getJson(
       '/api/v1/users/$userId/transactions',
       queryParameters: {
-        if (limit != null) 'limit': limit,
+        'limit': ?limit,
       },
     );
   }

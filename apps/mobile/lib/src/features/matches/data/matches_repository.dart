@@ -133,14 +133,14 @@ class MatchesRepository {
       body: {
         'sportId': sportId,
         'categoryId': categoryId,
-        if (type != null) 'type': type,
+        'type': ?type,
         if (scheduledAt != null) 'scheduledAt': scheduledAt.toIso8601String(),
-        if (courtId != null) 'courtId': courtId,
-        if (venueId != null) 'venueId': venueId,
-        if (tournamentId != null) 'tournamentId': tournamentId,
-        if (pricePerPlayerCents != null) 'pricePerPlayerCents': pricePerPlayerCents,
-        if (maxParticipants != null) 'maxParticipants': maxParticipants,
-        if (durationMinutes != null) 'durationMinutes': durationMinutes,
+        'courtId': ?courtId,
+        'venueId': ?venueId,
+        'tournamentId': ?tournamentId,
+        'pricePerPlayerCents': ?pricePerPlayerCents,
+        'maxParticipants': ?maxParticipants,
+        'durationMinutes': ?durationMinutes,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
     );
@@ -185,9 +185,9 @@ class MatchesRepository {
       matchId: matchId,
       body: {
         'scores': scores,
-        if (teams != null) 'teams': teams,
-        if (sets != null) 'sets': sets,
-        if (sideByUserId != null) 'sideByUserId': sideByUserId,
+        'teams': ?teams,
+        'sets': ?sets,
+        'sideByUserId': ?sideByUserId,
       },
     );
   }
@@ -219,9 +219,9 @@ class MatchesRepository {
       matchId: matchId,
       body: {
         'scores': scores,
-        if (teams != null) 'teams': teams,
-        if (sets != null) 'sets': sets,
-        if (sideByUserId != null) 'sideByUserId': sideByUserId,
+        'teams': ?teams,
+        'sets': ?sets,
+        'sideByUserId': ?sideByUserId,
       },
     );
   }

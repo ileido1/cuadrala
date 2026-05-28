@@ -38,8 +38,8 @@ final class DioChatApi implements ChatApi {
     return _apiClient.getJson(
       '/api/v1/matches/$matchId/chat/messages',
       queryParameters: {
-        if (limit != null) 'limit': limit,
-        if (cursorCreatedAt != null) 'cursorCreatedAt': cursorCreatedAt,
+        'limit': ?limit,
+        'cursorCreatedAt': ?cursorCreatedAt,
       },
     );
   }
@@ -61,8 +61,8 @@ final class DioChatApi implements ChatApi {
     return _apiClient.getJson(
       '/api/v1/tournaments/$tournamentId/chat/messages',
       queryParameters: {
-        if (limit != null) 'limit': limit,
-        if (cursorCreatedAt != null) 'cursorCreatedAt': cursorCreatedAt,
+        'limit': ?limit,
+        'cursorCreatedAt': ?cursorCreatedAt,
       },
     );
   }

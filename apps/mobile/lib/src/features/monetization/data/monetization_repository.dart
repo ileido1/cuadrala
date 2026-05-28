@@ -36,7 +36,7 @@ class MonetizationRepository {
       matchId: matchId,
       body: {
         'amountBasePerPerson': amountBasePerPerson,
-        if (participantUserIds != null) 'participantUserIds': participantUserIds,
+        'participantUserIds': ?participantUserIds,
       },
     );
     // Backend suele responder envelope; si no, devolvemos raw.

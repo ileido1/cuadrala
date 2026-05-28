@@ -44,7 +44,7 @@ final class UploadReceiptScreen extends StatefulWidget {
       'method': method,
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
-      if (pricingCurrency != null) 'currency': pricingCurrency,
+      'currency': ?pricingCurrency,
       if (venueId != null && venueId.isNotEmpty) 'venueId': venueId,
     };
     final query = Uri(queryParameters: qp).query;

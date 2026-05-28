@@ -74,7 +74,7 @@ class NotificationsRepository {
   }) async {
     final body = <String, Object?>{
       'enabled': enabled,
-      if (enabledTypes != null) 'enabledTypes': enabledTypes,
+      'enabledTypes': ?enabledTypes,
     };
     final result = await _api.upsertSubscriptionEnvelope(body: body);
     final data = result['data'];
@@ -91,7 +91,7 @@ class NotificationsRepository {
     await _api.upsertDevicePushTokenEnvelope(body: {
       'token': token,
       'enabled': true,
-      if (platform != null) 'platform': platform,
+      'platform': ?platform,
     });
   }
 

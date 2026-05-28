@@ -22,8 +22,8 @@ final class DioMatchmakingApi implements MatchmakingApi {
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/matchmaking/$matchId/suggestions',
       queryParameters: {
-        if (limit != null) 'limit': limit,
-        if (radiusKm != null) 'radiusKm': radiusKm,
+        'limit': ?limit,
+        'radiusKm': ?radiusKm,
       },
     );
   }

@@ -102,7 +102,7 @@ class OnboardingRepository {
     required int radiusKm,
   }) async {
     final body = <String, Object?>{
-      if (label != null) 'label': label,
+      'label': ?label,
       'latitude': latitude,
       'longitude': longitude,
       'radiusKm': radiusKm,

@@ -39,8 +39,8 @@ final class WaitingConfirmationScreen extends StatefulWidget {
     final qp = <String, String>{
       'amountCents': amountPerPersonCents.toString(),
       'title': matchTitle,
-      if (pricingCurrency != null) 'currency': pricingCurrency,
-      if (transactionId != null) 'tx': transactionId,
+      'currency': ?pricingCurrency,
+      'tx': ?transactionId,
       if (venueId != null && venueId.isNotEmpty) 'venueId': venueId,
     };
     final query = Uri(queryParameters: qp).query;

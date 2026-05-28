@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/match_detail_dto.dart';
 
 void main() {
-  final Map<String, Object?> _baseJson = {
+  final Map<String, Object?> baseJson = {
     'id': 'match-1',
     'sportId': 'sport-1',
     'categoryId': 'cat-1',
@@ -24,13 +24,13 @@ void main() {
   group('MatchDetailDto.fromJson', () {
     group('affectsElo', () {
       test('defaults to true when key is absent from JSON', () {
-        final dto = MatchDetailDto.fromJson(_baseJson);
+        final dto = MatchDetailDto.fromJson(baseJson);
 
         expect(dto.affectsElo, isTrue);
       });
 
       test('parses false when explicitly set', () {
-        final json = Map<String, Object?>.from(_baseJson)
+        final json = Map<String, Object?>.from(baseJson)
           ..['affectsElo'] = false;
 
         final dto = MatchDetailDto.fromJson(json);

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/open_match_dto.dart';
 
 void main() {
-  final Map<String, Object?> _baseJson = {
+  final Map<String, Object?> baseJson = {
     'id': 'match-1',
     'sportId': 'sport-1',
     'categoryId': 'cat-1',
@@ -20,7 +20,7 @@ void main() {
   group('OpenMatchDto.fromJson', () {
     group('participantPreview', () {
       test('parses correctly from JSON list with userId and displayName', () {
-        final json = Map<String, Object?>.from(_baseJson)
+        final json = Map<String, Object?>.from(baseJson)
           ..['participantPreview'] = [
             {'userId': 'user-1', 'displayName': 'Alice Smith'},
             {'userId': 'user-2', 'displayName': 'Bob Jones'},
@@ -36,7 +36,7 @@ void main() {
       });
 
       test('defaults to empty list when key is absent from JSON', () {
-        final dto = OpenMatchDto.fromJson(_baseJson);
+        final dto = OpenMatchDto.fromJson(baseJson);
 
         expect(dto.participantPreview, isEmpty);
       });
@@ -44,13 +44,13 @@ void main() {
 
     group('affectsElo', () {
       test('defaults to true when key is absent from JSON', () {
-        final dto = OpenMatchDto.fromJson(_baseJson);
+        final dto = OpenMatchDto.fromJson(baseJson);
 
         expect(dto.affectsElo, isTrue);
       });
 
       test('parses false when explicitly set', () {
-        final json = Map<String, Object?>.from(_baseJson)
+        final json = Map<String, Object?>.from(baseJson)
           ..['affectsElo'] = false;
 
         final dto = OpenMatchDto.fromJson(json);
@@ -61,13 +61,13 @@ void main() {
 
     group('venueImageUrl', () {
       test('is null when key is absent from JSON', () {
-        final dto = OpenMatchDto.fromJson(_baseJson);
+        final dto = OpenMatchDto.fromJson(baseJson);
 
         expect(dto.venueImageUrl, isNull);
       });
 
       test('parses correctly when present', () {
-        final json = Map<String, Object?>.from(_baseJson)
+        final json = Map<String, Object?>.from(baseJson)
           ..['venueImageUrl'] = 'https://example.com/image.jpg';
 
         final dto = OpenMatchDto.fromJson(json);
@@ -78,7 +78,7 @@ void main() {
 
     group('gender', () {
       test('parses gender from JSON', () {
-        final json = Map<String, Object?>.from(_baseJson)..['gender'] = 'MALE';
+        final json = Map<String, Object?>.from(baseJson)..['gender'] = 'MALE';
 
         final dto = OpenMatchDto.fromJson(json);
 
@@ -86,7 +86,7 @@ void main() {
       });
 
       test('gender is null when absent from JSON', () {
-        final dto = OpenMatchDto.fromJson(_baseJson);
+        final dto = OpenMatchDto.fromJson(baseJson);
 
         expect(dto.gender, isNull);
       });

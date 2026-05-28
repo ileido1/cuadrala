@@ -54,7 +54,7 @@ final class DioProfileApi implements ProfileApi {
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/users/$userId/ratings',
       queryParameters: {
-        if (categoryId != null) 'categoryId': categoryId,
+        'categoryId': ?categoryId,
       },
     );
   }
@@ -69,9 +69,9 @@ final class DioProfileApi implements ProfileApi {
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/users/$userId/ratings/history',
       queryParameters: {
-        if (categoryId != null) 'categoryId': categoryId,
-        if (page != null) 'page': page,
-        if (limit != null) 'limit': limit,
+        'categoryId': ?categoryId,
+        'page': ?page,
+        'limit': ?limit,
       },
     );
   }
@@ -85,7 +85,7 @@ final class DioProfileApi implements ProfileApi {
       '/api/v1/ratings/leaderboard',
       queryParameters: {
         'categoryId': categoryId,
-        if (limit != null) 'limit': limit,
+        'limit': ?limit,
       },
     );
   }
