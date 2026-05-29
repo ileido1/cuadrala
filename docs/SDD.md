@@ -1,9 +1,11 @@
 # SDD — App móvil de gestión de pádel (Fase 1: visión, especificación y diseño)
 
 **Versión:** 1.1  
-**Alcance de este documento:** Fase 1 del flujo spec-driven (sin implementación de código).  
+**Alcance de este documento:** Visión de producto, personas y requisitos de alto nivel (Fase 1).  
 **Stack objetivo:** Flutter (Android/iOS/Web), BLoC, Dio, GoRouter; backend Node.js + TypeScript + PostgreSQL + Prisma; Clean Architecture + Repository + SOLID.  
 **Entorno de desarrollo:** Ubuntu.
+
+> **Estado de implementación y sprints:** no usar este archivo como backlog vivo. Fuente de verdad: [`docs/BACKLOG_UNIFICADO.md`](BACKLOG_UNIFICADO.md). Design system: [`docs/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 
 ---
 

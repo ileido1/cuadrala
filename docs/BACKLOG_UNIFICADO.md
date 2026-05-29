@@ -4,7 +4,7 @@
 - **Sprints** mobile, **API (backend)** y **web / backoffice** (plan por feature).
 - **Historias** Backend `US-E*`, Mobile `US-M*`, Web `US-W*`, con estado y dependencias.
 
-> Los documentos históricos `docs/BACKLOG.md`, `docs/BACKLOG_MOBILE.md` y `docs/MOBILE_SPRINTS.md` quedan como **referencia** pero deben alinearse a este archivo (ver sección “Migración de docs”).
+> Los documentos históricos están en `docs/archive/` (`BACKLOG_MOBILE.md`, `MOBILE_SPRINTS.md`). Los stubs en `docs/BACKLOG_MOBILE.md` y `docs/MOBILE_SPRINTS.md` solo redirigen. `docs/BACKLOG.md` sigue activo para US‑E*. Ver sección “Migración de docs”.
 
 ---
 
@@ -75,7 +75,7 @@
 
 #### Sprint M5 — Torneos (MVP)
 - **US incluidas**: `US-M4-01`, `US-M4-02`, `US-M4-03`, `US-M4-04`
-- **Estado**: **Pendiente (front)** / **Parcial (back)** (`US-E3-01` parcial, `US-E3-04` parcial; scoreboard listo)
+- **Estado**: **Parcial (front)** / **Parcial (back)** — crear torneo, detalle, scoreboard y schedule en app; **pendiente** listado/catálogo (`US-M4-01`, tab torneos sin listado completo)
 
 #### Sprint M16 — Notificaciones “pro”
 - **Alcance**:
@@ -126,7 +126,7 @@
 
 ## 2) Historias de usuario — Mobile (US-M*)
 
-> **Fuente**: `docs/BACKLOG_MOBILE.md` + lo ya implementado en código. Este listado se mantiene aquí como canonical.
+> **Fuente**: `docs/archive/BACKLOG_MOBILE.md` (histórico) + código en `apps/mobile/`. Este listado es el canonical.
 
 ### Fundaciones / Auth / Shell
 - **US-M0-01** App shell y navegación base — **Done (front)**
@@ -144,21 +144,21 @@
 - **US-M3-04** Unirse / salir — **Done (front)**
 - **US-M3-05** Cancelar / iniciar / finalizar — **Done (front)**
 - **US-M3-06** Proponer / confirmar resultado — **Done (front)**
-- **US-M3-07** Sugerencias de matchmaking — **Pendiente (front)** (backend listo `GET /matchmaking/.../suggestions`)
+- **US-M3-07** Sugerencias de matchmaking — **Done (front)** (`matchmaking_screen`; backend `GET /matchmaking/.../suggestions`)
 - **US-M3-08** Crear partida: **horarios disponibles** por pista/sede (consume `US-E4-06`) — **Pendiente (front)**
 - **US-M3-09** Tratamiento UX de conflictos de reserva (`CANCHA_OCUPADA`, etc.) — **Pendiente (front)** *(opcional dentro de Sprint M19)*
 
 ### Torneos
-- **US-M4-01** Catálogo deportes + presets — **Pendiente (front)**
-- **US-M4-02** Crear torneo — **Pendiente (front)**
-- **US-M4-03** Detalle + scoreboard — **Pendiente (front)**
-- **US-M4-04** Schedule genérico — **Pendiente (front)**
+- **US-M4-01** Catálogo deportes + presets + **listado** de torneos — **Pendiente (front)** (MVP: tab con placeholder “Próximamente: listado”; presets usados al crear)
+- **US-M4-02** Crear torneo — **Done (front)** (`create_tournament_screen`)
+- **US-M4-03** Detalle + scoreboard — **Done (front)** (`tournament_detail_screen`, scoreboard)
+- **US-M4-04** Schedule genérico — **Done (front)** (fixture en detalle)
 
 ### Chat / Notificaciones
 - **US-M5-01** Chat por partida — **Done (front)**
-- **US-M5-02** Chat por torneo — **Pendiente (front)**
+- **US-M5-02** Chat por torneo — **Done (front)** (`tournament_chat_screen`, read-only variant)
 - **US-M6-01** Inbox notificaciones — **Done (front)**
-- **US-M6-02** Preferencias por tipo — **Pendiente (front)**
+- **US-M6-02** Preferencias por tipo — **Done (front)** (`notification_prefs_screen`)
 - **US-M6-03** Device push tokens — **Pendiente (front)** (requiere proveedor push)
 
 ### Perfil / Ranking
@@ -223,6 +223,8 @@
 ## 4) Migración de docs (unificación)
 
 - `docs/BACKLOG.md`: debe incluir **US‑E8\*** (club/venue), **`US-E2-05`** / **`US-E4-06`** (disponibilidad) y referenciar este archivo como “plan integrado”.
-- `docs/BACKLOG_MOBILE.md`: queda como **lista histórica**; el estado canonical vive aquí (incl. **`US-M3-08`** / **`US-M3-09`**).
-- `docs/MOBILE_SPRINTS.md`: queda como **histórico**; los sprints canonical viven aquí (**Sprint M19** = disponibilidad pistas).
+- `docs/archive/BACKLOG_MOBILE.md`: **archivado** (lista histórica US-M*); stub en `docs/BACKLOG_MOBILE.md` redirige aquí.
+- `docs/archive/MOBILE_SPRINTS.md`: **archivado**; stub en `docs/MOBILE_SPRINTS.md` redirige aquí.
+- `docs/DESIGN_SYSTEM.md`: índice de tokens, tema y mockups (no duplica backlog).
+- Sprints canónicos: solo en este archivo (**Sprint M19** = disponibilidad pistas).
 

@@ -134,7 +134,9 @@ Exception: skip for trivial changes (typos, comments) or when user explicitly sa
 | `.cursor/rules/tdd-guidelines.mdc` | TDD cycle + integration test patterns |
 | `.cursor/rules/naming-conventions.mdc` | Naming conventions (API) |
 | `.cursor/rules/code-comments.mdc` | Comment style (Spanish) |
-| `docs/SDD.md` | Product spec + user stories |
+| `docs/SDD.md` | Product vision + high-level requirements (not live backlog) |
+| `docs/BACKLOG_UNIFICADO.md` | **SSOT** sprints + US mobile/API/web + delivery status |
+| `docs/DESIGN_SYSTEM.md` | Design tokens index (links to theme code + mockups) |
 | `services/api/ARCHITECTURE.md` | API Clean Architecture — layers, DI, patterns, migration |
 | `services/api/prisma/schema.prisma` | Full DB schema |
 | `services/api/README.md` | API endpoints + setup details |

@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Cuádrala UI/UX (Flutter)
 
+Índice de documentación: `docs/DESIGN_SYSTEM.md`. Tokens en código: `apps/mobile/lib/src/core/theme/`.
+
 ## Estilo visual (baseline)
 - **Look**: limpio, deportivo, con foco en legibilidad y CTAs claros.
 - **Componentes predominantes**: cards blancas con borde suave, chips/badges de estado, FAB verde, bottom nav 5 tabs.
