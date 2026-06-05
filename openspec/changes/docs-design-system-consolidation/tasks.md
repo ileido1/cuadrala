@@ -25,8 +25,8 @@
 - [x] **T12** `rg BACKLOG_MOBILE docs/` — stubs + archive
 - [x] **T13** Sin referencias a `desing.mdc`
 
-## Fase 2 futura (fuera de este change)
+## Fase 2 futura (completada 2026-05-29)
 
-- [ ] Archivar o reducir `docs/TODO.md`
-- [ ] Barrido hardcodes color en onboarding
-- [ ] Decisión tipografía (Plus Jakarta vs sistema / web fonts)
+- [x] Archivar o reducir `docs/TODO.md` → `docs/archive/TODO.md` + stub
+- [x] Barrido hardcodes color en onboarding (`availability_slot_styles`, `BrandColors.sportColorForCode`, `onHero`)
+- [x] Tipografía mobile: Plus Jakarta Sans vía `google_fonts` (`app_theme.dart`)

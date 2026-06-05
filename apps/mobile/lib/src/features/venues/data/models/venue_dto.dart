@@ -16,6 +16,7 @@ final class VenueDto {
     this.distanceKm,
     this.phone,
     this.description,
+    this.averageRating,
     this.sports = const [],
   });
 
@@ -33,12 +34,14 @@ final class VenueDto {
   final double? distanceKm;
   final String? phone;
   final String? description;
+  final double? averageRating;
   final List<String> sports;
 
   static VenueDto fromJson(Map<String, Object?> json) {
     final latRaw = json['latitude'];
     final lngRaw = json['longitude'];
     final distRaw = json['distanceKm'];
+    final ratingRaw = json['averageRating'];
     final sportsRaw = json['sports'];
     return VenueDto(
       id: json['id'] as String,
@@ -55,6 +58,7 @@ final class VenueDto {
       distanceKm: distRaw is num ? distRaw.toDouble() : null,
       phone: json['phone'] as String?,
       description: json['description'] as String?,
+      averageRating: ratingRaw is num ? ratingRaw.toDouble() : null,
       sports: sportsRaw is List
           ? sportsRaw.whereType<String>().toList(growable: false)
           : const [],

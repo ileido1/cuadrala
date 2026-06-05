@@ -1,8 +1,10 @@
 import 'package:equatable/equatable.dart';
 
-import '../../data/models/open_match_dto.dart';
+import '../../../../core/formatting/money_conversion.dart';
+import '../../../matches/data/models/open_match_dto.dart';
 
-enum TimeBucket { morning, afternoon, evening }
+/// Segmento del tab Partidas (handoff: Próximas vs Historial).
+enum PartidasSegment { upcoming, history }
 
 sealed class OpenMatchesState extends Equatable {
   const OpenMatchesState();
@@ -21,14 +23,7 @@ final class OpenMatchesLoading extends OpenMatchesState {
 
 final class OpenMatchesLoaded extends OpenMatchesState {
   const OpenMatchesLoaded({
-    required this.sportId,
-    required this.query,
-    required this.selectedDate,
-    required this.activeTimeBuckets,
-    required this.onlyAvailable,
-    required this.categoryId,
-    required this.gender,
-    required this.venueId,
+    required this.segment,
     required this.items,
     required this.visibleItems,
     required this.page,
@@ -36,16 +31,10 @@ final class OpenMatchesLoaded extends OpenMatchesState {
     required this.total,
     required this.isLoadingMore,
     required this.hasReachedEnd,
+    this.exchangeRates = const [],
   });
 
-  final String sportId;
-  final String query;
-  final DateTime? selectedDate;
-  final Set<TimeBucket> activeTimeBuckets;
-  final bool onlyAvailable;
-  final String? categoryId;
-  final String? gender;
-  final String? venueId;
+  final PartidasSegment segment;
   final List<OpenMatchDto> items;
   final List<OpenMatchDto> visibleItems;
   final int page;
@@ -53,16 +42,10 @@ final class OpenMatchesLoaded extends OpenMatchesState {
   final int total;
   final bool isLoadingMore;
   final bool hasReachedEnd;
+  final List<ExchangeRateRow> exchangeRates;
 
   OpenMatchesLoaded copyWith({
-    String? sportId,
-    String? query,
-    Object? selectedDate = _sentinel,
-    Set<TimeBucket>? activeTimeBuckets,
-    bool? onlyAvailable,
-    Object? categoryId = _sentinel,
-    Object? gender = _sentinel,
-    Object? venueId = _sentinel,
+    PartidasSegment? segment,
     List<OpenMatchDto>? items,
     List<OpenMatchDto>? visibleItems,
     int? page,
@@ -70,16 +53,10 @@ final class OpenMatchesLoaded extends OpenMatchesState {
     int? total,
     bool? isLoadingMore,
     bool? hasReachedEnd,
+    List<ExchangeRateRow>? exchangeRates,
   }) {
     return OpenMatchesLoaded(
-      sportId: sportId ?? this.sportId,
-      query: query ?? this.query,
-      selectedDate: selectedDate == _sentinel ? this.selectedDate : selectedDate as DateTime?,
-      activeTimeBuckets: activeTimeBuckets ?? this.activeTimeBuckets,
-      onlyAvailable: onlyAvailable ?? this.onlyAvailable,
-      categoryId: categoryId == _sentinel ? this.categoryId : categoryId as String?,
-      gender: gender == _sentinel ? this.gender : gender as String?,
-      venueId: venueId == _sentinel ? this.venueId : venueId as String?,
+      segment: segment ?? this.segment,
       items: items ?? this.items,
       visibleItems: visibleItems ?? this.visibleItems,
       page: page ?? this.page,
@@ -87,19 +64,13 @@ final class OpenMatchesLoaded extends OpenMatchesState {
       total: total ?? this.total,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasReachedEnd: hasReachedEnd ?? this.hasReachedEnd,
+      exchangeRates: exchangeRates ?? this.exchangeRates,
     );
   }
 
   @override
   List<Object?> get props => [
-        sportId,
-        query,
-        selectedDate,
-        activeTimeBuckets,
-        onlyAvailable,
-        categoryId,
-        gender,
-        venueId,
+        segment,
         items,
         visibleItems,
         page,
@@ -107,6 +78,7 @@ final class OpenMatchesLoaded extends OpenMatchesState {
         total,
         isLoadingMore,
         hasReachedEnd,
+        exchangeRates,
       ];
 }
 
@@ -119,5 +91,3 @@ final class OpenMatchesFailure extends OpenMatchesState {
   List<Object?> get props => [message];
 }
 
-// Sentinel object for nullable copyWith parameters
-const Object _sentinel = Object();

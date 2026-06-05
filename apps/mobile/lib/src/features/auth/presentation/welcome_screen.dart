@@ -187,7 +187,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     icon: const Icon(Icons.apple),
                     label: 'Continuar con Apple',
                     background: BrandColors.appleBlack,
-                    foreground: const Color(0xFFFFFFFF),
+                    foreground: scheme.onPrimary,
                     border: BrandColors.appleBlack,
                     onPressed: _isLoading ? null : _socialLoginApple,
                   ),

@@ -402,12 +402,12 @@ void main() {
   // ──────────────────────────────────────────────────────────────────────────
 
   blocTest<VenueBookingCubit, VenueBookingState>(
-    "setGender('MALE') — emits state with gender='MALE'",
+    "setGender('FEMALE') — emits state with gender='FEMALE'",
     build: () => _buildCubit(),
     seed: () => VenueBookingState(venue: _venue(), selectedDate: DateTime(2024)),
-    act: (cubit) => cubit.setGender('MALE'),
+    act: (cubit) => cubit.setGender('FEMALE'),
     expect: () => [
-      isA<VenueBookingState>().having((s) => s.gender, 'gender', 'MALE'),
+      isA<VenueBookingState>().having((s) => s.gender, 'gender', 'FEMALE'),
     ],
   );
 
@@ -460,7 +460,20 @@ void main() {
       venue: _venue(),
       selectedDate: DateTime(2024),
       selectedCourtId: 'court-1',
+      gender: 'MALE',
       // missing selectedSlot and selectedCategoryId
+    );
+    expect(state.canSubmit, isFalse);
+  });
+
+  test('canSubmit — false when gender is null', () {
+    final state = VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024),
+      selectedCourtId: 'court-1',
+      selectedSlot: '2024-06-01T10:00:00.000Z',
+      selectedCategoryId: 'cat-1',
+      gender: null,
     );
     expect(state.canSubmit, isFalse);
   });
@@ -472,6 +485,7 @@ void main() {
       selectedCourtId: 'court-1',
       selectedSlot: '2024-06-01T10:00:00.000Z',
       selectedCategoryId: 'cat-1',
+      gender: 'MALE',
     );
     expect(state.canSubmit, isTrue);
   });
@@ -483,6 +497,7 @@ void main() {
       selectedCourtId: 'court-1',
       selectedSlot: '2024-06-01T10:00:00.000Z',
       selectedCategoryId: 'cat-1',
+      gender: 'MALE',
       submitting: true,
     );
     expect(state.canSubmit, isFalse);
@@ -527,6 +542,7 @@ void main() {
       sportId: 'sport-1',
       maxParticipants: 4,
       affectsElo: true,
+      gender: 'MALE',
     ),
     act: (cubit) => cubit.submit(),
     expect: () => [
@@ -549,7 +565,7 @@ void main() {
             durationMinutes: 90,
             notes: any(named: 'notes'),
             affectsElo: true,
-            gender: any(named: 'gender'),
+            gender: 'MALE',
           )).called(1);
     },
   );
@@ -624,6 +640,7 @@ void main() {
       sportId: 'sport-1',
       maxParticipants: 4,
       affectsElo: true,
+      gender: 'MALE',
     ),
     act: (cubit) => cubit.submit(),
     expect: () => [

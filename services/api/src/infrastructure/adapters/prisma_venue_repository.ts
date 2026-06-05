@@ -21,6 +21,7 @@ const VENUE_LIST_SELECT = {
   pricingCurrency: true,
   createdAt: true,
   imageUrl: true,
+  averageRating: true,
 } as const;
 
 function kmToLatitudeDeltaSV(_radiusKm: number): number {
@@ -66,6 +67,7 @@ function mapVenueDetailSV(_venue: {
   pricingCurrency: string;
   countryCode: string;
   imageUrl: string | null;
+  averageRating: number | null;
   monetizationSettings: { timezone: string } | null;
   _count: { courts: number };
   courts: { sportType: string }[];
@@ -98,6 +100,7 @@ function mapVenueDetailSV(_venue: {
     countryCode: _venue.countryCode,
     timezone: _venue.monetizationSettings?.timezone ?? 'America/Caracas',
     imageUrl: _venue.imageUrl,
+    averageRating: _venue.averageRating,
     sports: [...new Set(_venue.courts.map((_c) => _c.sportType))],
   };
 }
@@ -304,6 +307,7 @@ export class PrismaVenueRepository implements VenueRepository {
         pricingCurrency: true,
         countryCode: true,
         imageUrl: true,
+        averageRating: true,
         monetizationSettings: { select: { timezone: true } },
         _count: { select: { courts: true } },
         courts: { where: { status: 'ACTIVE' }, select: { sportType: true } },

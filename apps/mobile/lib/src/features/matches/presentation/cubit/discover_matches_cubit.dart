@@ -1,0 +1,334 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../../core/failures/app_failure.dart';
+import '../../../../core/formatting/fx_price_labels.dart';
+import '../../../../core/formatting/money_conversion.dart';
+import '../../data/matches_repository.dart';
+import '../../data/models/open_match_dto.dart';
+import 'discover_matches_state.dart';
+
+final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
+  DiscoverMatchesCubit({
+    required MatchesRepository matchesRepository,
+    String? venueId,
+  })  : _matchesRepository = matchesRepository,
+        _venueId = venueId,
+        super(const DiscoverMatchesInitial());
+
+  final MatchesRepository _matchesRepository;
+  final String? _venueId;
+  static const _pageLimit = 20;
+
+  Future<void> load() async {
+    emit(const DiscoverMatchesLoading());
+    try {
+      final sportId = await _matchesRepository.resolveDefaultSportId();
+      final results = await Future.wait([
+        _matchesRepository.listOpenMatches(
+          sportId: sportId,
+          page: 1,
+          limit: _pageLimit,
+          gender: null,
+          venueId: _venueId,
+        ),
+        loadExchangeRatesSafelySV(),
+      ]);
+      final page = results[0] as OpenMatchesPage;
+      final rates = results[1] as List<ExchangeRateRow>;
+      final today = DateTime.now();
+      final selectedDate = DateTime(today.year, today.month, today.day);
+      final visible = _applyClientFilters(
+        items: page.items,
+        query: '',
+        selectedDate: selectedDate,
+        activeTimeBuckets: const {},
+        onlyAvailable: false,
+      );
+      emit(
+        DiscoverMatchesLoaded(
+          sportId: sportId,
+          query: '',
+          selectedDate: selectedDate,
+          activeTimeBuckets: const {},
+          onlyAvailable: false,
+          categoryId: null,
+          gender: null,
+          venueId: _venueId,
+          items: page.items,
+          visibleItems: visible,
+          page: page.page,
+          limit: page.limit,
+          total: page.total,
+          isLoadingMore: false,
+          hasReachedEnd: page.items.length >= page.total,
+          exchangeRates: rates,
+        ),
+      );
+    } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo cargar el listado.';
+      emit(DiscoverMatchesFailure(message: message));
+    }
+  }
+
+  void setQuery(String value) {
+    final current = state;
+    if (current is! DiscoverMatchesLoaded) return;
+    final q = value.trim();
+    final visible = _applyClientFilters(
+      items: current.items,
+      query: q,
+      selectedDate: current.selectedDate,
+      activeTimeBuckets: current.activeTimeBuckets,
+      onlyAvailable: current.onlyAvailable,
+    );
+    emit(current.copyWith(query: q, visibleItems: visible));
+  }
+
+  void selectDate(DateTime? date) {
+    final current = state;
+    if (current is! DiscoverMatchesLoaded) return;
+    final normalized = date != null ? DateTime(date.year, date.month, date.day) : null;
+    final visible = _applyClientFilters(
+      items: current.items,
+      query: current.query,
+      selectedDate: normalized,
+      activeTimeBuckets: current.activeTimeBuckets,
+      onlyAvailable: current.onlyAvailable,
+    );
+    emit(current.copyWith(selectedDate: normalized, visibleItems: visible));
+  }
+
+  void toggleTimeBucket(TimeBucket bucket) {
+    final current = state;
+    if (current is! DiscoverMatchesLoaded) return;
+    final updated = Set<TimeBucket>.from(current.activeTimeBuckets);
+    if (updated.contains(bucket)) {
+      updated.remove(bucket);
+    } else {
+      updated.add(bucket);
+    }
+    final visible = _applyClientFilters(
+      items: current.items,
+      query: current.query,
+      selectedDate: current.selectedDate,
+      activeTimeBuckets: updated,
+      onlyAvailable: current.onlyAvailable,
+    );
+    emit(current.copyWith(activeTimeBuckets: updated, visibleItems: visible));
+  }
+
+  void setOnlyAvailable(bool value) {
+    final current = state;
+    if (current is! DiscoverMatchesLoaded) return;
+    final visible = _applyClientFilters(
+      items: current.items,
+      query: current.query,
+      selectedDate: current.selectedDate,
+      activeTimeBuckets: current.activeTimeBuckets,
+      onlyAvailable: value,
+    );
+    emit(current.copyWith(onlyAvailable: value, visibleItems: visible));
+  }
+
+  Future<void> setCategoryId(String? categoryId) async {
+    final current = state;
+    if (current is! DiscoverMatchesLoaded) return;
+    emit(const DiscoverMatchesLoading());
+    try {
+      final page = await _matchesRepository.listOpenMatches(
+        sportId: current.sportId,
+        page: 1,
+        limit: current.limit,
+        categoryId: categoryId,
+        gender: current.gender,
+        venueId: current.venueId,
+      );
+      final visible = _applyClientFilters(
+        items: page.items,
+        query: current.query,
+        selectedDate: current.selectedDate,
+        activeTimeBuckets: current.activeTimeBuckets,
+        onlyAvailable: current.onlyAvailable,
+      );
+      emit(
+        DiscoverMatchesLoaded(
+          sportId: current.sportId,
+          query: current.query,
+          selectedDate: current.selectedDate,
+          activeTimeBuckets: current.activeTimeBuckets,
+          onlyAvailable: current.onlyAvailable,
+          categoryId: categoryId,
+          gender: current.gender,
+          venueId: current.venueId,
+          items: page.items,
+          visibleItems: visible,
+          page: page.page,
+          limit: page.limit,
+          total: page.total,
+          isLoadingMore: false,
+          hasReachedEnd: page.items.length >= page.total,
+          exchangeRates: current.exchangeRates,
+        ),
+      );
+    } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo cargar el listado.';
+      emit(DiscoverMatchesFailure(message: message));
+    }
+  }
+
+  Future<void> setGender(String? gender) async {
+    final current = state;
+    if (current is! DiscoverMatchesLoaded) return;
+    emit(const DiscoverMatchesLoading());
+    try {
+      final page = await _matchesRepository.listOpenMatches(
+        sportId: current.sportId,
+        page: 1,
+        limit: current.limit,
+        categoryId: current.categoryId,
+        gender: gender,
+        venueId: current.venueId,
+      );
+      final visible = _applyClientFilters(
+        items: page.items,
+        query: current.query,
+        selectedDate: current.selectedDate,
+        activeTimeBuckets: current.activeTimeBuckets,
+        onlyAvailable: current.onlyAvailable,
+      );
+      emit(
+        DiscoverMatchesLoaded(
+          sportId: current.sportId,
+          query: current.query,
+          selectedDate: current.selectedDate,
+          activeTimeBuckets: current.activeTimeBuckets,
+          onlyAvailable: current.onlyAvailable,
+          categoryId: current.categoryId,
+          gender: gender,
+          venueId: current.venueId,
+          items: page.items,
+          visibleItems: visible,
+          page: page.page,
+          limit: page.limit,
+          total: page.total,
+          isLoadingMore: false,
+          hasReachedEnd: page.items.length >= page.total,
+          exchangeRates: current.exchangeRates,
+        ),
+      );
+    } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo cargar el listado.';
+      emit(DiscoverMatchesFailure(message: message));
+    }
+  }
+
+  Future<void> loadMore() async {
+    final current = state;
+    if (current is! DiscoverMatchesLoaded) return;
+    if (current.isLoadingMore || current.hasReachedEnd) return;
+
+    emit(current.copyWith(isLoadingMore: true));
+
+    try {
+      final nextPage = current.page + 1;
+      final page = await _matchesRepository.listOpenMatches(
+        sportId: current.sportId,
+        page: nextPage,
+        limit: current.limit,
+        categoryId: current.categoryId,
+        gender: current.gender,
+        venueId: current.venueId,
+      );
+      final merged = [...current.items, ...page.items];
+      final visible = _applyClientFilters(
+        items: merged,
+        query: current.query,
+        selectedDate: current.selectedDate,
+        activeTimeBuckets: current.activeTimeBuckets,
+        onlyAvailable: current.onlyAvailable,
+      );
+      emit(
+        DiscoverMatchesLoaded(
+          sportId: current.sportId,
+          query: current.query,
+          selectedDate: current.selectedDate,
+          activeTimeBuckets: current.activeTimeBuckets,
+          onlyAvailable: current.onlyAvailable,
+          categoryId: current.categoryId,
+          gender: current.gender,
+          venueId: current.venueId,
+          items: merged,
+          visibleItems: visible,
+          page: page.page,
+          limit: page.limit,
+          total: page.total,
+          isLoadingMore: false,
+          hasReachedEnd: merged.length >= page.total,
+          exchangeRates: current.exchangeRates,
+        ),
+      );
+    } catch (e) {
+      emit(current.copyWith(isLoadingMore: false));
+    }
+  }
+
+  static List<OpenMatchDto> _applyClientFilters({
+    required List<OpenMatchDto> items,
+    required String query,
+    required DateTime? selectedDate,
+    required Set<TimeBucket> activeTimeBuckets,
+    required bool onlyAvailable,
+  }) {
+    final q = query.toLowerCase();
+
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+
+    TimeBucket bucketFor(DateTime dt) {
+      if (dt.hour < 12) return TimeBucket.morning;
+      if (dt.hour < 19) return TimeBucket.afternoon;
+      return TimeBucket.evening;
+    }
+
+    bool matchesQuery(OpenMatchDto m) {
+      if (q.isEmpty) return true;
+      final haystack = [
+        m.clubName,
+        m.courtName,
+        m.locationLabel,
+        m.id,
+      ].whereType<String>().join(' ').toLowerCase();
+      return haystack.contains(q);
+    }
+
+    bool matchesDate(OpenMatchDto m) {
+      if (selectedDate == null) return true;
+      final s = m.scheduledAt;
+      if (s == null) return true;
+      return sameDay(s.toLocal(), selectedDate);
+    }
+
+    bool matchesTimeBucket(OpenMatchDto m) {
+      if (activeTimeBuckets.isEmpty) return true;
+      final s = m.scheduledAt;
+      if (s == null) return true;
+      return activeTimeBuckets.contains(bucketFor(s.toLocal()));
+    }
+
+    bool matchesAvailability(OpenMatchDto m) {
+      if (!onlyAvailable) return true;
+      return m.openSpots > 0;
+    }
+
+    return items
+        .where((m) =>
+            matchesQuery(m) &&
+            matchesDate(m) &&
+            matchesTimeBucket(m) &&
+            matchesAvailability(m))
+        .toList();
+  }
+}

@@ -2,16 +2,22 @@ import 'package:flutter/material.dart';
 
 /// Cuádrala brand palette — all named constants.
 ///
-/// Use these constants when wiring ColorScheme overrides in [AppTheme].
-/// Widgets must NOT import this file directly — use
-/// `Theme.of(context).colorScheme.*` or
+/// Use these constants when wiring [ColorScheme] overrides in [AppTheme].
+/// Widgets should prefer `Theme.of(context).colorScheme.*` or
 /// `Theme.of(context).extension<BrandGradients>()`.
+///
+/// **Semantic catalogs** (sport icons, availability slots) may reference
+/// constants in this file only — no inline `Color(0x…)` in presentation.
 abstract final class BrandColors {
   // ─── Brand primary ────────────────────────────────────────────────────────
   static const padelGreen = Color(0xFF17A34A);
+  static const padelGreenDark = Color(0xFF13883E);
   static const navy = Color(0xFF0F172A);
   static const navyMid = Color(0xFF172340);
   static const limeAccent = Color(0xFFC5FF00);
+
+  /// Text on navy/green hero surfaces (always white).
+  static const onHero = Color(0xFFFFFFFF);
 
   // ─── Light scheme overrides ───────────────────────────────────────────────
   static const lightSurface = Color(0xFFFFFFFF);
@@ -33,4 +39,28 @@ abstract final class BrandColors {
 
   /// Success / good state — readable on both light and dark backgrounds.
   static const successGreen = Color(0xFF8BC34A);
+
+  // ─── Availability time-of-day (onboarding + profile) ─────────────────────
+  static const slotMorning = Color(0xFFFFB300);
+  static const slotAfternoon = warningAmber;
+  static const slotEvening = Color(0xFF5C6BC0);
+
+  // ─── Sport icon accents (onboarding sport picker) ─────────────────────────
+  static const sportPadel = Color(0xFF2E7D32);
+  static const sportTennis = Color(0xFF607D8B);
+  static const sportPickleball = Color(0xFF00897B);
+  static const sportFootball5 = Color(0xFF455A64);
+  static const sportBasketball3x3 = Color(0xFFE65100);
+  static const sportVolleyBeach = Color(0xFFFFB300);
+  static const sportFallback = Color(0xFF546E7A);
+
+  static Color sportColorForCode(String code) => switch (code.toUpperCase()) {
+        'PADEL' => sportPadel,
+        'TENNIS' => sportTennis,
+        'PICKLEBALL' => sportPickleball,
+        'FOOTBALL5' => sportFootball5,
+        'BASKETBALL3X3' => sportBasketball3x3,
+        'VOLLEY_BEACH' => sportVolleyBeach,
+        _ => sportFallback,
+      };
 }

@@ -9,8 +9,8 @@ import '../data/models/venue_dto.dart';
 import 'cubit/venue_map_cubit.dart';
 import 'cubit/venue_map_state.dart';
 
-/// Full-screen map-based venue discovery screen.
-/// This is the new target of [Routes.createMatch].
+/// Full-screen map-based venue discovery screen (legacy / tests).
+/// La ruta `/matches/create` usa [CreateMatchRouteScreen] + [showCreateMatchSheet].
 class VenueMapScreen extends StatelessWidget {
   const VenueMapScreen({super.key});
 

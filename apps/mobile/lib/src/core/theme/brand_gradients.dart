@@ -33,7 +33,7 @@ class BrandGradients extends ThemeExtension<BrandGradients> {
         nextMatchCard: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [BrandColors.padelGreen, Color(0xFF13883E)],
+          colors: [BrandColors.padelGreen, BrandColors.padelGreenDark],
         ),
       );
 
@@ -46,7 +46,7 @@ class BrandGradients extends ThemeExtension<BrandGradients> {
         nextMatchCard: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [BrandColors.padelGreen, Color(0xFF13883E)],
+          colors: [BrandColors.padelGreen, BrandColors.padelGreenDark],
         ),
       );
 

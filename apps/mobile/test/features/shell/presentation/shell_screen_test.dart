@@ -209,7 +209,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(notifCubit: notifCubit));
 
-      expect(find.byType(Badge), findsNothing);
+      expect(find.text('99+'), findsNothing);
     });
 
     testWidgets('badge rendered with correct count when unreadCount = 3',
@@ -218,7 +218,6 @@ void main() {
 
       await tester.pumpWidget(_wrap(notifCubit: notifCubit));
 
-      expect(find.byType(Badge), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
     });
 
@@ -227,20 +226,18 @@ void main() {
 
       await tester.pumpWidget(_wrap(notifCubit: notifCubit));
 
-      expect(find.byType(Badge), findsOneWidget);
       expect(find.text('99+'), findsOneWidget);
     });
 
     testWidgets(
-        'badge renders on both icon and activeIcon slots when unread > 0',
+        'badge renders on active Avisos tab when unread > 0',
         (tester) async {
-      // Avisos is active (index 2) — active icon slot should also show badge
       when(() => notifCubit.state).thenReturn(_notifState(unread: 5));
 
       await tester.pumpWidget(
           _wrap(notifCubit: notifCubit, currentIndex: 2));
 
-      expect(find.byType(Badge), findsAtLeastNWidgets(1));
+      expect(find.text('5'), findsOneWidget);
     });
   });
 

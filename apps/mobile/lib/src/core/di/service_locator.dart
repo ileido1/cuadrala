@@ -32,6 +32,7 @@ import '../../features/chat/data/chat_api.dart';
 import '../../features/chat/data/chat_repository.dart';
 import '../../features/matches/data/matches_api.dart';
 import '../../features/matches/data/matches_repository.dart';
+import '../../features/matches/presentation/cubit/discover_matches_cubit.dart';
 import '../../features/matches/presentation/cubit/open_matches_cubit.dart';
 import '../../features/monetization/data/monetization_api.dart';
 import '../../features/monetization/data/monetization_repository.dart';
@@ -238,6 +239,10 @@ Future<void> setupDependencies() async {
 
   getIt.registerFactory<OpenMatchesCubit>(
     () => OpenMatchesCubit(matchesRepository: getIt<MatchesRepository>()),
+  );
+
+  getIt.registerFactory<DiscoverMatchesCubit>(
+    () => DiscoverMatchesCubit(matchesRepository: getIt<MatchesRepository>()),
   );
 
   getIt.registerLazySingleton<TournamentsApi>(

@@ -18,3 +18,4 @@ Documentos movidos aquí porque **ya no son fuente de verdad** para planificaci�
 |---------|-------------------|
 | `BACKLOG_MOBILE.md` | Historias US-M* detalladas; reemplazadas por BACKLOG_UNIFICADO |
 | `MOBILE_SPRINTS.md` | Plan de sprints M1–M19 histórico; sprints canónicos en UNIFICADO |
+| `TODO.md` | Tablero Scrum/Kanban backend antiguo (sprints 3–36); reemplazado por BACKLOG_UNIFICADO |

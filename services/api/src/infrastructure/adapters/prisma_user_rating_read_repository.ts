@@ -1,5 +1,6 @@
 import type {
   PaginatedUserRatingHistoryDTO,
+  PrimaryUserRatingDTO,
   UserRatingReadRepository,
   UserRatingReadRowDTO,
 } from '../../domain/ports/user_rating_read_repository.js';
@@ -16,6 +17,28 @@ export class PrismaUserRatingReadRepository implements UserRatingReadRepository 
       select: { categoryId: true, rating: true, updatedAt: true },
       orderBy: { updatedAt: 'desc' },
     });
+  }
+
+  async getPrimaryUserRatingSV(_userId: string): Promise<PrimaryUserRatingDTO | null> {
+    const ROW = await PRISMA.userRating.findFirst({
+      where: { userId: _userId },
+      // Categoría de mayor ELO; ante empate, la actualizada más recientemente.
+      orderBy: [{ rating: 'desc' }, { updatedAt: 'desc' }],
+      select: {
+        categoryId: true,
+        rating: true,
+        category: { select: { name: true, sportId: true } },
+      },
+    });
+
+    if (ROW === null) return null;
+
+    return {
+      categoryId: ROW.categoryId,
+      categoryName: ROW.category.name,
+      sportId: ROW.category.sportId,
+      rating: ROW.rating,
+    };
   }
 
   async getUserRatingHistorySV(_params: {

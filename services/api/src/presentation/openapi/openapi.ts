@@ -878,9 +878,53 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Profile'],
         summary: 'Consultar perfil propio',
+        description:
+          'Incluye `primaryRating` (categoría de mayor ELO con nombre y deporte) ' +
+          'o `null` si el jugador aún no tiene ratings.',
         security: [{ bearerAuth: [] }],
         responses: {
-          '200': { description: 'OK' },
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        user: {
+                          type: 'object',
+                          required: ['id', 'email', 'name', 'subscriptionType'],
+                          properties: {
+                            id: { type: 'string', format: 'uuid' },
+                            email: { type: 'string', format: 'email' },
+                            name: { type: 'string' },
+                            subscriptionType: { type: 'string', enum: ['FREE', 'PRO'] },
+                            primaryRating: {
+                              type: 'object',
+                              nullable: true,
+                              required: ['categoryId', 'categoryName', 'sportId', 'rating'],
+                              properties: {
+                                categoryId: { type: 'string', format: 'uuid' },
+                                categoryName: { type: 'string' },
+                                sportId: { type: 'string', format: 'uuid' },
+                                rating: { type: 'number' },
+                              },
+                            },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            updatedAt: { type: 'string', format: 'date-time' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           '401': { description: 'No autorizado' },
         },
       },

@@ -241,73 +241,40 @@ void main() {
     });
   });
 
-  // ── 5. "En vivo" badge conditionality ────────────────────────────────────
+  // ── 5. Hero card CTAs ─────────────────────────────────────────────────────
 
-  group('"En vivo" badge conditionality', () {
-    testWidgets('badge absent when myMatches is empty', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        _loadedState(myMatches: []),
-      );
+  group('Hero card CTAs', () {
+    testWidgets('hero shows Buscar and Crear buttons', (tester) async {
+      when(() => homeCubit.state).thenReturn(_loadedState());
 
       await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
       await tester.pumpAndSettle();
 
+      expect(find.text('Buscar'), findsOneWidget);
+      expect(find.text('Crear'), findsOneWidget);
       expect(find.text('En vivo'), findsNothing);
-    });
-
-    testWidgets('badge absent when myMatches has no match within 30 min', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        _loadedState(myMatches: [_makeFutureMatch()]),
-      );
-
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
-      await tester.pumpAndSettle();
-
-      expect(find.text('En vivo'), findsNothing);
-    });
-
-    testWidgets('badge shown when myMatches has a SCHEDULED match within 30 min', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        _loadedState(myMatches: [_makeLiveMatch(status: 'SCHEDULED')]),
-      );
-
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
-      await tester.pumpAndSettle();
-
-      expect(find.text('En vivo'), findsOneWidget);
-    });
-
-    testWidgets('badge shown when myMatches has an IN_PROGRESS match within 30 min', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        _loadedState(myMatches: [_makeLiveMatch(status: 'IN_PROGRESS')]),
-      );
-
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
-      await tester.pumpAndSettle();
-
-      expect(find.text('En vivo'), findsOneWidget);
     });
   });
 
   // ── 6. CTA hierarchy ──────────────────────────────────────────────────────
 
   group('CTA hierarchy fix', () {
-    testWidgets('"Buscar partida" primary button is present', (tester) async {
+    testWidgets('"Buscar" primary button is present', (tester) async {
       when(() => homeCubit.state).thenReturn(_loadedState());
 
       await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
       await tester.pumpAndSettle();
 
-      expect(find.text('Buscar partida'), findsOneWidget);
+      expect(find.text('Buscar'), findsOneWidget);
     });
 
-    testWidgets('"Crear partida" secondary button is present', (tester) async {
+    testWidgets('"Crear" secondary button is present', (tester) async {
       when(() => homeCubit.state).thenReturn(_loadedState());
 
       await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
       await tester.pumpAndSettle();
 
-      expect(find.text('Crear partida'), findsOneWidget);
+      expect(find.text('Crear'), findsOneWidget);
     });
 
     testWidgets('"Nuevo Torneo" CTA is absent', (tester) async {

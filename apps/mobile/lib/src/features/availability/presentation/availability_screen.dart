@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:cuadrala_mobile/src/shared/constants/availability_slot_styles.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
 import 'package:cuadrala_mobile/src/features/onboarding/data/models/user_availability_dto.dart';
 import 'package:cuadrala_mobile/src/features/availability/data/availability_repository.dart';
@@ -322,12 +323,6 @@ final class _AddSlotBottomSheetState extends State<_AddSlotBottomSheet> {
     DayOfWeek.sunday: 'Dom',
   };
 
-  static const _slotsMeta = <AvailabilitySlot, _SlotMeta>{
-    AvailabilitySlot.morning: _SlotMeta(title: 'Mañana', range: '06:00 – 12:00', icon: Icons.wb_sunny_outlined, color: Color(0xFFFFB300)),
-    AvailabilitySlot.afternoon: _SlotMeta(title: 'Tarde', range: '12:00 – 18:00', icon: Icons.wb_twilight, color: Color(0xFFFB8C00)),
-    AvailabilitySlot.evening: _SlotMeta(title: 'Noche', range: '18:00 – 22:00', icon: Icons.nightlight_outlined, color: Color(0xFF5C6BC0)),
-  };
-
   void _checkDuplicate() {
     if (_days.isEmpty || _slots.isEmpty) {
       setState(() => _duplicateWarning = null);
@@ -416,7 +411,7 @@ final class _AddSlotBottomSheetState extends State<_AddSlotBottomSheet> {
               const SizedBox(height: 20),
               Text('Franja horaria', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
-              for (final entry in _slotsMeta.entries) ...[
+              for (final entry in availabilitySlotStyles.entries) ...[
                 _SlotCardBS(
                   meta: entry.value,
                   selected: _slots.contains(entry.key),
@@ -489,14 +484,6 @@ final class _AddSlotBottomSheetState extends State<_AddSlotBottomSheet> {
   }
 }
 
-final class _SlotMeta {
-  const _SlotMeta({required this.title, required this.range, required this.icon, required this.color});
-  final String title;
-  final String range;
-  final IconData icon;
-  final Color color;
-}
-
 final class _DayChip extends StatelessWidget {
   const _DayChip({required this.label, required this.selected, required this.onTap});
 
@@ -533,7 +520,7 @@ final class _DayChip extends StatelessWidget {
 final class _SlotCardBS extends StatelessWidget {
   const _SlotCardBS({required this.meta, required this.selected, required this.onTap});
 
-  final _SlotMeta meta;
+  final AvailabilitySlotStyle meta;
   final bool selected;
   final VoidCallback onTap;
 

@@ -115,6 +115,11 @@ Widget _wrapScreen(
   );
 }
 
+Future<void> _openEloSheet(WidgetTester tester) async {
+  await tester.tap(find.text('Historial de ELO'));
+  await tester.pumpAndSettle();
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -130,26 +135,18 @@ void main() {
     when(() => profileCubit.load()).thenAnswer((_) async {});
   });
 
-  // ── UT-05 ─────────────────────────────────────────────────────────────────
-  // Orchestration logic (no leaderboard call when ratings empty) is now covered
-  // in profile_cubit_test.dart. This widget test verifies the empty-leaderboard
-  // UI renders without errors.
-
-  testWidgets('UT-05: empty leaderboard state renders empty-state text', (tester) async {
+  testWidgets('UT-05: empty leaderboard state renders empty-state text in ELO sheet', (tester) async {
     final loaded = _makeLoaded(ratings: [], leaderboard: []);
     when(() => profileCubit.state).thenReturn(loaded);
     whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
 
     await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
     await tester.pumpAndSettle();
+    await _openEloSheet(tester);
 
-    expect(find.text('Sin datos de clasificación'), findsWidgets);
+    expect(find.text('Sin datos de clasificación'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-
-  // ── UT-06 ─────────────────────────────────────────────────────────────────
-  // Leaderboard-throw degraded-success is covered in profile_cubit_test.dart.
-  // This widget test verifies the screen renders the user name when loaded.
 
   testWidgets('UT-06: screen renders user name when ProfileLoaded is emitted', (tester) async {
     final loaded = _makeLoaded(leaderboard: []);
@@ -159,13 +156,11 @@ void main() {
     await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
     await tester.pumpAndSettle();
 
-    expect(find.text('Test User'), findsWidgets);
+    expect(find.text('Test User'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  // ── WT-01 ─────────────────────────────────────────────────────────────────
-
-  testWidgets('WT-01: renders 5 rows with rank, displayName and rating', (tester) async {
+  testWidgets('WT-01: ELO sheet renders 5 rows with rank, displayName and rating', (tester) async {
     final entries = _makeEntries();
     final loaded = _makeLoaded(leaderboard: entries);
     when(() => profileCubit.state).thenReturn(loaded);
@@ -173,16 +168,15 @@ void main() {
 
     await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
     await tester.pumpAndSettle();
+    await _openEloSheet(tester);
 
     for (final e in entries) {
-      expect(find.text(e.displayName), findsWidgets);
+      expect(find.text(e.displayName), findsOneWidget);
     }
-    expect(find.textContaining('1600'), findsWidgets);
+    expect(find.textContaining('1600'), findsOneWidget);
   });
 
-  // ── WT-02 ─────────────────────────────────────────────────────────────────
-
-  testWidgets('WT-02: row with me.id has highlighted visual treatment', (tester) async {
+  testWidgets('WT-02: ELO sheet row with me.id has highlighted visual treatment', (tester) async {
     final entries = _makeEntries(highlightUserId: _kMe.id);
     final loaded = _makeLoaded(leaderboard: entries);
     when(() => profileCubit.state).thenReturn(loaded);
@@ -190,6 +184,7 @@ void main() {
 
     await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
     await tester.pumpAndSettle();
+    await _openEloSheet(tester);
 
     final aliceText = find.text('Alice');
     expect(aliceText, findsOneWidget);
@@ -202,8 +197,6 @@ void main() {
     expect(hasHighlight, isTrue);
   });
 
-  // ── WT-03 ─────────────────────────────────────────────────────────────────
-
   testWidgets('WT-03: no row highlighted when userId does not match me.id', (tester) async {
     final entries = _makeEntries();
     final loaded = _makeLoaded(leaderboard: entries);
@@ -212,23 +205,38 @@ void main() {
 
     await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
     await tester.pumpAndSettle();
+    await _openEloSheet(tester);
 
-    expect(find.text('Alice'), findsWidgets);
+    expect(find.text('Alice'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  // ── WT-04 ─────────────────────────────────────────────────────────────────
-
-  testWidgets('WT-04: empty leaderboard renders empty-state, no list rows', (tester) async {
+  testWidgets('WT-04: empty leaderboard in ELO sheet, no list rows', (tester) async {
     final loaded = _makeLoaded(leaderboard: []);
     when(() => profileCubit.state).thenReturn(loaded);
     whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
 
     await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
     await tester.pumpAndSettle();
+    await _openEloSheet(tester);
 
     expect(find.text('Alice'), findsNothing);
     expect(find.text('Bob'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('handoff: settings menu shows Editar perfil and Ajustes', (tester) async {
+    final loaded = _makeLoaded();
+    when(() => profileCubit.state).thenReturn(loaded);
+    whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+
+    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Editar perfil'), findsOneWidget);
+    expect(find.text('Ajustes'), findsOneWidget);
+    expect(find.text('Jugadas'), findsOneWidget);
+    expect(find.text('Victorias'), findsOneWidget);
+    expect(find.text('ELO'), findsOneWidget);
   });
 }

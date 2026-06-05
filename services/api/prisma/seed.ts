@@ -422,6 +422,7 @@ async function seedMatchLifecycle(): Promise<void> {
     email?: string;
     description?: string;
     openingHours?: Prisma.InputJsonValue;
+    averageRating?: number;
   }> = [
     {
       placeId: 'seed:venue:club-cuadrala',
@@ -431,6 +432,7 @@ async function seedMatchLifecycle(): Promise<void> {
       addressCountry: 'VE',
       latitude: 10.4806,
       longitude: -66.9036,
+      averageRating: 4.8,
       courts: ['Cancha 1', 'Cancha 2', 'Cancha 3', 'Cancha 4', 'Cancha 5'],
       phone: '+58-212-555-0100',
       email: 'contacto@clubcuadrala.com',
@@ -453,6 +455,7 @@ async function seedMatchLifecycle(): Promise<void> {
       addressCountry: 'VE',
       latitude: 10.4925,
       longitude: -66.8576,
+      averageRating: 4.6,
       courts: ['Cancha A', 'Cancha B'],
       phone: '+58-212-555-0200',
       email: 'info@padelcenter.com.ve',
@@ -475,6 +478,7 @@ async function seedMatchLifecycle(): Promise<void> {
       addressCountry: 'VE',
       latitude: 10.5995,
       longitude: -66.9333,
+      averageRating: 4.4,
       courts: ['Cancha 1'],
       phone: '+58-212-555-0300',
       email: 'clublaguaira@gmail.com',
@@ -508,6 +512,7 @@ async function seedMatchLifecycle(): Promise<void> {
           email: _v.email,
           description: _v.description,
           openingHours: _v.openingHours,
+          averageRating: _v.averageRating ?? null,
         },
         update: {
           name: _v.name,
@@ -521,6 +526,7 @@ async function seedMatchLifecycle(): Promise<void> {
           email: _v.email,
           description: _v.description,
           openingHours: _v.openingHours,
+          averageRating: _v.averageRating ?? null,
         },
         select: { id: true, name: true, placeId: true },
       }),

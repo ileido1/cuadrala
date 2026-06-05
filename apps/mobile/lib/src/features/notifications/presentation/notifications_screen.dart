@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
-import '../../../shared/widgets/app_header.dart';
 import '../data/models/notification_delivery_dto.dart';
 import 'cubit/notifications_cubit.dart';
 import 'cubit/notifications_state.dart';
@@ -26,57 +26,74 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       key: const Key('notifications.screen'),
       body: SafeArea(
+        bottom: false,
         child: BlocBuilder<NotificationsCubit, NotificationsState>(
           builder: (context, state) {
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppHeader(
-                  title: 'Notificaciones',
-                  showBack: false,
-                  rightAction: TextButton(
-                    onPressed: state.isMutating ? null : () => context.read<NotificationsCubit>().markAllAsRead(),
-                    child: const Text('Marcar leídas'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _TabChip(
-                            label: 'Todas',
-                            isActive: !state.onlyUnread,
-                            onTap: () => context.read<NotificationsCubit>().toggleOnlyUnread(false),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _TabChip(
-                            label: 'No leídas',
-                            isActive: state.onlyUnread,
-                            onTap: () => context.read<NotificationsCubit>().toggleOnlyUnread(true),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                _AvisosHeader(
+                  hasUnread: state.items.any((n) => n.isUnread),
+                  isMutating: state.isMutating,
+                  onMarkAllRead: () =>
+                      context.read<NotificationsCubit>().markAllAsRead(),
                 ),
                 Expanded(child: _Body(state: state)),
               ],
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+final class _AvisosHeader extends StatelessWidget {
+  const _AvisosHeader({
+    required this.hasUnread,
+    required this.isMutating,
+    required this.onMarkAllRead,
+  });
+
+  final bool hasUnread;
+  final bool isMutating;
+  final VoidCallback onMarkAllRead;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Text(
+              'Avisos',
+              style: TextStyle(
+                fontSize: 27,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+          if (hasUnread)
+            TextButton(
+              onPressed: isMutating ? null : onMarkAllRead,
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.primary,
+                textStyle: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              child: const Text('Marcar leídas'),
+            ),
+        ],
       ),
     );
   }
@@ -93,16 +110,18 @@ final class _Body extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.status == NotificationsStatus.error) {
-      return _ErrorState(message: state.errorMessage ?? 'No pudimos cargar las notificaciones.');
+      return _ErrorState(
+        message: state.errorMessage ?? 'No pudimos cargar las notificaciones.',
+      );
     }
     if (state.items.isEmpty) {
       return const _EmptyState();
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 16),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       itemCount: state.items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final n = state.items[index];
         return _NotificationTile(notification: n);
@@ -119,140 +138,127 @@ final class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final (icon, bg, fg) = _styleForType(scheme, notification.type);
+    final icon = _iconForType(notification.type);
+    final greenBg = scheme.primary.withValues(alpha: 0.15);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: () {
-        if (notification.isUnread) {
-          context.read<NotificationsCubit>().markOneAsRead(notification.id);
-        }
-        final link = notification.deepLink;
-        if (link != null && link.startsWith('/matches/')) {
-          final matchId = link.replaceFirst('/matches/', '').split('/').first;
-          if (matchId.isNotEmpty) {
-            if (notification.type == NotificationType.chatMessage) {
-              context.push(Routes.matchChat(matchId));
-            } else {
-              context.push(Routes.matchDetail(matchId));
-            }
-            return;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          if (notification.isUnread) {
+            context.read<NotificationsCubit>().markOneAsRead(notification.id);
           }
-        }
-        context.push('${Routes.notifications}/${notification.id}');
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: notification.isUnread ? scheme.surfaceContainerHighest.withValues(alpha: 0.55) : scheme.surface,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-              child: Icon(icon, color: fg),
+          final link = notification.deepLink;
+          if (link != null && link.startsWith('/matches/')) {
+            final matchId = link.replaceFirst('/matches/', '').split('/').first;
+            if (matchId.isNotEmpty) {
+              if (notification.type == NotificationType.chatMessage) {
+                context.push(Routes.matchChat(matchId));
+              } else {
+                context.push(Routes.matchDetail(matchId));
+              }
+              return;
+            }
+          }
+          context.push('${Routes.notifications}/${notification.id}');
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: notification.isUnread ? scheme.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: notification.isUnread
+                  ? scheme.outlineVariant
+                  : Colors.transparent,
+              width: 1.5,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: greenBg,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, color: scheme.primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      notification.title,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      notification.body,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _relativeTime(notification.createdAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
                   Text(
-                    notification.body,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: scheme.onSurfaceVariant, height: 1.2),
+                    _relativeTime(notification.createdAt),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+                    ),
                   ),
+                  if (notification.isUnread) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: BrandColors.limeAccent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
                 ],
               ),
-            ),
-            if (notification.isUnread) ...[
-              const SizedBox(width: 10),
-              Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(top: 6),
-                decoration: BoxDecoration(color: scheme.primary, shape: BoxShape.circle),
-              ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  (IconData, Color, Color) _styleForType(ColorScheme scheme, NotificationType type) {
-    return switch (type) {
-      NotificationType.chatMessage => (Icons.chat_bubble_outline, Colors.blue.withValues(alpha: 0.12), Colors.blue.shade700),
-      NotificationType.matchSlotOpened => (Icons.emoji_events_outlined, scheme.primary.withValues(alpha: 0.12), scheme.primary),
-      NotificationType.paymentPending => (Icons.credit_card, scheme.tertiary.withValues(alpha: 0.25), scheme.onTertiary),
-      NotificationType.paymentConfirmed => (Icons.check_circle_outline, Colors.green.withValues(alpha: 0.12), Colors.green.shade700),
-      NotificationType.matchPlayerJoined => (Icons.person_add_alt_1, scheme.secondary.withValues(alpha: 0.12), scheme.secondary),
-      NotificationType.matchCancelled => (Icons.event_busy, scheme.error.withValues(alpha: 0.12), scheme.error),
-      NotificationType.unknown => (Icons.notifications_none_outlined, scheme.surfaceContainerHighest, scheme.onSurfaceVariant),
-    };
-  }
-}
-
-final class _TabChip extends StatelessWidget {
-  const _TabChip({required this.label, required this.isActive, required this.onTap});
-
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: isActive ? scheme.surface : Colors.transparent,
-          border: Border.all(color: isActive ? scheme.outlineVariant : Colors.transparent),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: isActive ? scheme.onSurface : scheme.onSurfaceVariant,
-            ),
           ),
         ),
       ),
     );
+  }
+
+  IconData _iconForType(NotificationType type) {
+    return switch (type) {
+      NotificationType.chatMessage => Icons.chat_bubble_outline,
+      NotificationType.matchSlotOpened => Icons.emoji_events_outlined,
+      NotificationType.paymentPending => Icons.credit_card,
+      NotificationType.paymentConfirmed => Icons.check_circle_outline,
+      NotificationType.matchPlayerJoined => Icons.person_add_alt_1,
+      NotificationType.matchCancelled => Icons.event_busy,
+      NotificationType.unknown => Icons.notifications_none_outlined,
+    };
   }
 }
 
@@ -268,9 +274,16 @@ final class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.notifications_none_outlined, size: 42, color: scheme.onSurfaceVariant),
+            Icon(
+              Icons.notifications_none_outlined,
+              size: 42,
+              color: scheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 10),
-            const Text('Sin notificaciones nuevas', style: TextStyle(fontWeight: FontWeight.w900)),
+            const Text(
+              'Sin notificaciones nuevas',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 4),
             Text(
               'Cuando haya novedades de tus partidas, te avisamos por aquí.',
@@ -319,7 +332,6 @@ String _relativeTime(DateTime dt) {
   if (diff.inMinutes < 1) return 'ahora';
   if (diff.inMinutes < 60) return 'hace ${diff.inMinutes} min';
   if (diff.inHours < 24) return 'hace ${diff.inHours} h';
-  if (diff.inDays == 1) return 'Ayer';
+  if (diff.inDays == 1) return 'ayer';
   return 'hace ${diff.inDays} d';
 }
-

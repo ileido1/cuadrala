@@ -20,7 +20,7 @@ final class VenueBookingState extends Equatable {
     this.selectedSlot,
     this.selectedCategoryId,
     this.affectsElo = true,
-    this.gender,
+    this.gender = 'MALE',
     this.maxParticipants = 4,
     this.notes = '',
     this.submittedMatchId,
@@ -57,6 +57,8 @@ final class VenueBookingState extends Equatable {
       selectedCourtId != null &&
       selectedSlot != null &&
       selectedCategoryId != null &&
+      gender != null &&
+      gender!.isNotEmpty &&
       !submitting;
 
   CourtDto? get selectedCourt => courts.cast<CourtDto?>().firstWhere(

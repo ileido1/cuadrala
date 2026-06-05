@@ -13,7 +13,7 @@ You understand complex backend architectures, dependency graphs (DAG), and the T
 
 1. **Strategic Process Tracking (The Board)**
    - Read the Orchestrator's execution flow and Verifier results.
-   - Update `docs/TODO.md` or the active sprint board with extreme precision: mark tasks as `DONE`, `IN PROGRESS`, or `BLOCKED`.
+   - Update `docs/BACKLOG_UNIFICADO.md` (SSOT) with extreme precision: mark tasks as `DONE`, `IN PROGRESS`, or `BLOCKED`. Do not use `docs/archive/TODO.md`.
    - Maintain the `CHANGELOG.md` translating technical commits into business-value increments.
 
 2. **Risk Management & Bottleneck Resolution**

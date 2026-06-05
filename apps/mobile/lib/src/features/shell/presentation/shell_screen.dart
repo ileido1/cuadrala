@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:ui';
 
 import '../../../core/config/feature_flags.dart';
+import '../../../core/theme/brand_colors.dart';
 import '../../../core/di/service_locator.dart';
 import '../../home/presentation/cubit/home_cubit.dart';
 import '../../matches/presentation/cubit/open_matches_cubit.dart';
@@ -132,6 +132,7 @@ class ShellBody extends StatelessWidget {
       builder: (context, notifState) {
         final unreadCount = notifState.items.where((n) => n.isUnread).length;
 
+        final scheme = Theme.of(context).colorScheme;
         final items = [
           for (var i = 0; i < resolvedTabs.length; i++)
             BottomNavigationBarItem(
@@ -139,11 +140,13 @@ class ShellBody extends StatelessWidget {
                 tab: resolvedTabs[i],
                 unreadCount: unreadCount,
                 active: false,
+                scheme: scheme,
               ),
               activeIcon: _buildIcon(
                 tab: resolvedTabs[i],
                 unreadCount: unreadCount,
                 active: true,
+                scheme: scheme,
               ),
               label: resolvedTabs[i].label,
             ),
@@ -151,7 +154,7 @@ class ShellBody extends StatelessWidget {
 
         return Scaffold(
           body: child,
-          bottomNavigationBar: _BlurBottomNav(
+          bottomNavigationBar: _ShellBottomNav(
             child: BottomNavigationBar(
               currentIndex: currentIndex,
               items: items,
@@ -159,14 +162,17 @@ class ShellBody extends StatelessWidget {
               type: BottomNavigationBarType.fixed,
               backgroundColor: Colors.transparent,
               elevation: 0,
-              selectedItemColor: Theme.of(context).colorScheme.primary,
-              unselectedItemColor:
-                  Theme.of(context).colorScheme.onSurfaceVariant,
+              selectedItemColor: scheme.primary,
+              unselectedItemColor: const Color(0xFF94A3B8),
               showUnselectedLabels: true,
               selectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.w800, fontSize: 11),
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
               unselectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.w700, fontSize: 11),
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
             ),
           ),
         );
@@ -183,6 +189,7 @@ Widget _buildIcon({
   required ShellTabConfig tab,
   required int unreadCount,
   required bool active,
+  required ColorScheme scheme,
 }) {
   final icon = Icon(active ? tab.activeIcon : tab.inactiveIcon);
 
@@ -191,32 +198,62 @@ Widget _buildIcon({
 
   final cappedCount = unreadCount > 99 ? 99 : unreadCount;
   final label = cappedCount >= 99 ? '99+' : '$cappedCount';
-  return Badge(label: Text(label), child: icon);
+  return Stack(
+    clipBehavior: Clip.none,
+    children: [
+      icon,
+      Positioned(
+        top: -3,
+        right: -6,
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            color: BrandColors.limeAccent,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: scheme.surface, width: 1.5),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF15301A),
+              height: 1,
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Blurred bottom nav container
+// Bottom nav — handoff: bg-2, borde superior, safe area inferior
 // ---------------------------------------------------------------------------
 
-final class _BlurBottomNav extends StatelessWidget {
-  const _BlurBottomNav({required this.child});
+final class _ShellBottomNav extends StatelessWidget {
+  const _ShellBottomNav({required this.child});
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: 0.82),
-            border: Border(
-                top: BorderSide(
-                    color: scheme.outlineVariant.withValues(alpha: 0.7))),
-          ),
-          child: SafeArea(top: false, child: child),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(
+          top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(bottom: 8),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 8, 6, 0),
+          child: child,
         ),
       ),
     );

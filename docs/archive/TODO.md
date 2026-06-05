@@ -1,3 +1,5 @@
+> **ARCHIVADO.** Fuente de verdad: [`docs/BACKLOG_UNIFICADO.md`](../BACKLOG_UNIFICADO.md).
+
 ## Sprint 3 — E2 MVP (backend-first)
 
 ### Objetivo

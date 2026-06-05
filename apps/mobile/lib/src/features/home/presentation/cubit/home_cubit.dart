@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../../../core/formatting/fx_price_labels.dart';
+import '../../../../core/formatting/money_conversion.dart';
 import '../../../matches/data/matches_repository.dart';
 import '../../../matches/data/models/open_match_dto.dart';
 import '../../../profile/data/profile_repository.dart';
@@ -32,10 +34,14 @@ class HomeCubit extends Cubit<HomeState> {
           limit: 20,
         ),
         _safeListMyMatches(),
+        loadExchangeRatesSafelySV(),
       ]);
 
-      final openMatchesPage = results[0];
-      final myMatchesPage = results[1];
+      final openMatchesPage = results[0] as OpenMatchesPage;
+      final myMatchesPage = results[1] as OpenMatchesPage;
+      final exchangeRates = results[2] as List<ExchangeRateRow>;
+
+      final rating = me.primaryRating;
 
       emit(
         HomeLoaded(
@@ -43,6 +49,9 @@ class HomeCubit extends Cubit<HomeState> {
           sportId: sportId,
           openMatches: openMatchesPage.items,
           myMatches: myMatchesPage.items,
+          levelCategory: rating?.categoryName,
+          levelElo: rating?.rating.round(),
+          exchangeRates: exchangeRates,
         ),
       );
     } catch (e) {

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/sport/sport_classification.dart';
+import '../../../../core/theme/brand_colors.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../../catalog/data/models/category_dto.dart';
 import '../../../catalog/data/models/sport_dto.dart';
@@ -33,21 +34,19 @@ class _SportMeta {
   final Color color;
 }
 
-const _sportMetaByCode = <String, _SportMeta>{
-  'PADEL': _SportMeta(icon: Icons.sports_tennis, color: Color(0xFF2E7D32)),
-  'TENNIS': _SportMeta(icon: Icons.sports_tennis, color: Color(0xFF607D8B)),
-  'PICKLEBALL': _SportMeta(icon: Icons.sports_tennis, color: Color(0xFF00897B)),
-  'FOOTBALL5': _SportMeta(icon: Icons.sports_soccer, color: Color(0xFF455A64)),
-  'BASKETBALL3X3': _SportMeta(icon: Icons.sports_basketball, color: Color(0xFFE65100)),
-  'VOLLEY_BEACH': _SportMeta(icon: Icons.sports_volleyball, color: Color(0xFFFFB300)),
+const _sportIconsByCode = <String, IconData>{
+  'PADEL': Icons.sports_tennis,
+  'TENNIS': Icons.sports_tennis,
+  'PICKLEBALL': Icons.sports_tennis,
+  'FOOTBALL5': Icons.sports_soccer,
+  'BASKETBALL3X3': Icons.sports_basketball,
+  'VOLLEY_BEACH': Icons.sports_volleyball,
 };
 
-const _fallbackMeta = _SportMeta(icon: Icons.sports, color: Color(0xFF546E7A));
-
-_SportMeta _metaFor(SportDto sport) {
-  final key = sport.code.toUpperCase();
-  return _sportMetaByCode[key] ?? _fallbackMeta;
-}
+_SportMeta _metaFor(SportDto sport) => _SportMeta(
+      icon: _sportIconsByCode[sport.code.toUpperCase()] ?? Icons.sports,
+      color: BrandColors.sportColorForCode(sport.code),
+    );
 
 class _PerSportSelection {
   SkillBand? band;

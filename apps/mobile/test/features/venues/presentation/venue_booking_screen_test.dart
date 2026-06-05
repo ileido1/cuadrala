@@ -13,6 +13,8 @@ import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_booking_cubit.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_booking_state.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/venue_booking_screen.dart';
+import 'package:cuadrala_mobile/src/features/venues/presentation/widgets/court_picker.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/date_strip.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -139,12 +141,13 @@ void main() {
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
-    // Loading indicator visible; no courts accordion or submit button
+    // Loading indicator visible; no court picker or submit button
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     // AppBar still shows venue name even while loading (by design)
     expect(find.text('Club Padel Norte'), findsOneWidget);
-    // No court tiles shown yet
-    expect(find.byType(ExpansionTile), findsNothing);
+    // No date strip or court picker shown yet
+    expect(find.byType(DateStrip), findsNothing);
+    expect(find.byType(CourtPicker), findsNothing);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -165,29 +168,31 @@ void main() {
   // Date row visible
   // ──────────────────────────────────────────────────────────────────────────
 
-  testWidgets('shows date row with today\'s formatted date', (tester) async {
+  testWidgets('shows the weekly DateStrip under the "Cuándo" section',
+      (tester) async {
     when(() => cubit.state).thenReturn(_loadedState());
     whenListen(cubit, Stream<VenueBookingState>.empty(), initialState: _loadedState());
 
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
-    // Date row should show the selected date text
-    expect(find.text('01/06/2024'), findsOneWidget);
+    // The redesigned "Cuándo" section renders a DateStrip with a relative chip.
+    expect(find.byType(DateStrip), findsOneWidget);
+    expect(find.text('Hoy'), findsOneWidget);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Courts accordion rendered
+  // Court picker rendered
   // ──────────────────────────────────────────────────────────────────────────
 
-  testWidgets('renders ExpansionTile per active court', (tester) async {
+  testWidgets('renders CourtPicker with a row per active court', (tester) async {
     when(() => cubit.state).thenReturn(_loadedState());
     whenListen(cubit, Stream<VenueBookingState>.empty(), initialState: _loadedState());
 
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
-    expect(find.byType(ExpansionTile), findsOneWidget);
+    expect(find.byType(CourtPicker), findsOneWidget);
     expect(find.text('Pista 1'), findsOneWidget);
   });
 
@@ -203,11 +208,11 @@ void main() {
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
-    final fab = find.byType(FloatingActionButton);
-    expect(fab, findsOneWidget);
+    final btn = find.byWidgetPredicate((w) => w is FilledButton);
+    expect(btn, findsOneWidget);
 
-    final fabWidget = tester.widget<FloatingActionButton>(fab);
-    expect(fabWidget.onPressed, isNull);
+    final btnWidget = tester.widget<FilledButton>(btn);
+    expect(btnWidget.onPressed, isNull);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -223,11 +228,11 @@ void main() {
     await tester.pumpWidget(_buildTestApp(state: state, cubit: cubit));
     await tester.pump();
 
-    final fab = find.byType(FloatingActionButton);
-    expect(fab, findsOneWidget);
+    final btn = find.byWidgetPredicate((w) => w is FilledButton);
+    expect(btn, findsOneWidget);
 
-    final fabWidget = tester.widget<FloatingActionButton>(fab);
-    expect(fabWidget.onPressed, isNotNull);
+    final btnWidget = tester.widget<FilledButton>(btn);
+    expect(btnWidget.onPressed, isNotNull);
   });
 
   // ──────────────────────────────────────────────────────────────────────────

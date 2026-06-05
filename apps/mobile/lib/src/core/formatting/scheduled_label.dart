@@ -17,3 +17,24 @@ String formatTimeHm(DateTime dt) {
   final m = dt.minute.toString().padLeft(2, '0');
   return '$h:$m';
 }
+
+const _monthsEs = <String>[
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
+
+/// Fecha compacta para bloques de tarjeta (p. ej. `02 Jun`).
+String compactCalendarDate(DateTime dt) {
+  final day = dt.day.toString().padLeft(2, '0');
+  return '$day ${_monthsEs[dt.month - 1]}';
+}

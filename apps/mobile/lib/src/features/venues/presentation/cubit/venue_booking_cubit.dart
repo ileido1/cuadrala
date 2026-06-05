@@ -13,17 +13,19 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
     required VenuesRepository venuesRepository,
     required MatchesRepository matchesRepository,
     required CatalogRepository catalogRepository,
+    DateTime? initialDate,
   })  : _venuesRepository = venuesRepository,
         _matchesRepository = matchesRepository,
         _catalogRepository = catalogRepository,
         super(
           VenueBookingState(
             venue: venue,
-            selectedDate: DateTime(
-              DateTime.now().year,
-              DateTime.now().month,
-              DateTime.now().day,
-            ),
+            selectedDate: initialDate ??
+                DateTime(
+                  DateTime.now().year,
+                  DateTime.now().month,
+                  DateTime.now().day,
+                ),
           ),
         );
 

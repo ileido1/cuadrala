@@ -6,12 +6,14 @@ import { UpdatePlayerProfileUseCase } from '../../application/use_cases/update_p
 import { PrismaUserRepository } from '../../infrastructure/adapters/prisma_user_repository.js';
 import { PrismaPlayerProfileRepository } from '../../infrastructure/adapters/prisma_player_profile_repository.js';
 import { PrismaUserStatsRepository } from '../../infrastructure/adapters/prisma_user_stats_repository.js';
+import { PrismaUserRatingReadRepository } from '../../infrastructure/adapters/prisma_user_rating_read_repository.js';
 
 const USER_REPOSITORY = new PrismaUserRepository();
 const PLAYER_PROFILE_REPOSITORY = new PrismaPlayerProfileRepository();
 const USER_STATS_REPOSITORY = new PrismaUserStatsRepository();
+const USER_RATING_READ_REPOSITORY = new PrismaUserRatingReadRepository();
 
-export const GET_PROFILE_UC = new GetProfileUseCase(USER_REPOSITORY);
+export const GET_PROFILE_UC = new GetProfileUseCase(USER_REPOSITORY, USER_RATING_READ_REPOSITORY);
 export const UPDATE_PROFILE_UC = new UpdateProfileUseCase(USER_REPOSITORY);
 export const GET_PLAYER_PROFILE_UC = new GetPlayerProfileUseCase(PLAYER_PROFILE_REPOSITORY);
 export const UPDATE_PLAYER_PROFILE_UC = new UpdatePlayerProfileUseCase(

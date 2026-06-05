@@ -196,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     icon: const Icon(Icons.apple),
                     label: 'Continuar con Apple',
                     background: BrandColors.appleBlack,
-                    foreground: const Color(0xFFFFFFFF),
+                    foreground: scheme.onPrimary,
                     border: BrandColors.appleBlack,
                     onPressed: isBusy ? null : _socialLoginApple,
                   ),

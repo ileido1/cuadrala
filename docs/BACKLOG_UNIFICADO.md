@@ -227,4 +227,5 @@
 - `docs/archive/MOBILE_SPRINTS.md`: **archivado**; stub en `docs/MOBILE_SPRINTS.md` redirige aquí.
 - `docs/DESIGN_SYSTEM.md`: índice de tokens, tema y mockups (no duplica backlog).
 - Sprints canónicos: solo en este archivo (**Sprint M19** = disponibilidad pistas).
+- `docs/archive/TODO.md`: tablero histórico backend; stub en `docs/TODO.md`.
 

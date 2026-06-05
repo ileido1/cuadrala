@@ -58,13 +58,13 @@ Repo externo **Cuadrada-Sport** (no está en este monorepo):
 
 ## Tipografía
 
-| Plataforma | Estado |
-|------------|--------|
-| Mockups | Plus Jakarta Sans (`DESIGN_SPEC.md`) |
-| Web | DM Sans + Outfit (`tailwind.config.ts`) |
-| Mobile | Material 3 (tipografía del sistema) |
+| Plataforma | Fuente | Implementación |
+|------------|--------|----------------|
+| Mockups | Plus Jakarta Sans | `DESIGN_SPEC.md` (Cuadrada-Sport) |
+| Web | DM Sans + Outfit | `apps/web/tailwind.config.ts` |
+| Mobile | Plus Jakarta Sans | `google_fonts` en `AppTheme._textTheme()` (`app_theme.dart`) |
 
-Decisión pendiente: unificar fuente custom en mobile (fase futura).
+Mobile alinea tipografía con mockups; web mantiene stack propio hasta un change de unificación cross-platform.
 
 ## No hacer
 

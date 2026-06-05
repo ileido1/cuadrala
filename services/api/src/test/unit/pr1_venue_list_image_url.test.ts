@@ -31,6 +31,7 @@ type FakeVenueDetailRow = {
   pricingCurrency: string;
   countryCode: string;
   imageUrl: string | null;
+  averageRating: number | null;
   monetizationSettings: { timezone: string } | null;
   _count: { courts: number };
   courts: { sportType: string }[];
@@ -174,5 +175,72 @@ describe('VenueDetailDTO — sports[] field', () => {
   it('debe incluir imageUrl null en el DTO de detalle cuando no tiene imagen', () => {
     const ROW = makeDetailRow({ imageUrl: null });
     expect(ROW.imageUrl).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SC-1.3 — averageRating en VenueListItemDTO
+// ---------------------------------------------------------------------------
+
+describe('VenueListItemDTO — averageRating field', () => {
+  it('SC-1.3: debe exponer averageRating cuando existe', () => {
+    const ROW = {
+      id: 'venue-1',
+      name: 'Sede Test',
+      address: 'Av. Test 123',
+      latitude: null,
+      longitude: null,
+      displayCurrency: 'USD',
+      pricingCurrency: 'USD',
+      createdAt: new Date('2026-01-01'),
+      imageUrl: null,
+      averageRating: 4.8,
+    };
+
+    expect(ROW).toHaveProperty('averageRating', 4.8);
+
+    const DTO = {
+      id: ROW.id,
+      name: ROW.name,
+      address: ROW.address,
+      latitude: ROW.latitude,
+      longitude: ROW.longitude,
+      displayCurrency: ROW.displayCurrency,
+      pricingCurrency: ROW.pricingCurrency,
+      createdAt: ROW.createdAt,
+      imageUrl: ROW.imageUrl,
+      averageRating: ROW.averageRating,
+    };
+    expect(DTO.averageRating).toBe(4.8);
+  });
+
+  it('SC-1.4: debe exponer averageRating como null cuando no hay valoración', () => {
+    const ROW = {
+      id: 'venue-2',
+      name: 'Sede Sin Rating',
+      address: null,
+      latitude: null,
+      longitude: null,
+      displayCurrency: 'USD',
+      pricingCurrency: 'USD',
+      createdAt: new Date('2026-01-01'),
+      imageUrl: null,
+      averageRating: null,
+    };
+
+    const DTO = {
+      id: ROW.id,
+      name: ROW.name,
+      address: ROW.address,
+      latitude: ROW.latitude,
+      longitude: ROW.longitude,
+      displayCurrency: ROW.displayCurrency,
+      pricingCurrency: ROW.pricingCurrency,
+      createdAt: ROW.createdAt,
+      imageUrl: ROW.imageUrl,
+      averageRating: ROW.averageRating,
+    };
+    expect('averageRating' in DTO).toBe(true);
+    expect(DTO.averageRating).toBeNull();
   });
 });

@@ -536,6 +536,8 @@ model Venue {
   owner             User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
   /// URL to venue photo/image. Nullable — populated via admin or future upload.
   imageUrl          String?
+  /// Valoración media de la sede (1–5). Nullable hasta que existan reviews.
+  averageRating     Float?
   phone             String?
   email             String?
   description       String?

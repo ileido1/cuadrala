@@ -12,6 +12,7 @@ import '../features/auth/presentation/welcome_screen.dart';
 import '../features/availability/presentation/availability_screen.dart';
 import '../features/availability/presentation/cubit/availability_cubit.dart';
 import '../features/availability/data/availability_repository.dart';
+import '../features/matches/presentation/discover_matches_screen.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
 import '../features/matches/presentation/match_lifecycle_screen.dart';
 import '../features/matches/presentation/result_entry_screen.dart';
@@ -28,10 +29,10 @@ import '../features/notifications/presentation/notification_prefs_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
 import '../features/venues/data/models/venue_dto.dart';
+import '../features/venues/presentation/create_match_panel.dart';
 import '../features/venues/presentation/venue_booking_screen.dart';
-import '../features/venues/presentation/venue_map_screen.dart';
 import '../features/venues/presentation/cubit/venue_booking_cubit.dart';
-import '../features/venues/presentation/cubit/venue_map_cubit.dart';
+import '../features/matches/presentation/cubit/discover_matches_cubit.dart';
 import '../features/tournaments/presentation/create_tournament_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
 import 'auth_redirect.dart';
@@ -96,9 +97,13 @@ final class AppRouter {
             // ------------------------------------------------------------------
             GoRoute(
               path: Routes.createMatch,
-              builder: (context, state) => BlocProvider<VenueMapCubit>(
-                create: (_) => getIt<VenueMapCubit>()..load(),
-                child: const VenueMapScreen(),
+              builder: (context, state) => const CreateMatchRouteScreen(),
+            ),
+            GoRoute(
+              path: Routes.discoverMatches,
+              builder: (context, state) => BlocProvider<DiscoverMatchesCubit>(
+                create: (_) => getIt<DiscoverMatchesCubit>(),
+                child: const DiscoverMatchesScreen(),
               ),
             ),
             GoRoute(

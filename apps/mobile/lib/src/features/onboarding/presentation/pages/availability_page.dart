@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../shared/constants/availability_slot_styles.dart';
 import '../../data/models/onboarding_status_dto.dart';
 import '../../data/models/user_availability_dto.dart';
 import '../cubit/onboarding_cubit.dart';
@@ -49,27 +50,6 @@ class _OnboardingAvailabilityPageState extends State<OnboardingAvailabilityPage>
     DayOfWeek.sunday: 'Domingo',
   };
 
-  static const _slotsMeta = <AvailabilitySlot, _SlotMeta>{
-    AvailabilitySlot.morning: _SlotMeta(
-      title: 'Mañana',
-      range: '06:00 – 12:00',
-      icon: Icons.wb_sunny_outlined,
-      color: Color(0xFFFFB300),
-    ),
-    AvailabilitySlot.afternoon: _SlotMeta(
-      title: 'Tarde',
-      range: '12:00 – 18:00',
-      icon: Icons.wb_twilight,
-      color: Color(0xFFFB8C00),
-    ),
-    AvailabilitySlot.evening: _SlotMeta(
-      title: 'Noche',
-      range: '18:00 – 22:00',
-      icon: Icons.nightlight_outlined,
-      color: Color(0xFF5C6BC0),
-    ),
-  };
-
   String _selectedDaysSummary() {
     if (_days.isEmpty) return '';
     final names = _daysOrder.where(_days.contains).map((d) => _daysLong[d]!).toList();
@@ -81,7 +61,10 @@ class _OnboardingAvailabilityPageState extends State<OnboardingAvailabilityPage>
   String _slotsSummary() {
     if (_slots.isEmpty) return '';
     final order = [AvailabilitySlot.morning, AvailabilitySlot.afternoon, AvailabilitySlot.evening];
-    return order.where(_slots.contains).map((s) => _slotsMeta[s]!.title.toLowerCase()).join('/');
+    return order
+        .where(_slots.contains)
+        .map((s) => availabilitySlotStyles[s]!.title.toLowerCase())
+        .join('/');
   }
 
   Future<void> _submit() async {
@@ -157,7 +140,7 @@ class _OnboardingAvailabilityPageState extends State<OnboardingAvailabilityPage>
                         const SizedBox(height: 24),
                         const _SectionTitle(title: 'Horario preferido'),
                         const SizedBox(height: 10),
-                        for (final entry in _slotsMeta.entries) ...[
+                        for (final entry in availabilitySlotStyles.entries) ...[
                           _SlotCard(
                             meta: entry.value,
                             selected: _slots.contains(entry.key),
@@ -214,20 +197,6 @@ class _OnboardingAvailabilityPageState extends State<OnboardingAvailabilityPage>
   }
 }
 
-class _SlotMeta {
-  const _SlotMeta({
-    required this.title,
-    required this.range,
-    required this.icon,
-    required this.color,
-  });
-
-  final String title;
-  final String range;
-  final IconData icon;
-  final Color color;
-}
-
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title});
   final String title;
@@ -281,7 +250,7 @@ class _DayChip extends StatelessWidget {
 class _SlotCard extends StatelessWidget {
   const _SlotCard({required this.meta, required this.selected, required this.onTap});
 
-  final _SlotMeta meta;
+  final AvailabilitySlotStyle meta;
   final bool selected;
   final VoidCallback onTap;
 

@@ -8,6 +8,9 @@ final class AppTheme {
   static const _radius = 12.0;
   static const _radiusLg = 18.0;
 
+  /// Family name registered by [google_fonts] for Plus Jakarta Sans.
+  static const plusJakartaFontFamily = 'PlusJakartaSans';
+
   // ─── Light ─────────────────────────────────────────────────────────────────
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
@@ -15,9 +18,9 @@ final class AppTheme {
       brightness: Brightness.light,
     ).copyWith(
       primary: BrandColors.padelGreen,
-      onPrimary: const Color(0xFFFFFFFF), // white on green — WCAG AA compliant
+      onPrimary: BrandColors.onHero,
       secondary: BrandColors.navy,
-      onSecondary: const Color(0xFFFFFFFF),
+      onSecondary: BrandColors.onHero,
       tertiary: BrandColors.limeAccent,
       onTertiary: BrandColors.navy,
       surface: BrandColors.lightSurface,
@@ -35,9 +38,9 @@ final class AppTheme {
       brightness: Brightness.dark,
     ).copyWith(
       primary: BrandColors.padelGreen,
-      onPrimary: const Color(0xFFFFFFFF), // white on green — WCAG AA compliant
+      onPrimary: BrandColors.onHero,
       secondary: BrandColors.navy,
-      onSecondary: const Color(0xFFFFFFFF),
+      onSecondary: BrandColors.onHero,
       tertiary: BrandColors.limeAccent,
       onTertiary: BrandColors.navy,
       surface: BrandColors.darkSurface,
@@ -51,20 +54,20 @@ final class AppTheme {
 
   // ─── Shared builder ────────────────────────────────────────────────────────
   static ThemeData _buildTheme(ColorScheme scheme, BrandGradients gradients) {
+    final textTheme = _textTheme(scheme);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
+      textTheme: textTheme,
       extensions: [gradients],
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         surfaceTintColor: scheme.surface,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: scheme.onSurface,
+        titleTextStyle: textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w700,
-          fontSize: 18,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -162,6 +165,22 @@ final class AppTheme {
           ),
         ),
       ),
+    );
+  }
+
+  /// Plus Jakarta Sans — alineado con mockups (`DESIGN_SPEC.md`).
+  ///
+  /// Usa `fontFamily` en el [TextTheme] sin descargar fuentes en build:
+  /// [google_fonts] resuelve el glyph en runtime al pintar texto.
+  static TextTheme _textTheme(ColorScheme scheme) {
+    final base = ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+    ).textTheme;
+    return base.apply(
+      fontFamily: plusJakartaFontFamily,
+      bodyColor: scheme.onSurface,
+      displayColor: scheme.onSurface,
     );
   }
 }
