@@ -25,21 +25,27 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
   final String _matchId;
   String? _viewerUserId;
 
-  Future<bool> _viewerHasConfirmedPayment(
+  /// Estado de pago del viewer para esta partida: confirmado (staff aprobó),
+  /// pendiente (comprobante enviado, en revisión) o ninguno.
+  Future<({bool confirmed, bool pending})> _viewerPaymentStatus(
     MatchDetailDto match,
     String viewerUserId,
   ) async {
-    if (match.pricePerPlayerCents <= 0) return false;
+    if (match.pricePerPlayerCents <= 0) return (confirmed: false, pending: false);
     if (!match.participants.any((p) => p.userId == viewerUserId)) {
-      return false;
+      return (confirmed: false, pending: false);
     }
     try {
       final txs = await _monetizationRepository.listMyTransactions(limit: 100);
-      return txs.transactions.any(
-        (t) => t.matchId == _matchId && t.status == 'CONFIRMED',
-      );
+      final mine =
+          txs.transactions.where((t) => t.matchId == _matchId).toList();
+      final confirmed = mine.any((t) => t.status == 'CONFIRMED');
+      // Pendiente = existe comprobante no rechazado ni confirmado aún.
+      final pending = !confirmed &&
+          mine.any((t) => t.status != 'REJECTED' && t.status != 'CANCELLED');
+      return (confirmed: confirmed, pending: pending);
     } catch (_) {
-      return false;
+      return (confirmed: false, pending: false);
     }
   }
 
@@ -50,11 +56,12 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
     String? actionMessage,
     bool actionMessageIsError = false,
   }) async {
-    final hasPaid = await _viewerHasConfirmedPayment(match, viewerUserId);
+    final payment = await _viewerPaymentStatus(match, viewerUserId);
     return MatchDetailLoaded(
       match: match,
       viewerUserId: viewerUserId,
-      viewerHasConfirmedPayment: hasPaid,
+      viewerHasConfirmedPayment: payment.confirmed,
+      viewerHasPendingPayment: payment.pending,
       actionLoading: actionLoading,
       actionMessage: actionMessage,
       actionMessageIsError: actionMessageIsError,
@@ -89,6 +96,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         match: current.match,
         viewerUserId: current.viewerUserId,
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
+        viewerHasPendingPayment: current.viewerHasPendingPayment,
         actionLoading: true,
       ),
     );
@@ -110,6 +118,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           match: current.match,
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
+          viewerHasPendingPayment: current.viewerHasPendingPayment,
           actionMessage: message,
           actionMessageIsError: true,
         ),
@@ -127,6 +136,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         match: current.match,
         viewerUserId: current.viewerUserId,
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
+        viewerHasPendingPayment: current.viewerHasPendingPayment,
         actionLoading: true,
       ),
     );
@@ -148,6 +158,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           match: current.match,
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
+          viewerHasPendingPayment: current.viewerHasPendingPayment,
           actionMessage: message,
           actionMessageIsError: true,
         ),
@@ -193,6 +204,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         match: current.match,
         viewerUserId: current.viewerUserId,
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
+        viewerHasPendingPayment: current.viewerHasPendingPayment,
         actionLoading: true,
       ),
     );
@@ -214,6 +226,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           match: current.match,
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
+          viewerHasPendingPayment: current.viewerHasPendingPayment,
           actionMessage: message,
           actionMessageIsError: true,
         ),

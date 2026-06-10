@@ -11,7 +11,9 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
+import '../../../shared/widgets/court_view.dart';
 import '../data/matches_repository.dart';
 import '../data/models/match_detail_dto.dart';
 import '../../monetization/data/monetization_repository.dart';
@@ -20,6 +22,20 @@ import '../../profile/data/profile_repository.dart';
 import 'cubit/match_detail_cubit.dart';
 import 'cubit/match_detail_state.dart';
 import 'open_match_display.dart';
+
+// ─── Fases del detalle (handoff) ──────────────────────────────────────────────
+
+enum _Phase { browse, joined, pending, confirmed, played }
+
+_Phase _phaseFor(MatchDetailLoaded l) {
+  final m = l.match;
+  if (m.status == 'FINISHED') return _Phase.played;
+  if (!l.isParticipant) return _Phase.browse;
+  final hasPrice = m.pricePerPlayerCents > 0;
+  if (!hasPrice || l.viewerHasConfirmedPayment) return _Phase.confirmed;
+  if (l.viewerHasPendingPayment) return _Phase.pending;
+  return _Phase.joined;
+}
 
 // ─── Entry Point ────────────────────────────────────────────────────────────
 
@@ -49,9 +65,23 @@ final class _MatchDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       key: const Key('match.detail'),
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: scheme.surfaceContainerLowest,
+      appBar: AppBar(
+        backgroundColor: scheme.surfaceContainerLow,
+        surfaceTintColor: scheme.surfaceContainerLow,
+        title: const Text(
+          'Detalle de partida',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Routes.popOrGoPartidas(context),
+        ),
+        actions: const [_DetailActions(), SizedBox(width: 4)],
+      ),
       body: BlocBuilder<MatchDetailCubit, MatchDetailState>(
         builder: (context, state) {
           if (state is MatchDetailLoading || state is MatchDetailInitial) {
@@ -82,59 +112,62 @@ final class _MatchDetailView extends StatelessWidget {
 
           final loaded = state as MatchDetailLoaded;
           final m = loaded.match;
-          final isParticipant = loaded.isParticipant;
-          final isOrganizer = m.participants.isNotEmpty &&
-              m.participants.first.userId == loaded.viewerUserId;
-          final canJoin = m.status == 'SCHEDULED' && m.openSpots > 0;
-          final isFinished = m.status == 'FINISHED';
-          final hasPrice = m.pricePerPlayerCents > 0;
+          final phase = _phaseFor(loaded);
+          final usesCourt = m.maxParticipants == 4;
 
           return Column(
             children: [
-              // ── Scrollable body ──────────────────────────────────────────
               Expanded(
-                child: CustomScrollView(
-                  slivers: [
-                    _HeroSliverAppBar(
-                      match: m,
-                      isOrganizer: isOrganizer,
+                child: Stack(
+                  children: [
+                    ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 150),
+                      children: [
+                        _StatusRow(status: m.status),
+                        const SizedBox(height: 12),
+                        Text(
+                          m.clubName ?? 'Partida sin sede',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _LocationRow(match: m),
+                        _Banner(phase: phase),
+                        const SizedBox(height: 14),
+                        _InfoTilesRow(match: m),
+                        const SizedBox(height: 12),
+                        _DetailChips(match: m),
+                        const SizedBox(height: 24),
+                        _CourtHeader(
+                          finished: phase == _Phase.played,
+                          filled: m.participantCount,
+                          total: m.maxParticipants,
+                        ),
+                        const SizedBox(height: 12),
+                        if (usesCourt)
+                          _CourtSection(loaded: loaded, phase: phase)
+                        else
+                          _PlayersFallback(match: m),
+                      ],
                     ),
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (isParticipant)
-                            _ParticipantBanner(
-                              hasPrice: hasPrice,
-                              hasConfirmedPayment:
-                                  loaded.viewerHasConfirmedPayment,
-                              match: m,
-                            ),
-                          _MatchInfoSection(match: m),
-                          const Divider(height: 1, indent: 20, endIndent: 20),
-                          _PlayersSection(match: m),
-                          const SizedBox(height: 100),
-                        ],
-                      ),
+                    Positioned(
+                      right: 0,
+                      bottom: 16,
+                      child: _ChatFab(matchId: m.id),
                     ),
                   ],
                 ),
               ),
-
               if (loaded.actionMessage != null)
                 _ActionMessageBanner(
                   message: loaded.actionMessage!,
                   isError: loaded.actionMessageIsError,
                 ),
-
-              // ── Sticky bottom bar ────────────────────────────────────────
-              _BottomBar(
-                loaded: loaded,
-                canJoin: canJoin,
-                isParticipant: isParticipant,
-                isFinished: isFinished,
-                hasPrice: hasPrice,
-              ),
+              _Footer(loaded: loaded, phase: phase, usesCourt: usesCourt),
             ],
           );
         },
@@ -143,338 +176,256 @@ final class _MatchDetailView extends StatelessWidget {
   }
 }
 
-// ─── Hero Sliver App Bar ─────────────────────────────────────────────────────
+// ─── Header actions (share + overflow) ────────────────────────────────────────
 
-final class _HeroSliverAppBar extends StatelessWidget {
-  const _HeroSliverAppBar({required this.match, required this.isOrganizer});
+final class _DetailActions extends StatelessWidget {
+  const _DetailActions();
 
-  final MatchDetailDto match;
-  final bool isOrganizer;
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MatchDetailCubit, MatchDetailState>(
+      builder: (context, state) {
+        if (state is! MatchDetailLoaded) return const SizedBox.shrink();
+        final m = state.match;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.ios_share_rounded, size: 20),
+              tooltip: 'Compartir',
+              onPressed: () => _shareMatchInvite(context, m),
+            ),
+            IconButton(
+              icon: const Icon(Icons.more_horiz_rounded),
+              tooltip: 'Acciones',
+              onPressed: () => _showActionsSheet(context, state),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── Status + category chips ──────────────────────────────────────────────────
+
+final class _StatusRow extends StatelessWidget {
+  const _StatusRow({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MatchDetailCubit, MatchDetailState>(
+      builder: (context, state) {
+        final m = state is MatchDetailLoaded ? state.match : null;
+        return Row(
+          children: [
+            _StatusChip(status: status),
+            if (m?.categoryName != null) ...[
+              const SizedBox(width: 8),
+              _CategoryChip(label: m!.categoryName!),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+final class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.status});
+
+  final String status;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final m = match;
-    final scheduled = m.scheduledAt;
-    final scheduleText = scheduled == null
-        ? 'Por confirmar'
-        : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';
-
-    return SliverAppBar(
-      expandedHeight: 200,
-      pinned: true,
-      backgroundColor: scheme.surface,
-      surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => Routes.popOrGoPartidas(context),
+    final (label, color) = switch (status) {
+      'SCHEDULED' => ('Programado', scheme.primary),
+      'IN_PROGRESS' => ('En curso', scheme.primary),
+      'FINISHED' => ('Finalizada', scheme.primary),
+      'CANCELLED' => ('Cancelada', scheme.error),
+      _ => (status, scheme.onSurfaceVariant),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(999),
       ),
-      actions: [
-        if (isOrganizer)
-          IconButton(
-            icon: const Icon(Icons.more_horiz),
-            tooltip: 'Acciones',
-            onPressed: () => _showOrganizerSheet(context, m),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-        const SizedBox(width: 4),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        collapseMode: CollapseMode.pin,
-        background: _HeroBanner(match: m, scheduleText: scheduleText),
-      ),
-    );
-  }
-
-  void _showOrganizerSheet(BuildContext context, MatchDetailDto m) {
-    final cubit = context.read<MatchDetailCubit>();
-    final isFinished = m.status == 'FINISHED';
-
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Theme.of(ctx).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Text(
-                  'Gestionar partida',
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                ),
-              ),
-              _SheetAction(
-                icon: Icons.chat_bubble_outline,
-                label: 'Abrir chat',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(Routes.matchChat(m.id));
-                },
-              ),
-              if (m.status == 'SCHEDULED')
-                _SheetAction(
-                  icon: Icons.play_circle_outline,
-                  label: 'Iniciar partida',
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final ok = await _confirmDialog(
-                      context,
-                      title: 'Iniciar partida',
-                      message: '¿Confirmas que la partida empieza ahora?',
-                      confirmLabel: 'Iniciar',
-                    );
-                    if (ok) cubit.start();
-                  },
-                ),
-              if (m.status == 'IN_PROGRESS')
-                _SheetAction(
-                  icon: Icons.stop_circle_outlined,
-                  label: 'Finalizar partida',
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final ok = await _confirmDialog(
-                      context,
-                      title: 'Finalizar partida',
-                      message: '¿Confirmas que la partida terminó?',
-                      confirmLabel: 'Finalizar',
-                    );
-                    if (ok) cubit.finish();
-                  },
-                ),
-              if (isFinished)
-                _SheetAction(
-                  icon: Icons.scoreboard_outlined,
-                  label: 'Cargar resultado',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.push(Routes.matchResult(m.id));
-                  },
-                ),
-              if (m.status != 'CANCELLED' && m.status != 'FINISHED')
-                _SheetAction(
-                  icon: Icons.cancel_outlined,
-                  label: 'Cancelar partida',
-                  isDestructive: true,
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final ok = await _confirmDialog(
-                      context,
-                      title: 'Cancelar partida',
-                      message: 'Se notificará a los jugadores.',
-                      confirmLabel: 'Cancelar',
-                    );
-                    if (ok) cubit.cancel();
-                  },
-                ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<bool> _confirmDialog(
-    BuildContext context, {
-    required String title,
-    required String message,
-    required String confirmLabel,
-  }) async {
-    final res = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Volver'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(confirmLabel),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
           ),
         ],
       ),
     );
-    return res == true;
   }
 }
 
-final class _HeroBanner extends StatelessWidget {
-  const _HeroBanner({required this.match, required this.scheduleText});
+final class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.label});
 
-  final MatchDetailDto match;
-  final String scheduleText;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final m = match;
-
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            scheme.primaryContainer.withValues(alpha: 0.7),
-            scheme.surface,
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        color: BrandColors.limeAccent,
+        borderRadius: BorderRadius.circular(999),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Row(
-                children: [
-                  _StatusBadge(status: m.status),
-                  const SizedBox(width: 8),
-                  _SoftBadge(label: m.categoryName ?? m.type),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                m.clubName ?? 'Partida sin sede',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, height: 1.1),
-              ),
-              const SizedBox(height: 4),
-              if (m.courtName != null || m.locationLabel != null)
-                Row(
-                  children: [
-                    Icon(Icons.place_outlined, size: 15, color: scheme.onSurfaceVariant),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        [
-                          if (m.courtName != null) m.courtName!,
-                          if (m.locationLabel != null) m.locationLabel!,
-                        ].join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w800,
+          color: BrandColors.onLime,
         ),
       ),
     );
   }
 }
 
-// ─── Participant Banner ──────────────────────────────────────────────────────
+final class _LocationRow extends StatelessWidget {
+  const _LocationRow({required this.match});
 
-final class _ParticipantBanner extends StatelessWidget {
-  const _ParticipantBanner({
-    required this.hasPrice,
-    required this.hasConfirmedPayment,
-    required this.match,
-  });
-
-  final bool hasPrice;
-  final bool hasConfirmedPayment;
   final MatchDetailDto match;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final text = [
+      if (match.courtName != null) match.courtName!,
+      if (match.locationLabel != null) match.locationLabel!,
+    ].join(' · ');
+    if (text.isEmpty) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Icon(Icons.place_outlined, size: 15, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Phase banner ─────────────────────────────────────────────────────────────
+
+final class _Banner extends StatelessWidget {
+  const _Banner({required this.phase});
+
+  final _Phase phase;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (icon, accent, title, sub) = switch (phase) {
+      _Phase.browse => (
+          Icons.group_outlined,
+          scheme.onSurfaceVariant,
+          'Únete a esta partida',
+          'Elige tu lugar en la cancha 👇',
+        ),
+      _Phase.joined => (
+          Icons.check_rounded,
+          scheme.primary,
+          'Te uniste a la partida',
+          'Falta confirmar tu pago',
+        ),
+      _Phase.pending => (
+          Icons.schedule_rounded,
+          scheme.tertiary,
+          'Pago en revisión',
+          'El staff de la sede confirmará tu pago',
+        ),
+      _Phase.confirmed => (
+          Icons.check_rounded,
+          scheme.primary,
+          'Ya estás anotado',
+          'Tu pago está confirmado',
+        ),
+      _Phase.played => (
+          Icons.adjust_rounded,
+          scheme.primary,
+          'Partida finalizada',
+          'Resultado y ELO actualizados',
+        ),
+    };
+    final neutral = phase == _Phase.browse;
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        color: neutral
+            ? scheme.surfaceContainer
+            : accent.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: neutral
+              ? scheme.outlineVariant
+              : accent.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline, color: scheme.primary, size: 22),
-          const SizedBox(width: 10),
+          Icon(icon, size: 22, color: accent),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ya estás anotado',
+                  title,
                   style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: scheme.onPrimaryContainer,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onSurface,
                   ),
                 ),
-                if (hasPrice && !hasConfirmedPayment)
-                  Text(
-                    'Recuerda pagar tu cuota antes del partido',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: scheme.onPrimaryContainer.withValues(alpha: 0.75),
-                    ),
+                Text(
+                  sub,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
                   ),
-                if (hasPrice && hasConfirmedPayment)
-                  Text(
-                    'Tu pago está confirmado',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: scheme.onPrimaryContainer.withValues(alpha: 0.75),
-                    ),
-                  ),
+                ),
               ],
             ),
           ),
-          if (hasPrice && !hasConfirmedPayment)
-            TextButton(
-              onPressed: () => context.push(
-                PayMethodScreen.route(
-                  matchId: match.id,
-                  amountPerPersonCents: match.pricePerPlayerCents,
-                  matchTitle: match.clubName ?? 'Partida',
-                  venueId: match.venueId,
-                  pricingCurrency: match.pricingCurrency,
-                  displayCurrency: match.displayCurrency,
-                  scheduledAt: match.scheduledAt,
-                ),
-              ),
-              child: const Text('Pagar'),
-            ),
         ],
       ),
     );
   }
 }
 
-// ─── Match Info Section ──────────────────────────────────────────────────────
+// ─── Info tiles (fecha + precio) ──────────────────────────────────────────────
 
-final class _MatchInfoSection extends StatelessWidget {
-  const _MatchInfoSection({required this.match});
+final class _InfoTilesRow extends StatelessWidget {
+  const _InfoTilesRow({required this.match});
 
   final MatchDetailDto match;
 
@@ -482,47 +433,163 @@ final class _MatchInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = match;
     final scheduled = m.scheduledAt;
-    final scheduleText = scheduled == null
-        ? 'Por confirmar'
-        : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';
     final hasPrice = m.pricePerPlayerCents > 0;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: _InfoTile(
+            icon: Icons.calendar_today_outlined,
+            label: 'Fecha',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  scheduled == null
+                      ? 'Por confirmar'
+                      : '${shortDateLabel(scheduled)} ${compactCalendarDate(scheduled)}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  scheduled == null ? '—' : '${formatTimeHm(scheduled)} hs',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _InfoTile(
+            icon: Icons.info_outline_rounded,
+            label: 'Precio',
+            child: hasPrice
+                ? Text(
+                    '${formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m))} p/p',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  )
+                : const Text(
+                    'Gratis',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+final class _InfoTile extends StatelessWidget {
+  const _InfoTile({
+    required this.icon,
+    required this.label,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: _InfoTile(
-                  icon: Icons.calendar_month_outlined,
-                  label: 'FECHA',
-                  value: scheduleText,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _InfoTile(
-                  icon: Icons.payments_outlined,
-                  label: 'PRECIO',
-                  value: hasPrice
-                      ? '${formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m))} p/p'
-                      : 'Gratis',
-                  highlight: hasPrice,
+              Icon(icon, size: 15, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Chip(
-            label: Text(m.affectsElo ? 'Ranked' : 'Amistoso'),
-            avatar: Icon(
-              m.affectsElo ? Icons.emoji_events : Icons.handshake_outlined,
-              size: 14,
+          const SizedBox(height: 6),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+final class _DetailChips extends StatelessWidget {
+  const _DetailChips({required this.match});
+
+  final MatchDetailDto match;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _DetailChip(
+          icon: Icons.adjust_rounded,
+          iconColor: Theme.of(context).colorScheme.primary,
+          label: match.affectsElo ? 'Ranked · Afecta ELO' : 'Amistoso',
+        ),
+      ],
+    );
+  }
+}
+
+final class _DetailChip extends StatelessWidget {
+  const _DetailChip({
+    required this.icon,
+    required this.label,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor ?? scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
             ),
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
           ),
         ],
       ),
@@ -530,61 +597,131 @@ final class _MatchInfoSection extends StatelessWidget {
   }
 }
 
-// ─── Players Section ─────────────────────────────────────────────────────────
+final class _CourtHeader extends StatelessWidget {
+  const _CourtHeader({
+    required this.finished,
+    required this.filled,
+    required this.total,
+  });
 
-final class _PlayersSection extends StatelessWidget {
-  const _PlayersSection({required this.match});
+  final bool finished;
+  final int filled;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            finished ? 'Resultado' : 'En la cancha',
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(
+            color: scheme.primary.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '$filled/$total',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: scheme.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Court section — derives positions from join order (padel 4) ──────────────
+
+final class _CourtSection extends StatelessWidget {
+  const _CourtSection({required this.loaded, required this.phase});
+
+  final MatchDetailLoaded loaded;
+  final _Phase phase;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = loaded.match;
+    final parts = m.participants;
+    final canJoin = m.status == 'SCHEDULED' && m.openSpots > 0;
+    final joinableEmpty = phase == _Phase.browse && canJoin;
+
+    CourtSpotData spot(int index) {
+      if (index < parts.length) {
+        final p = parts[index];
+        final isYou = p.userId == loaded.viewerUserId;
+        final status = isYou
+            ? (loaded.viewerHasConfirmedPayment
+                ? CourtPlayerStatus.paid
+                : CourtPlayerStatus.pending)
+            : CourtPlayerStatus.paid;
+        return CourtSpotData(
+          player: CourtPlayer(
+            name: p.displayName ?? 'Jugador #${idPreview(p.userId)}',
+            colorIndex: index,
+            status: status,
+            isYou: isYou,
+          ),
+        );
+      }
+      return CourtSpotData(joinable: joinableEmpty);
+    }
+
+    return CourtView(
+      teamADrive: spot(0),
+      teamAReves: spot(1),
+      teamBDrive: spot(2),
+      teamBReves: spot(3),
+      onJoin: joinableEmpty
+          ? (_, _) => context.read<MatchDetailCubit>().join()
+          : null,
+    );
+  }
+}
+
+// ─── Players fallback list (no padel-4) ──────────────────────────────────────
+
+final class _PlayersFallback extends StatelessWidget {
+  const _PlayersFallback({required this.match});
 
   final MatchDetailDto match;
 
   @override
   Widget build(BuildContext context) {
     final m = match;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Jugadores',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                ),
-              ),
-              _SoftBadge(
-                label: '${m.participantCount}/${m.maxParticipants}',
-                emphasize: true,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...m.participants.map(
-            (p) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _PlayerTile(
-                matchId: m.id,
-                userId: p.userId,
-                displayName: p.displayName,
-                joinedAt: p.joinedAt,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...m.participants.map(
+          (p) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _PlayerTile(
+              matchId: m.id,
+              userId: p.userId,
+              displayName: p.displayName,
+              joinedAt: p.joinedAt,
             ),
           ),
-          for (int i = 0; i < m.openSpots; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _EmptySlot(),
-            ),
-        ],
-      ),
+        ),
+        for (int i = 0; i < m.openSpots; i++)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: _EmptySlot(),
+          ),
+      ],
     );
   }
 }
 
-// ─── Player Tile ─────────────────────────────────────────────────────────────
+// ─── Player Tile (fallback) ───────────────────────────────────────────────────
 
 final class _PlayerTile extends StatefulWidget {
   const _PlayerTile({
@@ -631,7 +768,7 @@ final class _PlayerTileState extends State<_PlayerTile> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
+        color: scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
       ),
@@ -654,10 +791,11 @@ final class _PlayerTileState extends State<_PlayerTile> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-            Text(
-              widget.displayName ?? 'Jugador #${idPreview(widget.userId)}',
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            ),
+                Text(
+                  widget.displayName ?? 'Jugador #${idPreview(widget.userId)}',
+                  style:
+                      const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
                 Text(
                   'Desde ${formatTimeHm(widget.joinedAt)}',
                   style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
@@ -674,7 +812,11 @@ final class _PlayerTileState extends State<_PlayerTile> {
               if (snap.connectionState == ConnectionState.done) {
                 return _SoftBadge(label: 'Pendiente');
               }
-              return const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
+              return const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              );
             },
           ),
         ],
@@ -694,9 +836,9 @@ final class _PlayerTileState extends State<_PlayerTile> {
   }
 }
 
-// ─── Empty Slot ──────────────────────────────────────────────────────────────
-
 final class _EmptySlot extends StatelessWidget {
+  const _EmptySlot();
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -708,7 +850,7 @@ final class _EmptySlot extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: scheme.primaryContainer.withValues(alpha: 0.08),
+          color: scheme.primary.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -754,8 +896,7 @@ class _DashedBorderPainter extends CustomPainter {
       Radius.circular(radius),
     );
     final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics();
-    for (final metric in metrics) {
+    for (final metric in path.computeMetrics()) {
       double dist = 0;
       while (dist < metric.length) {
         canvas.drawPath(
@@ -771,13 +912,302 @@ class _DashedBorderPainter extends CustomPainter {
   bool shouldRepaint(_DashedBorderPainter old) => old.color != color;
 }
 
+// ─── Chat FAB ─────────────────────────────────────────────────────────────────
+
+final class _ChatFab extends StatelessWidget {
+  const _ChatFab({required this.matchId});
+
+  final String matchId;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 6,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push(Routes.matchChat(matchId)),
+        child: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: scheme.outlineVariant, width: 1.5),
+          ),
+          child: Icon(Icons.chat_bubble_outline_rounded,
+              size: 22, color: scheme.onSurface),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Phase footer ─────────────────────────────────────────────────────────────
+
+final class _Footer extends StatelessWidget {
+  const _Footer({
+    required this.loaded,
+    required this.phase,
+    required this.usesCourt,
+  });
+
+  final MatchDetailLoaded loaded;
+  final _Phase phase;
+  final bool usesCourt;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final m = loaded.match;
+    final priceLabel =
+        formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m));
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        14,
+        20,
+        MediaQuery.of(context).padding.bottom + 16,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            scheme.surfaceContainerLow.withValues(alpha: 0),
+            scheme.surfaceContainerLow,
+          ],
+        ),
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: loaded.actionLoading
+          ? const SizedBox(
+              height: 54,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : _content(context, scheme, m, priceLabel),
+    );
+  }
+
+  Widget _content(
+    BuildContext context,
+    ColorScheme scheme,
+    MatchDetailDto m,
+    String priceLabel,
+  ) {
+    switch (phase) {
+      case _Phase.browse:
+        final canJoin = m.status == 'SCHEDULED' && m.openSpots > 0;
+        if (!canJoin) {
+          return _DisabledCta(
+            icon: Icons.group_outlined,
+            label: 'Partida llena',
+          );
+        }
+        if (usesCourt) {
+          return _DisabledCta(
+            icon: Icons.group_outlined,
+            label: 'Toca un lugar para unirte',
+          );
+        }
+        return _PrimaryCta(
+          icon: Icons.add_rounded,
+          label: 'Unirme a la partida',
+          onPressed: () => context.read<MatchDetailCubit>().join(),
+        );
+
+      case _Phase.joined:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Tu lugar reservado',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Text(
+                  '$priceLabel p/p',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _PrimaryCta(
+              icon: Icons.info_outline_rounded,
+              label: 'Pagar ahora · $priceLabel',
+              onPressed: () => context.push(
+                PayMethodScreen.route(
+                  matchId: m.id,
+                  amountPerPersonCents: m.pricePerPlayerCents,
+                  matchTitle: m.clubName ?? 'Partida',
+                  venueId: m.venueId,
+                  pricingCurrency: m.pricingCurrency,
+                  displayCurrency: m.displayCurrency,
+                  scheduledAt: m.scheduledAt,
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case _Phase.pending:
+      case _Phase.confirmed:
+        return Row(
+          children: [
+            _SquareButton(
+              icon: Icons.ios_share_rounded,
+              onTap: () => _shareMatchInvite(context, m),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _PrimaryCta(
+                icon: Icons.chat_bubble_outline_rounded,
+                label: 'Compartir partida',
+                onPressed: () => _shareMatchInvite(context, m),
+              ),
+            ),
+          ],
+        );
+
+      case _Phase.played:
+        return Row(
+          children: [
+            _SquareButton(
+              icon: Icons.ios_share_rounded,
+              onTap: () => _shareMatchInvite(context, m),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _PrimaryCta(
+                icon: Icons.adjust_rounded,
+                label: 'Cargar resultado',
+                onPressed: () => context.push(Routes.matchResult(m.id)),
+              ),
+            ),
+          ],
+        );
+    }
+  }
+}
+
+final class _PrimaryCta extends StatelessWidget {
+  const _PrimaryCta({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          elevation: 8,
+          shadowColor: scheme.primary.withValues(alpha: 0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: Icon(icon, size: 20),
+        label: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
+      ),
+    );
+  }
+}
+
+final class _DisabledCta extends StatelessWidget {
+  const _DisabledCta({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      height: 54,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 20, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _SquareButton extends StatelessWidget {
+  const _SquareButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: scheme.outlineVariant, width: 1.5),
+          ),
+          child: Icon(icon, size: 22, color: scheme.onSurface),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Action feedback ─────────────────────────────────────────────────────────
 
 final class _ActionMessageBanner extends StatelessWidget {
-  const _ActionMessageBanner({
-    required this.message,
-    required this.isError,
-  });
+  const _ActionMessageBanner({required this.message, required this.isError});
 
   final String message;
   final bool isError;
@@ -787,30 +1217,23 @@ final class _ActionMessageBanner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final bg = isError
         ? scheme.errorContainer
-        : scheme.primaryContainer;
-    final fg = isError ? scheme.error : scheme.onPrimaryContainer;
+        : scheme.primary.withValues(alpha: 0.15);
+    final fg = isError ? scheme.error : scheme.primary;
     final icon = isError ? Icons.error_outline : Icons.check_circle_outline;
 
     return Material(
       color: bg,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, size: 20, color: fg),
             const SizedBox(width: 10),
             Expanded(
-              child: SelectableText.rich(
-                TextSpan(
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: fg,
-                        fontWeight: FontWeight.w600,
-                      ),
-                  children: [
-                    TextSpan(text: message),
-                  ],
-                ),
+              child: Text(
+                message,
+                style: TextStyle(color: fg, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -820,209 +1243,31 @@ final class _ActionMessageBanner extends StatelessWidget {
   }
 }
 
-// ─── Bottom Bar ──────────────────────────────────────────────────────────────
+// ─── Soft Badge ──────────────────────────────────────────────────────────────
 
-final class _BottomBar extends StatelessWidget {
-  const _BottomBar({
-    required this.loaded,
-    required this.canJoin,
-    required this.isParticipant,
-    required this.isFinished,
-    required this.hasPrice,
-  });
+final class _SoftBadge extends StatelessWidget {
+  const _SoftBadge({required this.label, this.emphasize = false});
 
-  final MatchDetailLoaded loaded;
-  final bool canJoin;
-  final bool isParticipant;
-  final bool isFinished;
-  final bool hasPrice;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final m = loaded.match;
-
-    VoidCallback? primaryAction;
-    String primaryLabel;
-    Color? primaryBg;
-
-    if (isFinished) {
-      primaryLabel = 'Cargar resultado';
-      primaryAction = () => context.push(Routes.matchResult(m.id));
-    } else if (isParticipant && hasPrice && !loaded.viewerHasConfirmedPayment) {
-      primaryLabel = 'Pagar ahora';
-      primaryAction = () => context.push(
-            PayMethodScreen.route(
-              matchId: m.id,
-              amountPerPersonCents: m.pricePerPlayerCents,
-              matchTitle: m.clubName ?? 'Partida',
-              venueId: m.venueId,
-              pricingCurrency: m.pricingCurrency,
-              displayCurrency: m.displayCurrency,
-              scheduledAt: m.scheduledAt,
-            ),
-          );
-    } else if (isParticipant && hasPrice && loaded.viewerHasConfirmedPayment) {
-      primaryLabel = 'Compartir partida';
-      primaryAction = () => _shareMatchInvite(context, m);
-    } else if (isParticipant) {
-      primaryLabel = 'Salir de la partida';
-      primaryBg = scheme.errorContainer;
-      primaryAction = () => _confirmLeave(context);
-    } else if (canJoin) {
-      primaryLabel = 'Unirme a la partida';
-      primaryAction = () => context.read<MatchDetailCubit>().join();
-    } else {
-      primaryLabel = 'Partida llena';
-    }
-
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-          border: Border(
-            top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-          ),
-        ),
-        child: Row(
-          children: [
-            // Chat icon button
-            OutlinedButton(
-              onPressed: loaded.actionLoading
-                  ? null
-                  : () => context.push(Routes.matchChat(m.id)),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(56, 56),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: const Icon(Icons.chat_bubble_outline, size: 22),
-            ),
-            const SizedBox(width: 12),
-            // Main CTA
-            Expanded(
-              child: SizedBox(
-                height: 56,
-                child: FilledButton(
-                  style: primaryBg != null
-                      ? FilledButton.styleFrom(backgroundColor: primaryBg)
-                      : null,
-                  onPressed: loaded.actionLoading ? null : primaryAction,
-                  child: loaded.actionLoading
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(
-                          primaryLabel,
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                        ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _shareMatchInvite(BuildContext context, MatchDetailDto match) {
-    final scheduled = match.scheduledAt;
-    final when = scheduled == null
-        ? 'Fecha por confirmar'
-        : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';
-    final whereParts = <String>[
-      if (match.clubName != null && match.clubName!.trim().isNotEmpty)
-        match.clubName!.trim(),
-      if (match.courtName != null && match.courtName!.trim().isNotEmpty)
-        match.courtName!.trim(),
-      if (match.locationLabel != null &&
-          match.locationLabel!.trim().isNotEmpty)
-        match.locationLabel!.trim(),
-    ];
-    final where =
-        whereParts.isEmpty ? '' : ' en ${whereParts.join(' · ')}';
-    final spotsLine = match.openSpots > 0
-        ? '\nQuedan ${match.openSpots} lugares.'
-        : '';
-
-    final text = StringBuffer()
-      ..writeln('¡Sumate a mi partida de pádel$where!')
-      ..writeln(when)
-      ..write(spotsLine)
-      ..writeln()
-      ..writeln('Buscá la partida en Cuadrala.');
-
-    Clipboard.setData(ClipboardData(text: text.toString().trim()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Invitación copiada. Pegala en WhatsApp o donde quieras.',
-        ),
-      ),
-    );
-  }
-
-  void _confirmLeave(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Salir de la partida'),
-        content: const Text('¿Confirmas que deseas salir de esta partida?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Volver'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Salir'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true && context.mounted) {
-      context.read<MatchDetailCubit>().leave();
-    }
-  }
-}
-
-// ─── Sheet Action ────────────────────────────────────────────────────────────
-
-final class _SheetAction extends StatelessWidget {
-  const _SheetAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isDestructive = false,
-  });
-
-  final IconData icon;
   final String label;
-  final VoidCallback onTap;
-  final bool isDestructive;
+  final bool emphasize;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = isDestructive ? scheme.error : scheme.onSurface;
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-      onTap: onTap,
+    final bg = emphasize
+        ? scheme.primary.withValues(alpha: 0.15)
+        : scheme.surfaceContainerHighest;
+    final fg = emphasize ? scheme.primary : scheme.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: fg),
+      ),
     );
   }
 }
@@ -1051,11 +1296,15 @@ final class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
+            Icon(icon,
+                size: 56, color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w900),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -1073,122 +1322,240 @@ final class _EmptyState extends StatelessWidget {
   }
 }
 
-// ─── Status Badge ────────────────────────────────────────────────────────────
+// ─── Organizer / participant actions sheet ────────────────────────────────────
 
-final class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
+  final cubit = context.read<MatchDetailCubit>();
+  final m = loaded.match;
+  final isOrganizer = m.participants.isNotEmpty &&
+      m.participants.first.userId == loaded.viewerUserId;
+  final isFinished = m.status == 'FINISHED';
 
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final (bg, fg, label) = switch (status) {
-      'SCHEDULED' => (scheme.primary, scheme.onPrimary, 'Programado'),
-      'IN_PROGRESS' => (scheme.tertiary, scheme.onTertiary, 'En curso'),
-      'FINISHED' => (scheme.onSurface, scheme.surface, 'Finalizado'),
-      'CANCELLED' => (scheme.error, scheme.onError, 'Cancelado'),
-      _ => (scheme.surfaceContainerHighest, scheme.onSurfaceVariant, status),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
+  showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Gestionar partida',
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+            _SheetAction(
+              icon: Icons.chat_bubble_outline,
+              label: 'Abrir chat',
+              onTap: () {
+                Navigator.pop(ctx);
+                context.push(Routes.matchChat(m.id));
+              },
+            ),
+            if (isOrganizer && m.status == 'SCHEDULED')
+              _SheetAction(
+                icon: Icons.play_circle_outline,
+                label: 'Iniciar partida',
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final ok = await _confirmDialog(
+                    context,
+                    title: 'Iniciar partida',
+                    message: '¿Confirmas que la partida empieza ahora?',
+                    confirmLabel: 'Iniciar',
+                  );
+                  if (ok) cubit.start();
+                },
+              ),
+            if (isOrganizer && m.status == 'IN_PROGRESS')
+              _SheetAction(
+                icon: Icons.stop_circle_outlined,
+                label: 'Finalizar partida',
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final ok = await _confirmDialog(
+                    context,
+                    title: 'Finalizar partida',
+                    message: '¿Confirmas que la partida terminó?',
+                    confirmLabel: 'Finalizar',
+                  );
+                  if (ok) cubit.finish();
+                },
+              ),
+            if (isOrganizer && isFinished)
+              _SheetAction(
+                icon: Icons.scoreboard_outlined,
+                label: 'Cargar resultado',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.push(Routes.matchResult(m.id));
+                },
+              ),
+            if (!isOrganizer && loaded.isParticipant && !isFinished)
+              _SheetAction(
+                icon: Icons.logout,
+                label: 'Salir de la partida',
+                isDestructive: true,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmLeave(context);
+                },
+              ),
+            if (isOrganizer && m.status != 'CANCELLED' && !isFinished)
+              _SheetAction(
+                icon: Icons.cancel_outlined,
+                label: 'Cancelar partida',
+                isDestructive: true,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final ok = await _confirmDialog(
+                    context,
+                    title: 'Cancelar partida',
+                    message: 'Se notificará a los jugadores.',
+                    confirmLabel: 'Cancelar',
+                  );
+                  if (ok) cubit.cancel();
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
-      child: Text(
-        label,
-        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: fg),
-      ),
-    );
+    ),
+  );
+}
+
+Future<bool> _confirmDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+}) async {
+  final res = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Volver'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(confirmLabel),
+        ),
+      ],
+    ),
+  );
+  return res == true;
+}
+
+void _confirmLeave(BuildContext context) async {
+  final cubit = context.read<MatchDetailCubit>();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Salir de la partida'),
+      content: const Text('¿Confirmas que deseas salir de esta partida?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Volver'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(ctx).colorScheme.error,
+          ),
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('Salir'),
+        ),
+      ],
+    ),
+  );
+  if (ok == true && context.mounted) {
+    cubit.leave();
   }
 }
 
-// ─── Soft Badge ──────────────────────────────────────────────────────────────
+void _shareMatchInvite(BuildContext context, MatchDetailDto match) {
+  final scheduled = match.scheduledAt;
+  final when = scheduled == null
+      ? 'Fecha por confirmar'
+      : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';
+  final whereParts = <String>[
+    if (match.clubName != null && match.clubName!.trim().isNotEmpty)
+      match.clubName!.trim(),
+    if (match.courtName != null && match.courtName!.trim().isNotEmpty)
+      match.courtName!.trim(),
+    if (match.locationLabel != null && match.locationLabel!.trim().isNotEmpty)
+      match.locationLabel!.trim(),
+  ];
+  final where = whereParts.isEmpty ? '' : ' en ${whereParts.join(' · ')}';
+  final spotsLine =
+      match.openSpots > 0 ? '\nQuedan ${match.openSpots} lugares.' : '';
 
-final class _SoftBadge extends StatelessWidget {
-  const _SoftBadge({required this.label, this.emphasize = false});
+  final text = StringBuffer()
+    ..writeln('¡Sumate a mi partida de pádel$where!')
+    ..writeln(when)
+    ..write(spotsLine)
+    ..writeln()
+    ..writeln('Buscá la partida en Cuadrala.');
 
-  final String label;
-  final bool emphasize;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final bg = emphasize
-        ? scheme.primary.withValues(alpha: 0.12)
-        : scheme.surfaceContainerHighest;
-    final fg = emphasize ? scheme.primary : scheme.onSurfaceVariant;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: fg),
-      ),
-    );
-  }
+  Clipboard.setData(ClipboardData(text: text.toString().trim()));
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Invitación copiada. Pegala en WhatsApp o donde quieras.'),
+    ),
+  );
 }
 
-// ─── Info Tile ───────────────────────────────────────────────────────────────
+// ─── Sheet Action ────────────────────────────────────────────────────────────
 
-final class _InfoTile extends StatelessWidget {
-  const _InfoTile({
+final class _SheetAction extends StatelessWidget {
+  const _SheetAction({
     required this.icon,
     required this.label,
-    required this.value,
-    this.highlight = false,
+    required this.onTap,
+    this.isDestructive = false,
   });
 
   final IconData icon;
   final String label;
-  final String value;
-  final bool highlight;
+  final VoidCallback onTap;
+  final bool isDestructive;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: highlight ? scheme.primary : scheme.onSurfaceVariant),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
-                  color: highlight ? scheme.primary : scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 14,
-              color: highlight ? scheme.primary : scheme.onSurface,
-            ),
-          ),
-        ],
-      ),
+    final color = isDestructive ? scheme.error : scheme.onSurface;
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(label,
+          style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      onTap: onTap,
     );
   }
 }

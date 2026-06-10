@@ -24,11 +24,19 @@ final class AppTheme {
       tertiary: BrandColors.limeAccent,
       onTertiary: BrandColors.navy,
       surface: BrandColors.lightSurface,
+      surfaceContainerLowest: BrandColors.lightSurface,
+      surfaceContainerLow: BrandColors.lightSurface,
+      surfaceContainer: BrandColors.lightSurface,
+      surfaceContainerHigh: BrandColors.lightSurfaceContainer,
       surfaceContainerHighest: BrandColors.lightSurfaceContainer,
       outline: BrandColors.lightOutline,
     );
 
-    return _buildTheme(scheme, BrandGradients.light());
+    return _buildTheme(
+      scheme,
+      BrandGradients.light(),
+      scaffoldBackground: BrandColors.lightBg,
+    );
   }
 
   // ─── Dark ──────────────────────────────────────────────────────────────────
@@ -43,27 +51,41 @@ final class AppTheme {
       onSecondary: BrandColors.onHero,
       tertiary: BrandColors.limeAccent,
       onTertiary: BrandColors.navy,
-      surface: BrandColors.darkSurface,
-      surfaceContainerHighest: BrandColors.darkSurfaceContainer,
+      // `scheme.surface` = `--surface` (#131C2E, color de card). El fondo de
+      // scaffold (`--bg` #0B1220) se aplica vía `scaffoldBackground` aparte.
+      surface: BrandColors.darkSurfaceContainer,
+      surfaceContainerLowest: BrandColors.darkSurface, // --bg
+      surfaceContainerLow: BrandColors.darkSurfaceLow, // --bg-2
+      surfaceContainer: BrandColors.darkSurfaceContainer, // --surface
+      surfaceContainerHigh: BrandColors.darkSurfaceHigh,
+      surfaceContainerHighest: BrandColors.darkSurface2, // --surface-2
       outline: BrandColors.darkOutline,
       onSurface: BrandColors.darkOnSurface,
     );
 
-    return _buildTheme(scheme, BrandGradients.dark());
+    return _buildTheme(
+      scheme,
+      BrandGradients.dark(),
+      scaffoldBackground: BrandColors.darkSurface,
+    );
   }
 
   // ─── Shared builder ────────────────────────────────────────────────────────
-  static ThemeData _buildTheme(ColorScheme scheme, BrandGradients gradients) {
+  static ThemeData _buildTheme(
+    ColorScheme scheme,
+    BrandGradients gradients, {
+    required Color scaffoldBackground,
+  }) {
     final textTheme = _textTheme(scheme);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: scaffoldBackground,
       textTheme: textTheme,
       extensions: [gradients],
       appBarTheme: AppBarTheme(
-        backgroundColor: scheme.surface,
-        surfaceTintColor: scheme.surface,
+        backgroundColor: scheme.surfaceContainerLow,
+        surfaceTintColor: scheme.surfaceContainerLow,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: textTheme.titleMedium?.copyWith(
@@ -118,7 +140,7 @@ final class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: scheme.surface,
+        color: scheme.surfaceContainer,
         elevation: 1,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -127,12 +149,12 @@ final class AppTheme {
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: scheme.surface,
+        backgroundColor: scheme.surfaceContainerLow,
         selectedItemColor: scheme.primary,
         unselectedItemColor: scheme.onSurfaceVariant,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: scheme.surface,
+        backgroundColor: scheme.surfaceContainerLow,
         indicatorColor: scheme.primaryContainer,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {

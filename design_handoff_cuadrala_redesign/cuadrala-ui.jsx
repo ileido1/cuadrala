@@ -247,7 +247,36 @@ function Price({ amount, suffix, align = 'right', size = 15 }) {
   );
 }
 
+// ── Single avatar (initials) ─────────────────────────────────────────────────
+function Avatar({ initials, size = 40, idx = 0, you, ring }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: 999, flexShrink: 0,
+      background: AV_COLORS[idx % AV_COLORS.length], color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.4, fontWeight: 800,
+      border: ring ? '2px solid var(--lime)' : (you ? '2px solid var(--lime)' : 'none'),
+    }}>{initials}</div>
+  );
+}
+
+// ── Sheet header (back/close + title + optional trailing) ────────────────────
+function SheetHeader({ title, subtitle, onBack, backIcon = 'chevronLeft', trailing, center }) {
+  return (
+    <div style={{ paddingTop: 56, paddingBottom: 14, paddingInline: 16, background: 'var(--bg-2)', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+      <button onClick={onBack} style={{ all: 'unset', cursor: 'pointer', width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', color: 'var(--text)', flexShrink: 0 }}>
+        <Icon name={backIcon} size={20} />
+      </button>
+      <div style={{ flex: 1, minWidth: 0, textAlign: center ? 'center' : 'left' }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{subtitle}</div>}
+      </div>
+      <div style={{ width: 38, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>{trailing}</div>
+    </div>
+  );
+}
+
 Object.assign(window, {
   Icon, SectionLabel, Card, DateStrip, Chip, Toggle, Stepper, Segmented, ImgPlaceholder, AvatarStack,
-  DOW, MONTHS, AV_COLORS, BS_RATE, bs, usd, Price,
+  DOW, MONTHS, AV_COLORS, BS_RATE, bs, usd, Price, Avatar, SheetHeader,
 });

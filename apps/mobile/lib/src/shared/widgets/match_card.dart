@@ -72,9 +72,10 @@ class MatchCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final openSpots =
         (maxParticipants - participantCount).clamp(0, maxParticipants);
+    final filledSpots = participantCount.clamp(0, maxParticipants);
 
     return Material(
-      color: scheme.surface,
+      color: scheme.surfaceContainer,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -126,34 +127,21 @@ class MatchCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14.5,
                             ),
                       ),
                       if (locationLabel != null) ...[
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.place_outlined,
-                              size: 13,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                locationLabel!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                        const SizedBox(height: 1),
+                        Text(
+                          locationLabel!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12.5,
                               ),
-                            ),
-                          ],
                         ),
                       ],
                       const SizedBox(height: 10),
@@ -161,7 +149,7 @@ class MatchCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           AvatarStack(
-                            initials: participantInitials,
+                            filledCount: filledSpots,
                             emptySpots: openSpots,
                           ),
                           const SizedBox(width: 10),
@@ -177,7 +165,8 @@ class MatchCard extends StatelessWidget {
                                     color: openSpots == 0
                                         ? scheme.onSurfaceVariant
                                         : scheme.primary,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12.5,
                                   ),
                             ),
                           ),
@@ -242,10 +231,11 @@ class _DateBlock extends StatelessWidget {
 
     return Container(
       width: 58,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: live ? 0.16 : 0.10),
-        borderRadius: BorderRadius.circular(14),
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: live ? Border.all(color: accent.withValues(alpha: 0.55)) : null,
       ),
       child: Column(
         children: [
@@ -255,27 +245,27 @@ class _DateBlock extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               fontSize: 11,
               color: accent,
-              letterSpacing: 0.2,
+              letterSpacing: 0.6,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             timeLabel,
             style: TextStyle(
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               fontSize: 18,
               color: scheme.onSurface,
-              height: 1.05,
+              height: 1.1,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(
             subDateLabel,
             style: TextStyle(
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 10.5,
               color: scheme.onSurfaceVariant,
             ),
@@ -302,8 +292,8 @@ class _CategoryBadge extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          color: BrandColors.onHero,
-          fontWeight: FontWeight.w900,
+          color: BrandColors.onLime,
+          fontWeight: FontWeight.w800,
           fontSize: 11,
         ),
       ),

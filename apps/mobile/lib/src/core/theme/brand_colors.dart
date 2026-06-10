@@ -20,13 +20,41 @@ abstract final class BrandColors {
   static const onHero = Color(0xFFFFFFFF);
 
   // ─── Light scheme overrides ───────────────────────────────────────────────
+  /// `--bg` claro — scaffold gris; las cards quedan blancas encima.
+  static const lightBg = Color(0xFFF3F4F6);
   static const lightSurface = Color(0xFFFFFFFF);
   static const lightSurfaceContainer = Color(0xFFF3F4F6);
   static const lightOutline = Color(0xFFE5E7EB);
 
-  // ─── Dark scheme overrides ────────────────────────────────────────────────
+  /// Texto sobre badges lime (categoría). Verde casi negro del prototipo.
+  static const onLime = Color(0xFF15301A);
+
+  /// Paleta de avatares (pila de cupos y avatares de cancha). Cicla por índice.
+  static const avatarPalette = <Color>[
+    padelGreen, // #17A34A
+    Color(0xFF3B82F6),
+    Color(0xFFF59E0B),
+    Color(0xFFEC4899),
+    Color(0xFF8B5CF6),
+    Color(0xFF06B6D4),
+  ];
+
+  // ─── Dark scheme surface ramp (prototipo: bg / bg-2 / surface / surface-2) ──
+  /// `--bg` — fondo base de la app (scaffold).
   static const darkSurface = Color(0xFF0B1220);
-  static const darkSurfaceContainer = Color(0xFF111827);
+
+  /// `--bg-2` — header, bottom nav y sheets (== [navy]).
+  static const darkSurfaceLow = navy; // #0F172A
+
+  /// `--surface` — base de cards (match card, venue card, perfil…).
+  static const darkSurfaceContainer = Color(0xFF131C2E);
+
+  /// Nivel intermedio interpolado para `surfaceContainerHigh`.
+  static const darkSurfaceHigh = Color(0xFF16203A);
+
+  /// `--surface-2` — inputs, chips off, date block, stepper, slots.
+  static const darkSurface2 = Color(0xFF1B2740);
+
   static const darkOutline = Color(0xFF1F2937);
   static const darkOnSurface = Color(0xFFE5E7EB);
 

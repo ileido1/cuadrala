@@ -12,10 +12,10 @@ const NEARBY = [
 ];
 
 // ── Match card ────────────────────────────────────────────────────────────────
-function MatchCard({ m }) {
+function MatchCard({ m, onPress }) {
   const full = m.filled >= m.total;
   return (
-    <Card onClick={() => {}} style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'stretch' }}>
+    <Card onClick={onPress} style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'stretch' }}>
       {/* date block */}
       <div style={{ width: 58, flexShrink: 0, borderRadius: 12, background: 'var(--surface-2)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 0' }}>
         <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.6, color: 'var(--green)' }}>{m.day}</span>
@@ -69,7 +69,7 @@ function AppHeader({ onBell }) {
 }
 
 // ── Home screen ───────────────────────────────────────────────────────────────
-function HomeScreen({ onCreate, onSearch, onBell }) {
+function HomeScreen({ onCreate, onSearch, onBell, onOpenMatch }) {
   return (
     <div style={{ paddingBottom: 24 }}>
       <AppHeader onBell={onBell} />
@@ -103,13 +103,13 @@ function HomeScreen({ onCreate, onSearch, onBell }) {
         {/* My matches */}
         <SectionHeaderRow title="Mis partidas" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {MY_MATCHES.map((m, i) => <MatchCard key={i} m={m} />)}
+          {MY_MATCHES.map((m, i) => <MatchCard key={i} m={m} onPress={() => onOpenMatch(m)} />)}
         </div>
 
         {/* Nearby */}
         <SectionHeaderRow title="Cerca de ti" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {NEARBY.map((m, i) => <MatchCard key={i} m={m} />)}
+          {NEARBY.map((m, i) => <MatchCard key={i} m={m} onPress={() => onOpenMatch(m)} />)}
         </div>
       </div>
     </div>
@@ -137,7 +137,7 @@ const secondaryBtn = {
 };
 
 // ── Matches tab ────────────────────────────────────────────────────────────────
-function MatchesScreen() {
+function MatchesScreen({ onOpenMatch }) {
   const [tab, setTab] = React.useState('Próximas');
   const list = tab === 'Próximas' ? [...MY_MATCHES, ...NEARBY] : MY_MATCHES;
   return (
@@ -147,7 +147,7 @@ function MatchesScreen() {
         <Segmented options={['Próximas', 'Historial']} value={tab} onChange={setTab} />
       </div>
       <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {list.map((m, i) => <MatchCard key={i} m={m} />)}
+        {list.map((m, i) => <MatchCard key={i} m={m} onPress={() => onOpenMatch(m)} />)}
       </div>
     </div>
   );

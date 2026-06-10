@@ -22,6 +22,7 @@ final class MatchDetailLoaded extends MatchDetailState {
     required this.match,
     required this.viewerUserId,
     this.viewerHasConfirmedPayment = false,
+    this.viewerHasPendingPayment = false,
     this.actionLoading = false,
     this.actionMessage,
     this.actionMessageIsError = false,
@@ -30,6 +31,9 @@ final class MatchDetailLoaded extends MatchDetailState {
   final MatchDetailDto match;
   final String viewerUserId;
   final bool viewerHasConfirmedPayment;
+
+  /// El viewer envió un comprobante que el staff aún no confirmó (en revisión).
+  final bool viewerHasPendingPayment;
   final bool actionLoading;
   final String? actionMessage;
   final bool actionMessageIsError;
@@ -41,6 +45,7 @@ final class MatchDetailLoaded extends MatchDetailState {
         match,
         viewerUserId,
         viewerHasConfirmedPayment,
+        viewerHasPendingPayment,
         actionLoading,
         actionMessage,
         actionMessageIsError,

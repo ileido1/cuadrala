@@ -17,6 +17,37 @@ Cómo abrir el prototipo: abrir `Cuadrala App.html` en un navegador. Los `.jsx` 
 
 ---
 
+## Para una recreación EXACTA (leer primero)
+
+El objetivo es que la implementación quede **idéntica** al prototipo. Orden de prioridad de fuentes de verdad:
+
+1. **El código fuente del prototipo (`.jsx`) = valores exactos.** Cada color, padding, radio, tamaño de fuente, duración de animación y regla de layout está literalmente en los `.jsx`. Ante cualquier duda de medida o color, **lee el valor en el `.jsx`**, no lo estimes desde la prosa ni desde una captura.
+2. **Las capturas en `screens/` = verdad visual.** Úsalas como checklist de comparación 1:1. Después de implementar cada pantalla, ponla lado a lado con su PNG y corrige hasta que coincidan (espaciados, pesos tipográficos, alineaciones, estados de color).
+3. **Este README = el “por qué” y el comportamiento** (flujos, estados, qué viene del backend).
+
+Flujo recomendado con Claude Code:
+- Abre `Cuadrala App.html` en un navegador para navegar el prototipo **en vivo** (es la referencia más fiel; muestra animaciones e interacciones reales).
+- Implementa pantalla por pantalla, comparando contra `screens/NN-*.png`.
+- Reproduce los valores leyéndolos del `.jsx` correspondiente (ver mapa en §Files).
+
+### Capturas de referencia (`screens/`)
+| Archivo | Pantalla |
+|---|---|
+| `01-home.png` | Home / Actividad cerca de ti |
+| `02-partidas.png` | Tab Partidas |
+| `03-avisos.png` | Tab Avisos |
+| `04-perfil.png` | Tab Perfil |
+| `05-crear.png` | Crear partida (Cuándo / Dónde / Categoría) |
+| `06-buscar.png` | Buscar / matchmaking |
+| `07-detalle.png` | Detalle de partida — vista de cancha (sin unirse) |
+| `08-detalle-unido.png` | Detalle — unido, banner verde + “Pagar ahora” |
+| `09-pago-metodo.png` | Método de pago (Transferencia seleccionada + datos) |
+| `10-cargar-resultado.png` | Cargar resultado — paso 1 (asignar posiciones) |
+
+> Las capturas son del tema **oscuro** (default). El tema claro existe en el prototipo (toggle en Tweaks); sus tokens están más abajo.
+
+---
+
 ## Design Tokens
 
 > Fuente de verdad en producción: `brand_colors.dart`, `app_theme.dart` (mobile) y `tailwind.config.ts` / `globals.css` (web). Estos valores deben coincidir con el design system; abajo se listan los usados en el prototipo.
@@ -166,8 +197,50 @@ Datos a traer del backend (ver OpenAPI real en `services/api`, no el §D del DES
 
 ## Files
 - `Cuadrala App.html` — entry point del prototipo (tokens CSS, fuentes, monta los scripts).
-- `cuadrala-ui.jsx` — primitivas: Icon, DateStrip, Chip, Toggle, Stepper, Segmented, Card, Price (moneda dual), AvatarStack, helpers `usd/bs/BS_RATE`.
+- `cuadrala-ui.jsx` — primitivas: Icon, DateStrip, Chip, Toggle, Stepper, Segmented, Card, Price (moneda dual), AvatarStack, Avatar, SheetHeader, helpers `usd/bs/BS_RATE`.
 - `cuadrala-screens.jsx` — CreateMatchScreen, VenueCard, CourtPicker, MiniMap, data demo (VENUES, CATEGORIES).
 - `cuadrala-home.jsx` — HomeScreen, MatchCard, AppHeader, MatchesScreen, AvisosScreen, PerfilScreen, BottomNav.
-- `cuadrala-app.jsx` — root: navegación, sheet, Tweaks (tema, esquinas, vista de sedes).
+- `cuadrala-court.jsx` — **CourtView / CourtSpot**: vista de cancha unificada (Equipo A/B, Drive/Revés, RED), usada en detalle y resultado.
+- `cuadrala-detail.jsx` — MatchDetailScreen (con CourtView + estados join/pago), Banner, InfoTile, DEMO_COURT, ME.
+- `cuadrala-payment.jsx` — **PaymentFlow**: selección de método (Efectivo/Transferencia/Pago móvil) + datos dinámicos + pantalla "Comprobante enviado / pendiente".
+- `cuadrala-result.jsx` — LoadResultFlow (posiciones → sets → resumen+ELO).
+- `cuadrala-search.jsx` — SearchScreen (matchmaking).
+- `cuadrala-app.jsx` — root: navegación por stack de overlays, estado de partida (joinedPos/payment/played), Tweaks.
 - `ios-frame.jsx`, `tweaks-panel.jsx` — andamiaje de presentación (no portar a Flutter).
+
+---
+
+## ADENDA — Flujo unir → pagar → resultado (v2)
+
+### Vista de cancha unificada (CourtView) — pieza central
+La MISMA visualización de cancha se reutiliza en 3 momentos (consistencia pedida por el cliente):
+1. **Detalle / unirse**: muestra la alineación; los lugares vacíos del usuario son tappables ("Unirme aquí"). Al unirte quedas colocado **al lado de tu compañero** (misma mitad de cancha).
+2. **Cargar resultado · paso 1**: asignación de posiciones.
+3. **Detalle tras jugar**: la misma cancha en modo solo-lectura con el marcador por equipo.
+
+Estructura: tarjeta con **Equipo A** (acento verde) arriba, divisor **RED** (línea punteada), **Equipo B** (acento lime) abajo; cada equipo con 2 posiciones **Drive / Revés** (96–104px). Spot ocupado = avatar + nombre + dot de estado (verde=Pagado / lime=Pendiente) + badge "TÚ" si eres tú. Spot vacío = dashed con "+" y "Unirme aquí" (interactivo) o "Disponible" (solo lectura). En Flutter: `GridView`/`Row` 2×2 con un divisor central.
+
+### Máquina de estados del Detalle (phase)
+`browse` (no unido) → `joined` (unido, sin pagar) → `pending` (pago en revisión) → `confirmed` (pago confirmado) · y `played` (finalizada). Cada fase cambia el **banner** y el **footer**:
+| phase | banner | footer CTA |
+|---|---|---|
+| browse | "Únete a esta partida" (neutro) | deshabilitado "Toca un lugar para unirte" |
+| joined | "Te uniste a la partida" (verde) | **Pagar ahora · US$X** + resumen precio |
+| pending | "Pago en revisión" (lime) | Compartir + **Cargar resultado** |
+| confirmed | "Ya estás anotado" (verde) | Compartir + **Cargar resultado** |
+| played | "Partida finalizada" (verde) | Volver al inicio + línea "Ganaste · ELO 1240→1254 (+14)" |
+
+### Flujo de pago (PaymentFlow)
+**Paso método** — header centrado "Elegir método de pago". Card resumen (club + "Pago por jugador" + precio dual). Lista de **radios**: Efectivo / Transferencia bancaria / Pago móvil (cada uno con subetiqueta). Bloque dinámico debajo:
+- *Efectivo* → nota: "Pagarás en efectivo en el club. No necesitas subir comprobante…". CTA = **Confirmar inscripción**.
+- *Transferencia / Pago móvil* → card "Datos para pagar" (Banco, Cuenta/Teléfono, Titular/Cédula — placeholders). CTA = **Ya pagué · Enviar comprobante**.
+
+**Paso confirmación** — spinner verde animado, "Comprobante enviado", "El staff de la sede revisará el pago en el panel web.", card (club + Monto dual + badge **Pendiente** lime). Botones: **Ir al inicio** / **Ver mi partida**.
+
+> Backend: los datos bancarios y métodos vienen de la sede; el estado de pago lo confirma el staff desde el panel web (no es pasarela automática). El precio se muestra en **US$ + Bs**.
+
+### Navegación (stack de overlays)
+El root mantiene un stack: `detail → payment` (push), `detail → result` (push); `Ver mi partida` hace pop a `detail` (ahora `pending`); `Ir al inicio` limpia el stack y va al tab Inicio. En Flutter: `Navigator.push/pop` con rutas slide-up (`showModalBottomSheet` full-height o `PageRouteBuilder`).
+
+### Estado app-level (demo)
+`joinedPos` ('A-d'|'A-r'|'B-d'|'B-r'|null), `payment` ('none'|'pending'|'confirmed'), `played` (bool), `scores`. Al abrir una partida se resetean. En producción derivan del backend (inscripción + estado de pago + resultado).

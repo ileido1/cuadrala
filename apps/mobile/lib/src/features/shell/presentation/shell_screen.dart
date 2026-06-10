@@ -211,7 +211,7 @@ Widget _buildIcon({
           decoration: BoxDecoration(
             color: BrandColors.limeAccent,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: scheme.surface, width: 1.5),
+            border: Border.all(color: scheme.surfaceContainerLow, width: 1.5),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -243,7 +243,7 @@ final class _ShellBottomNav extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surface,
+        color: scheme.surfaceContainerLow,
         border: Border(
           top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
         ),

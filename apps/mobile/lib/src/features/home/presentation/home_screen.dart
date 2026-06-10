@@ -7,8 +7,6 @@ import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
-import '../../../core/theme/brand_colors.dart';
-import '../../../core/theme/brand_gradients.dart';
 import '../../../router/routes.dart';
 import '../../matches/data/models/open_match_dto.dart';
 import '../../venues/presentation/create_match_panel.dart';
@@ -218,34 +216,28 @@ final class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final gradients = Theme.of(context).extension<BrandGradients>()!;
-    const heroCardText = BrandColors.onHero;
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: gradients.heroCard,
-        boxShadow: [
-          BoxShadow(
-            color: gradients.heroCard.colors.first.withValues(alpha: 0.35),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
+          // Glow radial verde en la esquina superior derecha.
           Positioned(
-            right: -20,
-            top: -20,
+            right: -40,
+            top: -60,
             child: Container(
-              width: 120,
-              height: 120,
+              width: 200,
+              height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    BrandColors.limeAccent.withValues(alpha: 0.18),
+                    scheme.primary.withValues(alpha: 0.22),
                     Colors.transparent,
                   ],
                 ),
@@ -253,49 +245,49 @@ final class _HeroCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 46,
+                      height: 46,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(13),
                         color: scheme.primary,
                         boxShadow: [
                           BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 14,
+                            color: scheme.primary.withValues(alpha: 0.45),
+                            blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
                         ],
                       ),
-                      child: Icon(Icons.bolt_rounded, color: scheme.onPrimary),
+                      child: Icon(Icons.bolt_rounded,
+                          color: scheme.onPrimary, size: 24),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Buscar partida',
                             style: TextStyle(
-                              color: heroCardText,
-                              fontWeight: FontWeight.w900,
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w800,
                               fontSize: 16,
-                              letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 2),
                           Text(
                             'Matchmaking por horario y nivel',
                             style: TextStyle(
-                              color: heroCardText.withValues(alpha: 0.55),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 11,
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -303,22 +295,25 @@ final class _HeroCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
                       child: SizedBox(
                         height: 48,
-                        child: FilledButton(
+                        child: FilledButton.icon(
                           onPressed: onBuscar,
                           style: FilledButton.styleFrom(
+                            elevation: 6,
+                            shadowColor: scheme.primary.withValues(alpha: 0.4),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
+                          icon: const Icon(Icons.search_rounded, size: 18),
+                          label: const Text(
                             'Buscar',
-                            style: TextStyle(fontWeight: FontWeight.w900),
+                            style: TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),
                       ),
@@ -327,20 +322,23 @@ final class _HeroCard extends StatelessWidget {
                     Expanded(
                       child: SizedBox(
                         height: 48,
-                        child: OutlinedButton(
+                        child: OutlinedButton.icon(
                           onPressed: onCrear,
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: heroCardText,
+                            foregroundColor: scheme.onSurface,
+                            backgroundColor: scheme.surfaceContainerHighest,
                             side: BorderSide(
-                              color: heroCardText.withValues(alpha: 0.35),
+                              color: scheme.outlineVariant,
+                              width: 1.5,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text(
                             'Crear',
-                            style: TextStyle(fontWeight: FontWeight.w900),
+                            style: TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),
                       ),
@@ -381,7 +379,19 @@ final class _SectionHeader extends StatelessWidget {
         ),
         TextButton(
           onPressed: onAction,
-          child: const Text('Ver todas'),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(
+            'Ver todas',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+            ),
+          ),
         ),
       ],
     );
@@ -503,8 +513,8 @@ final class _HomeHeader extends StatelessWidget {
                 initials,
                 style: TextStyle(
                   color: scheme.onPrimary,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 19,
                 ),
               ),
             ),
@@ -518,10 +528,11 @@ final class _HomeHeader extends StatelessWidget {
                     'Hola, $greetingName',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                   if (hasLevel) ...[
                     const SizedBox(height: 4),
@@ -538,8 +549,9 @@ final class _HomeHeader extends StatelessWidget {
         Text(
           'Actividad cerca de ti',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                fontSize: 27,
+                letterSpacing: -0.5,
                 color: scheme.onSurface,
               ),
         ),
@@ -561,37 +573,44 @@ final class _LevelRow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.adjust_rounded, size: 14, color: scheme.primary),
-        const SizedBox(width: 4),
+        Icon(Icons.adjust_rounded, size: 13, color: scheme.primary),
+        const SizedBox(width: 5),
         if (category != null)
           Text(
             category!,
             style: TextStyle(
-              color: scheme.primary,
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
+              color: scheme.onSurface,
+              fontWeight: FontWeight.w800,
+              fontSize: 13.5,
             ),
           ),
         if (category != null && elo != null) ...[
-          const SizedBox(width: 6),
+          const SizedBox(width: 5),
           Text(
             '·',
-            style: TextStyle(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: scheme.onSurfaceVariant),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 5),
         ],
-        if (elo != null)
+        if (elo != null) ...[
           Text(
-            '$elo ELO',
+            '$elo',
             style: TextStyle(
               color: scheme.onSurface,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'ELO',
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
               fontSize: 12,
             ),
           ),
+        ],
       ],
     );
   }
@@ -606,7 +625,7 @@ final class _BellButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.surface,
+      color: scheme.surfaceContainer,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -616,7 +635,7 @@ final class _BellButton extends StatelessWidget {
           height: 42,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: scheme.outlineVariant),
+            border: Border.all(color: scheme.outlineVariant, width: 1.5),
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -635,7 +654,7 @@ final class _BellButton extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: scheme.tertiary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: scheme.surface, width: 1.5),
+                    border: Border.all(color: scheme.surfaceContainer, width: 1.5),
                   ),
                 ),
               ),

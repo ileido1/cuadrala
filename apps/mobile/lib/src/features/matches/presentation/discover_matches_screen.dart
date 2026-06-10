@@ -105,6 +105,18 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                      child: Text(
+                        'DÍA',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                     DateStrip(
                       days: _days,
                       value: _selectedDayKey(state),
@@ -137,6 +149,32 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                         onChanged: (v) => context
                             .read<DiscoverMatchesCubit>()
                             .setOnlyAvailable(v),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '${state.visibleItems.length} '
+                            '${state.visibleItems.length == 1 ? 'partida' : 'partidas'}',
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (state.onlyAvailable)
+                            Text(
+                              'con cupos',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],
@@ -263,7 +301,7 @@ final class _DiscoverHeader extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Partidas abiertas cerca de ti',
+                  'Matchmaking por horario y nivel',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,

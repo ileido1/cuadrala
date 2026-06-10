@@ -1,52 +1,48 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
-/// Pila de avatares solapados con iniciales, usada para mostrar los
-/// participantes de una partida en las tarjetas (rediseño).
+import '../../core/theme/brand_colors.dart';
+
+/// Pila de avatares solapados (cupos de una partida), recreando el prototipo:
+/// los lugares ocupados son **puntos sólidos multicolor** (paleta que cicla por
+/// índice) y los libres son círculos **punteados**. No muestra iniciales.
 ///
-/// Es **presentacional**: recibe la lista de iniciales ya resuelta y, opcional,
-/// cuántos huecos libres quedan ([emptySpots]) para renderizar marcadores
-/// punteados al final.
+/// Es **presentacional**: recibe cuántos cupos están ocupados ([filledCount]) y
+/// cuántos quedan libres ([emptySpots]).
 class AvatarStack extends StatelessWidget {
   const AvatarStack({
     super.key,
-    required this.initials,
+    required this.filledCount,
     this.emptySpots = 0,
-    this.maxVisible = 4,
-    this.size = 30,
+    this.size = 24,
   });
 
-  /// Iniciales de cada participante (p. ej. `['MR', 'JS']`).
-  final List<String> initials;
+  /// Número de cupos ocupados (puntos sólidos de color).
+  final int filledCount;
 
-  /// Número de huecos libres a representar con marcadores punteados.
+  /// Número de cupos libres (círculos punteados).
   final int emptySpots;
 
-  /// Máximo de avatares visibles antes de colapsar en `+N`.
-  final int maxVisible;
-
-  /// Diámetro de cada avatar.
+  /// Diámetro de cada círculo.
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final overlap = size * 0.36;
+    final filled = math.max(0, filledCount);
+    final empty = math.max(0, emptySpots);
+    final total = filled + empty;
+    if (total == 0) return const SizedBox.shrink();
 
-    final visible = initials.take(maxVisible).toList();
-    final overflow = initials.length - visible.length;
-    final emptyToShow =
-        overflow > 0 ? 0 : (emptySpots).clamp(0, maxVisible - visible.length);
+    final overlap = size * 0.34;
+    final step = size - overlap;
+    final totalWidth = size + (total - 1) * step;
 
     final tiles = <Widget>[
-      for (final ini in visible) _AvatarTile(label: ini, size: size),
-      for (var i = 0; i < emptyToShow; i++) _EmptyTile(size: size),
-      if (overflow > 0) _AvatarTile(label: '+$overflow', size: size, muted: true),
+      for (var i = 0; i < filled; i++)
+        _Dot(size: size, color: BrandColors.avatarPalette[i % BrandColors.avatarPalette.length]),
+      for (var i = 0; i < empty; i++) _Dot(size: size, color: null),
     ];
-
-    if (tiles.isEmpty) return const SizedBox.shrink();
-
-    final step = size - overlap;
-    final totalWidth = size + (tiles.length - 1) * step;
 
     return SizedBox(
       width: totalWidth,
@@ -55,78 +51,81 @@ class AvatarStack extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           for (var i = 0; i < tiles.length; i++)
-            Positioned(
-              left: i * step,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: scheme.surface, width: 2),
-                ),
-                child: tiles[i],
-              ),
-            ),
+            Positioned(left: i * step, child: tiles[i]),
         ],
       ),
     );
   }
 }
 
-class _AvatarTile extends StatelessWidget {
-  const _AvatarTile({required this.label, required this.size, this.muted = false});
+/// Punto de la pila: relleno sólido si [color] != null, punteado si es null.
+class _Dot extends StatelessWidget {
+  const _Dot({required this.size, required this.color});
 
-  final String label;
   final double size;
-  final bool muted;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bg = muted
-        ? scheme.surfaceContainerHighest
-        : scheme.primary.withValues(alpha: 0.14);
-    final fg = muted ? scheme.onSurfaceVariant : scheme.primary;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: fg,
-          fontWeight: FontWeight.w900,
-          fontSize: size * 0.36,
+    if (color != null) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: scheme.surfaceContainer, width: 2),
         ),
+      );
+    }
+    // Cupo libre: círculo punteado sobre surface-2.
+    return CustomPaint(
+      size: Size.square(size),
+      painter: _DashedCirclePainter(
+        ring: scheme.outline,
+        fill: scheme.surfaceContainerHighest,
+        gap: scheme.surfaceContainer,
       ),
     );
   }
 }
 
-class _EmptyTile extends StatelessWidget {
-  const _EmptyTile({required this.size});
+class _DashedCirclePainter extends CustomPainter {
+  _DashedCirclePainter({required this.ring, required this.fill, required this.gap});
 
-  final double size;
+  final Color ring;
+  final Color fill;
+  final Color gap;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: scheme.surface,
-        border: Border.all(
-          color: scheme.outlineVariant,
-          width: 1.4,
-        ),
-      ),
-      child: Icon(
-        Icons.add,
-        size: size * 0.46,
-        color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
-      ),
-    );
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    // Borde de 2px del color del fondo de la card (efecto de solapado).
+    canvas.drawCircle(center, size.width / 2, Paint()..color = gap);
+    final r = size.width / 2 - 2;
+    canvas.drawCircle(center, r, Paint()..color = fill);
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = ring;
+    const dash = 3.2;
+    final circumference = 2 * math.pi * r;
+    final dashCount = (circumference / (dash * 2)).floor();
+    final sweep = (2 * math.pi) / dashCount;
+    for (var i = 0; i < dashCount; i++) {
+      final start = i * sweep;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: r),
+        start,
+        sweep / 2,
+        false,
+        ringPaint,
+      );
+    }
   }
+
+  @override
+  bool shouldRepaint(_DashedCirclePainter old) =>
+      old.ring != ring || old.fill != fill || old.gap != gap;
 }

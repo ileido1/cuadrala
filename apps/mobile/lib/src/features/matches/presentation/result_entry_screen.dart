@@ -3,11 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/theme/brand_colors.dart';
 import '../data/models/match_detail_dto.dart';
 import '../domain/scoring/set_score.dart';
 import 'cubit/result_entry_cubit.dart';
 import 'cubit/result_entry_state.dart';
-import 'widgets/court_assignment_widget.dart';
 
 // ---------------------------------------------------------------------------
 // Entry point — provides cubit via BlocProvider
@@ -271,9 +271,9 @@ class _StepProgressBar extends StatelessWidget {
                   Text(
                     _labels[i],
                     style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: active
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: i == step
                           ? scheme.primary
                           : scheme.onSurfaceVariant.withValues(alpha: 0.6),
                     ),
@@ -338,11 +338,25 @@ class _BottomNavBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Step 0: _CourtAssignStep — delegates to CourtAssignmentWidget
+// Step 0: _CourtAssignStep — tap-to-assign court (handoff)
 // ---------------------------------------------------------------------------
 
-class _CourtAssignStep extends StatelessWidget {
+class _CourtAssignStep extends StatefulWidget {
   const _CourtAssignStep();
+
+  @override
+  State<_CourtAssignStep> createState() => _CourtAssignStepState();
+}
+
+class _CourtAssignStepState extends State<_CourtAssignStep> {
+  /// userId del jugador seleccionado en el pool "Sin asignar".
+  String? _selected;
+
+  static String _firstName(String name) {
+    final t = name.trim();
+    if (t.isEmpty) return '';
+    return t.split(RegExp(r'\s+')).first;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -351,35 +365,352 @@ class _CourtAssignStep extends StatelessWidget {
         final cubit = context.read<ResultEntryCubit>();
         final scheme = Theme.of(context).colorScheme;
         final participants = state.match?.participants ?? [];
-        final participantIds = participants.map((p) => p.userId).toList();
-        final displayNames = {
-          for (final p in participants)
-            p.userId: p.displayName ?? p.userId,
+        final colorIndexOf = <String, int>{
+          for (var i = 0; i < participants.length; i++)
+            participants[i].userId: i,
         };
+        final assigned = state.courtPositions;
+        final assignedIds = assigned.values.toSet();
+        final pool =
+            participants.where((p) => !assignedIds.contains(p.userId)).toList();
 
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        void place(CourtPosition pos) {
+          final occupant = assigned[pos];
+          if (_selected != null) {
+            if (occupant != null) cubit.removeFromPosition(pos);
+            cubit.assignToPosition(pos, _selected!);
+            setState(() => _selected = null);
+          } else if (occupant != null) {
+            cubit.removeFromPosition(pos);
+          }
+        }
+
+        Widget slot(CourtPosition pos, String label, Color accent) {
+          final uid = assigned[pos];
+          final p = uid != null
+              ? participants.where((x) => x.userId == uid).firstOrNull
+              : null;
+          return Expanded(
+            child: _CourtSlot(
+              name: p != null ? _firstName(p.displayName ?? uid!) : null,
+              colorIndex: uid != null ? (colorIndexOf[uid] ?? 0) : 0,
+              label: label,
+              accent: accent,
+              onTap: () => place(pos),
+            ),
+          );
+        }
+
+        Widget teamRow(String team, Color accent, CourtPosition drive,
+            CourtPosition reves) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Arrastrá cada jugador a su posición en la cancha',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                'Equipo $team',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.4,
+                  color: accent,
+                ),
               ),
-              const SizedBox(height: 12),
-              CourtAssignmentWidget(
-                participants: participantIds,
-                displayNames: displayNames,
-                courtPositions: state.courtPositions,
-                onAssign: cubit.assignToPosition,
-                onRemove: cubit.removeFromPosition,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  slot(drive, 'Drive', accent),
+                  const SizedBox(width: 10),
+                  slot(reves, 'Revés', accent),
+                ],
               ),
             ],
-          ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          children: [
+            Text(
+              'Toca un jugador y luego su posición en la cancha. '
+              'Toca una posición ocupada para liberarla.',
+              style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            teamRow('A', scheme.primary, CourtPosition.teamADrive,
+                CourtPosition.teamAReves),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(child: Divider(color: scheme.outlineVariant)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Text(
+                      'RED',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: scheme.outlineVariant)),
+                ],
+              ),
+            ),
+            teamRow('B', scheme.tertiary, CourtPosition.teamBDrive,
+                CourtPosition.teamBReves),
+            const SizedBox(height: 24),
+            Text(
+              'SIN ASIGNAR',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (pool.isEmpty)
+              Row(
+                children: [
+                  Icon(Icons.check_rounded, size: 18, color: scheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Todos en posición',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  for (final p in pool)
+                    _PoolAvatar(
+                      name: _firstName(p.displayName ?? p.userId),
+                      colorIndex: colorIndexOf[p.userId] ?? 0,
+                      selected: _selected == p.userId,
+                      onTap: () => setState(
+                        () => _selected = _selected == p.userId ? null : p.userId,
+                      ),
+                    ),
+                ],
+              ),
+          ],
         );
       },
+    );
+  }
+}
+
+/// Slot de cancha (paso 1): vacío = punteado del color del equipo con label
+/// Drive/Revés; ocupado = avatar + primer nombre, borde sólido.
+class _CourtSlot extends StatelessWidget {
+  const _CourtSlot({
+    required this.name,
+    required this.colorIndex,
+    required this.label,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final String? name;
+  final int colorIndex;
+  final String label;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final filled = name != null;
+    final border = filled
+        ? Border.all(color: accent, width: 2)
+        : Border.all(color: accent.withValues(alpha: 0.6), width: 2);
+
+    final content = Container(
+      height: 96,
+      decoration: BoxDecoration(
+        color: filled ? scheme.surface : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        border: filled ? border : null,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: filled
+            ? [
+                _ResultAvatar(name: name!, colorIndex: colorIndex, size: 36),
+                const SizedBox(height: 6),
+                Text(
+                  name!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ]
+            : [
+                Icon(Icons.group_outlined,
+                    size: 22, color: scheme.onSurfaceVariant),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+      ),
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: filled
+          ? content
+          : CustomPaint(
+              painter: _DashedSlotPainter(color: accent.withValues(alpha: 0.6)),
+              child: content,
+            ),
+    );
+  }
+}
+
+class _DashedSlotPainter extends CustomPainter {
+  _DashedSlotPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      const Radius.circular(14),
+    );
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      var dist = 0.0;
+      while (dist < metric.length) {
+        final end = (dist + 6).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(dist, end), paint);
+        dist += 10;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedSlotPainter old) => old.color != color;
+}
+
+/// Avatar del pool "Sin asignar" (tappable, con halo lime al seleccionar).
+class _PoolAvatar extends StatelessWidget {
+  const _PoolAvatar({
+    required this.name,
+    required this.colorIndex,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String name;
+  final int colorIndex;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selected ? scheme.tertiary : Colors.transparent,
+                width: 2,
+              ),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: scheme.tertiary.withValues(alpha: 0.22),
+                        blurRadius: 0,
+                        spreadRadius: 3,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: _ResultAvatar(name: name, colorIndex: colorIndex, size: 48),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResultAvatar extends StatelessWidget {
+  const _ResultAvatar({
+    required this.name,
+    required this.colorIndex,
+    required this.size,
+  });
+
+  final String name;
+  final int colorIndex;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = BrandColors
+        .avatarPalette[colorIndex % BrandColors.avatarPalette.length];
+    final parts =
+        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final initials = parts.isEmpty
+        ? '?'
+        : (parts.length == 1
+            ? parts.first.characters.first
+            : parts.first.characters.first + parts.last.characters.first);
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: Text(
+        initials.toUpperCase(),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: size * 0.4,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }

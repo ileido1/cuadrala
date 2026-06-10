@@ -75,7 +75,6 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
   MatchPaymentInfoDto? _legacyPaymentInfo;
   String? _resolvedPricingCurrency;
   String? _resolvedDisplayCurrency;
-  String? _countryCode;
   DateTime? _matchScheduledAt;
   List<ExchangeRateRow> _exchangeRates = const [];
   bool _fxMissingRate = false;
@@ -185,7 +184,6 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           _legacyPaymentInfo = legacyInfo;
           _resolvedPricingCurrency = pricingCurrency;
           _resolvedDisplayCurrency = displayCurrency;
-          _countryCode = countryCode;
           _matchScheduledAt = scheduledAt;
           _exchangeRates = exchangeRates;
           _selectedMethodId = methods.isNotEmpty ? methods.first.id : 'TRANSFER';
@@ -224,7 +222,6 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
             _legacyPaymentInfo = legacyInfo;
             _resolvedPricingCurrency = pricingCurrency;
             _resolvedDisplayCurrency = displayCurrency;
-            _countryCode = countryCode;
             _matchScheduledAt = scheduledAt;
             _exchangeRates = exchangeRates;
             _selectedMethodId = methods.isNotEmpty ? methods.first.id : 'TRANSFER';
@@ -433,55 +430,51 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                         _displayCurrencyCode,
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 18),
                     Text(
-                      'Selecciona una opción',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
+                      'SELECCIONA UNA OPCIÓN',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     if (_methods.isNotEmpty)
                       ..._methods.map(
-                        (m) => Card(
-                          child: RadioListTile<String>(
-                            value: m.id,
-                            groupValue: _selectedMethodId,
-                            onChanged: (v) {
-                              setState(() => _selectedMethodId = v);
+                        (m) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _MethodOption(
+                            selected: _selectedMethodId == m.id,
+                            title: m.displayLabel,
+                            subtitle: '${m.name} · ${m.settlementCurrency}',
+                            onTap: () {
+                              setState(() => _selectedMethodId = m.id);
                               _recomputeFx();
                             },
-                            title: Text(m.displayLabel),
-                            subtitle: Text(
-                              '${m.name} · ${m.settlementCurrency}',
-                            ),
                           ),
                         ),
                       )
                     else ...[
-                      Card(
-                        child: RadioListTile<String>(
-                          value: 'TRANSFER',
-                          groupValue: _selectedMethodId,
-                          onChanged: (v) {
-                            setState(() => _selectedMethodId = v ?? 'TRANSFER');
-                            _recomputeFx();
-                          },
-                          title: const Text('Transferencia bancaria'),
-                          subtitle: const Text('Recomendado'),
-                        ),
+                      _MethodOption(
+                        selected: _selectedMethodId == 'TRANSFER',
+                        title: 'Transferencia bancaria',
+                        subtitle: 'Recomendado',
+                        onTap: () {
+                          setState(() => _selectedMethodId = 'TRANSFER');
+                          _recomputeFx();
+                        },
                       ),
-                      Card(
-                        child: RadioListTile<String>(
-                          value: 'CASH',
-                          groupValue: _selectedMethodId,
-                          onChanged: (v) {
-                            setState(() => _selectedMethodId = v ?? 'CASH');
-                            _recomputeFx();
-                          },
-                          title: const Text('Efectivo'),
-                          subtitle: const Text('Coordina con el organizador'),
-                        ),
+                      const SizedBox(height: 10),
+                      _MethodOption(
+                        selected: _selectedMethodId == 'CASH',
+                        title: 'Efectivo',
+                        subtitle: 'Coordina con el organizador',
+                        onTap: () {
+                          setState(() => _selectedMethodId = 'CASH');
+                          _recomputeFx();
+                        },
                       ),
                     ],
                     if (_selectedMethod != null)
@@ -524,9 +517,10 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                               ),
                         ),
                       ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 18),
                     SizedBox(
                       width: double.infinity,
+                      height: 54,
                       child: FilledButton(
                         onPressed: (_submitting ||
                                 (!_isCash && _fxMissingRate))
@@ -534,7 +528,11 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                             : _continue,
                         style: FilledButton.styleFrom(
                           backgroundColor: scheme.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 8,
+                          shadowColor: scheme.primary.withValues(alpha: 0.4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: _submitting
                             ? const SizedBox(
@@ -542,7 +540,15 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                                 width: 18,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Continuar'),
+                            : Text(
+                                _isCash
+                                    ? 'Confirmar inscripción'
+                                    : 'Ya pagué · Enviar comprobante',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -561,10 +567,11 @@ final class _MatchHeaderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(18),
+        color: scheme.surfaceContainerLow,
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
       ),
       child: Row(
         children: [
@@ -575,7 +582,7 @@ final class _MatchHeaderCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                       ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -627,18 +634,18 @@ final class _PaymentMethodDetailsCard extends StatelessWidget {
       padding: const EdgeInsets.only(top: 14),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: scheme.tertiaryContainer.withValues(alpha: 0.4),
-          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(18),
+          color: scheme.surfaceContainerLow,
+          border: Border.all(color: scheme.outlineVariant, width: 1.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.payments_outlined, size: 18, color: scheme.tertiary),
+                Icon(Icons.info_outline_rounded, size: 18, color: scheme.tertiary),
                 const SizedBox(width: 8),
                 Text(
                   'Datos para pagar',
@@ -775,6 +782,104 @@ final class _SettlementConversionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+final class _MethodOption extends StatelessWidget {
+  const _MethodOption({
+    required this.selected,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? scheme.primary.withValues(alpha: 0.15)
+              : scheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? scheme.primary : scheme.outlineVariant,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            _Radio(on: selected),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _Radio extends StatelessWidget {
+  const _Radio({required this.on});
+
+  final bool on;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 22,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: on ? scheme.primary : scheme.onSurface.withValues(alpha: 0.18),
+          width: 2,
+        ),
+      ),
+      child: on
+          ? Container(
+              width: 11,
+              height: 11,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                shape: BoxShape.circle,
+              ),
+            )
+          : null,
     );
   }
 }

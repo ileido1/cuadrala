@@ -220,7 +220,7 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
                           ? scheme.primaryContainer
                           : isRejected
                               ? scheme.errorContainer
-                              : scheme.tertiary.withValues(alpha: 0.12),
+                              : scheme.tertiary,
                     ),
                     child: Text(
                       isConfirmed
@@ -234,7 +234,7 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
                                 ? scheme.primary
                                 : isRejected
                                     ? scheme.error
-                                    : scheme.tertiary,
+                                    : scheme.onTertiary,
                           ),
                     ),
                   ),

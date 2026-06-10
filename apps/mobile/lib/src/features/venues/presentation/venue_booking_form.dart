@@ -509,8 +509,8 @@ class VenueBookingStickyFooter extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            scheme.surface.withValues(alpha: 0),
-            scheme.surface,
+            scheme.surfaceContainerLow.withValues(alpha: 0),
+            scheme.surfaceContainerLow,
           ],
         ),
         border: Border(
