@@ -8,8 +8,10 @@ import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/date_strip.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/match_card.dart';
 import '../../../shared/widgets/selectable_chip.dart';
 import '../data/matches_repository.dart';
@@ -86,7 +88,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                     context.read<DiscoverMatchesCubit>().setQuery(v),
                 decoration: InputDecoration(
                   hintText: 'Buscar club o dirección',
-                  prefixIcon: const Icon(Icons.search),
+                  prefixIcon: const Icon(AppIcons.search),
                   filled: true,
                   fillColor: scheme.surfaceContainerHighest,
                   border: OutlineInputBorder(
@@ -189,19 +191,10 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (state is DiscoverMatchesFailure) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(state.message, textAlign: TextAlign.center),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: () =>
-                                context.read<DiscoverMatchesCubit>().load(),
-                            child: const Text('Reintentar'),
-                          ),
-                        ],
-                      ),
+                    return ErrorState(
+                      message: state.message,
+                      onRetry: () =>
+                          context.read<DiscoverMatchesCubit>().load(),
                     );
                   }
 
@@ -281,7 +274,7 @@ final class _DiscoverHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onBack,
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(AppIcons.arrowBack),
             style: IconButton.styleFrom(
               backgroundColor: scheme.surfaceContainerHighest,
             ),
@@ -537,7 +530,7 @@ class _JoinConfirmSheetState extends State<_JoinConfirmSheet> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.payments_outlined, size: 18, color: scheme.primary),
+              Icon(AppIcons.payments, size: 18, color: scheme.primary),
               const SizedBox(width: 6),
               Text(
                 formatMoneyLabel(

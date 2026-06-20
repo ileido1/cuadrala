@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../data/monetization_repository.dart';
 import 'pay_method_screen.dart';
@@ -144,9 +145,9 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
               ),
               child: Center(
                 child: isConfirmed
-                    ? Icon(Icons.check_circle, color: scheme.primary, size: 48)
+                    ? Icon(AppIcons.checkCircle, color: scheme.primary, size: 48)
                     : isRejected
-                        ? Icon(Icons.cancel, color: scheme.error, size: 48)
+                        ? Icon(AppIcons.closeCircle, color: scheme.error, size: 48)
                         : const CircularProgressIndicator(),
               ),
             ),
@@ -183,7 +184,7 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.sports_tennis),
+                  const Icon(AppIcons.racquetSport),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/brand_colors.dart';
 import '../../data/models/user_rating_dto.dart';
 import '../cubit/profile_state.dart';
@@ -46,7 +47,7 @@ final class _ProfileEloSheet extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(AppIcons.close),
                 ),
               ],
             ),

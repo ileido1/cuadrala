@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
+import '../../../core/theme/app_icons.dart';
 import '../data/monetization_repository.dart';
 import 'waiting_confirmation_screen.dart';
 
@@ -138,7 +139,7 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.receipt_long),
+                const Icon(AppIcons.receipt),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

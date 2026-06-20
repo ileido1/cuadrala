@@ -24,7 +24,19 @@ abstract final class BrandColors {
   static const lightBg = Color(0xFFF3F4F6);
   static const lightSurface = Color(0xFFFFFFFF);
   static const lightSurfaceContainer = Color(0xFFF3F4F6);
+
+  /// `--line` claro — borde débil (cards, chips, segmented, inputs).
   static const lightOutline = Color(0xFFE5E7EB);
+
+  /// `--line-strong` claro — borde fuerte (OutlineBtn, toggle off, anillo
+  /// punteado de avatar vacío).
+  static const lightOutlineStrong = Color(0xFFCBD2DC);
+
+  /// `--muted` claro — texto secundario.
+  static const lightMuted = Color(0xFF64748B);
+
+  /// `--muted-2` claro — texto terciario/deshabilitado.
+  static const lightMuted2 = Color(0xFF94A3B8);
 
   /// Texto sobre badges lime (categoría). Verde casi negro del prototipo.
   static const onLime = Color(0xFF15301A);
@@ -52,10 +64,25 @@ abstract final class BrandColors {
   /// Nivel intermedio interpolado para `surfaceContainerHigh`.
   static const darkSurfaceHigh = Color(0xFF16203A);
 
-  /// `--surface-2` — inputs, chips off, date block, stepper, slots.
+  /// `--surface-2` — chips off, date block, stepper, slots (los inputs van
+  /// sobre `--surface`, no este rol — confirmado contra `Field` del prototipo).
   static const darkSurface2 = Color(0xFF1B2740);
 
+  /// `--line` oscuro — borde débil (cards, chips, segmented, inputs).
   static const darkOutline = Color(0xFF1F2937);
+
+  /// `--line-strong` oscuro — borde fuerte (OutlineBtn, toggle off, anillo
+  /// punteado de avatar vacío). El prototipo lo define como blanco
+  /// translúcido (`rgba(255,255,255,.18)`); replicado literal en vez de
+  /// aplanarlo a un hex, para que se adapte igual sobre cualquier superficie.
+  static const darkOutlineStrong = Color(0x2EFFFFFF);
+
+  /// `--muted` oscuro — texto secundario.
+  static const darkMuted = Color(0xFF94A3B8);
+
+  /// `--muted-2` oscuro — texto terciario/deshabilitado.
+  static const darkMuted2 = Color(0xFF5C6B85);
+
   static const darkOnSurface = Color(0xFFE5E7EB);
 
   // ─── Semantic / fixed colours ─────────────────────────────────────────────

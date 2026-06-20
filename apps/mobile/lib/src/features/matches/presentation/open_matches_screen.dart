@@ -7,6 +7,8 @@ import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/match_card.dart';
 import '../../../shared/widgets/segmented_control.dart';
@@ -56,7 +58,7 @@ class _OpenMatchesScreenState extends State<OpenMatchesScreen> {
         onPressed: () => context.push(Routes.createMatch),
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
-        child: const Icon(Icons.add),
+        child: const Icon(AppIcons.add),
       ),
       body: SafeArea(
         bottom: false,
@@ -97,19 +99,9 @@ class _OpenMatchesScreenState extends State<OpenMatchesScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (state is OpenMatchesFailure) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(state.message, textAlign: TextAlign.center),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: () =>
-                                context.read<OpenMatchesCubit>().load(),
-                            child: const Text('Reintentar'),
-                          ),
-                        ],
-                      ),
+                    return ErrorState(
+                      message: state.message,
+                      onRetry: () => context.read<OpenMatchesCubit>().load(),
                     );
                   }
 

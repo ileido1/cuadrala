@@ -153,7 +153,9 @@ void main() {
       expect(find.byKey(const Key('pay.method.screen')), findsOneWidget);
       expect(find.text('Transferencia bancaria'), findsOneWidget);
       expect(find.text('Efectivo'), findsOneWidget);
-      expect(find.text('Continuar'), findsOneWidget);
+      // El primer método (`methods.first`) queda preseleccionado; acá es
+      // BANK_TRANSFER, así que el CTA pide el comprobante, no dice "Continuar".
+      expect(find.text('Ya pagué · Enviar comprobante'), findsOneWidget);
     });
 
     testWidgets('CASH navega a espera sin pantalla de comprobante', (tester) async {
@@ -207,7 +209,9 @@ void main() {
 
       await tester.tap(find.text('Efectivo'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Continuar'));
+      // Con Efectivo seleccionado el CTA pasa a "Confirmar inscripción"
+      // (el texto "Continuar" no existe en esta pantalla).
+      await tester.tap(find.text('Confirmar inscripción'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 

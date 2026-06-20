@@ -5,6 +5,7 @@ import '../../../core/formatting/fx_price_labels.dart';
 import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../shared/widgets/date_strip.dart';
 import '../../../shared/widgets/dual_price.dart';
 import '../../../shared/widgets/segmented_control.dart';
@@ -251,7 +252,7 @@ class MatchSettingsSection extends StatelessWidget {
                   color: scheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(Icons.adjust_rounded,
+                child: Icon(AppIcons.target,
                     size: 20, color: scheme.primary),
               ),
               const SizedBox(width: 12),
@@ -407,7 +408,7 @@ class _Stepper extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _StepperButton(
-            icon: Icons.remove_rounded,
+            icon: AppIcons.remove,
             enabled: value > min,
             onTap: () => onChanged(value - 1),
           ),
@@ -424,7 +425,7 @@ class _Stepper extends StatelessWidget {
             ),
           ),
           _StepperButton(
-            icon: Icons.add_rounded,
+            icon: AppIcons.add,
             enabled: value < max,
             onTap: () => onChanged(value + 1),
           ),
@@ -568,7 +569,7 @@ class VenueBookingStickyFooter extends StatelessWidget {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.check_rounded),
+                  : const Icon(AppIcons.check),
               label: Text(ready ? 'Crear partida' : 'Elige cancha y horario'),
             ),
           ),

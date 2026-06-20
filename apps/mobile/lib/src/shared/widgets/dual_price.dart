@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/formatting/money_format.dart';
 import '../../core/models/currency_code.dart';
+import '../../core/theme/brand_colors.dart';
 
 /// Precio en moneda dual (rediseño): importe principal grande + secundario
 /// (p. ej. `Bs`) atenuado debajo.
@@ -54,6 +55,10 @@ class DualPrice extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final suffixText = suffix == null ? '' : ' $suffix';
+    // `--muted-2`: tono propio del prototipo, no "muted con menos opacidad".
+    final muted2 = Theme.of(context).brightness == Brightness.dark
+        ? BrandColors.darkMuted2
+        : BrandColors.lightMuted2;
 
     return Column(
       crossAxisAlignment:
@@ -91,7 +96,7 @@ class DualPrice extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+                color: muted2,
               ),
             ),
           ),

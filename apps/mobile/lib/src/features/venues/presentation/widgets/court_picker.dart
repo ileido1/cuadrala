@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/brand_colors.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../shared/widgets/selectable_chip.dart';
+import '../../../../shared/widgets/surface_tag.dart';
 import '../../data/models/court_dto.dart';
 
 /// Selector de cancha + horario (rediseño Crear partida).
@@ -122,7 +124,7 @@ class _CourtRow extends StatelessWidget {
             onTap: onTap,
             child: Row(
               children: [
-                Icon(Icons.sports_tennis_rounded,
+                Icon(AppIcons.racquetSport,
                     size: 17, color: scheme.onSurfaceVariant),
                 const SizedBox(width: 8),
                 Expanded(
@@ -137,7 +139,7 @@ class _CourtRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                _SurfaceTag(label: surfaceLabel),
+                SurfaceTag(label: surfaceLabel),
               ],
             ),
           ),
@@ -198,10 +200,11 @@ class _Slots extends StatelessWidget {
       runSpacing: 8,
       children: [
         for (final iso in available)
-          _SlotChip(
+          SelectableChip(
             label: _formatSlot(iso),
             selected: selectedSlot == iso,
             onTap: () => onSelectSlot(iso),
+            icon: AppIcons.clock,
           ),
       ],
     );
@@ -215,60 +218,6 @@ class _Slots extends StatelessWidget {
   }
 }
 
-class _SlotChip extends StatelessWidget {
-  const _SlotChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final fg = selected ? BrandColors.onHero : scheme.onSurface;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: selected ? scheme.primary : scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? scheme.primary : scheme.outlineVariant,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.schedule_rounded,
-              size: 13,
-              color: fg.withValues(alpha: selected ? 1 : 0.5),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: fg,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _EmptySlots extends StatelessWidget {
   const _EmptySlots({required this.dateLabel, required this.onChangeDate});
@@ -287,7 +236,7 @@ class _EmptySlots extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.schedule_rounded,
+          Icon(AppIcons.clock,
               size: 16, color: scheme.onSurfaceVariant),
           const SizedBox(width: 10),
           Expanded(
@@ -311,7 +260,7 @@ class _EmptySlots extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.arrow_forward_rounded,
+                Icon(AppIcons.arrowForward,
                     size: 14, color: scheme.primary),
               ],
             ),
@@ -322,28 +271,3 @@ class _EmptySlots extends StatelessWidget {
   }
 }
 
-class _SurfaceTag extends StatelessWidget {
-  const _SurfaceTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}

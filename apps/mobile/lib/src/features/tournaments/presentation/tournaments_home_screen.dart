@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 
 final class TournamentsHomeScreen extends StatelessWidget {
@@ -17,7 +18,7 @@ final class TournamentsHomeScreen extends StatelessWidget {
           IconButton(
             tooltip: 'Crear torneo',
             onPressed: () => context.push(Routes.createTournament),
-            icon: const Icon(Icons.add),
+            icon: const Icon(AppIcons.add),
           ),
         ],
       ),
@@ -51,7 +52,7 @@ final class TournamentsHomeScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: () => context.push(Routes.createTournament),
-                  icon: const Icon(Icons.emoji_events),
+                  icon: const Icon(AppIcons.trophy),
                   label: const Text('Crear torneo'),
                 ),
               ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../data/models/register_request.dart';
@@ -137,7 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     decoration: InputDecoration(
                       labelText: 'Correo electrónico',
                       hintText: 'tu@email.com',
-                      prefixIcon: const Icon(Icons.mail_outline),
+                      prefixIcon: const Icon(AppIcons.mail),
                       errorText: fieldErrors?.email,
                     ),
                   ),
@@ -149,13 +150,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: const Icon(AppIcons.lock),
                       suffixIcon: IconButton(
                         onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                         icon: Icon(
                           _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+                              ? AppIcons.eyeOn
+                              : AppIcons.eyeOff,
                         ),
                       ),
                       errorText: fieldErrors?.password,
@@ -170,13 +171,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       labelText: 'Confirmar contraseña',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: const Icon(AppIcons.lock),
                       suffixIcon: IconButton(
                         onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                         icon: Icon(
                           _obscureConfirm
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+                              ? AppIcons.eyeOn
+                              : AppIcons.eyeOff,
                         ),
                       ),
                       errorText: _confirmError,
@@ -186,7 +187,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 24),
                   PrimaryButton(
                     label: 'Continuar',
-                    icon: Icons.arrow_forward,
+                    icon: AppIcons.arrowForward,
                     height: 52,
                     isLoading: isLoading,
                     onPressed: _submit,

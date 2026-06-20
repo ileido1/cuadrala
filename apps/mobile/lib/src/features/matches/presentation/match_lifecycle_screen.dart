@@ -5,6 +5,9 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/info_badge.dart';
 import '../../monetization/data/monetization_repository.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/matches_repository.dart';
@@ -75,21 +78,9 @@ final class _MatchLifecycleView extends StatelessWidget {
             return const Center(child: Text('Partida no encontrada.'));
           }
           if (state is MatchDetailFailure) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: () => context.read<MatchDetailCubit>().load(),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
+            return ErrorState(
+              message: state.message,
+              onRetry: () => context.read<MatchDetailCubit>().load(),
             );
           }
 
@@ -119,23 +110,23 @@ final class _MatchLifecycleView extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _StatusChip(label: 'PROGRAMADA', active: isScheduled),
-                        _StatusChip(label: 'EN CURSO', active: inProgress),
-                        _StatusChip(label: 'FINALIZADA', active: finished),
+                        _statusPill(scheme, 'PROGRAMADA', isScheduled),
+                        _statusPill(scheme, 'EN CURSO', inProgress),
+                        _statusPill(scheme, 'FINALIZADA', finished),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: const [
-                        _GhostChip(label: 'ERROR 403'),
-                        _GhostChip(label: 'ERROR 409'),
+                      children: [
+                        _ghostPill(scheme, 'ERROR 403'),
+                        _ghostPill(scheme, 'ERROR 409'),
                       ],
                     ),
                     const SizedBox(height: 10),
                     _InfoChip(
-                      icon: Icons.check_circle,
+                      icon: AppIcons.checkCircle,
                       label: 'PATCH /cancel disponible · POST /start disponible',
                     ),
                     const SizedBox(height: 12),
@@ -158,8 +149,8 @@ final class _MatchLifecycleView extends StatelessWidget {
                           Wrap(
                             spacing: 8,
                             children: [
-                              _Pill(
-                                text: m.status,
+                              InfoBadge(
+                                label: m.status,
                                 background: scheme.surface.withValues(alpha: 0.22),
                                 foreground: scheme.onPrimary,
                               ),
@@ -179,7 +170,7 @@ final class _MatchLifecycleView extends StatelessWidget {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(Icons.location_on,
+                              Icon(AppIcons.pin,
                                   size: 16, color: scheme.onPrimary),
                               const SizedBox(width: 6),
                               Expanded(
@@ -204,7 +195,7 @@ final class _MatchLifecycleView extends StatelessWidget {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(Icons.schedule,
+                              Icon(AppIcons.clock,
                                   size: 16, color: scheme.onPrimary),
                               const SizedBox(width: 6),
                               Text(
@@ -218,7 +209,7 @@ final class _MatchLifecycleView extends StatelessWidget {
                                     ),
                               ),
                               const SizedBox(width: 12),
-                              Icon(Icons.payments,
+                              Icon(AppIcons.payments,
                                   size: 16, color: scheme.onPrimary),
                               const SizedBox(width: 6),
                               Text(
@@ -249,8 +240,8 @@ final class _MatchLifecycleView extends StatelessWidget {
                               ),
                         ),
                         const Spacer(),
-                        _Pill(
-                          text: '${m.participantCount}/${m.maxParticipants} Anotados',
+                        InfoBadge(
+                          label: '${m.participantCount}/${m.maxParticipants} Anotados',
                           background: scheme.primary.withValues(alpha: 0.12),
                           foreground: scheme.primary,
                         ),
@@ -265,8 +256,8 @@ final class _MatchLifecycleView extends StatelessWidget {
                           ),
                           title: Text('Usuario ${idPreview(p.userId)}'),
                           subtitle: Text('Joined: ${shortDateLabel(p.joinedAt)}'),
-                          trailing: _Pill(
-                            text: 'Pagado',
+                          trailing: InfoBadge(
+                            label: 'Pagado',
                             background: scheme.primary.withValues(alpha: 0.12),
                             foreground: scheme.primary,
                           ),
@@ -276,7 +267,7 @@ final class _MatchLifecycleView extends StatelessWidget {
                     if (loaded.actionMessage != null) ...[
                       const SizedBox(height: 12),
                       _InfoChip(
-                        icon: Icons.info_outline,
+                        icon: AppIcons.info,
                         label: loaded.actionMessage!,
                       ),
                     ],
@@ -309,7 +300,7 @@ final class _MatchLifecycleView extends StatelessWidget {
                             side: BorderSide(color: scheme.error),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                          icon: const Icon(Icons.close),
+                          icon: const Icon(AppIcons.close),
                           label: const Text('Cancelar'),
                         ),
                       ),
@@ -356,7 +347,7 @@ final class _MatchLifecycleView extends StatelessWidget {
                                   width: 18,
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
-                              : Icon(canFinish ? Icons.flag : Icons.play_arrow),
+                              : Icon(canFinish ? AppIcons.flag : AppIcons.play),
                           label: Text(canFinish ? 'Finalizar' : 'Iniciar'),
                         ),
                       ),
@@ -372,50 +363,19 @@ final class _MatchLifecycleView extends StatelessWidget {
   }
 }
 
-final class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.active});
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Chip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w900,
-          color: active ? scheme.onPrimary : scheme.onSurfaceVariant,
-        ),
-      ),
-      backgroundColor: active ? scheme.primary : scheme.surfaceContainerHighest,
-      side: BorderSide(
-        color: active ? scheme.primary : scheme.outlineVariant,
-      ),
+Widget _statusPill(ColorScheme scheme, String label, bool active) => InfoBadge(
+      label: label,
+      background: active ? scheme.primary : scheme.surfaceContainerHighest,
+      foreground: active ? scheme.onPrimary : scheme.onSurfaceVariant,
+      borderColor: active ? scheme.primary : scheme.outlineVariant,
     );
-  }
-}
 
-final class _GhostChip extends StatelessWidget {
-  const _GhostChip({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Chip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w900,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-      backgroundColor: scheme.surfaceContainerHighest,
-      side: BorderSide(color: scheme.outlineVariant),
+Widget _ghostPill(ColorScheme scheme, String label) => InfoBadge(
+      label: label,
+      background: scheme.surfaceContainerHighest,
+      foreground: scheme.onSurfaceVariant,
+      borderColor: scheme.outlineVariant,
     );
-  }
-}
 
 final class _InfoChip extends StatelessWidget {
   const _InfoChip({required this.icon, required this.label});
@@ -453,33 +413,4 @@ final class _InfoChip extends StatelessWidget {
   }
 }
 
-final class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.text,
-    required this.background,
-    required this.foreground,
-  });
-
-  final String text;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: foreground,
-            ),
-      ),
-    );
-  }
-}
 

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/models/onboarding_status_dto.dart';
@@ -166,7 +167,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           decoration: InputDecoration(
                             labelText: 'Nombre completo',
                             hintText: 'Carlos Rodríguez',
-                            prefixIcon: const Icon(Icons.person_outline),
+                            prefixIcon: const Icon(AppIcons.person),
                             errorText: _nameError,
                           ),
                         ),
@@ -176,7 +177,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           decoration: InputDecoration(
                             labelText: 'Teléfono (WhatsApp)',
                             hintText: '+58 412 555 1234',
-                            prefixIcon: const Icon(Icons.phone_outlined),
+                            prefixIcon: const Icon(AppIcons.phone),
                             errorText: _phoneError,
                             helperText: 'Te avisamos cuando una partida está cuadrada.',
                           ),
@@ -193,7 +194,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           decoration: InputDecoration(
                             labelText: 'Número de documento (DNI)',
                             hintText: 'Ej: 12345678',
-                            prefixIcon: const Icon(Icons.badge_outlined),
+                            prefixIcon: const Icon(AppIcons.badge),
                             errorText: _documentError,
                             helperText: 'Opcional. Solo números sin puntos ni guiones.',
                           ),
@@ -205,7 +206,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           child: InputDecorator(
                             decoration: InputDecoration(
                               labelText: 'Fecha de nacimiento',
-                              prefixIcon: const Icon(Icons.cake_outlined),
+                              prefixIcon: const Icon(AppIcons.cake),
                               errorText: _birthError,
                             ),
                             child: Row(
@@ -221,7 +222,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                                     ),
                                   ),
                                 ),
-                                const Icon(Icons.calendar_month),
+                                const Icon(AppIcons.calendar),
                               ],
                             ),
                           ),
@@ -234,7 +235,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           decoration: const InputDecoration(
                             labelText: 'Ciudad',
                             hintText: 'Caracas, Venezuela',
-                            prefixIcon: Icon(Icons.location_on_outlined),
+                            prefixIcon: Icon(AppIcons.pin),
                             helperText: 'La usamos para mostrarte partidas y canchas cercanas.',
                           ),
                         ),
@@ -257,7 +258,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                 ],
                 PrimaryButton(
                   label: 'Continuar',
-                  icon: Icons.arrow_forward,
+                  icon: AppIcons.arrowForward,
                   height: 54,
                   isLoading: saving,
                   onPressed: _submit,
@@ -317,7 +318,7 @@ class _AvatarPicker extends StatelessWidget {
                     width: 2.5,
                   ),
                 ),
-                child: Icon(Icons.camera_alt, size: 17, color: scheme.onSurface),
+                child: Icon(AppIcons.camera, size: 17, color: scheme.onSurface),
               ),
             ],
           ),

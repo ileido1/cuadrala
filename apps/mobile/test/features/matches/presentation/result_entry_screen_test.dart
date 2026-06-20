@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_api.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_api.dart';
@@ -170,12 +171,32 @@ void main() {
       expect(find.text('Diana'), findsOneWidget);
     });
 
-    testWidgets('court step renders 4 DragTarget zones', (tester) async {
+    // Paso 1 ya no es drag-and-drop (no hay `DragTarget` en la pantalla
+    // actual) — es tap: tocás un jugador de "SIN ASIGNAR" y luego su
+    // posición. Cada equipo tiene 2 posiciones (Drive/Revés) => 4 en total.
+    testWidgets('court step renders 4 tappable position slots (Drive/Revés x2 teams)',
+        (tester) async {
       await _setupGetIt(matchesApi, catalogApi);
       await tester.pumpWidget(_buildTestApp());
       await tester.pumpAndSettle();
 
-      expect(find.byType(DragTarget<String>), findsNWidgets(4));
+      expect(find.text('Drive'), findsNWidgets(2));
+      expect(find.text('Revés'), findsNWidgets(2));
+    });
+
+    testWidgets(
+        'tapping a pool player then a position slot assigns them via the cubit',
+        (tester) async {
+      await _setupGetIt(matchesApi, catalogApi);
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Ana'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Drive').first);
+      await tester.pumpAndSettle();
+
+      expect(_lastCubit!.state.courtPositions[CourtPosition.teamADrive], 'u1');
     });
 
     testWidgets(
@@ -217,7 +238,7 @@ void main() {
       // Tap + on team A until 7
       final incrementA = find.descendant(
         of: find.byKey(const Key('draft.score.a')),
-        matching: find.byIcon(Icons.add_circle_outline),
+        matching: find.byIcon(AppIcons.addCircle),
       );
       for (int i = 0; i < 7; i++) {
         await tester.tap(incrementA);
@@ -227,7 +248,7 @@ void main() {
       // Tap + on team B until 5
       final incrementB = find.descendant(
         of: find.byKey(const Key('draft.score.b')),
-        matching: find.byIcon(Icons.add_circle_outline),
+        matching: find.byIcon(AppIcons.addCircle),
       );
       for (int i = 0; i < 5; i++) {
         await tester.tap(incrementB);
@@ -257,7 +278,7 @@ void main() {
 
       final incrementA = find.descendant(
         of: find.byKey(const Key('draft.score.a')),
-        matching: find.byIcon(Icons.add_circle_outline),
+        matching: find.byIcon(AppIcons.addCircle),
       );
       for (int i = 0; i < 6; i++) {
         await tester.tap(incrementA);
@@ -266,7 +287,7 @@ void main() {
 
       final incrementB = find.descendant(
         of: find.byKey(const Key('draft.score.b')),
-        matching: find.byIcon(Icons.add_circle_outline),
+        matching: find.byIcon(AppIcons.addCircle),
       );
       for (int i = 0; i < 4; i++) {
         await tester.tap(incrementB);
@@ -292,7 +313,7 @@ void main() {
 
       final incrementA = find.descendant(
         of: find.byKey(const Key('draft.score.a')),
-        matching: find.byIcon(Icons.add_circle_outline),
+        matching: find.byIcon(AppIcons.addCircle),
       );
       for (int i = 0; i < 6; i++) {
         await tester.tap(incrementA);
@@ -300,7 +321,7 @@ void main() {
       }
       final incrementB = find.descendant(
         of: find.byKey(const Key('draft.score.b')),
-        matching: find.byIcon(Icons.add_circle_outline),
+        matching: find.byIcon(AppIcons.addCircle),
       );
       for (int i = 0; i < 3; i++) {
         await tester.tap(incrementB);

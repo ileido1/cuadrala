@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../auth/presentation/cubit/session_cubit.dart';
 import '../data/onboarding_repository.dart';
 import 'cubit/onboarding_cubit.dart';
@@ -72,23 +74,10 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
             return const Center(child: CircularProgressIndicator());
           }
           if (state.type == OnboardingStatusType.error) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 48),
-                    const SizedBox(height: 12),
-                    Text(state.errorMessage ?? 'No se pudo cargar el onboarding.'),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: () => context.read<OnboardingCubit>().load(),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
+            return ErrorState(
+              icon: AppIcons.warning,
+              message: state.errorMessage ?? 'No se pudo cargar el onboarding.',
+              onRetry: () => context.read<OnboardingCubit>().load(),
             );
           }
 
@@ -164,7 +153,7 @@ class _OnboardingHeader extends StatelessWidget {
                         color: scheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(11),
                       ),
-                      child: const Icon(Icons.chevron_left, size: 20),
+                      child: const Icon(AppIcons.chevronLeft, size: 20),
                     ),
                   ),
                   Expanded(

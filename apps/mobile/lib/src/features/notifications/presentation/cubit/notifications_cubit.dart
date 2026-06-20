@@ -44,6 +44,9 @@ class NotificationsCubit extends Cubit<NotificationsState> {
     try {
       await _repository.markAllAsRead();
       await load(onlyUnread: state.onlyUnread);
+      // `load()` no toca `isMutating` — sin esto queda en `true` para siempre
+      // tras un éxito y el botón de "marcar todas como leídas" no se reactiva.
+      emit(state.copyWith(isMutating: false));
     } catch (e) {
       emit(state.copyWith(isMutating: false, errorMessage: 'No pudimos marcar como leídas. Reintentar.'));
     }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/shared/constants/availability_slot_styles.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/error_state.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/selectable_chip.dart';
 import 'package:cuadrala_mobile/src/features/onboarding/data/models/user_availability_dto.dart';
 import 'package:cuadrala_mobile/src/features/availability/data/availability_repository.dart';
 import 'package:cuadrala_mobile/src/features/availability/presentation/cubit/availability_cubit.dart';
@@ -62,7 +65,7 @@ final class _AvailabilityView extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('availability.add.button'),
         onPressed: () => _showAddBottomSheet(context),
-        icon: const Icon(Icons.add),
+        icon: const Icon(AppIcons.add),
         label: const Text('Agregar'),
       ),
     );
@@ -92,7 +95,8 @@ final class _Body extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.status == AvailabilityStatus.failure) {
-      return _ErrorView(
+      return ErrorState(
+        icon: AppIcons.warning,
         message: state.error ?? 'No se pudieron cargar tus horarios.',
         onRetry: () => context.read<AvailabilityCubit>().load(),
       );
@@ -139,7 +143,7 @@ final class _SlotCard extends StatelessWidget {
           color: scheme.error,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(Icons.delete_outline, color: scheme.onError),
+        child: Icon(AppIcons.delete, color: scheme.onError),
       ),
       onDismissed: (_) => onRemove(),
       confirmDismiss: (_) async {
@@ -180,7 +184,7 @@ final class _SlotCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+            Icon(AppIcons.chevronRight, color: scheme.onSurfaceVariant),
           ],
         ),
       ),
@@ -223,13 +227,13 @@ final class _DayBadge extends StatelessWidget {
 
   (IconData, Color) _metaFor(DayOfWeek day, ColorScheme scheme) {
     return switch (day) {
-      DayOfWeek.monday => (Icons.work_outline, Colors.indigo),
-      DayOfWeek.tuesday => (Icons.local_fire_department_outlined, Colors.orange),
-      DayOfWeek.wednesday => (Icons.sports_esports_outlined, Colors.cyan),
-      DayOfWeek.thursday => (Icons.thunderstorm_outlined, Colors.purple),
-      DayOfWeek.friday => (Icons.star_outline, Colors.amber),
-      DayOfWeek.saturday => (Icons.celebration_outlined, Colors.pink),
-      DayOfWeek.sunday => (Icons.restaurant_outlined, Colors.teal),
+      DayOfWeek.monday => (AppIcons.work, Colors.indigo),
+      DayOfWeek.tuesday => (AppIcons.fire, Colors.orange),
+      DayOfWeek.wednesday => (AppIcons.esports, Colors.cyan),
+      DayOfWeek.thursday => (AppIcons.storm, Colors.purple),
+      DayOfWeek.friday => (AppIcons.star, Colors.amber),
+      DayOfWeek.saturday => (AppIcons.celebration, Colors.pink),
+      DayOfWeek.sunday => (AppIcons.restaurant, Colors.teal),
     };
   }
 }
@@ -246,7 +250,7 @@ final class _EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.schedule_outlined, size: 52, color: scheme.onSurfaceVariant),
+            Icon(AppIcons.clock, size: 52, color: scheme.onSurfaceVariant),
             const SizedBox(height: 16),
             const Text('Sin horarios configurados', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
             const SizedBox(height: 8),
@@ -255,33 +259,6 @@ final class _EmptyView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: scheme.onSurfaceVariant, height: 1.3),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-final class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 52, color: scheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ),
       ),
@@ -392,7 +369,7 @@ final class _AddSlotBottomSheetState extends State<_AddSlotBottomSheet> {
                 runSpacing: 8,
                 children: [
                   for (final d in _daysOrder)
-                    _DayChip(
+                    SelectableChip(
                       label: _daysShort[d]!,
                       selected: _days.contains(d),
                       onTap: () {
@@ -439,7 +416,7 @@ final class _AddSlotBottomSheetState extends State<_AddSlotBottomSheet> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_outlined, color: scheme.error, size: 20),
+                      Icon(AppIcons.warning, color: scheme.error, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -472,7 +449,7 @@ final class _AddSlotBottomSheetState extends State<_AddSlotBottomSheet> {
                   onPressed: saving ? null : _submit,
                   icon: saving
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.check, size: 20),
+                      : const Icon(AppIcons.check, size: 20),
                   label: Text(saving ? 'Guardando…' : 'Guardar'),
                 ),
               ),
@@ -484,38 +461,6 @@ final class _AddSlotBottomSheetState extends State<_AddSlotBottomSheet> {
   }
 }
 
-final class _DayChip extends StatelessWidget {
-  const _DayChip({required this.label, required this.selected, required this.onTap});
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: selected ? scheme.primary : scheme.surfaceContainerHighest,
-          border: Border.all(color: selected ? scheme.primary : scheme.outlineVariant),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            color: selected ? scheme.onPrimary : scheme.onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 final class _SlotCardBS extends StatelessWidget {
   const _SlotCardBS({required this.meta, required this.selected, required this.onTap});
@@ -566,7 +511,7 @@ final class _SlotCardBS extends StatelessWidget {
                 color: selected ? scheme.primary : Colors.transparent,
                 border: Border.all(color: selected ? scheme.primary : scheme.outline, width: 1.5),
               ),
-              child: selected ? Icon(Icons.check, size: 16, color: scheme.onPrimary) : null,
+              child: selected ? Icon(AppIcons.check, size: 16, color: scheme.onPrimary) : null,
             ),
           ],
         ),

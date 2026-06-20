@@ -9,6 +9,7 @@ import '../../../core/formatting/fx_price_labels.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/money_conversion.dart';
 import '../../../core/models/currency_code.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../features/catalog/data/catalog_repository.dart';
 import '../../../features/matches/data/matches_repository.dart';
@@ -331,7 +332,7 @@ class _UnifiedScroll extends StatelessWidget {
           onChanged: cubit.search,
           decoration: const InputDecoration(
             hintText: 'Buscar club o dirección',
-            prefixIcon: Icon(Icons.search_rounded),
+            prefixIcon: Icon(AppIcons.search),
           ),
         ),
         const SizedBox(height: 12),
@@ -342,12 +343,12 @@ class _UnifiedScroll extends StatelessWidget {
             SegmentedOption(
               value: _VenueView.lista,
               label: 'Lista',
-              icon: Icons.view_list_rounded,
+              icon: AppIcons.list,
             ),
             SegmentedOption(
               value: _VenueView.mapa,
               label: 'Mapa',
-              icon: Icons.map_rounded,
+              icon: AppIcons.map,
             ),
           ],
         ),
@@ -589,7 +590,7 @@ class _CompactVenueMap extends StatelessWidget {
                           child: GestureDetector(
                             onTap: () => cubit.selectVenue(venue),
                             child: Icon(
-                              Icons.location_pin,
+                              AppIcons.pin,
                               size: 36,
                               color: state.selectedVenue?.id == venue.id
                                   ? scheme.primary
@@ -631,7 +632,7 @@ class _PanelHeader extends StatelessWidget {
                 color: scheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.close_rounded, size: 20, color: scheme.onSurface),
+              child: Icon(AppIcons.close, size: 20, color: scheme.onSurface),
             ),
           ),
           const SizedBox(width: 12),

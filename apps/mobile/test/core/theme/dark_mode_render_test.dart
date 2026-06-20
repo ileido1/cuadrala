@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
+import 'package:cuadrala_mobile/src/core/theme/brand_colors.dart';
 
 /// Smoke tests: verify key screens render without overflow or exceptions
 /// in both light and dark mode.
@@ -65,9 +66,11 @@ void main() {
         ),
       );
 
-      final scheme = Theme.of(capturedContext).colorScheme;
-      expect(scheme.brightness, Brightness.dark);
-      expect(scheme.surface, const Color(0xFF0B1220));
+      final theme = Theme.of(capturedContext);
+      expect(theme.colorScheme.brightness, Brightness.dark);
+      // El fondo de scaffold es `--bg`; `colorScheme.surface` es el color de
+      // card (`--surface`) a propósito — ver AppTheme.dark().
+      expect(theme.scaffoldBackgroundColor, BrandColors.darkSurface);
     });
   });
 }

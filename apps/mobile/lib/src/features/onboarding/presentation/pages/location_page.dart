@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/location/location_service.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/selectable_chip.dart';
 import '../../data/models/onboarding_status_dto.dart';
@@ -130,7 +131,7 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                           decoration: const InputDecoration(
                             labelText: 'Zona o ciudad (opcional)',
                             hintText: 'Caracas — La Castellana',
-                            prefixIcon: Icon(Icons.place_outlined),
+                            prefixIcon: Icon(AppIcons.pin),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -232,7 +233,7 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                                   ],
                                   decoration: const InputDecoration(
                                     labelText: 'Latitud',
-                                    prefixIcon: Icon(Icons.my_location_outlined),
+                                    prefixIcon: Icon(AppIcons.myLocation),
                                   ),
                                 ),
                               ),
@@ -249,7 +250,7 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                                   ],
                                   decoration: const InputDecoration(
                                     labelText: 'Longitud',
-                                    prefixIcon: Icon(Icons.explore_outlined),
+                                    prefixIcon: Icon(AppIcons.explore),
                                   ),
                                 ),
                               ),
@@ -272,7 +273,7 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                 ),
                 PrimaryButton(
                   label: 'Continuar',
-                  icon: Icons.arrow_forward,
+                  icon: AppIcons.arrowForward,
                   height: 54,
                   isLoading: saving,
                   onPressed: _submit,
@@ -324,7 +325,7 @@ class _GpsCard extends StatelessWidget {
                         valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
                     )
-                  : const Icon(Icons.gps_fixed, color: Colors.white, size: 22),
+                  : const Icon(AppIcons.myLocation, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -352,7 +353,7 @@ class _GpsCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (!loading) Icon(Icons.chevron_right, color: scheme.primary),
+            if (!loading) Icon(AppIcons.chevronRight, color: scheme.primary),
           ],
         ),
       ),

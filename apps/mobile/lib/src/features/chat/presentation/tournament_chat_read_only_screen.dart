@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/chat_repository.dart';
 import 'cubit/tournament_chat_read_only_cubit.dart';
@@ -51,7 +53,7 @@ class _TournamentChatReadOnlyViewState extends State<_TournamentChatReadOnlyView
         actions: [
           IconButton(
             onPressed: () => context.read<TournamentChatReadOnlyCubit>().load(),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(AppIcons.refresh),
           ),
         ],
       ),
@@ -61,21 +63,9 @@ class _TournamentChatReadOnlyViewState extends State<_TournamentChatReadOnlyView
             return const Center(child: CircularProgressIndicator());
           }
           if (state is TournamentChatFailure) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: () => context.read<TournamentChatReadOnlyCubit>().load(),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
+            return ErrorState(
+              message: state.message,
+              onRetry: () => context.read<TournamentChatReadOnlyCubit>().load(),
             );
           }
 

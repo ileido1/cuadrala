@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/brand_colors.dart';
 
 /// Mitad de cancha (equipo).
@@ -321,7 +322,7 @@ class _Spot extends StatelessWidget {
                   width: 36,
                   height: 36,
                   child: Icon(
-                    joinable ? Icons.add_rounded : Icons.group_outlined,
+                    joinable ? AppIcons.add : AppIcons.group,
                     size: 18,
                     color: iconColor,
                   ),

@@ -29,7 +29,12 @@ final class AppTheme {
       surfaceContainer: BrandColors.lightSurface,
       surfaceContainerHigh: BrandColors.lightSurfaceContainer,
       surfaceContainerHighest: BrandColors.lightSurfaceContainer,
-      outline: BrandColors.lightOutline,
+      // `outline` = `--line-strong` (OutlineBtn, toggle off…), `outlineVariant`
+      // = `--line` (cards, chips, segmented, inputs) — antes ninguno de los
+      // dos estaba fijado al token real del diseño.
+      outline: BrandColors.lightOutlineStrong,
+      outlineVariant: BrandColors.lightOutline,
+      onSurfaceVariant: BrandColors.lightMuted,
     );
 
     return _buildTheme(
@@ -59,8 +64,13 @@ final class AppTheme {
       surfaceContainer: BrandColors.darkSurfaceContainer, // --surface
       surfaceContainerHigh: BrandColors.darkSurfaceHigh,
       surfaceContainerHighest: BrandColors.darkSurface2, // --surface-2
-      outline: BrandColors.darkOutline,
+      // `outline` = `--line-strong` (OutlineBtn, toggle off…), `outlineVariant`
+      // = `--line` (cards, chips, segmented, inputs) — antes ninguno de los
+      // dos estaba fijado al token real del diseño.
+      outline: BrandColors.darkOutlineStrong,
+      outlineVariant: BrandColors.darkOutline,
       onSurface: BrandColors.darkOnSurface,
+      onSurfaceVariant: BrandColors.darkMuted,
     );
 
     return _buildTheme(
@@ -94,15 +104,16 @@ final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerHighest,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        // `Field` del prototipo va sobre `--surface`, no `--surface-2`.
+        fillColor: scheme.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
-          borderSide: BorderSide(color: scheme.outline),
+          borderSide: BorderSide(color: scheme.outlineVariant, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
-          borderSide: BorderSide(color: scheme.outline),
+          borderSide: BorderSide(color: scheme.outlineVariant, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
@@ -110,7 +121,7 @@ final class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
-          borderSide: BorderSide(color: scheme.error),
+          borderSide: BorderSide(color: scheme.error, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
@@ -126,17 +137,20 @@ final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_radius),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          // `OutlineBtn` del prototipo es un botón con fondo `--surface`, no
+          // transparente — solo el borde lo distingue del primario.
+          backgroundColor: scheme.surface,
           minimumSize: const Size.fromHeight(48),
-          side: BorderSide(color: scheme.outline),
+          side: BorderSide(color: scheme.outline, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_radius),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
         ),
       ),
       cardTheme: CardThemeData(
@@ -145,7 +159,7 @@ final class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_radiusLg),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6), width: 1.5),
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(

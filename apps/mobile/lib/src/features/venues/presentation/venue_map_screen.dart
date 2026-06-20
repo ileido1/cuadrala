@@ -4,7 +4,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../data/models/venue_dto.dart';
 import 'cubit/venue_map_cubit.dart';
 import 'cubit/venue_map_state.dart';
@@ -61,26 +63,7 @@ class _Failure extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                error,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: onRetry,
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      ),
+      body: ErrorState(message: error, onRetry: onRetry),
     );
   }
 }
@@ -127,7 +110,7 @@ class _MapView extends StatelessWidget {
                       child: GestureDetector(
                         onTap: () => cubit.selectVenue(venue),
                         child: const Icon(
-                          Icons.location_pin,
+                          AppIcons.pin,
                           size: 36,
                           color: Colors.red,
                         ),
@@ -181,7 +164,7 @@ class _SearchBar extends StatelessWidget {
         onChanged: onChanged,
         decoration: const InputDecoration(
           hintText: 'Buscar club o dirección',
-          prefixIcon: Icon(Icons.search),
+          prefixIcon: Icon(AppIcons.search),
           border: OutlineInputBorder(borderSide: BorderSide.none),
           filled: true,
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -233,7 +216,7 @@ class _VenueMiniSheet extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(AppIcons.close),
                     onPressed: onClose,
                   ),
                 ],

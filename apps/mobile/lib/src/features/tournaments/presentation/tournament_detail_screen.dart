@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../data/models/tournament_schedule_dto.dart';
 import '../data/models/tournament_scoreboard_dto.dart';
@@ -41,7 +42,7 @@ final class TournamentDetailScreen extends StatelessWidget {
             actions: [
               IconButton(
                 onPressed: () => context.push(Routes.tournamentChat(tournamentId)),
-                icon: const Icon(Icons.chat_bubble_outline),
+                icon: const Icon(AppIcons.chat),
                 tooltip: 'Chat del torneo',
               ),
             ],
@@ -103,7 +104,7 @@ final class _ScheduleTab extends StatelessWidget {
                                   participantUserIds: participantIds,
                                 )
                             : null,
-                        icon: const Icon(Icons.auto_awesome),
+                        icon: const Icon(AppIcons.sparkle),
                         label: Text(
                           participantIds.length >= 2
                               ? 'Generar fixture'
@@ -423,7 +424,7 @@ final class _ErrorBox extends StatelessWidget {
           const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(AppIcons.refresh),
             label: const Text('Reintentar'),
           ),
         ],

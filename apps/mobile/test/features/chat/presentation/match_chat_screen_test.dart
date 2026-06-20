@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/chat/data/chat_repository.dart';
 import 'package:cuadrala_mobile/src/features/chat/data/models/chat_message_dto.dart';
 import 'package:cuadrala_mobile/src/features/chat/presentation/match_chat_screen.dart';
@@ -84,7 +85,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Mensaje nuevo');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(AppIcons.send));
       await tester.pumpAndSettle();
 
       expect(find.text('Mensaje nuevo'), findsOneWidget);

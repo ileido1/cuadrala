@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
+import '../../../shared/widgets/cuadrala_mark.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -39,14 +41,11 @@ class WelcomeScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(8),
                       child: ClipOval(
                         child: Container(
-                          color: scheme.surface,
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Image(
-                              image: AssetImage('assets/images/logo.png'),
-                              fit: BoxFit.contain,
-                            ),
-                          ),
+                          // Blanco fijo (#fff) en el prototipo, no
+                          // `scheme.surface` — en dark mode ese rol es
+                          // oscuro y el mark quedaría invisible.
+                          color: Colors.white,
+                          child: const Center(child: CuadralaMark(size: 48)),
                         ),
                       ),
                     ),
@@ -102,7 +101,7 @@ class WelcomeScreen extends StatelessWidget {
                   const SizedBox(height: 18),
                   FilledButton.icon(
                     onPressed: () => context.go(Routes.register),
-                    icon: const Icon(Icons.mail_outline, size: 20),
+                    icon: const Icon(AppIcons.mail, size: 20),
                     label: const Text('Crear cuenta con email'),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(50),

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../data/notifications_repository.dart';
 import 'cubit/notification_prefs_cubit.dart';
 import 'cubit/notification_prefs_state.dart';
@@ -33,21 +35,9 @@ final class _NotificationPrefsView extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (state is NotificationPrefsFailure) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => context.read<NotificationPrefsCubit>().load(),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
+            return ErrorState(
+              message: state.message,
+              onRetry: () => context.read<NotificationPrefsCubit>().load(),
             );
           }
 
@@ -86,28 +76,28 @@ final class _NotificationPrefsView extends StatelessWidget {
                         ),
                       ),
                     _TypeToggleTile(
-                      icon: Icons.people_outline,
+                      icon: AppIcons.people,
                       title: 'Cupos disponibles',
                       subtitle: 'Cuando se abre un cupo en una partida',
                       type: 'MATCH_SLOT_OPENED',
                       value: loaded.isTypeEnabled('MATCH_SLOT_OPENED'),
                     ),
                     _TypeToggleTile(
-                      icon: Icons.cancel_outlined,
+                      icon: AppIcons.closeCircle,
                       title: 'Partidas canceladas',
                       subtitle: 'Cuando se cancela una partida',
                       type: 'MATCH_CANCELLED',
                       value: loaded.isTypeEnabled('MATCH_CANCELLED'),
                     ),
                     _TypeToggleTile(
-                      icon: Icons.chat_bubble_outline,
+                      icon: AppIcons.chat,
                       title: 'Mensajes de chat',
                       subtitle: 'Cuando alguien escribe en el chat',
                       type: 'CHAT_MESSAGE',
                       value: loaded.isTypeEnabled('CHAT_MESSAGE'),
                     ),
                     _TypeToggleTile(
-                      icon: Icons.payments_outlined,
+                      icon: AppIcons.payments,
                       title: 'Pagos pendientes',
                       subtitle: 'Recordatorios de pago',
                       type: 'PAYMENT_PENDING',

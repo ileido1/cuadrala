@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../cubit/result_entry_state.dart';
 
 // ---------------------------------------------------------------------------
@@ -361,7 +362,7 @@ class _CourtZone extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.person_add_outlined,
+                    AppIcons.personAdd,
                     color: teamColor.withValues(alpha: 0.5),
                     size: 20,
                   ),
@@ -421,7 +422,7 @@ class _UnassignedPool extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle_outline, color: scheme.primary, size: 16),
+            Icon(AppIcons.checkCircle, color: scheme.primary, size: 16),
             const SizedBox(width: 6),
             Text(
               'Todos asignados',

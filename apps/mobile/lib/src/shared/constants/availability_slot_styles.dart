@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/brand_colors.dart';
 import '../../features/onboarding/data/models/user_availability_dto.dart';
 
@@ -22,19 +23,19 @@ const availabilitySlotStyles = <AvailabilitySlot, AvailabilitySlotStyle>{
   AvailabilitySlot.morning: AvailabilitySlotStyle(
     title: 'Mañana',
     range: '06:00 – 12:00',
-    icon: Icons.wb_sunny_outlined,
+    icon: AppIcons.sun,
     color: BrandColors.slotMorning,
   ),
   AvailabilitySlot.afternoon: AvailabilitySlotStyle(
     title: 'Tarde',
     range: '12:00 – 18:00',
-    icon: Icons.wb_twilight,
+    icon: AppIcons.sunset,
     color: BrandColors.slotAfternoon,
   ),
   AvailabilitySlot.evening: AvailabilitySlotStyle(
     title: 'Noche',
     range: '18:00 – 22:00',
-    icon: Icons.nightlight_outlined,
+    icon: AppIcons.moon,
     color: BrandColors.slotEvening,
   ),
 };

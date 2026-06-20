@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/cuadrala_mark.dart';
+
 class AuthHeader extends StatelessWidget {
   const AuthHeader({super.key, required this.title, this.subtitle});
 
@@ -31,14 +33,11 @@ class AuthHeader extends StatelessWidget {
               padding: const EdgeInsets.all(6),
               child: ClipOval(
                 child: Container(
-                  color: scheme.surface,
-                  child: const Padding(
-                    padding: EdgeInsets.all(3),
-                    child: Image(
-                      image: AssetImage('assets/images/logo.png'),
-                      fit: BoxFit.contain,
-                    ),
-                  ),
+                  // El círculo interno del mark es blanco fijo en el
+                  // prototipo (#fff), no el `surface` del tema — en dark
+                  // mode `scheme.surface` sería oscuro y el mark se perdería.
+                  color: Colors.white,
+                  child: const Center(child: CuadralaMark(size: 32)),
                 ),
               ),
             ),

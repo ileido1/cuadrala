@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/feature_flags.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../core/di/service_locator.dart';
 import '../../home/presentation/cubit/home_cubit.dart';
@@ -30,28 +31,28 @@ class ShellTabConfig {
 
 final _defaultTabs = [
   const ShellTabConfig(
-    activeIcon: Icons.home,
-    inactiveIcon: Icons.home_outlined,
+    activeIcon: AppIcons.home,
+    inactiveIcon: AppIcons.home,
     label: 'Inicio',
   ),
   const ShellTabConfig(
-    activeIcon: Icons.sports_tennis,
-    inactiveIcon: Icons.sports_tennis_outlined,
+    activeIcon: AppIcons.racquetSport,
+    inactiveIcon: AppIcons.racquetSport,
     label: 'Partidas',
   ),
   const ShellTabConfig(
-    activeIcon: Icons.emoji_events,
-    inactiveIcon: Icons.emoji_events_outlined,
+    activeIcon: AppIcons.trophy,
+    inactiveIcon: AppIcons.trophy,
     label: 'Torneos',
   ),
   const ShellTabConfig(
-    activeIcon: Icons.notifications,
-    inactiveIcon: Icons.notifications_outlined,
+    activeIcon: AppIcons.bell,
+    inactiveIcon: AppIcons.bell,
     label: 'Avisos',
   ),
   const ShellTabConfig(
-    activeIcon: Icons.person,
-    inactiveIcon: Icons.person_outlined,
+    activeIcon: AppIcons.person,
+    inactiveIcon: AppIcons.person,
     label: 'Perfil',
   ),
 ];

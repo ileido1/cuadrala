@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/brand_colors.dart';
 import 'avatar_stack.dart';
 import 'dual_price.dart';
+import 'info_badge.dart';
+import 'surface_tag.dart';
 
 /// Tarjeta de partida del rediseño: bloque de fecha a la izquierda, badge de
 /// categoría lime, título (club · pista), ubicación, y pie con pila de
@@ -87,6 +89,7 @@ class MatchCard extends StatelessWidget {
               color: live
                   ? scheme.tertiary.withValues(alpha: 0.55)
                   : scheme.outlineVariant,
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
@@ -114,10 +117,15 @@ class MatchCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          _CategoryBadge(label: category),
+                          InfoBadge(
+                            label: category,
+                            background: BrandColors.limeAccent,
+                            foreground: BrandColors.onLime,
+                            fontSize: 11,
+                          ),
                           if (surfaceTag != null) ...[
                             const SizedBox(width: 6),
-                            _SurfaceTag(label: surfaceTag!),
+                            SurfaceTag(label: surfaceTag!),
                           ],
                         ],
                       ),
@@ -235,7 +243,9 @@ class _DateBlock extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: live ? Border.all(color: accent.withValues(alpha: 0.55)) : null,
+        border: live
+            ? Border.all(color: accent.withValues(alpha: 0.55), width: 1.5)
+            : null,
       ),
       child: Column(
         children: [
@@ -276,54 +286,3 @@ class _DateBlock extends StatelessWidget {
   }
 }
 
-class _CategoryBadge extends StatelessWidget {
-  const _CategoryBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: BrandColors.limeAccent,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: BrandColors.onLime,
-          fontWeight: FontWeight.w800,
-          fontSize: 11,
-        ),
-      ),
-    );
-  }
-}
-
-class _SurfaceTag extends StatelessWidget {
-  const _SurfaceTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w800,
-          fontSize: 10.5,
-        ),
-      ),
-    );
-  }
-}

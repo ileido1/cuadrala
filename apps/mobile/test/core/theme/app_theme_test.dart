@@ -23,8 +23,15 @@ void main() {
       expect(dark.colorScheme.primary, BrandColors.padelGreen);
     });
 
-    test('surface is BrandColors.darkSurface', () {
-      expect(dark.colorScheme.surface, BrandColors.darkSurface);
+    // `colorScheme.surface` es el color de card (`--surface`) a propósito —
+    // el fondo de scaffold (`--bg`) vive en `surfaceContainerLowest`. Ver
+    // el comentario en `AppTheme.dark()` (rampa de superficies del rediseño).
+    test('surfaceContainerLowest is BrandColors.darkSurface (--bg, scaffold)', () {
+      expect(dark.colorScheme.surfaceContainerLowest, BrandColors.darkSurface);
+    });
+
+    test('surface is BrandColors.darkSurfaceContainer (--surface, card color)', () {
+      expect(dark.colorScheme.surface, BrandColors.darkSurfaceContainer);
     });
 
     test('tertiary is BrandColors.limeAccent', () {

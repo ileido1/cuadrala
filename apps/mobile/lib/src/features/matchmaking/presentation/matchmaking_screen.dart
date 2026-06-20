@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../data/matchmaking_repository.dart';
 import 'cubit/matchmaking_cubit.dart';
 import 'cubit/matchmaking_state.dart';
@@ -39,21 +40,9 @@ final class _MatchmakingView extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (state is MatchmakingFailure) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => context.read<MatchmakingCubit>().load(),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
+            return ErrorState(
+              message: state.message,
+              onRetry: () => context.read<MatchmakingCubit>().load(),
             );
           }
 

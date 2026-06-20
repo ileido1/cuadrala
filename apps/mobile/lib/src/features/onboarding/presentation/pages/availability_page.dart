@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../../../../shared/constants/availability_slot_styles.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/selectable_chip.dart';
@@ -178,7 +179,7 @@ class _OnboardingAvailabilityPageState extends State<OnboardingAvailabilityPage>
                   ),
                 PrimaryButton(
                   label: '¡Empezar a jugar!',
-                  icon: Icons.bolt,
+                  icon: AppIcons.bolt,
                   height: 54,
                   isLoading: saving,
                   onPressed: _submit,
@@ -273,7 +274,7 @@ class _SlotCard extends StatelessWidget {
                 ),
               ),
               child: selected
-                  ? Icon(Icons.check, size: 16, color: scheme.onPrimary)
+                  ? Icon(AppIcons.check, size: 16, color: scheme.onPrimary)
                   : null,
             ),
           ],

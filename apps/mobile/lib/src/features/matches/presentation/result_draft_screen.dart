@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../data/matches_repository.dart';
 import '../data/models/match_detail_dto.dart';
 
@@ -95,19 +97,7 @@ class _ResultDraftScreenState extends State<ResultDraftScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: _load,
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
-                  ),
-                )
+              ? ErrorState(message: _error!, onRetry: _load)
               : match == null
                   ? const SizedBox.shrink()
                   : ListView(
@@ -141,7 +131,7 @@ class _ResultDraftScreenState extends State<ResultDraftScreen> {
                                         : () => setState(() {
                                               _pointsByUserId[p.userId] = points - 1;
                                             }),
-                                    icon: const Icon(Icons.remove_circle_outline),
+                                    icon: const Icon(AppIcons.removeCircle),
                                   ),
                                   Text(
                                     points.toString(),
@@ -155,7 +145,7 @@ class _ResultDraftScreenState extends State<ResultDraftScreen> {
                                         : () => setState(() {
                                               _pointsByUserId[p.userId] = points + 1;
                                             }),
-                                    icon: const Icon(Icons.add_circle_outline),
+                                    icon: const Icon(AppIcons.addCircle),
                                   ),
                                 ],
                               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/brand_colors.dart';
 
 /// Chip seleccionable (rediseño Cuádrala).
@@ -45,7 +46,7 @@ class SelectableChip extends StatelessWidget {
       border = scheme.outlineVariant;
     }
 
-    final leading = icon ?? (selected ? Icons.check_rounded : null);
+    final leading = icon ?? (selected ? AppIcons.check : null);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/brand_colors.dart';
+import '../../../../shared/widgets/surface_tag.dart';
 
 /// Tarjeta de sede del selector "Dónde" (rediseño Crear partida).
 ///
@@ -91,7 +93,7 @@ class VenueCard extends StatelessWidget {
                       ),
                       if (rating != null) ...[
                         const SizedBox(width: 6),
-                        Icon(Icons.star_rounded,
+                        Icon(AppIcons.star,
                             size: 14, color: BrandColors.limeAccent),
                         const SizedBox(width: 2),
                         Text(
@@ -122,7 +124,7 @@ class VenueCard extends StatelessWidget {
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
-                      children: [for (final t in tags) _Tag(label: t)],
+                      children: [for (final t in tags) SurfaceTag(label: t)],
                     ),
                   ],
                 ],
@@ -153,7 +155,7 @@ class _Thumb extends StatelessWidget {
       alignment: Alignment.center,
       color: scheme.surfaceContainerHighest,
       child: Icon(
-        Icons.sports_tennis_rounded,
+        AppIcons.racquetSport,
         size: 26,
         color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
       ),
@@ -178,28 +180,3 @@ class _Thumb extends StatelessWidget {
   }
 }
 
-class _Tag extends StatelessWidget {
-  const _Tag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}

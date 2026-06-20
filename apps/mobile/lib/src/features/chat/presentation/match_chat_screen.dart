@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../shared/widgets/error_state.dart';
 import 'chat_scroll_utils.dart';
 import 'cubit/match_chat_cubit.dart';
 import 'cubit/match_chat_state.dart';
@@ -57,7 +59,7 @@ class _MatchChatViewState extends State<_MatchChatView> {
         actions: [
           IconButton(
             onPressed: () => context.read<MatchChatCubit>().load(),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(AppIcons.refresh),
           ),
         ],
       ),
@@ -85,21 +87,9 @@ class _MatchChatViewState extends State<_MatchChatView> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (state is MatchChatFailure) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(state.message, textAlign: TextAlign.center),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: () => context.read<MatchChatCubit>().load(),
-                            child: const Text('Reintentar'),
-                          ),
-                        ],
-                      ),
-                    ),
+                  return ErrorState(
+                    message: state.message,
+                    onRetry: () => context.read<MatchChatCubit>().load(),
                   );
                 }
 
@@ -195,7 +185,7 @@ class _MatchChatViewState extends State<_MatchChatView> {
                                   width: 18,
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
-                              : const Icon(Icons.send, size: 20),
+                              : const Icon(AppIcons.send, size: 20),
                         ),
                       ),
                     ],

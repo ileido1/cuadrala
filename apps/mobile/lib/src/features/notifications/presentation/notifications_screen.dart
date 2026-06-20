@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../data/models/notification_delivery_dto.dart';
 import 'cubit/notifications_cubit.dart';
 import 'cubit/notifications_state.dart';
@@ -110,8 +112,10 @@ final class _Body extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.status == NotificationsStatus.error) {
-      return _ErrorState(
+      return ErrorState(
+        icon: AppIcons.warning,
         message: state.errorMessage ?? 'No pudimos cargar las notificaciones.',
+        onRetry: () => context.read<NotificationsCubit>().load(),
       );
     }
     if (state.items.isEmpty) {
@@ -251,13 +255,13 @@ final class _NotificationTile extends StatelessWidget {
 
   IconData _iconForType(NotificationType type) {
     return switch (type) {
-      NotificationType.chatMessage => Icons.chat_bubble_outline,
-      NotificationType.matchSlotOpened => Icons.emoji_events_outlined,
-      NotificationType.paymentPending => Icons.credit_card,
-      NotificationType.paymentConfirmed => Icons.check_circle_outline,
-      NotificationType.matchPlayerJoined => Icons.person_add_alt_1,
-      NotificationType.matchCancelled => Icons.event_busy,
-      NotificationType.unknown => Icons.notifications_none_outlined,
+      NotificationType.chatMessage => AppIcons.chat,
+      NotificationType.matchSlotOpened => AppIcons.trophy,
+      NotificationType.paymentPending => AppIcons.creditCard,
+      NotificationType.paymentConfirmed => AppIcons.checkCircle,
+      NotificationType.matchPlayerJoined => AppIcons.personAdd,
+      NotificationType.matchCancelled => AppIcons.eventBusy,
+      NotificationType.unknown => AppIcons.bell,
     };
   }
 }
@@ -275,7 +279,7 @@ final class _EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.notifications_none_outlined,
+              AppIcons.bell,
               size: 42,
               color: scheme.onSurfaceVariant,
             ),
@@ -297,34 +301,6 @@ final class _EmptyState extends StatelessWidget {
   }
 }
 
-final class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 42, color: scheme.error),
-            const SizedBox(height: 10),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: () => context.read<NotificationsCubit>().load(),
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 String _relativeTime(DateTime dt) {
   final now = DateTime.now();

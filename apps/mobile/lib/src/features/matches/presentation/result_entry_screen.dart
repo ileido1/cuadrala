@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../data/models/match_detail_dto.dart';
 import '../domain/scoring/set_score.dart';
 import 'cubit/result_entry_cubit.dart';
@@ -91,27 +93,10 @@ class _ResultEntryViewState extends State<_ResultEntryView> {
 
           if (state.error != null && state.match == null) {
             return Scaffold(
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48),
-                      const SizedBox(height: 12),
-                      Text(
-                        state.error!,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () =>
-                            context.read<ResultEntryCubit>().load(),
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
-                  ),
-                ),
+              body: ErrorState(
+                icon: AppIcons.warning,
+                message: state.error!,
+                onRetry: () => context.read<ResultEntryCubit>().load(),
               ),
             );
           }
@@ -187,7 +172,7 @@ class _ResultHeader extends StatelessWidget {
                   : Align(
                       alignment: Alignment.centerLeft,
                       child: IconButton(
-                        icon: const Icon(Icons.chevron_left, size: 28),
+                        icon: const Icon(AppIcons.chevronLeft, size: 28),
                         onPressed: () {
                           if (step == 0) {
                             context.pop();
@@ -475,7 +460,7 @@ class _CourtAssignStepState extends State<_CourtAssignStep> {
             if (pool.isEmpty)
               Row(
                 children: [
-                  Icon(Icons.check_rounded, size: 18, color: scheme.primary),
+                  Icon(AppIcons.check, size: 18, color: scheme.primary),
                   const SizedBox(width: 6),
                   Text(
                     'Todos en posición',
@@ -560,7 +545,7 @@ class _CourtSlot extends StatelessWidget {
                 ),
               ]
             : [
-                Icon(Icons.group_outlined,
+                Icon(AppIcons.group,
                     size: 22, color: scheme.onSurfaceVariant),
                 const SizedBox(height: 6),
                 Text(
@@ -816,7 +801,7 @@ class _ScoreEntryStepState extends State<_ScoreEntryStep> {
                       IconButton(
                         key: const Key('remove.last.set'),
                         icon: Icon(
-                          Icons.close,
+                          AppIcons.close,
                           color: scheme.error,
                           size: 20,
                         ),
@@ -972,7 +957,7 @@ class _ScoreSpinner extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: const Icon(Icons.remove_circle_outline),
+          icon: const Icon(AppIcons.removeCircle),
           onPressed: onDecrement,
         ),
         SizedBox(
@@ -987,7 +972,7 @@ class _ScoreSpinner extends StatelessWidget {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.add_circle_outline),
+          icon: const Icon(AppIcons.addCircle),
           onPressed: onIncrement,
         ),
       ],
@@ -1129,7 +1114,7 @@ class _ConfirmStep extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.emoji_events, size: 20),
+                    const Icon(AppIcons.trophy, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       winner == 0
@@ -1248,7 +1233,7 @@ class _ResultSummaryStep extends StatelessWidget {
                           if (isWinner) ...[
                             const SizedBox(width: 6),
                             Icon(
-                              Icons.emoji_events_rounded,
+                              AppIcons.trophy,
                               size: 14,
                               color: scheme.primary,
                             ),
@@ -1287,7 +1272,7 @@ class _ResultSummaryStep extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.check_circle_rounded, size: 52, color: scheme.primary),
+              Icon(AppIcons.checkCircle, size: 52, color: scheme.primary),
               const SizedBox(height: 8),
               Text(
                 'Propuesta enviada',

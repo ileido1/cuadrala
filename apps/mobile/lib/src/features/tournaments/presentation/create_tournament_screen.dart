@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/failures/app_failure.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models/category_dto.dart';
@@ -335,7 +336,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                                 height: 18,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Icon(Icons.check),
+                            : const Icon(AppIcons.check),
                         label: Text(isSubmitting ? 'Creando...' : 'Crear torneo'),
                       ),
                       const SizedBox(height: 12),
@@ -434,7 +435,7 @@ final class _ErrorBox extends StatelessWidget {
           const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(AppIcons.refresh),
             label: const Text('Reintentar'),
           ),
         ],
@@ -598,7 +599,7 @@ final class _StepperTiny extends StatelessWidget {
         IconButton(
           visualDensity: VisualDensity.compact,
           onPressed: canDec ? () => onChanged(value - 1) : null,
-          icon: const Icon(Icons.remove_circle_outline),
+          icon: const Icon(AppIcons.removeCircle),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -615,7 +616,7 @@ final class _StepperTiny extends StatelessWidget {
         IconButton(
           visualDensity: VisualDensity.compact,
           onPressed: canInc ? () => onChanged(value + 1) : null,
-          icon: const Icon(Icons.add_circle_outline),
+          icon: const Icon(AppIcons.addCircle),
         ),
       ],
     );

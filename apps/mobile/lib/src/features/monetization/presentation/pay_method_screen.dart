@@ -9,6 +9,8 @@ import '../../../core/failures/app_failure.dart';
 import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../matches/data/matches_repository.dart';
 import '../../matches/presentation/open_match_display.dart';
 import '../../profile/data/profile_repository.dart';
@@ -404,22 +406,7 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_error!, textAlign: TextAlign.center),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _bootstrap,
-                          child: const Text('Reintentar'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
+              ? ErrorState(message: _error!, onRetry: _bootstrap)
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -645,7 +632,7 @@ final class _PaymentMethodDetailsCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.info_outline_rounded, size: 18, color: scheme.tertiary),
+                Icon(AppIcons.info, size: 18, color: scheme.tertiary),
                 const SizedBox(width: 8),
                 Text(
                   'Datos para pagar',
@@ -709,7 +696,7 @@ final class _BankInfoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.account_balance, size: 18, color: scheme.tertiary),
+                Icon(AppIcons.bank, size: 18, color: scheme.tertiary),
                 const SizedBox(width: 8),
                 Text(
                   'Datos para la transferencia',

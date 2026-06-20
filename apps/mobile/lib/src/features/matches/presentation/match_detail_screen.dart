@@ -11,9 +11,11 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/court_view.dart';
+import '../../../shared/widgets/info_badge.dart';
 import '../data/matches_repository.dart';
 import '../data/models/match_detail_dto.dart';
 import '../../monetization/data/monetization_repository.dart';
@@ -77,7 +79,7 @@ final class _MatchDetailView extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(AppIcons.arrowBack),
           onPressed: () => Routes.popOrGoPartidas(context),
         ),
         actions: const [_DetailActions(), SizedBox(width: 4)],
@@ -89,7 +91,7 @@ final class _MatchDetailView extends StatelessWidget {
           }
           if (state is MatchDetailNotFound) {
             return _EmptyState(
-              icon: Icons.sports_outlined,
+              icon: AppIcons.racquetSport,
               title: 'Partida no encontrada',
               subtitle: 'Es posible que haya sido eliminada.',
               action: TextButton(
@@ -100,7 +102,7 @@ final class _MatchDetailView extends StatelessWidget {
           }
           if (state is MatchDetailFailure) {
             return _EmptyState(
-              icon: Icons.wifi_off_outlined,
+              icon: AppIcons.wifiOff,
               title: 'Error al cargar',
               subtitle: state.message,
               action: FilledButton(
@@ -191,12 +193,12 @@ final class _DetailActions extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.ios_share_rounded, size: 20),
+              icon: const Icon(AppIcons.share, size: 20),
               tooltip: 'Compartir',
               onPressed: () => _shareMatchInvite(context, m),
             ),
             IconButton(
-              icon: const Icon(Icons.more_horiz_rounded),
+              icon: const Icon(AppIcons.moreHoriz),
               tooltip: 'Acciones',
               onPressed: () => _showActionsSheet(context, state),
             ),
@@ -221,10 +223,14 @@ final class _StatusRow extends StatelessWidget {
         final m = state is MatchDetailLoaded ? state.match : null;
         return Row(
           children: [
-            _StatusChip(status: status),
+            _statusBadge(context, status),
             if (m?.categoryName != null) ...[
               const SizedBox(width: 8),
-              _CategoryChip(label: m!.categoryName!),
+              InfoBadge(
+                label: m!.categoryName!,
+                background: BrandColors.limeAccent,
+                foreground: BrandColors.onLime,
+              ),
             ],
           ],
         );
@@ -233,73 +239,16 @@ final class _StatusRow extends StatelessWidget {
   }
 }
 
-final class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final (label, color) = switch (status) {
-      'SCHEDULED' => ('Programado', scheme.primary),
-      'IN_PROGRESS' => ('En curso', scheme.primary),
-      'FINISHED' => ('Finalizada', scheme.primary),
-      'CANCELLED' => ('Cancelada', scheme.error),
-      _ => (status, scheme.onSurfaceVariant),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-      decoration: BoxDecoration(
-        color: BrandColors.limeAccent,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w800,
-          color: BrandColors.onLime,
-        ),
-      ),
-    );
-  }
+Widget _statusBadge(BuildContext context, String status) {
+  final scheme = Theme.of(context).colorScheme;
+  final (label, color) = switch (status) {
+    'SCHEDULED' => ('Programado', scheme.primary),
+    'IN_PROGRESS' => ('En curso', scheme.primary),
+    'FINISHED' => ('Finalizada', scheme.primary),
+    'CANCELLED' => ('Cancelada', scheme.error),
+    _ => (status, scheme.onSurfaceVariant),
+  };
+  return InfoBadge(label: label, color: color, dot: true);
 }
 
 final class _LocationRow extends StatelessWidget {
@@ -317,7 +266,7 @@ final class _LocationRow extends StatelessWidget {
     if (text.isEmpty) return const SizedBox.shrink();
     return Row(
       children: [
-        Icon(Icons.place_outlined, size: 15, color: scheme.onSurfaceVariant),
+        Icon(AppIcons.pin, size: 15, color: scheme.onSurfaceVariant),
         const SizedBox(width: 5),
         Expanded(
           child: Text(
@@ -344,31 +293,31 @@ final class _Banner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final (icon, accent, title, sub) = switch (phase) {
       _Phase.browse => (
-        Icons.group_outlined,
+        AppIcons.group,
         scheme.onSurfaceVariant,
         'Únete a esta partida',
         'Elige tu lugar en la cancha 👇',
       ),
       _Phase.joined => (
-        Icons.check_rounded,
+        AppIcons.check,
         scheme.primary,
         'Te uniste a la partida',
         'Falta confirmar tu pago',
       ),
       _Phase.pending => (
-        Icons.schedule_rounded,
+        AppIcons.clock,
         scheme.tertiary,
         'Pago en revisión',
         'El staff de la sede confirmará tu pago',
       ),
       _Phase.confirmed => (
-        Icons.check_rounded,
+        AppIcons.check,
         scheme.primary,
         'Ya estás anotado',
         'Tu pago está confirmado',
       ),
       _Phase.played => (
-        Icons.adjust_rounded,
+        AppIcons.target,
         scheme.primary,
         'Partida finalizada',
         'Resultado y ELO actualizados',
@@ -440,7 +389,7 @@ final class _InfoTilesRow extends StatelessWidget {
         children: [
           Expanded(
             child: _InfoTile(
-              icon: Icons.calendar_today_outlined,
+              icon: AppIcons.calendar,
               label: 'Fecha',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,7 +417,7 @@ final class _InfoTilesRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: _InfoTile(
-              icon: Icons.info_outline_rounded,
+              icon: AppIcons.info,
               label: 'Precio',
               child: hasPrice
                   ? Text(
@@ -553,7 +502,7 @@ final class _DetailChips extends StatelessWidget {
       runSpacing: 8,
       children: [
         _DetailChip(
-          icon: Icons.adjust_rounded,
+          icon: AppIcons.target,
           iconColor: Theme.of(context).colorScheme.primary,
           label: match.affectsElo ? 'Ranked · Afecta ELO' : 'Amistoso',
         ),
@@ -819,10 +768,19 @@ final class _PlayerTileState extends State<_PlayerTile> {
             future: _isPaidFuture,
             builder: (context, snap) {
               if (snap.data == true) {
-                return _SoftBadge(label: 'Pagado', emphasize: true);
+                return InfoBadge(
+                  label: 'Pagado',
+                  color: scheme.primary,
+                  fontSize: 11,
+                );
               }
               if (snap.connectionState == ConnectionState.done) {
-                return _SoftBadge(label: 'Pendiente');
+                return InfoBadge(
+                  label: 'Pendiente',
+                  background: scheme.surfaceContainerHighest,
+                  foreground: scheme.onSurfaceVariant,
+                  fontSize: 11,
+                );
               }
               return const SizedBox(
                 width: 20,
@@ -870,7 +828,7 @@ final class _EmptySlot extends StatelessWidget {
             CircleAvatar(
               radius: 22,
               backgroundColor: scheme.surfaceContainerHighest,
-              child: Icon(Icons.add, color: scheme.onSurfaceVariant, size: 20),
+              child: Icon(AppIcons.add, color: scheme.onSurfaceVariant, size: 20),
             ),
             const SizedBox(width: 12),
             Text(
@@ -950,7 +908,7 @@ final class _ChatFab extends StatelessWidget {
             border: Border.all(color: scheme.outlineVariant, width: 1.5),
           ),
           child: Icon(
-            Icons.chat_bubble_outline_rounded,
+            AppIcons.chat,
             size: 22,
             color: scheme.onSurface,
           ),
@@ -1020,18 +978,18 @@ final class _Footer extends StatelessWidget {
         final canJoin = m.status == 'SCHEDULED' && m.openSpots > 0;
         if (!canJoin) {
           return _DisabledCta(
-            icon: Icons.group_outlined,
+            icon: AppIcons.group,
             label: 'Partida llena',
           );
         }
         if (usesCourt) {
           return _DisabledCta(
-            icon: Icons.group_outlined,
+            icon: AppIcons.group,
             label: 'Toca un lugar para unirte',
           );
         }
         return _PrimaryCta(
-          icon: Icons.add_rounded,
+          icon: AppIcons.add,
           label: 'Unirme a la partida',
           onPressed: () => context.read<MatchDetailCubit>().join(),
         );
@@ -1063,7 +1021,7 @@ final class _Footer extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _PrimaryCta(
-              icon: Icons.info_outline_rounded,
+              icon: AppIcons.info,
               label: 'Pagar ahora · $priceLabel',
               onPressed: () => context.push(
                 PayMethodScreen.route(
@@ -1085,13 +1043,13 @@ final class _Footer extends StatelessWidget {
         return Row(
           children: [
             _SquareButton(
-              icon: Icons.ios_share_rounded,
+              icon: AppIcons.share,
               onTap: () => _shareMatchInvite(context, m),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _PrimaryCta(
-                icon: Icons.chat_bubble_outline_rounded,
+                icon: AppIcons.chat,
                 label: 'Compartir partida',
                 onPressed: () => _shareMatchInvite(context, m),
               ),
@@ -1103,13 +1061,13 @@ final class _Footer extends StatelessWidget {
         return Row(
           children: [
             _SquareButton(
-              icon: Icons.ios_share_rounded,
+              icon: AppIcons.share,
               onTap: () => _shareMatchInvite(context, m),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _PrimaryCta(
-                icon: Icons.adjust_rounded,
+                icon: AppIcons.target,
                 label: 'Cargar resultado',
                 onPressed: () => context.push(Routes.matchResult(m.id)),
               ),
@@ -1236,7 +1194,7 @@ final class _ActionMessageBanner extends StatelessWidget {
         ? scheme.errorContainer
         : scheme.primary.withValues(alpha: 0.15);
     final fg = isError ? scheme.error : scheme.primary;
-    final icon = isError ? Icons.error_outline : Icons.check_circle_outline;
+    final icon = isError ? AppIcons.warning : AppIcons.checkCircle;
 
     return Material(
       color: bg,
@@ -1255,35 +1213,6 @@ final class _ActionMessageBanner extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ─── Soft Badge ──────────────────────────────────────────────────────────────
-
-final class _SoftBadge extends StatelessWidget {
-  const _SoftBadge({required this.label, this.emphasize = false});
-
-  final String label;
-  final bool emphasize;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final bg = emphasize
-        ? scheme.primary.withValues(alpha: 0.15)
-        : scheme.surfaceContainerHighest;
-    final fg = emphasize ? scheme.primary : scheme.onSurfaceVariant;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: fg),
       ),
     );
   }
@@ -1386,7 +1315,7 @@ void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
               ),
             ),
             _SheetAction(
-              icon: Icons.chat_bubble_outline,
+              icon: AppIcons.chat,
               label: 'Abrir chat',
               onTap: () {
                 Navigator.pop(ctx);
@@ -1395,7 +1324,7 @@ void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
             ),
             if (isOrganizer && m.status == 'SCHEDULED')
               _SheetAction(
-                icon: Icons.play_circle_outline,
+                icon: AppIcons.playCircle,
                 label: 'Iniciar partida',
                 onTap: () async {
                   Navigator.pop(ctx);
@@ -1410,7 +1339,7 @@ void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
               ),
             if (isOrganizer && m.status == 'IN_PROGRESS')
               _SheetAction(
-                icon: Icons.stop_circle_outlined,
+                icon: AppIcons.stopCircle,
                 label: 'Finalizar partida',
                 onTap: () async {
                   Navigator.pop(ctx);
@@ -1425,7 +1354,7 @@ void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
               ),
             if (isOrganizer && isFinished)
               _SheetAction(
-                icon: Icons.scoreboard_outlined,
+                icon: AppIcons.scoreboard,
                 label: 'Cargar resultado',
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1434,7 +1363,7 @@ void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
               ),
             if (!isOrganizer && loaded.isParticipant && !isFinished)
               _SheetAction(
-                icon: Icons.logout,
+                icon: AppIcons.signOut,
                 label: 'Salir de la partida',
                 isDestructive: true,
                 onTap: () {
@@ -1444,7 +1373,7 @@ void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
               ),
             if (isOrganizer && m.status != 'CANCELLED' && !isFinished)
               _SheetAction(
-                icon: Icons.cancel_outlined,
+                icon: AppIcons.closeCircle,
                 label: 'Cancelar partida',
                 isDestructive: true,
                 onTap: () async {

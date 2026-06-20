@@ -12,34 +12,17 @@ final class ApiClient {
   final Dio _dio;
   final AppFailureMapper _failureMapper;
 
-  Future<Map<String, Object?>> postMultipart(
+  Future<Map<String, Object?>> getJson(
     String path, {
-    required FormData formData,
     Map<String, Object?>? queryParameters,
     Map<String, Object?>? headers,
-  }) async {
-    try {
-      final response = await _dio.post<Object?>(
-        path,
-        data: formData,
-        queryParameters: queryParameters,
-        options: Options(
-          headers: headers,
-          contentType: 'multipart/form-data',
-        ),
-      );
-
-      final data = response.data;
-      if (data is Map<String, Object?>) {
-        return data;
-      }
-      throw const AppFailure(
-        code: 'INVALID_RESPONSE',
-        message: 'Respuesta inválida del servidor.',
-      );
-    } catch (e) {
-      throw _failureMapper.fromException(e);
-    }
+  }) {
+    return _requestJson(
+      path,
+      method: 'GET',
+      queryParameters: queryParameters,
+      headers: headers,
+    );
   }
 
   Future<Map<String, Object?>> postJson(
@@ -47,26 +30,60 @@ final class ApiClient {
     Object? body,
     Map<String, Object?>? queryParameters,
     Map<String, Object?>? headers,
-  }) async {
-    try {
-      final response = await _dio.post<Object?>(
-        path,
-        data: body,
-        queryParameters: queryParameters,
-        options: Options(headers: headers),
-      );
+  }) {
+    return _requestJson(
+      path,
+      method: 'POST',
+      body: body,
+      queryParameters: queryParameters,
+      headers: headers,
+    );
+  }
 
-      final data = response.data;
-      if (data is Map<String, Object?>) {
-        return data;
-      }
-      throw const AppFailure(
-        code: 'INVALID_RESPONSE',
-        message: 'Respuesta inválida del servidor.',
-      );
-    } catch (e) {
-      throw _failureMapper.fromException(e);
-    }
+  Future<Map<String, Object?>> patchJson(
+    String path, {
+    Object? body,
+    Map<String, Object?>? queryParameters,
+    Map<String, Object?>? headers,
+  }) {
+    return _requestJson(
+      path,
+      method: 'PATCH',
+      body: body,
+      queryParameters: queryParameters,
+      headers: headers,
+    );
+  }
+
+  Future<Map<String, Object?>> putJson(
+    String path, {
+    Object? body,
+    Map<String, Object?>? queryParameters,
+    Map<String, Object?>? headers,
+  }) {
+    return _requestJson(
+      path,
+      method: 'PUT',
+      body: body,
+      queryParameters: queryParameters,
+      headers: headers,
+    );
+  }
+
+  Future<Map<String, Object?>> postMultipart(
+    String path, {
+    required FormData formData,
+    Map<String, Object?>? queryParameters,
+    Map<String, Object?>? headers,
+  }) {
+    return _requestJson(
+      path,
+      method: 'POST',
+      body: formData,
+      queryParameters: queryParameters,
+      headers: headers,
+      contentType: 'multipart/form-data',
+    );
   }
 
   Future<void> postNoContent(
@@ -81,85 +98,6 @@ final class ApiClient {
         data: body,
         queryParameters: queryParameters,
         options: Options(headers: headers),
-      );
-    } catch (e) {
-      throw _failureMapper.fromException(e);
-    }
-  }
-
-  Future<Map<String, Object?>> getJson(
-    String path, {
-    Map<String, Object?>? queryParameters,
-    Map<String, Object?>? headers,
-  }) async {
-    try {
-      final response = await _dio.get<Object?>(
-        path,
-        queryParameters: queryParameters,
-        options: Options(headers: headers),
-      );
-
-      final data = response.data;
-      if (data is Map<String, Object?>) {
-        return data;
-      }
-      throw const AppFailure(
-        code: 'INVALID_RESPONSE',
-        message: 'Respuesta inválida del servidor.',
-      );
-    } catch (e) {
-      throw _failureMapper.fromException(e);
-    }
-  }
-
-  Future<Map<String, Object?>> patchJson(
-    String path, {
-    Object? body,
-    Map<String, Object?>? queryParameters,
-    Map<String, Object?>? headers,
-  }) async {
-    try {
-      final response = await _dio.patch<Object?>(
-        path,
-        data: body,
-        queryParameters: queryParameters,
-        options: Options(headers: headers),
-      );
-
-      final data = response.data;
-      if (data is Map<String, Object?>) {
-        return data;
-      }
-      throw const AppFailure(
-        code: 'INVALID_RESPONSE',
-        message: 'Respuesta inválida del servidor.',
-      );
-    } catch (e) {
-      throw _failureMapper.fromException(e);
-    }
-  }
-
-  Future<Map<String, Object?>> putJson(
-    String path, {
-    Object? body,
-    Map<String, Object?>? queryParameters,
-    Map<String, Object?>? headers,
-  }) async {
-    try {
-      final response = await _dio.put<Object?>(
-        path,
-        data: body,
-        queryParameters: queryParameters,
-        options: Options(headers: headers),
-      );
-
-      final data = response.data;
-      if (data is Map<String, Object?>) {
-        return data;
-      }
-      throw const AppFailure(
-        code: 'INVALID_RESPONSE',
-        message: 'Respuesta inválida del servidor.',
       );
     } catch (e) {
       throw _failureMapper.fromException(e);
@@ -189,15 +127,16 @@ final class ApiClient {
     Map<String, Object?>? queryParameters,
     Map<String, Object?>? headers,
     Object? body,
+    String? contentType,
   }) async {
     final m = method?.toUpperCase() ?? 'GET';
     try {
-      final response = await (_dio.request<Object?>(
+      final response = await _dio.request<Object?>(
         path,
         data: body,
         queryParameters: queryParameters,
-        options: Options(method: m, headers: headers),
-      ));
+        options: Options(method: m, headers: headers, contentType: contentType),
+      );
 
       final data = response.data;
       if (data is Map<String, Object?>) {

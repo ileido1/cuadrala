@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/presentation/cubit/session_cubit.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
+import '../../../shared/widgets/error_state.dart';
 import 'cubit/profile_cubit.dart';
 import 'cubit/profile_state.dart';
 import 'widgets/profile_elo_sheet.dart';
@@ -31,21 +33,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (state is ProfileFailure) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(state.message),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: () => context.read<ProfileCubit>().load(),
-                    child: const Text('Reintentar'),
-                  ),
-                ],
-              ),
-            ),
+          return ErrorState(
+            message: state.message,
+            onRetry: () => context.read<ProfileCubit>().load(),
           );
         }
 
@@ -137,7 +127,7 @@ final class _ProfileHero extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.adjust, size: 15, color: scheme.primary),
+                Icon(AppIcons.target, size: 15, color: scheme.primary),
                 const SizedBox(width: 6),
                 Text(
                   'Categoría $category',
@@ -263,17 +253,17 @@ final class _SettingsMenu extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final items = <_SettingsItem>[
       _SettingsItem(
-        icon: Icons.person_outline,
+        icon: AppIcons.person,
         label: 'Editar perfil',
         onTap: () => context.push(Routes.onboarding),
       ),
       _SettingsItem(
-        icon: Icons.adjust,
+        icon: AppIcons.target,
         label: 'Historial de ELO',
         onTap: () => showProfileEloSheet(context, vm),
       ),
       _SettingsItem(
-        icon: Icons.location_on_outlined,
+        icon: AppIcons.pin,
         label: 'Clubes favoritos',
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -282,7 +272,7 @@ final class _SettingsMenu extends StatelessWidget {
         },
       ),
       _SettingsItem(
-        icon: Icons.tune,
+        icon: AppIcons.sliders,
         label: 'Ajustes',
         onTap: () => context.push(Routes.notificationPrefs),
       ),
@@ -359,7 +349,7 @@ final class _SettingsRow extends StatelessWidget {
                     ),
                   ),
                   Icon(
-                    Icons.chevron_right,
+                    AppIcons.chevronRight,
                     size: 18,
                     color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
                   ),
@@ -396,7 +386,7 @@ final class _LogoutButton extends StatelessWidget {
         minimumSize: const Size.fromHeight(48),
         foregroundColor: scheme.error,
       ),
-      icon: const Icon(Icons.logout, size: 20),
+      icon: const Icon(AppIcons.signOut, size: 20),
       label: const Text(
         'Cerrar sesión',
         style: TextStyle(fontWeight: FontWeight.w700),
@@ -422,7 +412,7 @@ final class _OnboardingBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.auto_awesome, color: scheme.primary, size: 22),
+          Icon(AppIcons.sparkle, color: scheme.primary, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Column(

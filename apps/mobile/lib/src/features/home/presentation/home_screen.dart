@@ -7,11 +7,13 @@ import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../matches/data/models/open_match_dto.dart';
 import '../../venues/presentation/create_match_panel.dart';
 import '../../matches/presentation/open_match_display.dart';
 import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/match_card.dart';
 import '../../../shared/widgets/skeleton_list.dart';
 import 'cubit/home_cubit.dart';
@@ -46,19 +48,9 @@ class _HomeScreenState extends State<HomeScreen> {
               onRefresh: () => context.read<HomeCubit>().load(),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(state.message, textAlign: TextAlign.center),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () => context.read<HomeCubit>().load(),
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
-                  ),
+                child: ErrorState(
+                  message: state.message,
+                  onRetry: () => context.read<HomeCubit>().load(),
                 ),
               ),
             ),
@@ -265,7 +257,7 @@ final class _HeroCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Icon(Icons.bolt_rounded,
+                      child: Icon(AppIcons.bolt,
                           color: scheme.onPrimary, size: 24),
                     ),
                     const SizedBox(width: 12),
@@ -310,7 +302,7 @@ final class _HeroCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(Icons.search_rounded, size: 18),
+                          icon: const Icon(AppIcons.search, size: 18),
                           label: const Text(
                             'Buscar',
                             style: TextStyle(fontWeight: FontWeight.w800),
@@ -335,7 +327,7 @@ final class _HeroCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(Icons.add_rounded, size: 18),
+                          icon: const Icon(AppIcons.add, size: 18),
                           label: const Text(
                             'Crear',
                             style: TextStyle(fontWeight: FontWeight.w800),
@@ -573,7 +565,7 @@ final class _LevelRow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.adjust_rounded, size: 13, color: scheme.primary),
+        Icon(AppIcons.target, size: 13, color: scheme.primary),
         const SizedBox(width: 5),
         if (category != null)
           Text(
@@ -641,7 +633,7 @@ final class _BellButton extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               Icon(
-                Icons.notifications_outlined,
+                AppIcons.bell,
                 color: scheme.onSurface,
                 size: 20,
               ),

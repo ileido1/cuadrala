@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_icons.dart';
+
 final class AppHeader extends StatelessWidget {
   const AppHeader({
     super.key,
@@ -40,7 +42,7 @@ final class AppHeader extends StatelessWidget {
                   child: showBack
                       ? IconButton(
                           onPressed: () => context.pop(),
-                          icon: const Icon(Icons.chevron_left, size: 28),
+                          icon: const Icon(AppIcons.chevronLeft, size: 28),
                         )
                       : null,
                 ),

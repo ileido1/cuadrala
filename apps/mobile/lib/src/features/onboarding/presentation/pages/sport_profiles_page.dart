@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/sport/sport_classification.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/brand_colors.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/segmented_control.dart';
@@ -38,16 +39,16 @@ class _SportMeta {
 }
 
 const _sportIconsByCode = <String, IconData>{
-  'PADEL': Icons.sports_tennis,
-  'TENNIS': Icons.sports_tennis,
-  'PICKLEBALL': Icons.sports_tennis,
-  'FOOTBALL5': Icons.sports_soccer,
-  'BASKETBALL3X3': Icons.sports_basketball,
-  'VOLLEY_BEACH': Icons.sports_volleyball,
+  'PADEL': AppIcons.racquetSport,
+  'TENNIS': AppIcons.racquetSport,
+  'PICKLEBALL': AppIcons.racquetSport,
+  'FOOTBALL5': AppIcons.soccerBall,
+  'BASKETBALL3X3': AppIcons.basketball,
+  'VOLLEY_BEACH': AppIcons.volleyball,
 };
 
 _SportMeta _metaFor(SportDto sport) => _SportMeta(
-      icon: _sportIconsByCode[sport.code.toUpperCase()] ?? Icons.sports,
+      icon: _sportIconsByCode[sport.code.toUpperCase()] ?? AppIcons.racquetSport,
       color: BrandColors.sportColorForCode(sport.code),
     );
 
@@ -307,7 +308,7 @@ class _OnboardingSportProfilesPageState extends State<OnboardingSportProfilesPag
                   ),
                 PrimaryButton(
                   label: 'Continuar',
-                  icon: Icons.arrow_forward,
+                  icon: AppIcons.arrowForward,
                   height: 54,
                   isLoading: saving,
                   onPressed: _submit,
@@ -495,7 +496,7 @@ class _SportTile extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
               ),
             ),
-            if (selected) Icon(Icons.check, size: 18, color: scheme.primary),
+            if (selected) Icon(AppIcons.check, size: 18, color: scheme.primary),
           ],
         ),
       ),
