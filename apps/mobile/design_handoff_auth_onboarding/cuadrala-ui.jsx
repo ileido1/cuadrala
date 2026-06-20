@@ -30,6 +30,19 @@ function Icon({ name, size = 20, stroke = 2, style = {} }) {
     gender: <><circle cx="10" cy="13" r="4.5" {...p} /><path d="M16 8l4-4M20 4h-3.5M20 4v3.5" {...p} /></>,
     arrowRight: <><path d="M5 12h14M13 6l6 6-6 6" {...p} /></>,
     target: <><circle cx="12" cy="12" r="8.5" {...p} /><circle cx="12" cy="12" r="4" {...p} /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /></>,
+    mail: <><rect x="3" y="5" width="18" height="14" rx="2.5" {...p} /><path d="M4 7.5l8 5.5 8-5.5" {...p} /></>,
+    lock: <><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2" {...p} /><path d="M8 10.5V8a4 4 0 018 0v2.5" {...p} /></>,
+    eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" {...p} /><circle cx="12" cy="12" r="3" {...p} /></>,
+    eyeOff: <><path d="M3 3l18 18" {...p} /><path d="M10.6 6.2A8.9 8.9 0 0112 6.1c6 0 9.5 5.9 9.5 5.9a15 15 0 01-3 3.5M6.3 7.4A14.5 14.5 0 002.5 12s3.5 5.9 9.5 5.9a8.6 8.6 0 003.2-.6" {...p} /><path d="M9.9 9.9a3 3 0 004.2 4.2" {...p} /></>,
+    camera: <><rect x="3" y="7" width="18" height="13" rx="2.6" {...p} /><path d="M8.2 7l1.4-2.4h4.8L15.8 7" {...p} /><circle cx="12" cy="13.3" r="3.4" {...p} /></>,
+    phone: <><path d="M5 4.5h3.4l1.6 4.2-2.1 1.4a11 11 0 005 5l1.4-2.1 4.2 1.6V18a2 2 0 01-2.2 2A15.5 15.5 0 013 6.7 2 2 0 015 4.5z" {...p} /></>,
+    card: <><rect x="3" y="5.5" width="18" height="13" rx="2.5" {...p} /><path d="M3 10h18M6.5 14.5h5M15 14.5h2.5" {...p} /></>,
+    cake: <><path d="M4 21h16M5 21v-7a2 2 0 012-2h10a2 2 0 012 2v7" {...p} /><path d="M4 15.5c1.4 0 1.4 1.2 2.8 1.2S8.2 15.5 9.6 15.5 11 16.7 12 16.7s1-1.2 2.4-1.2 1.4 1.2 2.8 1.2 1.4-1.2 2.8-1.2" {...p} /><path d="M12 8.5V11M12 5.5v.01" {...p} /></>,
+    sun: <><circle cx="12" cy="12" r="4.2" {...p} /><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3L19 19M19 5l-1.7 1.7M6.7 17.3L5 19" {...p} /></>,
+    sunset: <><path d="M3 18.5h18M7.5 14.5a4.5 4.5 0 019 0" {...p} /><path d="M12 3v5M9.4 6.4L12 9l2.6-2.6" {...p} /><path d="M2.5 21.5h19" {...p} /></>,
+    moon: <><path d="M20 13.5A8 8 0 119.5 4a6.4 6.4 0 0010.5 9.5z" {...p} /></>,
+    locate: <><circle cx="12" cy="12" r="4" {...p} /><path d="M12 2v3.2M12 18.8V22M2 12h3.2M18.8 12H22" {...p} /></>,
+    sparkle: <><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" {...p} strokeLinejoin="round" /></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block', flexShrink: 0, ...style }}>

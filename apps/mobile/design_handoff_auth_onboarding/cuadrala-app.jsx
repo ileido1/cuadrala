@@ -3,8 +3,11 @@
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "theme": "dark",
   "venueView": "Lista",
-  "corners": "Redondeadas"
+  "corners": "Redondeadas",
+  "start": "Bienvenida"
 }/*EDITMODE-END*/;
+
+const START_AUTH = { 'Bienvenida': 'welcome', 'Login': 'login', 'Registro': 'register', 'Onboarding': 'onboarding', 'App (sin auth)': null };
 
 function Stage({ children }) {
   const [scale, setScale] = React.useState(1);
@@ -26,6 +29,7 @@ function Stage({ children }) {
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [auth, setAuth] = React.useState(() => START_AUTH[t.start] ?? 'welcome');
   const [tab, setTab] = React.useState('inicio');
   const [stack, setStack] = React.useState([]);
   const [selMatch, setSelMatch] = React.useState({ ...DEMO_MATCH, total: 4 });
@@ -62,6 +66,13 @@ function App() {
     result: <LoadResultFlow onClose={pop} onSaved={() => setPlayed(true)} />,
   };
 
+  const authScreens = {
+    welcome: <WelcomeScreen onRegister={() => setAuth('register')} onLogin={() => setAuth('login')} />,
+    login: <LoginScreen onSwitch={() => setAuth('register')} onSubmit={() => { setAuth(null); setTab('inicio'); reset(); }} />,
+    register: <RegisterScreen onSwitch={() => setAuth('login')} onSubmit={() => setAuth('onboarding')} />,
+    onboarding: <OnboardingScreen onExit={() => setAuth('register')} onFinish={() => { setAuth(null); setTab('inicio'); reset(); }} />,
+  };
+
   const czStyle = {
     height: '100%', position: 'relative', display: 'flex', flexDirection: 'column',
     background: 'var(--bg)', color: 'var(--text)',
@@ -73,15 +84,23 @@ function App() {
     <Stage>
       <IOSDevice dark={dark}>
         <div className="cz" data-theme={t.theme} style={czStyle}>
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} key={tab}>
-            {screens[tab]}
-          </div>
-          <BottomNav tab={tab} setTab={setTab} />
-
-          {top && (
-            <div key={top + stack.length} style={{ position: 'absolute', inset: 0, zIndex: 5, animation: 'sheetUp .28s cubic-bezier(.3,.8,.3,1)' }}>
-              {overlays[top]}
+          {auth ? (
+            <div key={auth} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              {authScreens[auth]}
             </div>
+          ) : (
+            <>
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} key={tab}>
+                {screens[tab]}
+              </div>
+              <BottomNav tab={tab} setTab={setTab} />
+
+              {top && (
+                <div key={top + stack.length} style={{ position: 'absolute', inset: 0, zIndex: 5, animation: 'sheetUp .28s cubic-bezier(.3,.8,.3,1)' }}>
+                  {overlays[top]}
+                </div>
+              )}
+            </>
           )}
         </div>
       </IOSDevice>
@@ -92,6 +111,12 @@ function App() {
         <TweakRadio label="Esquinas" value={t.corners} options={['Redondeadas', 'Suaves']} onChange={v => setTweak('corners', v)} />
         <TweakSection label="Crear partida" />
         <TweakRadio label="Vista de sedes" value={t.venueView} options={['Lista', 'Mapa']} onChange={v => setTweak('venueView', v)} />
+        <TweakSection label="Autenticación" />
+        <TweakButton label="Bienvenida" onClick={() => setAuth('welcome')} />
+        <TweakButton label="Login" onClick={() => setAuth('login')} />
+        <TweakButton label="Registro" onClick={() => setAuth('register')} />
+        <TweakButton label="Onboarding (4 pasos)" onClick={() => setAuth('onboarding')} />
+        <TweakButton label="Entrar a la app" onClick={() => { setAuth(null); setTab('inicio'); reset(); }} />
         <TweakSection label="Ir a pantalla" />
         <TweakButton label="Crear partida" onClick={() => reset('create')} />
         <TweakButton label="Buscar / matchmaking" onClick={() => reset('search')} />
