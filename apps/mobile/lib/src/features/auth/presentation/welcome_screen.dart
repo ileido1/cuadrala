@@ -1,111 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
-import 'widgets/google_g_logo.dart';
-import 'widgets/social_button.dart';
-
-import '../../../core/di/service_locator.dart';
-import '../../../core/env/app_env.dart';
-import '../../../core/theme/brand_colors.dart';
-import '../data/models/social_login_request.dart';
-import '../data/auth_repository.dart';
-import 'cubit/session_cubit.dart';
 import '../../../router/routes.dart';
 
-class WelcomeScreen extends StatefulWidget {
+class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
-
-  @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
-}
-
-class _WelcomeScreenState extends State<WelcomeScreen> {
-  bool _isLoading = false;
-  Future<void>? _googleInit;
-
-  Future<void> _ensureGoogleInitialized() {
-    final init = _googleInit;
-    if (init != null) return init;
-    final env = getIt<AppEnv>();
-    final future = GoogleSignIn.instance.initialize(
-      clientId: env.googleWebClientId,
-      serverClientId: env.googleWebClientId,
-    );
-    _googleInit = future;
-    return future;
-  }
-
-  Future<void> _socialLoginGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      await _ensureGoogleInitialized();
-      final account = await GoogleSignIn.instance.authenticate(
-        scopeHint: const ['email', 'profile'],
-      );
-      final idToken = account.authentication.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        throw Exception('No se pudo obtener idToken de Google.');
-      }
-
-      await getIt<AuthRepository>().socialLogin(
-        SocialLoginRequest(
-          provider: 'google',
-          idToken: idToken,
-          name: account.displayName,
-        ),
-      );
-      if (!mounted) return;
-      await context.read<SessionCubit>().markAuthenticated();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error Google: $e'), duration: const Duration(seconds: 8)),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _socialLoginApple() async {
-    setState(() => _isLoading = true);
-    try {
-      final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: const [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-      final idToken = credential.identityToken;
-      if (idToken == null || idToken.isEmpty) {
-        throw Exception('No se pudo obtener identityToken de Apple.');
-      }
-
-      final fullName = [
-        credential.givenName,
-        credential.familyName,
-      ].whereType<String>().where((p) => p.trim().isNotEmpty).join(' ');
-
-      await getIt<AuthRepository>().socialLogin(
-        SocialLoginRequest(
-          provider: 'apple',
-          idToken: idToken,
-          name: fullName.isEmpty ? null : fullName,
-        ),
-      );
-      if (!mounted) return;
-      await context.read<SessionCubit>().markAuthenticated();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo iniciar con Apple.')),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -173,25 +72,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 28),
-                  SocialButton(
-                    icon: const GoogleGLogo(size: 20),
-                    label: 'Continuar con Google',
-                    background: scheme.surface,
-                    foreground: scheme.onSurface,
-                    border: scheme.outlineVariant,
-                    onPressed: _isLoading ? null : _socialLoginGoogle,
-                  ),
-                  const SizedBox(height: 10),
-                  SocialButton(
-                    icon: const Icon(Icons.apple),
-                    label: 'Continuar con Apple',
-                    background: BrandColors.appleBlack,
-                    foreground: scheme.onPrimary,
-                    border: BrandColors.appleBlack,
-                    onPressed: _isLoading ? null : _socialLoginApple,
-                  ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 36),
                   Row(
                     children: [
                       Expanded(
@@ -218,27 +99,26 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 22),
-                  FilledButton(
-                    onPressed: _isLoading ? null : () => context.go(Routes.register),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: () => context.go(Routes.register),
+                    icon: const Icon(Icons.mail_outline, size: 20),
+                    label: const Text('Crear cuenta con email'),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                     ),
-                    child: const Text('Crear cuenta con email'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
-                    onPressed: _isLoading ? null : () => context.go(Routes.login),
+                    onPressed: () => context.go(Routes.login),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                     ),
                     child: const Text('Ya tengo cuenta'),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 22),
                   Text(
                     'Al continuar aceptas nuestros Términos y la Política de privacidad.',
                     textAlign: TextAlign.center,
@@ -256,4 +136,3 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 }
-

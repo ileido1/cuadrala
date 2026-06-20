@@ -186,6 +186,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 24),
                   PrimaryButton(
                     label: 'Continuar',
+                    icon: Icons.arrow_forward,
+                    height: 52,
                     isLoading: isLoading,
                     onPressed: _submit,
                   ),

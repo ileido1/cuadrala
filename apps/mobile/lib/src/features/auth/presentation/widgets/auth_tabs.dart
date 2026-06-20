@@ -23,7 +23,7 @@ class AuthTabs extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
       ),
       child: Row(
@@ -64,13 +64,13 @@ class _AuthTabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(999),
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
+        duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(999),
           color: selected ? scheme.surface : Colors.transparent,
           border: Border.all(
             color: selected ? scheme.outlineVariant : Colors.transparent,
@@ -82,6 +82,7 @@ class _AuthTabButton extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w900,
+              letterSpacing: 0.3,
               color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
             ),
           ),

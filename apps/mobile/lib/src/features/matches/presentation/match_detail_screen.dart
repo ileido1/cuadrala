@@ -344,35 +344,35 @@ final class _Banner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final (icon, accent, title, sub) = switch (phase) {
       _Phase.browse => (
-          Icons.group_outlined,
-          scheme.onSurfaceVariant,
-          'Únete a esta partida',
-          'Elige tu lugar en la cancha 👇',
-        ),
+        Icons.group_outlined,
+        scheme.onSurfaceVariant,
+        'Únete a esta partida',
+        'Elige tu lugar en la cancha 👇',
+      ),
       _Phase.joined => (
-          Icons.check_rounded,
-          scheme.primary,
-          'Te uniste a la partida',
-          'Falta confirmar tu pago',
-        ),
+        Icons.check_rounded,
+        scheme.primary,
+        'Te uniste a la partida',
+        'Falta confirmar tu pago',
+      ),
       _Phase.pending => (
-          Icons.schedule_rounded,
-          scheme.tertiary,
-          'Pago en revisión',
-          'El staff de la sede confirmará tu pago',
-        ),
+        Icons.schedule_rounded,
+        scheme.tertiary,
+        'Pago en revisión',
+        'El staff de la sede confirmará tu pago',
+      ),
       _Phase.confirmed => (
-          Icons.check_rounded,
-          scheme.primary,
-          'Ya estás anotado',
-          'Tu pago está confirmado',
-        ),
+        Icons.check_rounded,
+        scheme.primary,
+        'Ya estás anotado',
+        'Tu pago está confirmado',
+      ),
       _Phase.played => (
-          Icons.adjust_rounded,
-          scheme.primary,
-          'Partida finalizada',
-          'Resultado y ELO actualizados',
-        ),
+        Icons.adjust_rounded,
+        scheme.primary,
+        'Partida finalizada',
+        'Resultado y ELO actualizados',
+      ),
     };
     final neutral = phase == _Phase.browse;
     return Container(
@@ -434,57 +434,62 @@ final class _InfoTilesRow extends StatelessWidget {
     final m = match;
     final scheduled = m.scheduledAt;
     final hasPrice = m.pricePerPlayerCents > 0;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: _InfoTile(
-            icon: Icons.calendar_today_outlined,
-            label: 'Fecha',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  scheduled == null
-                      ? 'Por confirmar'
-                      : '${shortDateLabel(scheduled)} ${compactCalendarDate(scheduled)}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  scheduled == null ? '—' : '${formatTimeHm(scheduled)} hs',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _InfoTile(
-            icon: Icons.info_outline_rounded,
-            label: 'Precio',
-            child: hasPrice
-                ? Text(
-                    '${formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m))} p/p',
-                    style: TextStyle(
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _InfoTile(
+              icon: Icons.calendar_today_outlined,
+              label: 'Fecha',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    scheduled == null
+                        ? 'Por confirmar'
+                        : '${shortDateLabel(scheduled)} ${compactCalendarDate(scheduled)}',
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
-                      color: Theme.of(context).colorScheme.primary,
                     ),
-                  )
-                : const Text(
-                    'Gratis',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                   ),
+                  Text(
+                    scheduled == null ? '—' : '${formatTimeHm(scheduled)} hs',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: _InfoTile(
+              icon: Icons.info_outline_rounded,
+              label: 'Precio',
+              child: hasPrice
+                  ? Text(
+                      '${formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m))} p/p',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    )
+                  : const Text(
+                      'Gratis',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -558,11 +563,7 @@ final class _DetailChips extends StatelessWidget {
 }
 
 final class _DetailChip extends StatelessWidget {
-  const _DetailChip({
-    required this.icon,
-    required this.label,
-    this.iconColor,
-  });
+  const _DetailChip({required this.icon, required this.label, this.iconColor});
 
   final IconData icon;
   final String label;
@@ -660,8 +661,8 @@ final class _CourtSection extends StatelessWidget {
         final isYou = p.userId == loaded.viewerUserId;
         final status = isYou
             ? (loaded.viewerHasConfirmedPayment
-                ? CourtPlayerStatus.paid
-                : CourtPlayerStatus.pending)
+                  ? CourtPlayerStatus.paid
+                  : CourtPlayerStatus.pending)
             : CourtPlayerStatus.paid;
         return CourtSpotData(
           player: CourtPlayer(
@@ -761,7 +762,13 @@ final class _PlayerTileState extends State<_PlayerTile> {
     final scheme = Theme.of(context).colorScheme;
     final name = widget.displayName ?? '';
     final initials = name.trim().isNotEmpty
-        ? name.trim().split(RegExp(r'\s+')).take(2).map((w) => w[0]).join().toUpperCase()
+        ? name
+              .trim()
+              .split(RegExp(r'\s+'))
+              .take(2)
+              .map((w) => w[0])
+              .join()
+              .toUpperCase()
         : '#';
     final avatarColor = _colorFromId(widget.userId, scheme);
 
@@ -793,12 +800,17 @@ final class _PlayerTileState extends State<_PlayerTile> {
               children: [
                 Text(
                   widget.displayName ?? 'Jugador #${idPreview(widget.userId)}',
-                  style:
-                      const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
                 Text(
                   'Desde ${formatTimeHm(widget.joinedAt)}',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -937,8 +949,11 @@ final class _ChatFab extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: scheme.outlineVariant, width: 1.5),
           ),
-          child: Icon(Icons.chat_bubble_outline_rounded,
-              size: 22, color: scheme.onSurface),
+          child: Icon(
+            Icons.chat_bubble_outline_rounded,
+            size: 22,
+            color: scheme.onSurface,
+          ),
         ),
       ),
     );
@@ -962,8 +977,10 @@ final class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final m = loaded.match;
-    final priceLabel =
-        formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m));
+    final priceLabel = formatMoneyLabel(
+      m.pricePerPlayerCents,
+      matchDetailDisplayCurrency(m),
+    );
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -1296,15 +1313,17 @@ final class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 56, color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
+            Icon(
+              icon,
+              size: 56,
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+            ),
             const SizedBox(height: 16),
             Text(
               title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w900),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -1327,7 +1346,8 @@ final class _EmptyState extends StatelessWidget {
 void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
   final cubit = context.read<MatchDetailCubit>();
   final m = loaded.match;
-  final isOrganizer = m.participants.isNotEmpty &&
+  final isOrganizer =
+      m.participants.isNotEmpty &&
       m.participants.first.userId == loaded.viewerUserId;
   final isFinished = m.status == 'FINISHED';
 
@@ -1359,10 +1379,9 @@ void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Gestionar partida',
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
@@ -1514,8 +1533,9 @@ void _shareMatchInvite(BuildContext context, MatchDetailDto match) {
       match.locationLabel!.trim(),
   ];
   final where = whereParts.isEmpty ? '' : ' en ${whereParts.join(' · ')}';
-  final spotsLine =
-      match.openSpots > 0 ? '\nQuedan ${match.openSpots} lugares.' : '';
+  final spotsLine = match.openSpots > 0
+      ? '\nQuedan ${match.openSpots} lugares.'
+      : '';
 
   final text = StringBuffer()
     ..writeln('¡Sumate a mi partida de pádel$where!')
@@ -1553,8 +1573,10 @@ final class _SheetAction extends StatelessWidget {
     final color = isDestructive ? scheme.error : scheme.onSurface;
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Text(label,
-          style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      title: Text(
+        label,
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
       onTap: onTap,
     );
   }

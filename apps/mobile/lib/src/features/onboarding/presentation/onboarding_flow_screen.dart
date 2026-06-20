@@ -97,13 +97,13 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
               _OnboardingHeader(
                 currentPage: _currentPage,
                 total: 4,
-                canGoBack: _currentPage > 0,
-                onBack: () => _pageController.previousPage(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOut,
-                ),
+                onBack: _currentPage > 0
+                    ? () => _pageController.previousPage(
+                          duration: const Duration(milliseconds: 240),
+                          curve: Curves.easeOut,
+                        )
+                    : () => context.go(Routes.register),
               ),
-              _ProgressIndicator(currentPage: _currentPage, total: 4),
               Expanded(
                 child: PageView(
                   controller: _pageController,
@@ -129,107 +129,91 @@ class _OnboardingHeader extends StatelessWidget {
   const _OnboardingHeader({
     required this.currentPage,
     required this.total,
-    required this.canGoBack,
     required this.onBack,
   });
 
   final int currentPage;
   final int total;
-  final bool canGoBack;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.surface.withValues(alpha: 0.96),
+      color: scheme.surfaceContainerLow,
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
             ),
           ),
-          child: Row(
+          child: Column(
             children: [
-              SizedBox(
-                width: 56,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: canGoBack
-                      ? IconButton(
-                          onPressed: onBack,
-                          icon: const Icon(Icons.chevron_left, size: 28),
-                        )
-                      : null,
-                ),
+              Row(
+                children: [
+                  InkWell(
+                    onTap: onBack,
+                    borderRadius: BorderRadius.circular(11),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: const Icon(Icons.chevron_left, size: 20),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Configura tu perfil',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                        ),
+                        Text(
+                          'Paso ${currentPage + 1} de $total',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 38),
+                ],
               ),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Configura tu perfil',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
+              const SizedBox(height: 14),
+              Row(
+                children: List.generate(total, (i) {
+                  final active = i < currentPage + 1;
+                  return Expanded(
+                    child: Container(
+                      height: 4,
+                      margin: EdgeInsets.only(right: i < total - 1 ? 6 : 0),
+                      decoration: BoxDecoration(
+                        color: active ? scheme.primary : scheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    Text(
-                      'Paso ${currentPage + 1} de $total',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                }),
               ),
-              const SizedBox(width: 56),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ProgressIndicator extends StatelessWidget {
-  const _ProgressIndicator({required this.currentPage, required this.total});
-
-  final int currentPage;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: List.generate(total, (i) {
-          final active = i <= currentPage;
-          return Expanded(
-            child: Container(
-              height: 4,
-              margin: EdgeInsets.only(right: i < total - 1 ? 6 : 0),
-              decoration: BoxDecoration(
-                color: active ? scheme.primary : scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          );
-        }),
       ),
     );
   }

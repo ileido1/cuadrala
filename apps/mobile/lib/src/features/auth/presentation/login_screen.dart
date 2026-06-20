@@ -17,7 +17,6 @@ import 'widgets/google_g_logo.dart';
 import 'widgets/social_button.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/env/app_env.dart';
-import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/primary_button.dart';
 
@@ -174,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     title: 'Bienvenido de vuelta',
                     subtitle: 'Inicia sesión para seguir cuadrando partidas.',
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 22),
                   AuthTabs(
                     selectedIndex: 0,
                     isDisabled: isBusy,
@@ -195,9 +194,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   SocialButton(
                     icon: const Icon(Icons.apple),
                     label: 'Continuar con Apple',
-                    background: BrandColors.appleBlack,
-                    foreground: scheme.onPrimary,
-                    border: BrandColors.appleBlack,
+                    background: scheme.surface,
+                    foreground: scheme.onSurface,
+                    border: scheme.outlineVariant,
                     onPressed: isBusy ? null : _socialLoginApple,
                   ),
                   const SizedBox(height: 18),
@@ -230,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: Icon(Icons.mail_outline),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   TextField(
                     key: const Key('login.password'),
                     controller: _passwordController,
@@ -250,6 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -297,10 +297,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                  ],
+                  ] else
+                    const SizedBox(height: 20),
                   PrimaryButton(
                     key: const Key('login.submit'),
                     label: 'Iniciar sesión',
+                    height: 52,
                     isLoading: isLoading,
                     onPressed: _submit,
                   ),
@@ -338,12 +340,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 420),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: scheme.surface,
-                        ),
-                        child: content(),
-                      ),
+                      child: content(),
                     ),
                   ),
                 ),

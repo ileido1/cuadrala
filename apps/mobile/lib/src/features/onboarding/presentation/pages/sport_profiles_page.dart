@@ -4,6 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/sport/sport_classification.dart';
 import '../../../../core/theme/brand_colors.dart';
+import '../../../../shared/widgets/primary_button.dart';
+import '../../../../shared/widgets/segmented_control.dart';
+import '../../../../shared/widgets/selectable_chip.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../../catalog/data/models/category_dto.dart';
 import '../../../catalog/data/models/sport_dto.dart';
@@ -282,16 +285,12 @@ class _OnboardingSportProfilesPageState extends State<OnboardingSportProfilesPag
                                 ),
                           ),
                           const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: _DominantHandChoice.values.map((h) {
-                              final selected = _dominantHand == h;
-                              return ChoiceChip(
-                                label: Text(h.label),
-                                selected: selected,
-                                onSelected: (_) => setState(() => _dominantHand = h),
-                              );
-                            }).toList(),
+                          SegmentedControl<_DominantHandChoice>(
+                            options: _DominantHandChoice.values
+                                .map((h) => SegmentedOption(value: h, label: h.label))
+                                .toList(),
+                            value: _dominantHand,
+                            onChanged: (h) => setState(() => _dominantHand = h),
                           ),
                         ],
                       ],
@@ -306,18 +305,12 @@ class _OnboardingSportProfilesPageState extends State<OnboardingSportProfilesPag
                       style: TextStyle(color: scheme.error),
                     ),
                   ),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: saving ? null : _submit,
-                    child: saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Continuar'),
-                  ),
+                PrimaryButton(
+                  label: 'Continuar',
+                  icon: Icons.arrow_forward,
+                  height: 54,
+                  isLoading: saving,
+                  onPressed: _submit,
                 ),
               ],
             ),
@@ -374,13 +367,13 @@ class _SportClassificationCard extends StatelessWidget {
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
-              runSpacing: 6,
+              runSpacing: 8,
               children: SkillBand.values.map((band) {
                 final selected = config.band == band;
-                return FilterChip(
-                  label: Text(skillBandLabel(band)),
+                return SelectableChip(
+                  label: skillBandLabel(band),
                   selected: selected,
-                  onSelected: (_) => onBandChanged(band),
+                  onTap: () => onBandChanged(band),
                 );
               }).toList(),
             ),
@@ -410,13 +403,13 @@ class _SportClassificationCard extends StatelessWidget {
               else
                 Wrap(
                   spacing: 8,
-                  runSpacing: 6,
+                  runSpacing: 8,
                   children: categoriesForBand(sport, config.band!).map((c) {
                     final selected = config.categoryId == c.id;
-                    return ChoiceChip(
-                      label: Text(c.name),
+                    return SelectableChip(
+                      label: c.name,
                       selected: selected,
-                      onSelected: (_) => onCategoryChanged(c.id),
+                      onTap: () => onCategoryChanged(c.id),
                     );
                   }).toList(),
                 ),
@@ -428,24 +421,13 @@ class _SportClassificationCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Text('Drive (derecha)'),
-                      selected: config.courtSide == SidePreference.right,
-                      onSelected: (_) => onCourtSideChanged(SidePreference.right),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Text('Revés (izquierda)'),
-                      selected: config.courtSide == SidePreference.left,
-                      onSelected: (_) => onCourtSideChanged(SidePreference.left),
-                    ),
-                  ),
+              SegmentedControl<SidePreference>(
+                options: const [
+                  SegmentedOption(value: SidePreference.right, label: 'Drive (derecha)'),
+                  SegmentedOption(value: SidePreference.left, label: 'Revés (izquierda)'),
                 ],
+                value: config.courtSide,
+                onChanged: onCourtSideChanged,
               ),
             ],
             if (!isRacket && !isTeam)
@@ -483,36 +465,37 @@ class _SportTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: selected ? scheme.primary.withValues(alpha: .08) : scheme.surface,
           border: Border.all(
             color: selected ? scheme.primary : scheme.outlineVariant,
-            width: selected ? 1.5 : 1,
+            width: 1.5,
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: meta.color.withValues(alpha: .15),
+                borderRadius: BorderRadius.circular(11),
+                color: meta.color,
               ),
-              child: Icon(meta.icon, color: meta.color, size: 20),
+              child: Icon(meta.icon, color: Colors.white, size: 21),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 sport.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
               ),
             ),
-            if (selected) Icon(Icons.check_circle, size: 20, color: scheme.primary),
+            if (selected) Icon(Icons.check, size: 18, color: scheme.primary),
           ],
         ),
       ),

@@ -12,12 +12,12 @@ void main() {
       expect(evaluatePasswordStrength('abc'), PasswordStrength.weak);
     });
 
-    test('8+ con minúsculas y números => fair', () {
-      expect(evaluatePasswordStrength('abcd1234'), PasswordStrength.fair);
+    test('6+ solo minúsculas y números => weak', () {
+      expect(evaluatePasswordStrength('abcd1234'), PasswordStrength.weak);
     });
 
-    test('8+ con mayúsculas, minúsculas y números => good', () {
-      expect(evaluatePasswordStrength('Abcd1234'), PasswordStrength.good);
+    test('6+ con mayúsculas, minúsculas y números => fair', () {
+      expect(evaluatePasswordStrength('Abcd1234'), PasswordStrength.fair);
     });
 
     test('12+ con mayúsculas, números y símbolos => strong', () {

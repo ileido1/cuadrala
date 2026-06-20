@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../shared/constants/availability_slot_styles.dart';
+import '../../../../shared/widgets/primary_button.dart';
+import '../../../../shared/widgets/selectable_chip.dart';
 import '../../data/models/onboarding_status_dto.dart';
 import '../../data/models/user_availability_dto.dart';
 import '../cubit/onboarding_cubit.dart';
@@ -116,7 +118,7 @@ class _OnboardingAvailabilityPageState extends State<OnboardingAvailabilityPage>
                           runSpacing: 8,
                           children: [
                             for (final d in _daysOrder)
-                              _DayChip(
+                              SelectableChip(
                                 label: _daysShort[d]!,
                                 selected: _days.contains(d),
                                 onTap: () => setState(() {
@@ -174,19 +176,12 @@ class _OnboardingAvailabilityPageState extends State<OnboardingAvailabilityPage>
                           ),
                     ),
                   ),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: saving ? null : _submit,
-                    icon: saving
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.bolt, size: 20),
-                    label: const Text('¡Empezar a jugar!'),
-                  ),
+                PrimaryButton(
+                  label: '¡Empezar a jugar!',
+                  icon: Icons.bolt,
+                  height: 54,
+                  isLoading: saving,
+                  onPressed: _submit,
                 ),
               ],
             ),
@@ -212,41 +207,6 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _DayChip extends StatelessWidget {
-  const _DayChip({required this.label, required this.selected, required this.onTap});
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: selected ? scheme.primary : scheme.surfaceContainerHighest,
-          border: Border.all(
-            color: selected ? scheme.primary : scheme.outlineVariant,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            color: selected ? scheme.onPrimary : scheme.onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _SlotCard extends StatelessWidget {
   const _SlotCard({required this.meta, required this.selected, required this.onTap});
 
@@ -262,13 +222,13 @@ class _SlotCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: selected ? scheme.primary.withValues(alpha: .08) : scheme.surface,
+          color: selected ? scheme.primary.withValues(alpha: .15) : scheme.surface,
           border: Border.all(
             color: selected ? scheme.primary : scheme.outlineVariant,
-            width: selected ? 1.5 : 1,
+            width: 1.5,
           ),
         ),
         child: Row(
@@ -276,11 +236,12 @@ class _SlotCard extends StatelessWidget {
             Container(
               width: 44,
               height: 44,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: meta.color.withValues(alpha: .15),
+                borderRadius: BorderRadius.circular(12),
+                color: meta.color,
               ),
-              child: Icon(meta.icon, color: meta.color, size: 24),
+              child: Icon(meta.icon, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -289,20 +250,20 @@ class _SlotCard extends StatelessWidget {
                 children: [
                   Text(
                     meta.title,
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     meta.range,
-                    style: TextStyle(color: scheme.onSurfaceVariant),
+                    style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
             AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              width: 24,
-              height: 24,
+              width: 26,
+              height: 26,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: selected ? scheme.primary : Colors.transparent,

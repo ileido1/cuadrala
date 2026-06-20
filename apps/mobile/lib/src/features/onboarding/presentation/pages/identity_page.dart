@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 
 import '../../../../core/di/service_locator.dart';
+import '../../../../shared/widgets/primary_button.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/models/onboarding_status_dto.dart';
 import '../cubit/onboarding_cubit.dart';
@@ -156,7 +157,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                             onTap: _onAvatarTap,
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 26),
                         TextField(
                           controller: _nameController,
                           textInputAction: TextInputAction.next,
@@ -169,7 +170,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                             errorText: _nameError,
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         PhoneFormField(
                           controller: _phoneController,
                           decoration: InputDecoration(
@@ -183,7 +184,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           isCountryButtonPersistent: true,
                           autovalidateMode: AutovalidateMode.disabled,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _documentController,
                           keyboardType: TextInputType.number,
@@ -197,7 +198,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                             helperText: 'Opcional. Solo números sin puntos ni guiones.',
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         InkWell(
                           onTap: _pickBirthDate,
                           borderRadius: BorderRadius.circular(16),
@@ -225,7 +226,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         TextField(
                           controller: _cityController,
                           textCapitalization: TextCapitalization.words,
@@ -237,7 +238,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                             helperText: 'La usamos para mostrarte partidas y canchas cercanas.',
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         _ProfilePreviewCard(
                           name: _nameController.text.trim(),
                           city: _cityController.text.trim(),
@@ -254,18 +255,12 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                   ),
                   const SizedBox(height: 8),
                 ],
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: saving ? null : _submit,
-                    child: saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Continuar'),
-                  ),
+                PrimaryButton(
+                  label: 'Continuar',
+                  icon: Icons.arrow_forward,
+                  height: 54,
+                  isLoading: saving,
+                  onPressed: _submit,
                 ),
               ],
             ),
@@ -307,26 +302,34 @@ class _AvatarPicker extends StatelessWidget {
                     color: scheme.onPrimary,
                     fontSize: 38,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.all(6),
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: scheme.surface,
-                  border: Border.all(color: scheme.primary, width: 2),
+                  border: Border.all(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    width: 2.5,
+                  ),
                 ),
-                child: Icon(Icons.camera_alt, size: 16, color: scheme.primary),
+                child: Icon(Icons.camera_alt, size: 17, color: scheme.onSurface),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text(
           'Toca para cambiar la foto',
-          style: TextStyle(color: scheme.onSurfaceVariant),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -362,9 +365,9 @@ class _ProfilePreviewCard extends StatelessWidget {
           Text(
             'VISTA PREVIA DE TU PERFIL',
             style: TextStyle(
-              fontSize: 11,
-              letterSpacing: .8,
-              fontWeight: FontWeight.w900,
+              fontSize: 13,
+              letterSpacing: 0.3,
+              fontWeight: FontWeight.w700,
               color: scheme.onSurfaceVariant,
             ),
           ),
