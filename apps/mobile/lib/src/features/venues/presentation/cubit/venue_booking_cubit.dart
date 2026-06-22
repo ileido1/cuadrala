@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
@@ -79,6 +81,7 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
       selectedDate: date,
       selectedSlot: null,
       slotsByCourtId: const {},
+      slotsErrorByCourtId: const {},
     ));
   }
 
@@ -105,6 +108,11 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
     final from = DateTime(date.year, date.month, date.day);
     final to = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
+    // Invariante ambos-o-ninguno: el backend exige sportId junto a categoryId.
+    final sportId = state.sportId;
+    final categoryId = state.selectedCategoryId;
+    final sendTaxonomy = sportId != null && categoryId != null;
+
     try {
       final envelope = await _venuesRepository.getVenueAvailability(
         venueId: state.venue.id,
@@ -112,7 +120,8 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
         from: from,
         to: to,
         durationMinutes: durationMinutes,
-        sportId: state.sportId,
+        sportId: sendTaxonomy ? sportId : null,
+        categoryId: sendTaxonomy ? categoryId : null,
       );
 
       final courtsRaw = envelope['courts'];
@@ -139,13 +148,29 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
 
       final updated = Map<String, List<String>>.of(state.slotsByCourtId)
         ..[courtId] = slots;
+      final clearedErrors = Map<String, String>.of(state.slotsErrorByCourtId)
+        ..remove(courtId);
 
       emit(state.copyWith(
         slotsByCourtId: updated,
+        slotsErrorByCourtId: clearedErrors,
         slotsLoadingCourtId: null,
       ));
-    } catch (_) {
-      emit(state.copyWith(slotsLoadingCourtId: null));
+    } catch (e, st) {
+      developer.log(
+        'No se pudieron cargar horarios para court $courtId',
+        name: 'VenueBookingCubit',
+        error: e,
+        stackTrace: st,
+      );
+      final message =
+          e is AppFailure ? e.message : 'No pudimos cargar los horarios.';
+      final errors = Map<String, String>.of(state.slotsErrorByCourtId)
+        ..[courtId] = message;
+      emit(state.copyWith(
+        slotsErrorByCourtId: errors,
+        slotsLoadingCourtId: null,
+      ));
     }
   }
 

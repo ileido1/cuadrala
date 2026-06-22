@@ -15,6 +15,7 @@ final class VenueBookingState extends Equatable {
     this.categories = const [],
     this.sportId,
     this.slotsByCourtId = const {},
+    this.slotsErrorByCourtId = const {},
     this.slotsLoadingCourtId,
     this.selectedCourtId,
     this.selectedSlot,
@@ -37,6 +38,9 @@ final class VenueBookingState extends Equatable {
 
   /// courtId → list of available ISO scheduledAt strings.
   final Map<String, List<String>> slotsByCourtId;
+
+  /// courtId → mensaje de error de carga de horarios (no silencioso).
+  final Map<String, String> slotsErrorByCourtId;
   final String? slotsLoadingCourtId;
   final String? selectedCourtId;
   final String? selectedSlot;
@@ -92,6 +96,7 @@ final class VenueBookingState extends Equatable {
     List<CategoryDto>? categories,
     Object? sportId = _sentinel,
     Map<String, List<String>>? slotsByCourtId,
+    Map<String, String>? slotsErrorByCourtId,
     Object? slotsLoadingCourtId = _sentinel,
     Object? selectedCourtId = _sentinel,
     Object? selectedSlot = _sentinel,
@@ -112,6 +117,7 @@ final class VenueBookingState extends Equatable {
       categories: categories ?? this.categories,
       sportId: sportId == _sentinel ? this.sportId : sportId as String?,
       slotsByCourtId: slotsByCourtId ?? this.slotsByCourtId,
+      slotsErrorByCourtId: slotsErrorByCourtId ?? this.slotsErrorByCourtId,
       slotsLoadingCourtId: slotsLoadingCourtId == _sentinel
           ? this.slotsLoadingCourtId
           : slotsLoadingCourtId as String?,
@@ -144,6 +150,7 @@ final class VenueBookingState extends Equatable {
         categories,
         sportId,
         slotsByCourtId,
+        slotsErrorByCourtId,
         slotsLoadingCourtId,
         selectedCourtId,
         selectedSlot,

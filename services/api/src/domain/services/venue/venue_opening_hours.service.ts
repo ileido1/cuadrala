@@ -97,15 +97,44 @@ export function getWallClockMinutesFromDateSV(_date: Date): number {
   return _date.getUTCHours() * 60 + _date.getUTCMinutes();
 }
 
+/**
+ * Predicado puro y no-lanzante: indica si la franja [scheduledAt, +duration]
+ * cae dentro del horario de atención de la sede para ese día.
+ *
+ * Devuelve true cuando duration <= 0 (espeja el early-return del assert) o
+ * cuando START >= open && END <= close (límites inclusivos). Devuelve false
+ * cuando el día está cerrado (getDayHoursSV === null) o la franja se sale.
+ */
+export function isWithinOpeningHoursSV(
+  _scheduledAt: Date,
+  _durationMinutes: number,
+  _openingHours: OpeningHoursMap | null | undefined,
+): boolean {
+  if (_durationMinutes <= 0) {
+    return true;
+  }
+
+  const DAY_KEY = dayKeyFromDateSV(_scheduledAt);
+  const HOURS = getDayHoursSV(_openingHours, DAY_KEY);
+  if (HOURS === null) {
+    return false;
+  }
+
+  const START = getWallClockMinutesFromDateSV(_scheduledAt);
+  const END = START + _durationMinutes;
+  return START >= HOURS.openMinutes && END <= HOURS.closeMinutes;
+}
+
 export function assertReservationWithinOpeningHoursSV(
   _scheduledAt: Date,
   _durationMinutes: number,
   _openingHours: OpeningHoursMap | null | undefined,
 ): void {
-  if (_durationMinutes <= 0) {
+  if (isWithinOpeningHoursSV(_scheduledAt, _durationMinutes, _openingHours)) {
     return;
   }
 
+  // Camino de fallo: recomputar el horario del día para emitir el error correcto.
   const DAY_KEY = dayKeyFromDateSV(_scheduledAt);
   const HOURS = getDayHoursSV(_openingHours, DAY_KEY);
 
@@ -117,14 +146,9 @@ export function assertReservationWithinOpeningHoursSV(
     );
   }
 
-  const START = getWallClockMinutesFromDateSV(_scheduledAt);
-  const END = START + _durationMinutes;
-
-  if (START < HOURS.openMinutes || END > HOURS.closeMinutes) {
-    throw new AppError(
-      'FUERA_DE_HORARIO',
-      `El horario debe estar entre ${minutesToTimeStringSV(HOURS.openMinutes)} y ${minutesToTimeStringSV(HOURS.closeMinutes)}.`,
-      422,
-    );
-  }
+  throw new AppError(
+    'FUERA_DE_HORARIO',
+    `El horario debe estar entre ${minutesToTimeStringSV(HOURS.openMinutes)} y ${minutesToTimeStringSV(HOURS.closeMinutes)}.`,
+    422,
+  );
 }

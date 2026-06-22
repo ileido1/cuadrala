@@ -101,8 +101,8 @@ class VenuesRepository {
     final data = await _venuesApi.getVenueAvailabilityEnvelope(
       venueId: venueId,
       courtId: courtId,
-      fromIso: from.toIso8601String(),
-      toIso: to.toIso8601String(),
+      fromIso: from.toUtc().toIso8601String(),
+      toIso: to.toUtc().toIso8601String(),
       durationMinutes: durationMinutes,
       stepMinutes: stepMinutes,
       sportId: sportId,

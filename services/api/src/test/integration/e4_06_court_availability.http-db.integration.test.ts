@@ -22,6 +22,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let actorUserId: string;
     let venueAId: string;
     let courtA1Id: string;
+    let venueBId: string;
+    let courtB1Id: string;
 
     beforeAll(async () => {
       await resetDatabaseForTestsSV();
@@ -58,6 +60,21 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         data: { venueId: venueAId, name: 'Cancha A1' },
       });
       courtA1Id = COURT_A1.id;
+
+      // Venue B con openingHours acotados (miércoles 10:00-12:00) para validar
+      // que availability respeta la franja de la sede.
+      const VENUE_B = await PRISMA.venue.create({
+        data: {
+          name: `Club B ${TS}`,
+          openingHours: { wednesday: { open: '10:00', close: '12:00' } },
+        },
+      });
+      venueBId = VENUE_B.id;
+
+      const COURT_B1 = await PRISMA.court.create({
+        data: { venueId: venueBId, name: 'Cancha B1' },
+      });
+      courtB1Id = COURT_B1.id;
     });
 
     afterAll(async () => {
@@ -161,6 +178,26 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         scheduledAt: '2026-06-12T14:00:00.000Z',
         isAvailable: false,
         reason: 'INCOMPATIBLE_VACANT_HOUR',
+      });
+    });
+
+    it('marca fuera de horario si el slot cae fuera de openingHours de la sede (AC19)', async () => {
+      const RES = await request(APP)
+        .get(`/api/v1/venues/${venueBId}/availability`)
+        .query({
+          courtId: courtB1Id,
+          from: '2026-06-10T08:00:00.000Z', // miércoles, antes de open 10:00
+          to: '2026-06-10T12:00:00.000Z',
+          durationMinutes: 90,
+          stepMinutes: 30,
+        });
+
+      expect(RES.status).toBe(200);
+      const SLOTS = RES.body.data.courts[0].slots as Array<{ scheduledAt: string; isAvailable: boolean; reason?: string }>;
+      expect(SLOTS[0]).toMatchObject({
+        scheduledAt: '2026-06-10T08:00:00.000Z',
+        isAvailable: false,
+        reason: 'OUT_OF_OPENING_HOURS',
       });
     });
 

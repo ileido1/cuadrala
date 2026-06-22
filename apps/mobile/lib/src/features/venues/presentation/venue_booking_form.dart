@@ -141,6 +141,7 @@ class _VenueBookingFormState extends State<VenueBookingForm> {
                       selectedCourtId: state.selectedCourtId,
                       selectedSlot: state.selectedSlot,
                       slotsByCourtId: state.slotsByCourtId,
+                      errorByCourtId: state.slotsErrorByCourtId,
                       loadingCourtId: state.slotsLoadingCourtId,
                       dateLabel: dateLabel,
                       onSelectCourt: cubit.selectCourt,

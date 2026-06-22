@@ -1953,7 +1953,13 @@ const OPENAPI_CONST = {
                                     isAvailable: { type: 'boolean' },
                                     reason: {
                                       type: 'string',
-                                      enum: ['OCCUPIED_MATCH', 'INCOMPATIBLE_VACANT_HOUR', 'OUT_OF_RANGE'],
+                                      enum: [
+                                        'OCCUPIED_MATCH',
+                                        'OCCUPIED_RESERVATION',
+                                        'INCOMPATIBLE_VACANT_HOUR',
+                                        'OUT_OF_RANGE',
+                                        'OUT_OF_OPENING_HOURS',
+                                      ],
                                     },
                                   },
                                   additionalProperties: false,

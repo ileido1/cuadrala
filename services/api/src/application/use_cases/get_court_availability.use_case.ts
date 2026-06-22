@@ -1,11 +1,17 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { MatchCourtAvailabilityRepository } from '../../domain/ports/match_court_availability_repository.js';
+import type { VenueRepository } from '../../domain/ports/venue_repository.js';
+import {
+  isWithinOpeningHoursSV,
+  type OpeningHoursMap,
+} from '../../domain/services/venue/venue_opening_hours.service.js';
 
 export type CourtAvailabilityReasonDTO =
   | 'OCCUPIED_MATCH'
   | 'OCCUPIED_RESERVATION'
   | 'INCOMPATIBLE_VACANT_HOUR'
-  | 'OUT_OF_RANGE';
+  | 'OUT_OF_RANGE'
+  | 'OUT_OF_OPENING_HOURS';
 
 export type CourtAvailabilitySlotDTO = {
   scheduledAt: string;
@@ -43,7 +49,10 @@ function addMinutesSV(_date: Date, _minutes: number): Date {
 }
 
 export class GetCourtAvailabilityUseCase {
-  constructor(private readonly _repo: MatchCourtAvailabilityRepository) {}
+  constructor(
+    private readonly _repo: MatchCourtAvailabilityRepository,
+    private readonly _venueRepository: VenueRepository,
+  ) {}
 
   async executeSV(_input: GetCourtAvailabilityUseCaseInput): Promise<GetCourtAvailabilityUseCaseOutput> {
     const DURATION = _input.durationMinutes ?? 90;
@@ -73,6 +82,9 @@ export class GetCourtAvailabilityUseCase {
       throw new AppError('CANCHA_NO_EN_SEDE', 'La cancha no pertenece a la sede seleccionada.', 400);
     }
 
+    // Horario de la sede: se carga UNA sola vez por request (no por slot/court).
+    const OPENING_HOURS = await this._venueRepository.getOpeningHoursSV(_input.venueId);
+
     const RESULT_COURTS: CourtAvailabilityCourtDTO[] = [];
     for (const C of COURTS) {
       const SLOTS: CourtAvailabilitySlotDTO[] = [];
@@ -83,6 +95,15 @@ export class GetCourtAvailabilityUseCase {
             scheduledAt: t.toISOString(),
             isAvailable: false,
             reason: 'OUT_OF_RANGE',
+          });
+          continue;
+        }
+
+        if (!isWithinOpeningHoursSV(t, DURATION, OPENING_HOURS as OpeningHoursMap | null)) {
+          SLOTS.push({
+            scheduledAt: t.toISOString(),
+            isAvailable: false,
+            reason: 'OUT_OF_OPENING_HOURS',
           });
           continue;
         }

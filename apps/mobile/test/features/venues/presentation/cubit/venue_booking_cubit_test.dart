@@ -279,6 +279,7 @@ void main() {
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
             sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
           )).thenAnswer((_) async => _availabilityEnvelope());
       return VenueBookingCubit(
         venue: _venue(),
@@ -320,6 +321,7 @@ void main() {
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
             sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
           )).thenAnswer((_) async => _availabilityEnvelope());
 
       return VenueBookingCubit(
@@ -650,6 +652,274 @@ void main() {
           .having((s) => s.submitting, 'submitting=false', false)
           .having((s) => s.error, 'error set', 'Error al crear el partido.')
           .having((s) => s.submittedMatchId, 'no matchId', isNull),
+    ],
+  );
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // selectCourt() — taxonomy (sportId + categoryId) ambos-o-ninguno
+  // ──────────────────────────────────────────────────────────────────────────
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should send both sportId and categoryId in the availability request '
+    'when selectedCategoryId is not null',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer((_) async => _availabilityEnvelope());
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        catalogRepository: catalogRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+      selectedCategoryId: 'cat-1',
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    verify: (_) {
+      verify(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            sportId: 'sport-1',
+            categoryId: 'cat-1',
+          )).called(1);
+    },
+  );
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should omit both sportId and categoryId when selectedCategoryId is null',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer((_) async => _availabilityEnvelope());
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        catalogRepository: catalogRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+      // selectedCategoryId omitido → debe omitir AMBOS
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    verify: (_) {
+      verify(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            sportId: null,
+            categoryId: null,
+          )).called(1);
+    },
+  );
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // selectCourt() — error no silencioso (400 / 500) → slotsErrorByCourtId
+  // ──────────────────────────────────────────────────────────────────────────
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should expose a per-court error and clear slotsLoadingCourtId '
+    'when the API returns 400',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenThrow(
+        const AppFailure(code: 'HTTP_400', message: 'Solicitud inválida.'),
+      );
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        catalogRepository: catalogRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+      selectedCategoryId: 'cat-1',
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsErrorByCourtId['court-1'],
+            'per-court error set',
+            'Solicitud inválida.',
+          ),
+    ],
+  );
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should expose a per-court error and clear slotsLoadingCourtId '
+    'when the API returns 500',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenThrow(
+        const AppFailure(code: 'HTTP_500', message: 'Error del servidor.'),
+      );
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        catalogRepository: catalogRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+      selectedCategoryId: 'cat-1',
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsErrorByCourtId['court-1'],
+            'per-court error set',
+            'Error del servidor.',
+          ),
+    ],
+  );
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should not swallow the failure silently when availability fetch throws '
+    'a generic error',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenThrow(Exception('boom'));
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        catalogRepository: catalogRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+      selectedCategoryId: 'cat-1',
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsErrorByCourtId.containsKey('court-1'),
+            'per-court error present',
+            true,
+          ),
+    ],
+  );
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should clear the previous per-court error when a subsequent fetch succeeds',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer((_) async => _availabilityEnvelope());
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        catalogRepository: catalogRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+      selectedCategoryId: 'cat-1',
+      slotsErrorByCourtId: const {'court-1': 'error previo'},
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsErrorByCourtId.containsKey('court-1'),
+            'previous error cleared',
+            false,
+          )
+          .having(
+            (s) => s.slotsByCourtId.containsKey('court-1'),
+            'slots loaded',
+            true,
+          ),
     ],
   );
 }

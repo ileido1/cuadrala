@@ -23,6 +23,7 @@ class CourtPicker extends StatelessWidget {
     required this.onSelectCourt,
     required this.onSelectSlot,
     required this.onChangeDate,
+    this.errorByCourtId = const {},
   });
 
   final List<CourtDto> courts;
@@ -31,6 +32,9 @@ class CourtPicker extends StatelessWidget {
 
   /// courtId → lista de ISO `scheduledAt` disponibles.
   final Map<String, List<String>> slotsByCourtId;
+
+  /// courtId → mensaje de error de carga de horarios (si aplica).
+  final Map<String, String> errorByCourtId;
 
   /// courtId cuyos horarios se están cargando (spinner).
   final String? loadingCourtId;
@@ -65,6 +69,7 @@ class CourtPicker extends StatelessWidget {
             selected: selectedCourtId == court.id,
             selectedSlot: selectedSlot,
             slots: slotsByCourtId[court.id],
+            error: errorByCourtId[court.id],
             loading: loadingCourtId == court.id,
             dateLabel: dateLabel,
             onTap: () => onSelectCourt(court.id),
@@ -84,6 +89,7 @@ class _CourtRow extends StatelessWidget {
     required this.selected,
     required this.selectedSlot,
     required this.slots,
+    required this.error,
     required this.loading,
     required this.dateLabel,
     required this.onTap,
@@ -95,6 +101,7 @@ class _CourtRow extends StatelessWidget {
   final bool selected;
   final String? selectedSlot;
   final List<String>? slots;
+  final String? error;
   final bool loading;
   final String dateLabel;
   final VoidCallback onTap;
@@ -147,6 +154,7 @@ class _CourtRow extends StatelessWidget {
             const SizedBox(height: 10),
             _Slots(
               slots: slots,
+              error: error,
               loading: loading,
               selectedSlot: selectedSlot,
               dateLabel: dateLabel,
@@ -163,6 +171,7 @@ class _CourtRow extends StatelessWidget {
 class _Slots extends StatelessWidget {
   const _Slots({
     required this.slots,
+    required this.error,
     required this.loading,
     required this.selectedSlot,
     required this.dateLabel,
@@ -171,6 +180,7 @@ class _Slots extends StatelessWidget {
   });
 
   final List<String>? slots;
+  final String? error;
   final bool loading;
   final String? selectedSlot;
   final String dateLabel;
@@ -188,6 +198,12 @@ class _Slots extends StatelessWidget {
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       );
+    }
+
+    // El error tiene prioridad sobre el estado vacío.
+    final errorMessage = error;
+    if (errorMessage != null) {
+      return _ErrorSlots(message: errorMessage);
     }
 
     final available = slots ?? const <String>[];
@@ -263,6 +279,36 @@ class _EmptySlots extends StatelessWidget {
                 Icon(AppIcons.arrowForward,
                     size: 14, color: scheme.primary),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorSlots extends StatelessWidget {
+  const _ErrorSlots({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(AppIcons.clock, size: 16, color: scheme.onErrorContainer),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(fontSize: 13, color: scheme.onErrorContainer),
             ),
           ),
         ],
