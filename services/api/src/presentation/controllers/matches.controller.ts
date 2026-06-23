@@ -115,6 +115,7 @@ export async function postCreateMatchCON(_req: Request, _res: Response): Promise
     ...(BODY.maxParticipants !== undefined ? { maxParticipants: BODY.maxParticipants } : {}),
     ...(BODY.notes !== undefined ? { notes: BODY.notes } : {}),
     ...(BODY.gender !== undefined ? { gender: BODY.gender } : {}),
+    ...(BODY.affectsElo !== undefined ? { affectsElo: BODY.affectsElo } : {}),
   });
 
   _res.status(201).json({

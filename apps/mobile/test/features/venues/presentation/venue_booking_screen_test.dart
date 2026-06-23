@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:cuadrala_mobile/src/features/catalog/data/models/category_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/court_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_booking_cubit.dart';
@@ -54,16 +53,6 @@ CourtDto _court({
       durationMinutes: 90,
     );
 
-CategoryDto _category({String id = 'cat-1', String name = 'Primera'}) =>
-    CategoryDto(
-      id: id,
-      sportId: 'sport-1',
-      name: name,
-      slug: 'primera',
-      scheme: 'TIERED',
-      sortOrder: 1,
-    );
-
 VenueBookingState _loadedState({
   bool canSubmitState = false,
   String? submittedMatchId,
@@ -74,9 +63,9 @@ VenueBookingState _loadedState({
     loading: false,
     submitting: false,
     courts: [_court()],
-    categories: [_category()],
     sportId: 'sport-1',
     selectedCategoryId: canSubmitState ? 'cat-1' : null,
+    playerCategoryLabel: 'Primera',
     selectedCourtId: canSubmitState ? 'court-1' : null,
     selectedSlot: canSubmitState ? '2024-06-01T10:00:00.000Z' : null,
     submittedMatchId: submittedMatchId,

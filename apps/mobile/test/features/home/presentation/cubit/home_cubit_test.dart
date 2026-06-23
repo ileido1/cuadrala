@@ -45,6 +45,27 @@ OpenMatchDto _openMatch(String id) => OpenMatchDto(
       locationLabel: 'BA',
     );
 
+OpenMatchDto _myMatch(
+  String id, {
+  String status = 'SCHEDULED',
+  DateTime? scheduledAt,
+}) =>
+    OpenMatchDto(
+      id: id,
+      sportId: 'sport-1',
+      categoryId: 'cat-1',
+      categoryName: 'Primera',
+      status: status,
+      scheduledAt: scheduledAt,
+      pricePerPlayerCents: 1500,
+      maxParticipants: 4,
+      participantCount: 2,
+      openSpots: 2,
+      clubName: 'Club',
+      courtName: 'Cancha 1',
+      locationLabel: 'BA',
+    );
+
 OpenMatchesPage _emptyPage() => const OpenMatchesPage(
       items: [],
       page: 1,
@@ -158,6 +179,72 @@ void main() {
     expect: () => [
       isA<HomeLoading>(),
       isA<HomeFailure>().having((s) => s.message, 'message', 'No autorizado'),
+    ],
+  );
+
+  // ── 3b. myMatches: filter + order (Home quick win) ───────────────────────
+
+  void stubBase() {
+    when(() => profileRepo.getMe()).thenAnswer((_) async => _stubProfile());
+    when(() => matchesRepo.resolveDefaultSportId()).thenAnswer((_) async => 'sport-1');
+    when(
+      () => matchesRepo.listOpenMatches(
+        sportId: any(named: 'sportId'),
+        page: any(named: 'page'),
+        limit: any(named: 'limit'),
+      ),
+    ).thenAnswer((_) async => _emptyPage());
+  }
+
+  blocTest<HomeCubit, HomeState>(
+    'load() keeps only upcoming myMatches ordered by closeness (past hidden, nulls last)',
+    build: () {
+      stubBase();
+      final now = DateTime.now();
+      when(
+        () => matchesRepo.listMyMatchesSV(page: any(named: 'page'), limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => _pageWith([
+          _myMatch('past', scheduledAt: now.subtract(const Duration(days: 7))),
+          _myMatch('late', scheduledAt: now.add(const Duration(days: 3))),
+          _myMatch('null', scheduledAt: null),
+          _myMatch('soon', scheduledAt: now.add(const Duration(hours: 1))),
+          _myMatch('finished', status: 'FINISHED', scheduledAt: now.add(const Duration(hours: 2))),
+        ]),
+      );
+      return makeCubit();
+    },
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<HomeLoading>(),
+      isA<HomeLoaded>().having(
+        (s) => s.myMatches.map((m) => m.id).toList(),
+        'myMatches order',
+        ['soon', 'late', 'null'],
+      ),
+    ],
+  );
+
+  blocTest<HomeCubit, HomeState>(
+    'load() returns empty myMatches when all are past/finished',
+    build: () {
+      stubBase();
+      final now = DateTime.now();
+      when(
+        () => matchesRepo.listMyMatchesSV(page: any(named: 'page'), limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => _pageWith([
+          _myMatch('old', scheduledAt: now.subtract(const Duration(days: 14))),
+          _myMatch('done', status: 'FINISHED', scheduledAt: now),
+          _myMatch('cancelled', status: 'CANCELLED', scheduledAt: null),
+        ]),
+      );
+      return makeCubit();
+    },
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<HomeLoading>(),
+      isA<HomeLoaded>().having((s) => s.myMatches, 'myMatches', isEmpty),
     ],
   );
 

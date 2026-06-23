@@ -226,8 +226,10 @@ class _Spot extends StatelessWidget {
                 top: -3,
                 right: -1,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: scheme.tertiary,
                     borderRadius: BorderRadius.circular(4),
@@ -243,45 +245,52 @@ class _Spot extends StatelessWidget {
                 ),
               ),
             Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _Avatar(name: player.name, colorIndex: player.colorIndex),
-                  const SizedBox(height: 6),
-                  Text(
-                    _firstName(player.name),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
+              // scaleDown evita el overflow vertical (~5px) cuando el alto
+              // disponible se comprime por debajo del diseño: solo encoge si
+              // no cabe, sin alterar el tamaño cuando hay espacio.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _Avatar(name: player.name, colorIndex: player.colorIndex),
+                    const SizedBox(height: 6),
+                    Text(
+                      _firstName(player.name),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          shape: BoxShape.circle,
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        paid ? 'Pagado' : 'Pendiente',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: statusColor,
+                        const SizedBox(width: 4),
+                        Text(
+                          paid ? 'Pagado' : 'Pendiente',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -412,8 +421,11 @@ String _firstName(String name) {
 }
 
 String _initials(String name) {
-  final parts =
-      name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts.first.characters.first.toUpperCase();
   return (parts.first.characters.first + parts.last.characters.first)
@@ -452,7 +464,11 @@ class _DashedHLinePainter extends CustomPainter {
     var x = 0.0;
     final y = size.height / 2;
     while (x < size.width) {
-      canvas.drawLine(Offset(x, y), Offset(math.min(x + dash, size.width), y), paint);
+      canvas.drawLine(
+        Offset(x, y),
+        Offset(math.min(x + dash, size.width), y),
+        paint,
+      );
       x += dash + gap;
     }
   }

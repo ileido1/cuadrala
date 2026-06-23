@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 
-import '../../../catalog/data/models/category_dto.dart';
 import '../../data/models/court_dto.dart';
 import '../../data/models/venue_dto.dart';
 
@@ -12,7 +11,6 @@ final class VenueBookingState extends Equatable {
     this.submitting = false,
     this.error,
     this.courts = const [],
-    this.categories = const [],
     this.sportId,
     this.slotsByCourtId = const {},
     this.slotsErrorByCourtId = const {},
@@ -20,6 +18,7 @@ final class VenueBookingState extends Equatable {
     this.selectedCourtId,
     this.selectedSlot,
     this.selectedCategoryId,
+    this.playerCategoryLabel,
     this.affectsElo = true,
     this.gender = 'MALE',
     this.maxParticipants = 4,
@@ -33,7 +32,6 @@ final class VenueBookingState extends Equatable {
   final bool submitting;
   final String? error;
   final List<CourtDto> courts;
-  final List<CategoryDto> categories;
   final String? sportId;
 
   /// courtId → list of available ISO scheduledAt strings.
@@ -44,7 +42,14 @@ final class VenueBookingState extends Equatable {
   final String? slotsLoadingCourtId;
   final String? selectedCourtId;
   final String? selectedSlot;
+
+  /// Categoría del jugador para el deporte (fija, no editable). Null si el
+  /// jugador no tiene categoría en este deporte → bloquea la creación.
   final String? selectedCategoryId;
+
+  /// Etiqueta legible de la categoría del jugador (para mostrar read-only).
+  final String? playerCategoryLabel;
+
   final bool affectsElo;
   final String? gender;
   final int maxParticipants;
@@ -93,7 +98,6 @@ final class VenueBookingState extends Equatable {
     bool? submitting,
     Object? error = _sentinel,
     List<CourtDto>? courts,
-    List<CategoryDto>? categories,
     Object? sportId = _sentinel,
     Map<String, List<String>>? slotsByCourtId,
     Map<String, String>? slotsErrorByCourtId,
@@ -101,6 +105,7 @@ final class VenueBookingState extends Equatable {
     Object? selectedCourtId = _sentinel,
     Object? selectedSlot = _sentinel,
     Object? selectedCategoryId = _sentinel,
+    Object? playerCategoryLabel = _sentinel,
     bool? affectsElo,
     Object? gender = _sentinel,
     int? maxParticipants,
@@ -114,7 +119,6 @@ final class VenueBookingState extends Equatable {
       submitting: submitting ?? this.submitting,
       error: error == _sentinel ? this.error : error as String?,
       courts: courts ?? this.courts,
-      categories: categories ?? this.categories,
       sportId: sportId == _sentinel ? this.sportId : sportId as String?,
       slotsByCourtId: slotsByCourtId ?? this.slotsByCourtId,
       slotsErrorByCourtId: slotsErrorByCourtId ?? this.slotsErrorByCourtId,
@@ -129,6 +133,9 @@ final class VenueBookingState extends Equatable {
       selectedCategoryId: selectedCategoryId == _sentinel
           ? this.selectedCategoryId
           : selectedCategoryId as String?,
+      playerCategoryLabel: playerCategoryLabel == _sentinel
+          ? this.playerCategoryLabel
+          : playerCategoryLabel as String?,
       affectsElo: affectsElo ?? this.affectsElo,
       gender: gender == _sentinel ? this.gender : gender as String?,
       maxParticipants: maxParticipants ?? this.maxParticipants,
@@ -147,7 +154,6 @@ final class VenueBookingState extends Equatable {
         submitting,
         error,
         courts,
-        categories,
         sportId,
         slotsByCourtId,
         slotsErrorByCourtId,
@@ -155,6 +161,7 @@ final class VenueBookingState extends Equatable {
         selectedCourtId,
         selectedSlot,
         selectedCategoryId,
+        playerCategoryLabel,
         affectsElo,
         gender,
         maxParticipants,

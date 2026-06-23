@@ -18,6 +18,8 @@ export type CreateMatchUseCaseInput = {
   maxParticipants?: number;
   pricePerPlayerCents?: number;
   notes?: string;
+  affectsElo?: boolean;
+  gender?: 'MALE' | 'FEMALE' | 'MIXED';
 };
 
 export class CreateMatchUseCase {
@@ -89,6 +91,8 @@ export class CreateMatchUseCase {
       ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
       ...(_input.tournamentId !== undefined ? { tournamentId: _input.tournamentId } : {}),
       ...(_input.notes !== undefined ? { notes: _input.notes } : {}),
+      ...(_input.affectsElo !== undefined ? { affectsElo: _input.affectsElo } : {}),
+      ...(_input.gender !== undefined ? { gender: _input.gender } : {}),
     };
 
     return this._matchCrudRepository.createMatchSV(CREATE_INPUT, _input.creatorUserId);

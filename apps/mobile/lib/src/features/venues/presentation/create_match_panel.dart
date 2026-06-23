@@ -11,7 +11,7 @@ import '../../../core/formatting/money_conversion.dart';
 import '../../../core/models/currency_code.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
-import '../../../features/catalog/data/catalog_repository.dart';
+import '../../../features/onboarding/data/onboarding_repository.dart';
 import '../../../features/matches/data/matches_repository.dart';
 import '../../../shared/widgets/date_strip.dart';
 import '../../../shared/widgets/dual_price.dart';
@@ -167,7 +167,7 @@ class _CreateMatchPanelState extends State<CreateMatchPanel> {
         venue: venue,
         venuesRepository: getIt<VenuesRepository>(),
         matchesRepository: getIt<MatchesRepository>(),
-        catalogRepository: getIt<CatalogRepository>(),
+        onboardingRepository: getIt<OnboardingRepository>(),
         initialDate: _selectedDate,
       )..load();
       _loadExchangeRates(countryCode: venue.countryCode);
@@ -439,6 +439,10 @@ class _VenueListSection extends StatelessWidget {
 
         return Column(
           children: [
+            if (state.fellBackToAll) ...[
+              const _FallbackNotice(),
+              const SizedBox(height: 12),
+            ],
             for (final venue in state.filtered) ...[
               VenueCard(
                 name: venue.name,
@@ -469,6 +473,7 @@ class _VenueListSection extends StatelessWidget {
                   selectedCourtId: bookingState!.selectedCourtId,
                   selectedSlot: bookingState!.selectedSlot,
                   slotsByCourtId: bookingState!.slotsByCourtId,
+                  errorByCourtId: bookingState!.slotsErrorByCourtId,
                   loadingCourtId: bookingState!.slotsLoadingCourtId,
                   dateLabel: dateLabel,
                   onSelectCourt: onSelectCourt!,
@@ -682,6 +687,36 @@ class _SelectorError extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           TextButton(onPressed: onRetry, child: const Text('Reintentar')),
+        ],
+      ),
+    );
+  }
+}
+
+/// Aviso no bloqueante: la búsqueda por cercanía no halló sedes y se muestran
+/// todas. Solo se renderiza cuando `state.fellBackToAll` y hay sedes listadas.
+class _FallbackNotice extends StatelessWidget {
+  const _FallbackNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 18, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'No hay sedes cercanas. Mostrando todas.',
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
+            ),
+          ),
         ],
       ),
     );

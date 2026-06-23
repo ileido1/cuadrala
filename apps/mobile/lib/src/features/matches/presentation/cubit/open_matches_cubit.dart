@@ -5,6 +5,7 @@ import '../../../../core/formatting/fx_price_labels.dart';
 import '../../../../core/formatting/money_conversion.dart';
 import '../../data/matches_repository.dart';
 import '../../data/models/open_match_dto.dart';
+import '../../domain/match_time_filters.dart';
 import 'open_matches_state.dart';
 
 final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
@@ -105,24 +106,8 @@ final class OpenMatchesCubit extends Cubit<OpenMatchesState> {
   }) {
     return items
         .where((m) => segment == PartidasSegment.upcoming
-            ? _isUpcoming(m)
-            : _isHistory(m))
+            ? isUpcomingMatch(m)
+            : isHistoryMatch(m))
         .toList();
-  }
-
-  static bool _isUpcoming(OpenMatchDto m) {
-    final status = m.status.toUpperCase();
-    if (status == 'FINISHED' || status == 'CANCELLED') return false;
-    final scheduled = m.scheduledAt;
-    if (scheduled == null) return true;
-    return !scheduled.isBefore(DateTime.now().subtract(const Duration(hours: 2)));
-  }
-
-  static bool _isHistory(OpenMatchDto m) {
-    final status = m.status.toUpperCase();
-    if (status == 'FINISHED' || status == 'CANCELLED') return true;
-    final scheduled = m.scheduledAt;
-    if (scheduled == null) return false;
-    return scheduled.isBefore(DateTime.now().subtract(const Duration(hours: 2)));
   }
 }

@@ -19,8 +19,8 @@ class VenueMapCubit extends Cubit<VenueMapState> {
 
   /// Loads venues near the user's GPS position, or all venues if GPS is
   /// unavailable. Venues with null lat/lng are silently excluded.
-  Future<void> load({int radiusKm = 15}) async {
-    emit(state.copyWith(status: VenueMapStatus.loading));
+  Future<void> load({int radiusKm = 25}) async {
+    emit(state.copyWith(status: VenueMapStatus.loading, fellBackToAll: false));
 
     double? userLat;
     double? userLng;
@@ -43,9 +43,21 @@ class VenueMapCubit extends Cubit<VenueMapState> {
         radiusKm: near != null ? radiusKm : null,
       );
 
-      final withCoords = all
+      var withCoords = all
           .where((v) => v.latitude != null && v.longitude != null)
           .toList();
+      var fellBack = false;
+
+      // Fallback: si la búsqueda por cercanía no halló sedes, reintentar UNA
+      // vez sin `near` (lista completa) para no dejar al usuario sin resultados
+      // cuando su ubicación está lejos del catálogo disponible.
+      if (near != null && withCoords.isEmpty) {
+        final fallback = await _repository.listVenues();
+        withCoords = fallback
+            .where((v) => v.latitude != null && v.longitude != null)
+            .toList();
+        fellBack = true;
+      }
 
       emit(
         state.copyWith(
@@ -57,6 +69,7 @@ class VenueMapCubit extends Cubit<VenueMapState> {
           userLng: userLng,
           selectedVenue: null,
           error: null,
+          fellBackToAll: fellBack,
         ),
       );
     } on AppFailure catch (e) {

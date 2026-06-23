@@ -5,6 +5,7 @@ import '../../../../core/formatting/fx_price_labels.dart';
 import '../../../../core/formatting/money_conversion.dart';
 import '../../../matches/data/matches_repository.dart';
 import '../../../matches/data/models/open_match_dto.dart';
+import '../../../matches/domain/match_time_filters.dart';
 import '../../../profile/data/profile_repository.dart';
 import 'home_state.dart';
 
@@ -48,7 +49,7 @@ class HomeCubit extends Cubit<HomeState> {
           greetingName: _firstName(me.name),
           sportId: sportId,
           openMatches: openMatchesPage.items,
-          myMatches: myMatchesPage.items,
+          myMatches: _upcomingSorted(myMatchesPage.items),
           levelCategory: rating?.categoryName,
           levelElo: rating?.rating.round(),
           exchangeRates: exchangeRates,
@@ -58,6 +59,14 @@ class HomeCubit extends Cubit<HomeState> {
       final message = e is AppFailure ? e.message : 'No se pudo cargar el inicio.';
       emit(HomeFailure(message: message));
     }
+  }
+
+  /// Solo las partidas "próximas" (oculta las vencidas hace más de 2h y las
+  /// FINISHED/CANCELLED), ordenadas por cercanía ascendente con las sin fecha
+  /// al final. El widget se queda con las primeras 2.
+  static List<OpenMatchDto> _upcomingSorted(List<OpenMatchDto> items) {
+    return items.where(isUpcomingMatch).toList()
+      ..sort(byScheduledAtAscNullsLast);
   }
 
   /// Calls [listMyMatchesSV] and silently returns an empty page on any error.

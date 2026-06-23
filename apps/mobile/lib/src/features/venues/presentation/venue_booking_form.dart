@@ -9,8 +9,6 @@ import '../../../core/theme/app_icons.dart';
 import '../../../shared/widgets/date_strip.dart';
 import '../../../shared/widgets/dual_price.dart';
 import '../../../shared/widgets/segmented_control.dart';
-import '../../../shared/widgets/selectable_chip.dart';
-import '../../catalog/data/models/category_dto.dart';
 import 'cubit/venue_booking_cubit.dart';
 import 'cubit/venue_booking_state.dart';
 import 'widgets/court_picker.dart';
@@ -224,16 +222,13 @@ class MatchSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (state.categories.isNotEmpty) ...[
-          const _SectionLabel('Categoría', required: true),
-          const SizedBox(height: 10),
-          _CategoryChips(
-            categories: state.categories,
-            selectedId: state.selectedCategoryId,
-            onSelect: cubit.selectCategory,
-          ),
-          const SizedBox(height: 20),
-        ],
+        const _SectionLabel('Categoría', required: true),
+        const SizedBox(height: 10),
+        _CategoryReadOnly(
+          label: state.playerCategoryLabel,
+          hasCategory: state.selectedCategoryId != null,
+        ),
+        const SizedBox(height: 20),
 
         // Afecta ELO
         Container(
@@ -354,30 +349,68 @@ class MatchSettingsSection extends StatelessWidget {
   }
 }
 
-class _CategoryChips extends StatelessWidget {
-  const _CategoryChips({
-    required this.categories,
-    required this.selectedId,
-    required this.onSelect,
-  });
+/// Categoría de la partida: fija a la del jugador, NO editable. El jugador no
+/// puede subir/bajar de categoría a mano (eso depende del ELO). Si no tiene
+/// categoría en este deporte, muestra un mensaje y el submit queda bloqueado.
+class _CategoryReadOnly extends StatelessWidget {
+  const _CategoryReadOnly({required this.label, required this.hasCategory});
 
-  final List<CategoryDto> categories;
-  final String? selectedId;
-  final void Function(String id) onSelect;
+  final String? label;
+  final bool hasCategory;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final cat in categories)
-          SelectableChip(
-            label: cat.name,
-            selected: selectedId == cat.id,
-            onTap: () => onSelect(cat.id),
+    final scheme = Theme.of(context).colorScheme;
+
+    if (!hasCategory) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: scheme.errorContainer,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Icon(AppIcons.info, size: 18, color: scheme.onErrorContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Necesitás una categoría en este deporte para crear partidas.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: scheme.onErrorContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.workspace_premium_outlined, size: 18, color: scheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label ?? 'Tu categoría',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface,
+              ),
+            ),
           ),
-      ],
+          Icon(Icons.lock_outline, size: 16, color: scheme.onSurfaceVariant),
+        ],
+      ),
     );
   }
 }
@@ -528,7 +561,7 @@ class VenueBookingStickyFooter extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '${state.venue.name} · ${court.name} · '
-                    '${_slotTime(state.selectedSlot!)}',
+                    '${_slotTime(state.selectedSlot!, court.durationMinutes)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -579,10 +612,14 @@ class VenueBookingStickyFooter extends StatelessWidget {
     );
   }
 
-  static String _slotTime(String iso) {
-    final dt = DateTime.tryParse(iso)?.toLocal();
+  static String _slotTime(String iso, int durationMinutes) {
+    // Convención wall-clock-as-UTC: hora local de la sede en componentes UTC.
+    final dt = DateTime.tryParse(iso);
     if (dt == null) return iso;
-    return '${dt.hour.toString().padLeft(2, '0')}:'
-        '${dt.minute.toString().padLeft(2, '0')}';
+    final end = dt.add(Duration(minutes: durationMinutes));
+    String hhmm(DateTime d) =>
+        '${d.hour.toString().padLeft(2, '0')}:'
+        '${d.minute.toString().padLeft(2, '0')}';
+    return '${hhmm(dt)} - ${hhmm(end)}';
   }
 }
