@@ -15,6 +15,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
   'Integración MCP — confirmación partido sin settlementAmount (flag ON)',
   () => {
     let app: Awaited<ReturnType<typeof import('../../app.js').createApp>>;
+    let sportPadelId: string;
     let categoryId: string;
     let staffUserId: string;
     let payerUserId: string;
@@ -29,7 +30,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       app = createApp();
 
       await resetDatabaseForTestsSV();
-      await ensureTestCatalogSV();
+      const CATALOG = await ensureTestCatalogSV();
+      sportPadelId = CATALOG.sportPadelId;
 
       const SLUG = `mcp-match-${Date.now()}`;
       const CAT = await createTestCategorySV(sportPadelId, SLUG, 'MCP Match Cat');
@@ -109,22 +111,29 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await PRISMA.$disconnect();
     });
 
-    it('should confirm match transaction without settlementAmount when MCP flag is on', async () => {
+    it('should confirm match transaction with settlementAmount when MCP flag is on', async () => {
       const RES = await request(app)
         .patch(`/api/v1/transactions/${txPendingId}/confirm-manual`)
         .set('Authorization', `Bearer ${authToken}`)
-        .send({});
+        .send({
+          settlementAmount: { amountMinor: '800', currencyCode: 'BS' },
+        });
 
       expect(RES.status).toBe(200);
       expect(RES.body.data.status).toBe('CONFIRMED');
-      expect(RES.body.data.settlementAmount).toBeUndefined();
-      expect(RES.body.data.reservationPayment).toBeUndefined();
+      expect(RES.body.data.settlementAmount).toEqual({
+        amountMinor: '800',
+        currencyCode: 'BS',
+      });
+      expect(RES.body.data.appliedToObligation).toBeDefined();
 
       const ROW = await PRISMA.transaction.findUnique({
         where: { id: txPendingId },
       });
       expect(ROW?.status).toBe('CONFIRMED');
-      expect(ROW?.obligationCurrency).toBeNull();
+      expect(ROW?.obligationCurrency).toBe('BS');
+      expect(ROW?.settlementCurrency).toBe('BS');
+      expect(ROW?.settlementAmountMinor?.toString()).toBe('800');
     });
   },
 );

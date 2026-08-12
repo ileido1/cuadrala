@@ -54,9 +54,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       return CREATE.body.data.id as string;
     }
 
-    async function joinSV(_matchId: string, _token: string): Promise<void> {
-      const JOIN = await request(APP).post(`/api/v1/matches/${_matchId}/join`).set('Authorization', `Bearer ${_token}`);
-      expect(JOIN.status).toBe(200);
+    async function addParticipantSV(_matchId: string, _userId: string): Promise<void> {
+      await PRISMA.matchParticipant.create({
+        data: { matchId: _matchId, userId: _userId },
+      });
     }
 
     async function countNotificationEventsSV(_matchId: string): Promise<number> {
@@ -69,13 +70,17 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       });
     }
 
-    async function countNotificationDeliveriesToSV(_userIds: string[]): Promise<number> {
+    async function countNotificationDeliveriesToSV(
+      _userIds: string[],
+      _eventId?: string,
+    ): Promise<number> {
       if (_userIds.length === 0) {
         return 0;
       }
       return PRISMA.notificationDelivery.count({
         where: {
           userId: { in: _userIds },
+          ...(_eventId !== undefined ? { eventId: _eventId } : {}),
         },
       });
     }
@@ -123,9 +128,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
     it('leave (match lleno) => crea NotificationEvent MATCH_SLOT_OPENED; dispatch crea deliveries solo a elegibles y nunca a participantes', async () => {
       const MATCH_ID = await createMatchSV(TOKENS.P1!, 4);
-      await joinSV(MATCH_ID, TOKENS.P2!);
-      await joinSV(MATCH_ID, TOKENS.P3!);
-      await joinSV(MATCH_ID, TOKENS.P4!);
+      await addParticipantSV(MATCH_ID, USER_IDS.P2!);
+      await addParticipantSV(MATCH_ID, USER_IDS.P3!);
+      await addParticipantSV(MATCH_ID, USER_IDS.P4!);
 
       const LEAVE = await request(APP)
         .post(`/api/v1/matches/${MATCH_ID}/leave`)
@@ -195,22 +200,27 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         .set('Content-Type', 'application/json');
       expect([200, 202, 204]).toContain(DISPATCH.status);
 
-      // 4) Deliveries: solo S_MATCH y nunca participantes.
-      const DELIVERIES_TO_PARTICIPANTS = await countNotificationDeliveriesToSV([
-        USER_IDS.P1!,
-        USER_IDS.P2!,
-        USER_IDS.P3!,
-        USER_IDS.P4!,
-      ]);
+      // 4) Deliveries del evento MATCH_SLOT_OPENED: solo S_MATCH y nunca participantes.
+      const MATCH_SLOT_OPENED_EVENT = await PRISMA.notificationEvent.findFirst({
+        where: { matchId: MATCH_ID, categoryId, type: 'MATCH_SLOT_OPENED' },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(MATCH_SLOT_OPENED_EVENT).not.toBeNull();
+      const EVENT_ID = MATCH_SLOT_OPENED_EVENT!.id;
+
+      const DELIVERIES_TO_PARTICIPANTS = await countNotificationDeliveriesToSV(
+        [USER_IDS.P1!, USER_IDS.P2!, USER_IDS.P3!, USER_IDS.P4!],
+        EVENT_ID,
+      );
       expect(DELIVERIES_TO_PARTICIPANTS).toBe(0);
 
-      const DELIVERIES_TO_ELIGIBLES = await countNotificationDeliveriesToSV([USER_IDS.S_MATCH!]);
+      const DELIVERIES_TO_ELIGIBLES = await countNotificationDeliveriesToSV([USER_IDS.S_MATCH!], EVENT_ID);
       expect(DELIVERIES_TO_ELIGIBLES).toBe(1);
 
-      const DELIVERIES_TO_NON_ELIGIBLES = await countNotificationDeliveriesToSV([
-        USER_IDS.S_FAR!,
-        USER_IDS.S_DISABLED!,
-      ]);
+      const DELIVERIES_TO_NON_ELIGIBLES = await countNotificationDeliveriesToSV(
+        [USER_IDS.S_FAR!, USER_IDS.S_DISABLED!],
+        EVENT_ID,
+      );
       expect(DELIVERIES_TO_NON_ELIGIBLES).toBe(0);
     });
   },

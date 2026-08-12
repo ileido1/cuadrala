@@ -1,3 +1,4 @@
+/* eslint-env node */
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -55,7 +56,7 @@ function replaceCategoryCreates(content) {
   const sportId = sportIdExpr(content);
   let out = content;
   let searchFrom = 0;
-  while (true) {
+  for (;;) {
     const marker = 'PRISMA.category.create';
     const idx = out.indexOf(marker, searchFrom);
     if (idx === -1) break;
@@ -78,7 +79,6 @@ function replaceCategoryCreates(content) {
     if (out[end] === ')') end += 1;
     if (out[end] === ';') end += 1;
 
-    const block = out.slice(awaitIdx, end);
     const inner = out.slice(dataBrace + 1, dataClose);
     const name = extractField(inner, 'name');
     const slug = extractField(inner, 'slug');

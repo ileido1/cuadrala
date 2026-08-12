@@ -15,6 +15,7 @@ const APP = createApp();
 describe.skipIf(!HAS_INTEGRATION_DATABASE)(
   'Gate Wave 1 — pagos, tasas y métodos de pago (HTTP + DB)',
   () => {
+    let sportPadelId: string;
     let categoryId: string;
     let staffUserId: string;
     let payerUserId: string;
@@ -25,7 +26,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
     beforeAll(async () => {
       await resetDatabaseForTestsSV();
-      await ensureTestCatalogSV();
+      const CATALOG = await ensureTestCatalogSV();
+      sportPadelId = CATALOG.sportPadelId;
 
       const SLUG = `gate-cat-${Date.now()}`;
       const CAT = await createTestCategorySV(sportPadelId, SLUG, 'Cat gate');

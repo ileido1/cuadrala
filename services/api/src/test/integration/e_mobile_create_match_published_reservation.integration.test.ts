@@ -38,6 +38,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         .set('Content-Type', 'application/json');
       expect(REG.status).toBe(201);
       token = REG.body.data.accessToken as string;
+      const actorUserId = REG.body.data.user.id as string;
+      await PRISMA.userCategory.create({ data: { userId: actorUserId, categoryId } });
 
       const VENUE = await PRISMA.venue.create({
         data: { name: `Club Mobile M2 ${TS}`, pricingCurrency: 'USD' },

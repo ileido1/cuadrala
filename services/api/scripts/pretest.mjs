@@ -1,4 +1,3 @@
-/* global process */
 import { spawnSync } from 'node:child_process';
 
 function runOrThrowSV(_cmd, _args, _envOverrides = {}) {

@@ -50,6 +50,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(REG.status).toBe(201);
       token = REG.body.data.accessToken as string;
       actorUserId = REG.body.data.user.id as string;
+      await PRISMA.userCategory.create({ data: { userId: actorUserId, categoryId: categoryPadelId } });
 
       const VENUE_A = await PRISMA.venue.create({
         data: { name: `Club A ${TS}` },

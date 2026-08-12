@@ -65,48 +65,48 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     });
 
     it('start match -> cancel (organizer) -> finish => 409', async () => {
-      const MATCH_ID = await createMatchSV(TOKENS[0], 4);
-      await joinSV(MATCH_ID, TOKENS[1]);
-      await joinSV(MATCH_ID, TOKENS[2]);
-      await joinSV(MATCH_ID, TOKENS[3]);
+      const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
+      await joinSV(MATCH_ID, TOKENS[1]!);
+      await joinSV(MATCH_ID, TOKENS[2]!);
+      await joinSV(MATCH_ID, TOKENS[3]!);
 
       const START = await request(APP)
         .post(`/api/v1/matches/${MATCH_ID}/start`)
-        .set('Authorization', `Bearer ${TOKENS[0]}`);
+        .set('Authorization', `Bearer ${TOKENS[0]!}`);
       expect(START.status).toBe(204);
 
       const CANCEL = await request(APP)
         .patch(`/api/v1/matches/${MATCH_ID}/cancel`)
-        .set('Authorization', `Bearer ${TOKENS[0]}`);
+        .set('Authorization', `Bearer ${TOKENS[0]!}`);
       expect(CANCEL.status).toBe(200);
       expect(CANCEL.body.data.status).toBe('CANCELLED');
 
       const FINISH = await request(APP)
         .post(`/api/v1/matches/${MATCH_ID}/finish`)
-        .set('Authorization', `Bearer ${TOKENS[0]}`);
+        .set('Authorization', `Bearer ${TOKENS[0]!}`);
       expect(FINISH.status).toBe(409);
     });
 
     it('start match -> cancel -> PUT result-draft => 409', async () => {
-      const MATCH_ID = await createMatchSV(TOKENS[0], 4);
-      await joinSV(MATCH_ID, TOKENS[1]);
-      await joinSV(MATCH_ID, TOKENS[2]);
-      await joinSV(MATCH_ID, TOKENS[3]);
+      const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
+      await joinSV(MATCH_ID, TOKENS[1]!);
+      await joinSV(MATCH_ID, TOKENS[2]!);
+      await joinSV(MATCH_ID, TOKENS[3]!);
 
       const START = await request(APP)
         .post(`/api/v1/matches/${MATCH_ID}/start`)
-        .set('Authorization', `Bearer ${TOKENS[0]}`);
+        .set('Authorization', `Bearer ${TOKENS[0]!}`);
       expect(START.status).toBe(204);
 
       const CANCEL = await request(APP)
         .patch(`/api/v1/matches/${MATCH_ID}/cancel`)
-        .set('Authorization', `Bearer ${TOKENS[0]}`);
+        .set('Authorization', `Bearer ${TOKENS[0]!}`);
       expect(CANCEL.status).toBe(200);
       expect(CANCEL.body.data.status).toBe('CANCELLED');
 
       const DRAFT = await request(APP)
         .put(`/api/v1/matches/${MATCH_ID}/result-draft`)
-        .set('Authorization', `Bearer ${TOKENS[0]}`)
+        .set('Authorization', `Bearer ${TOKENS[0]!}`)
         .send({
           scores: [
             { userId: USER_IDS[0], points: 10 },
@@ -120,24 +120,24 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     });
 
     it('IN_PROGRESS: cancelar organizer => 200; no-organizer => 403', async () => {
-      const MATCH_ID = await createMatchSV(TOKENS[0], 4);
-      await joinSV(MATCH_ID, TOKENS[1]);
-      await joinSV(MATCH_ID, TOKENS[2]);
-      await joinSV(MATCH_ID, TOKENS[3]);
+      const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
+      await joinSV(MATCH_ID, TOKENS[1]!);
+      await joinSV(MATCH_ID, TOKENS[2]!);
+      await joinSV(MATCH_ID, TOKENS[3]!);
 
       const START = await request(APP)
         .post(`/api/v1/matches/${MATCH_ID}/start`)
-        .set('Authorization', `Bearer ${TOKENS[0]}`);
+        .set('Authorization', `Bearer ${TOKENS[0]!}`);
       expect(START.status).toBe(204);
 
       const CANCEL_NO_ORGANIZER = await request(APP)
         .patch(`/api/v1/matches/${MATCH_ID}/cancel`)
-        .set('Authorization', `Bearer ${TOKENS[1]}`);
+        .set('Authorization', `Bearer ${TOKENS[1]!}`);
       expect(CANCEL_NO_ORGANIZER.status).toBe(403);
 
       const CANCEL_ORGANIZER = await request(APP)
         .patch(`/api/v1/matches/${MATCH_ID}/cancel`)
-        .set('Authorization', `Bearer ${TOKENS[0]}`);
+        .set('Authorization', `Bearer ${TOKENS[0]!}`);
       expect(CANCEL_ORGANIZER.status).toBe(200);
       expect(CANCEL_ORGANIZER.body.data.status).toBe('CANCELLED');
     });

@@ -10,6 +10,11 @@ describe('AssertVenueStaffAccessUseCase', () => {
   it('should resolve when user is staff of venue', async () => {
     const VENUE_STAFF_REPO = {
       isUserStaffOfVenueSV: vi.fn().mockResolvedValue(true),
+      upsertSV: vi.fn(),
+      findByVenueAndUserSV: vi.fn(),
+      listByVenueIdSV: vi.fn(),
+      listByUserIdSV: vi.fn(),
+      removeByVenueAndUserSV: vi.fn(),
     };
     const UC = new AssertVenueStaffAccessUseCase(VENUE_STAFF_REPO);
 
@@ -27,6 +32,11 @@ describe('AssertVenueStaffAccessUseCase', () => {
   it('should throw 403 NO_AUTORIZADO when user is not staff', async () => {
     const VENUE_STAFF_REPO = {
       isUserStaffOfVenueSV: vi.fn().mockResolvedValue(false),
+      upsertSV: vi.fn(),
+      findByVenueAndUserSV: vi.fn(),
+      listByVenueIdSV: vi.fn(),
+      listByUserIdSV: vi.fn(),
+      removeByVenueAndUserSV: vi.fn(),
     };
     const UC = new AssertVenueStaffAccessUseCase(VENUE_STAFF_REPO);
 
@@ -43,6 +53,11 @@ describe('AssertVenueStaffAccessUseCase', () => {
   it('should use custom forbiddenMessage when provided', async () => {
     const VENUE_STAFF_REPO = {
       isUserStaffOfVenueSV: vi.fn().mockResolvedValue(false),
+      upsertSV: vi.fn(),
+      findByVenueAndUserSV: vi.fn(),
+      listByVenueIdSV: vi.fn(),
+      listByUserIdSV: vi.fn(),
+      removeByVenueAndUserSV: vi.fn(),
     };
     const UC = new AssertVenueStaffAccessUseCase(VENUE_STAFF_REPO);
     const CUSTOM_MESSAGE = 'No tienes permisos para ver stats de esta sede.';

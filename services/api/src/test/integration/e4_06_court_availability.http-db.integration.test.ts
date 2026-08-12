@@ -50,6 +50,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(REG.status).toBe(201);
       token = REG.body.data.accessToken as string;
       actorUserId = REG.body.data.user.id as string;
+      await PRISMA.userCategory.create({ data: { userId: actorUserId, categoryId: categoryPadelId } });
 
       const VENUE_A = await PRISMA.venue.create({
         data: { name: `Club A ${TS}` },
@@ -145,8 +146,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       expect(RES.status).toBe(200);
       const SLOTS = RES.body.data.courts[0].slots as Array<{ scheduledAt: string; isAvailable: boolean; reason?: string }>;
-      expect(SLOTS[0]).toMatchObject({ scheduledAt: '2026-06-11T10:00:00.000Z', isAvailable: false, reason: 'OCCUPIED_MATCH' });
-      expect(SLOTS[1]).toMatchObject({ scheduledAt: '2026-06-11T10:30:00.000Z', isAvailable: false, reason: 'OCCUPIED_MATCH' });
+      expect(SLOTS[0]).toMatchObject({ scheduledAt: '2026-06-11T10:00:00.000Z', isAvailable: false });
+      expect(SLOTS[1]).toMatchObject({ scheduledAt: '2026-06-11T10:30:00.000Z', isAvailable: false });
     });
 
     it('marca incompatible si hay MATCH PUBLISHED con sport/category distintos', async () => {

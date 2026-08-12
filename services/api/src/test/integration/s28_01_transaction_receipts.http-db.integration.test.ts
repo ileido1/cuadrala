@@ -20,6 +20,7 @@ const ONE_PX_PNG = Buffer.from(
 );
 
 describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración receipts (upload + download)', () => {
+  let sportPadelId: string;
   let categoryId: string;
   let userA: { id: string; token: string };
   let userB: string;
@@ -28,7 +29,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración receipts (upload + down
 
   beforeAll(async () => {
     await resetDatabaseForTestsSV();
-    await ensureTestCatalogSV();
+    const CATALOG = await ensureTestCatalogSV();
+    sportPadelId = CATALOG.sportPadelId;
 
     const SLUG = `rct-cat-${Date.now()}`;
     const CAT = await createTestCategorySV(sportPadelId, SLUG, 'Cat receipts');

@@ -16,6 +16,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
   'Integración MCP Fase 2 — ledger en confirmación de reserva',
   () => {
     let app: Awaited<ReturnType<typeof import('../../app.js').createApp>>;
+    let sportPadelId: string;
     let staffUserId: string;
     let payerUserId: string;
     let venueId: string;
@@ -32,7 +33,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       app = createApp();
 
       await resetDatabaseForTestsSV();
-      await ensureTestCatalogSV();
+      const CATALOG = await ensureTestCatalogSV();
+      sportPadelId = CATALOG.sportPadelId;
 
       const SPORT = await PRISMA.sport.findUnique({ where: { code: 'PADEL' } });
       const CAT = await createTestCategorySV(sportPadelId, `ledger-${Date.now()}`, 'Ledger Cat');
