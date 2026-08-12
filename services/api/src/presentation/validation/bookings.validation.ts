@@ -47,7 +47,7 @@ export const CREATE_BOOKING_BODY_SCHEMA = z
     visibility: z.enum(['PUBLISHED', 'DRAFT', 'PRIVATE']).default('DRAFT').optional(),
     organizerUserId: z.string().uuid().optional(),
     formatPresetId: z.string().uuid().optional(),
-    formatParameters: z.record(z.unknown()).optional(),
+    formatParameters: z.record(z.string(), z.unknown()).optional(),
     maxParticipants: z.coerce.number().int().min(2).max(20).default(4).optional(),
     pricePerPlayerCents: z.coerce.number().int().min(0).default(0).optional(),
     notes: z.string().max(500).nullable().optional(),
@@ -73,6 +73,6 @@ export const UPDATE_BOOKING_BODY_SCHEMA = z
     maxParticipants: z.coerce.number().int().min(2).max(20).optional(),
     pricePerPlayerCents: z.coerce.number().int().min(0).optional(),
     formatPresetId: z.string().uuid().optional(),
-    formatParameters: z.record(z.unknown()).nullable().optional(),
+    formatParameters: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict();

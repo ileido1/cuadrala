@@ -1,14 +1,25 @@
 import type { ExchangeRateDTO } from '../../domain/entities/payments/exchange_rate.entity.js';
 import type { ExchangeRateRepository } from '../../domain/ports/exchange_rate_repository.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 import { PRISMA } from '../prisma_client.js';
 import { caracasCalendarDateSV } from '../prisma_money_fields.js';
+
+function rateToBsNumberSV(_value: number | bigint | Prisma.Decimal): number {
+  if (typeof _value === 'bigint') {
+    return Number(_value);
+  }
+  if (typeof _value === 'number') {
+    return _value;
+  }
+  return _value.toNumber();
+}
 
 function mapExchangeRateSV(_row: {
   id: string;
   countryCode: string;
   currency: string;
-  rateToBs: bigint | number;
+  rateToBs: number | bigint | Prisma.Decimal;
   effectiveDate: Date;
   source: string | null;
   updatedAt: Date;
@@ -17,7 +28,7 @@ function mapExchangeRateSV(_row: {
     id: _row.id,
     countryCode: _row.countryCode,
     currency: _row.currency,
-    rateToBs: typeof _row.rateToBs === 'bigint' ? Number(_row.rateToBs) : _row.rateToBs,
+    rateToBs: rateToBsNumberSV(_row.rateToBs),
     effectiveDate: _row.effectiveDate,
     source: _row.source,
     updatedAt: _row.updatedAt,

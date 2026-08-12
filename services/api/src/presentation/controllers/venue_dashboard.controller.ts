@@ -113,6 +113,13 @@ export async function patchVenueCON(_req: Request, _res: Response): Promise<void
     forbiddenMessage: 'No tienes permisos para editar esta sede.',
   });
 
+  const OPENING_HOURS =
+    BODY.openingHours === null || BODY.openingHours === undefined
+      ? BODY.openingHours
+      : (Object.fromEntries(
+          Object.entries(BODY.openingHours).filter(([, _value]) => _value !== undefined),
+        ) as Record<string, { open: string; close: string }>);
+
   const RESULT = await UPDATE_VENUE_UC.executeSV(PARAMS.venueId, {
     name: BODY.name,
     address: BODY.address,
@@ -121,7 +128,7 @@ export async function patchVenueCON(_req: Request, _res: Response): Promise<void
     phone: BODY.phone,
     email: BODY.email,
     description: BODY.description,
-    openingHours: BODY.openingHours,
+    openingHours: OPENING_HOURS,
     pricingCurrency: BODY.pricingCurrency,
     displayCurrency: BODY.displayCurrency,
   });

@@ -13,7 +13,7 @@ export class ListMatchChatMessagesUseCase {
   async executeSV(_input: {
     matchId: string;
     limit: number;
-    cursorCreatedAt?: Date;
+    cursorCreatedAt?: Date | undefined;
   }): Promise<{
     threadId: string;
     messages: {

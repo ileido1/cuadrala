@@ -40,11 +40,11 @@ export type MatchListItemDTO = {
   maxParticipants: number;
   participantCount: number;
   openSpots: number;
-  clubName?: string;
-  courtName?: string;
-  locationLabel?: string;
-  pricingCurrency?: string;
-  displayCurrency?: string;
+  clubName?: string | null | undefined;
+  courtName?: string | null | undefined;
+  locationLabel?: string | null | undefined;
+  pricingCurrency?: string | undefined;
+  displayCurrency?: string | undefined;
 };
 
 export type MatchParticipantDTO = {
@@ -56,9 +56,9 @@ export type MatchParticipantDTO = {
 export type MatchDetailDTO = MatchListItemDTO & {
   courtId: string | null;
   venueId: string | null;
-  clubName?: string;
-  courtName?: string;
-  locationLabel?: string;
+  clubName?: string | null | undefined;
+  courtName?: string | null | undefined;
+  locationLabel?: string | null | undefined;
   tournamentId: string | null;
   participants: MatchParticipantDTO[];
   createdAt: Date;

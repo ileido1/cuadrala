@@ -28,7 +28,9 @@ const DEFAULT_OPEN_MINUTES = 8 * 60;
 const DEFAULT_CLOSE_MINUTES = 23 * 60;
 
 export function parseTimeToMinutesSV(_time: string): number {
-  const [H, M] = _time.split(':').map(Number);
+  const PARTS = _time.split(':').map(Number);
+  const H = PARTS[0] ?? 0;
+  const M = PARTS[1] ?? 0;
   if (!Number.isFinite(H) || !Number.isFinite(M)) {
     return 0;
   }
@@ -47,7 +49,10 @@ export function dayKeyFromDateSV(_date: Date): VenueDayKey {
 }
 
 export function dayKeyFromIsoDateSV(_isoDate: string): VenueDayKey {
-  const [Y, M, D] = _isoDate.split('-').map(Number);
+  const PARTS = _isoDate.split('-').map(Number);
+  const Y = PARTS[0] ?? 0;
+  const M = PARTS[1] ?? 1;
+  const D = PARTS[2] ?? 1;
   const LOCAL = new Date(Y, M - 1, D);
   const MAP: VenueDayKey[] = [
     'sunday',

@@ -4,6 +4,7 @@ import type {
   InAppNotificationDTO,
   NotificationDeliveryRepository,
 } from '../../domain/ports/notification_delivery_repository.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 import { PRISMA } from '../prisma_client.js';
 
@@ -65,7 +66,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
       attemptCount: _r.attemptCount,
       nextAttemptAt: _r.nextAttemptAt,
       event: {
-        type: _r.event.type,
+        type: _r.event.type as DueNotificationDeliveryWithEventDTO['event']['type'],
         matchId: _r.event.matchId,
         categoryId: _r.event.categoryId,
       },
@@ -139,7 +140,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
     const LIMIT = Number.isFinite(_dto.limit) ? _dto.limit : 20;
     const SKIP = (Math.max(1, PAGE) - 1) * Math.max(1, LIMIT);
 
-    const WHERE: Parameters<typeof PRISMA.notificationDelivery.count>[0]['where'] = { userId: _dto.userId };
+    const WHERE: Prisma.NotificationDeliveryWhereInput = { userId: _dto.userId };
     if (_dto.status === 'unread') {
       WHERE.readAt = null;
     }
@@ -170,12 +171,12 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
         deliveryId: _r.id,
         eventId: _r.eventId,
         userId: _r.userId,
-        deliveryStatus: _r.status,
+        deliveryStatus: _r.status as InAppNotificationDTO['deliveryStatus'],
         createdAt: _r.createdAt,
         sentAt: _r.sentAt,
         readAt: _r.readAt,
         event: {
-          type: _r.event.type,
+          type: _r.event.type as InAppNotificationDTO['event']['type'],
           matchId: _r.event.matchId,
           categoryId: _r.event.categoryId,
           payload: _r.event.payload as unknown,

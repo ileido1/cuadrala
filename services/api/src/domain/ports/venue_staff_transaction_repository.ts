@@ -7,30 +7,39 @@ export type StaffTransactionRow = {
   amountBase: { toString(): string };
   feeAmount: { toString(): string };
   amountTotal: { toString(): string };
-  match?: {
-    scheduledAt: Date | null;
-    court?: {
-      venueId: string;
-      venue: {
-        countryCode: string;
+  match?:
+    | {
+        scheduledAt: Date | null;
+        court?:
+          | {
+              venueId: string;
+              venue: {
+                countryCode: string;
+                pricingCurrency: string;
+                monetizationSettings: { timezone: string } | null;
+              };
+            }
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
+  reservation?:
+    | {
+        venueId: string;
+        scheduledAt: Date;
         pricingCurrency: string;
-        monetizationSettings: { timezone: string } | null;
-      };
-    } | null;
-  } | null;
-  reservation?: {
-    venueId: string;
-    scheduledAt: Date;
-    pricingCurrency: string;
-    totalAmountMinor: bigint | null;
-    paidAmountMinor: bigint;
-    court?: { venueId: string } | null;
-    venue: {
-      countryCode: string;
-      pricingCurrency: string;
-      monetizationSettings: { timezone: string } | null;
-    };
-  } | null;
+        totalAmountMinor: bigint | null;
+        paidAmountMinor: bigint;
+        court?: { venueId: string } | null | undefined;
+        venue: {
+          countryCode: string;
+          pricingCurrency: string;
+          monetizationSettings: { timezone: string } | null;
+        };
+      }
+    | null
+    | undefined;
 };
 
 export type McpConfirmPayload = {
@@ -43,25 +52,27 @@ export type McpConfirmPayload = {
   settlementAmountMinor: bigint;
   appliedToObligationMinor: bigint;
   amountBsMinor: bigint;
-  conversionRecord?: {
-    fromCurrency: string;
-    toCurrency: string;
-    fromAmountMinor: bigint;
-    toAmountMinor: bigint;
-    rateToBs: string;
-    rateDate: Date;
-    exchangeRateId: string | null;
-    source: string | null;
-  };
+  conversionRecord?:
+    | {
+        fromCurrency: string;
+        toCurrency: string;
+        fromAmountMinor: bigint;
+        toAmountMinor: bigint;
+        rateToBs: string;
+        rateDate: Date;
+        exchangeRateId: string | null;
+        source: string | null;
+      }
+    | undefined;
 };
 
 export type ConfirmStaffTransactionInput = {
   transactionId: string;
-  venuePaymentMethodId?: string;
-  referenceNumber?: string;
-  paymentData?: object;
+  venuePaymentMethodId?: string | undefined;
+  referenceNumber?: string | undefined;
+  paymentData?: object | undefined;
   confirmedBy: string;
-  mcp?: McpConfirmPayload;
+  mcp?: McpConfirmPayload | undefined;
 };
 
 export type ListPendingStaffTransactionsFilters = {
@@ -108,7 +119,15 @@ export interface VenueStaffTransactionRepository {
   confirmManualSV(
     _input: ConfirmStaffTransactionInput,
   ): Promise<{ id: string; status: string; confirmedAt: Date }>;
-  syncReservationPaymentSV(_reservationId: string): Promise<void>;
+  syncReservationPaymentSV(_reservationId: string): Promise<{
+    totalAmountCents: number | null;
+    paidAmountCents: number;
+    paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+    pricingCurrency: string;
+    totalAmountMinor: bigint | null;
+    paidAmountMinor: bigint;
+    paidAmountBsMinor: bigint | null;
+  }>;
   listPendingByVenueSV(
     _venueId: string,
     _filters?: ListPendingStaffTransactionsFilters,

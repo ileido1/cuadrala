@@ -1,5 +1,6 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import { Buffer } from 'node:buffer';
+import type { Messaging } from 'firebase-admin/messaging';
 import type {
   PushNotificationMessageDTO,
   PushNotificationProvider,
@@ -33,13 +34,7 @@ function parseServiceAccountFromBase64SV(_b64: string): ServiceAccountDTO {
 
 export class FcmPushNotificationProvider implements PushNotificationProvider {
   private _initialized = false;
-  private _messaging: null | {
-    sendEachForMulticast: (_payload: unknown) => Promise<{
-      responses: Array<{ success: boolean; error?: { message?: string; code?: string } }>;
-      successCount?: number;
-      failureCount?: number;
-    }>;
-  } = null;
+  private _messaging: Messaging | null = null;
 
   constructor(
     private readonly _serviceAccountJsonBase64: string,
@@ -53,7 +48,7 @@ export class FcmPushNotificationProvider implements PushNotificationProvider {
 
     const SERVICE_ACCOUNT = parseServiceAccountFromBase64SV(this._serviceAccountJsonBase64);
 
-    // Lazy import to avoid requiring firebase-admin in unit/contract contexts.
+    // Import diferido para evitar requerir firebase-admin en contextos unit/contract.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const ADMIN = await import('firebase-admin');
 
@@ -88,20 +83,22 @@ export class FcmPushNotificationProvider implements PushNotificationProvider {
       };
     }
 
-    const RES = await this._messaging.sendEachForMulticast({
-      tokens: _deviceTokens,
-      notification: { title: _message.title, body: _message.body },
-      data: _message.data,
-      android: { priority: 'high' },
-      apns: { headers: { 'apns-priority': '10' } },
-      fcmOptions: { analyticsLabel: 'dispatch' },
-      dryRun: this._dryRun,
-    });
+    const RES = await this._messaging.sendEachForMulticast(
+      {
+        tokens: _deviceTokens,
+        notification: { title: _message.title, body: _message.body },
+        data: _message.data,
+        android: { priority: 'high' },
+        apns: { headers: { 'apns-priority': '10' } },
+        fcmOptions: { analyticsLabel: 'dispatch' },
+      },
+      this._dryRun,
+    );
 
-    const failures: Array<{ token: string; error: string; errorCode?: string }> = [];
+    const failures: Array<{ token: string; error: string; errorCode?: string | undefined }> = [];
     for (let i = 0; i < RES.responses.length; i += 1) {
       const R = RES.responses[i];
-      if (!R.success) {
+      if (R !== undefined && !R.success) {
         failures.push({
           token: _deviceTokens[i] ?? 'unknown',
           error: R.error?.message ?? 'Error desconocido',

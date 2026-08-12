@@ -63,8 +63,8 @@ export interface PaymentTransactionRepository {
   recordPlayerPaymentSelectionSV(_input: {
     transactionId: string;
     actorUserId: string;
-    venuePaymentMethodId?: string;
-    paymentMethodType?: string;
-    reportedSettlement?: { amountMinor: bigint; currencyCode: string };
+    venuePaymentMethodId?: string | undefined;
+    paymentMethodType?: string | undefined;
+    reportedSettlement?: { amountMinor: bigint; currencyCode: string } | undefined;
   }): Promise<void>;
 }

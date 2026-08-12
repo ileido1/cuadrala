@@ -13,7 +13,7 @@ export interface ChatMessageRepository {
   listByThreadIdSV(_input: {
     threadId: string;
     limit: number;
-    cursorCreatedAt?: Date;
+    cursorCreatedAt?: Date | undefined;
   }): Promise<ChatMessageDTO[]>;
 }
 

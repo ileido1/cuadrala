@@ -39,10 +39,10 @@ export class ConfirmTransactionAsVenueStaffUseCase {
   async executeSV(_input: {
     transactionId: string;
     userId: string;
-    venuePaymentMethodId?: string;
-    settlementAmount?: { amountMinor: bigint; currencyCode: CurrencyCode };
-    referenceNumber?: string;
-    paymentData?: object;
+    venuePaymentMethodId?: string | undefined;
+    settlementAmount?: { amountMinor: bigint; currencyCode: CurrencyCode } | undefined;
+    referenceNumber?: string | undefined;
+    paymentData?: object | undefined;
   }): Promise<{
     id: string;
     status: string;
@@ -150,7 +150,7 @@ export class ConfirmTransactionAsVenueStaffUseCase {
         reservationId: TX.reservationId,
         transactionId: UPDATED.id,
         appliedToObligationMinor: MCP.appliedToObligationMinor,
-        pricingCurrency: MCP.pricingCurrency,
+        pricingCurrency: MCP.pricingCurrency as CurrencyCode,
         amountBsMinor: MCP.amountBsMinor,
         actorUserId: _input.userId,
       });

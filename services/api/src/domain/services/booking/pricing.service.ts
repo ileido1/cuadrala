@@ -19,8 +19,10 @@ export function assertValidPricingTimeRangeSV(_startTime: string, _endTime: stri
 
 /** Convierte "HH:MM" a minutos desde medianoche [0, 1440). */
 export function parseTimeToMinutesSV(_time: string): number {
-  const [H, M] = _time.split(':').map(Number);
-  return H * 60 + (M ?? 0);
+  const PARTS = _time.split(':').map(Number);
+  const H = PARTS[0] ?? 0;
+  const M = PARTS[1] ?? 0;
+  return H * 60 + M;
 }
 
 function findActiveTierSV(

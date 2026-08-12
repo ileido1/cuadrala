@@ -1,5 +1,6 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import type { Prisma as PrismaTypes } from '../../generated/prisma/client.js';
+import type { CurrencyCode } from '../../domain/money/currency_code.js';
 import type {
   CreatePaymentTransactionInput,
   PaymentTransactionRepository,
@@ -145,8 +146,8 @@ export class PrismaPaymentTransactionRepository
         await _tx.currencyConversionRecord.create({
           data: {
             transactionId: _input.transactionId,
-            fromCurrency: _input.mcp.conversionRecord.fromCurrency,
-            toCurrency: _input.mcp.conversionRecord.toCurrency,
+            fromCurrency: _input.mcp.conversionRecord.fromCurrency as CurrencyCode,
+            toCurrency: _input.mcp.conversionRecord.toCurrency as CurrencyCode,
             fromAmountMinor: _input.mcp.conversionRecord.fromAmountMinor,
             toAmountMinor: _input.mcp.conversionRecord.toAmountMinor,
             rateToBs: new Prisma.Decimal(_input.mcp.conversionRecord.rateToBs),

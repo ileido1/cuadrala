@@ -7,16 +7,16 @@ export type VenuePaymentInfoDTO = {
 };
 
 export type UpdateVenueDataDTO = {
-  name?: string | null;
-  address?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  phone?: string | null;
-  email?: string | null;
-  description?: string | null;
-  openingHours?: Record<string, { open: string; close: string }> | null;
-  pricingCurrency?: string | null;
-  displayCurrency?: string | null;
+  name?: string | null | undefined;
+  address?: string | null | undefined;
+  latitude?: number | null | undefined;
+  longitude?: number | null | undefined;
+  phone?: string | null | undefined;
+  email?: string | null | undefined;
+  description?: string | null | undefined;
+  openingHours?: Record<string, { open: string; close: string }> | null | undefined;
+  pricingCurrency?: string | null | undefined;
+  displayCurrency?: string | null | undefined;
 };
 
 export type VenueSettingsDTO = {
@@ -84,15 +84,15 @@ export type VenuePaymentInfoWithNameDTO = VenuePaymentInfoDTO & {
 
 export type CreateVenueInputDTO = {
   name: string;
-  address?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  paymentHolder?: string | null;
-  paymentBank?: string | null;
-  paymentCvu?: string | null;
-  paymentAlias?: string | null;
-  paymentNotes?: string | null;
-  ownerUserId?: string | null;
+  address?: string | null | undefined;
+  latitude?: number | null | undefined;
+  longitude?: number | null | undefined;
+  paymentHolder?: string | null | undefined;
+  paymentBank?: string | null | undefined;
+  paymentCvu?: string | null | undefined;
+  paymentAlias?: string | null | undefined;
+  paymentNotes?: string | null | undefined;
+  ownerUserId?: string | null | undefined;
 };
 
 export type PageDTO = {
