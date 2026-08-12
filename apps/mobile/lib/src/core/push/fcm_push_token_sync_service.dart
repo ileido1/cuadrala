@@ -1,9 +1,9 @@
 import 'dart:developer' as developer;
-import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/secure_token_storage.dart';
 import '../../features/notifications/data/notifications_repository.dart';
@@ -71,7 +71,8 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
           _authRepository.tokensInMemory!.accessToken.isEmpty) {
         await _authRepository.refresh();
       }
-      await _requestPermissionIfNeeded();
+      final permitted = await _requestPermissionIfNeeded();
+      if (!permitted) return;
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null || token.length < 16) {
         developer.log(
@@ -119,18 +120,34 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
     }
   }
 
-  Future<void> _requestPermissionIfNeeded() async {
-    if (!Platform.isIOS && !Platform.isAndroid) return;
-    await FirebaseMessaging.instance.requestPermission(
+  /// Devuelve `true` cuando corresponde continuar con el registro del token
+  /// (`authorized`/`provisional` o plataforma no móvil) y `false` cuando el
+  /// permiso fue denegado o el usuario descartó el diálogo (`notDetermined`).
+  Future<bool> _requestPermissionIfNeeded() async {
+    if (defaultTargetPlatform != TargetPlatform.android &&
+        defaultTargetPlatform != TargetPlatform.iOS) {
+      return true;
+    }
+    final settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+    final status = settings.authorizationStatus;
+    if (status == AuthorizationStatus.denied ||
+        status == AuthorizationStatus.notDetermined) {
+      developer.log(
+        'Permiso de notificaciones denegado ($status); omitiendo registro FCM',
+        name: 'FcmPushTokenSyncService',
+      );
+      return false;
+    }
+    return true;
   }
 
   String? _platformLabel() {
-    if (Platform.isAndroid) return 'android';
-    if (Platform.isIOS) return 'ios';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'android';
+    if (defaultTargetPlatform == TargetPlatform.iOS) return 'ios';
     return null;
   }
 }
