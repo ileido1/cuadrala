@@ -14,7 +14,7 @@
 - **Backend (API)**: base multi‑deporte, matches open + join, matchmaking suggestions, rankings/ratings, pagos (obligations/receipts) y notificaciones in‑app/preferencias **avanzado** (ver `US-E*`).
 - **Reserva de cancha**: validación **sede + pista + solape + vacante** al crear/reprogramar partida (**`US-E2-05`**, backend Done); **consulta de horarios disponibles** (**`US-E4-06`**) y UX en app (**`US-M3-08`**) planificadas en **Sprint M19**.
 - **Regla de producto (club)**: el cobro de **cancha** se alinea al **`Venue`** del `court` de la partida; la **validación del pago** la hace **solo el club** (staff del venue), no el organizador de la partida como autoridad de conciliación — backlog **`US-E8*`**, **`US-M8-03`**, **`US-W1-*`**.
-- **Web (Next.js)**: backoffice club **planificado** (`Sprint W1`); repo aún no creado en monorepo.
+- **Web (Next.js)**: backoffice club **implementado** en `apps/web` (`Sprint W1`: `US-W1-01`..`US-W1-05` **Done**; `US-W1-06` auditoría pendiente).
 
 ---
 
@@ -101,24 +101,24 @@
 #### Sprint E8 — Dueño de sede + conciliación (API / Backend)
 - **US incluidas**: `US-E8-01` … `US-E8-06` (ver §3)
 - **Objetivo**: modelo de **dueño/staff de sede**, **instrucciones de cobro por venue**, autorización de **confirmación de pago** solo por ese rol, listados para backoffice y ajuste de notificaciones al staff del club.
-- **Estado**: **Pendiente**
+- **Estado**: **Done/Parcial** — core implementado y usado por `apps/web`; `US-E8-06` tests/OpenAPI y `US-W1-06` auditoría UI pendientes.
 
 #### Sprint W1 — Backoffice Club (Web / Next.js)
 - **US incluidas**: `US-W1-01` … `US-W1-06` (ver §2b)
 - **Objetivo**: panel web para dueños de canchas (conciliación, ver comprobante, confirmar pago, editar datos de cobro del venue).
-- **Estado**: **Pendiente** (repo `apps/web-club` o similar por definir)
-- **Dependencias fuertes**: `US-E8-01`–`US-E8-04` mínimo
+- **Estado**: **Done (front W1-01..W1-05)** / **Done (back E8 mínimo)** — repo `apps/web` activo en el monorepo.
+- **Dependencias fuertes**: `US-E8-01`–`US-E8-04` mínimo (implementadas).
 
-### Plan de despliegue sugerido (tres carriles)
+### Plan de despliegue ejecutado (resumen)
 
-| Fase | API (E8) | Mobile (M18) | Web (W1) |
-|------|----------|--------------|----------|
-| **1** | `US-E8-01` dueño/staff en venue + migración | — | — |
-| **1** | `US-E8-02` datos de cobro en `Venue` + `GET` seguro para jugador en detalle de partida/pago | — | — |
-| **1** | `US-E8-03` `confirm-manual` con JWT + solo staff del venue del `court` | — | — |
-| **2** | `US-E8-04` listado transacciones PENDING por sede | `US-M8-03` UI pago con datos del venue | `US-W1-01`–`US-W1-02` auth + shell |
-| **3** | `US-E8-05` notificaciones a staff del venue | — | `US-W1-03`–`US-W1-04` lista + detalle + confirmar |
-| **4** | `US-E8-06` OpenAPI + tests | opcional `US-M8-04` inbox club en app | `US-W1-05`–`US-W1-06` editar cobro + auditoría |
+| Fase | API (E8) | Web (W1) | Estado |
+|------|----------|----------|--------|
+| **1** | `US-E8-01` dueño/staff en venue + migración | — | **Done** |
+| **1** | `US-E8-02` datos de cobro del venue | — | **Done** |
+| **1** | `US-E8-03` confirmación solo por staff del venue | — | **Done** |
+| **2** | `US-E8-04` listado transacciones PENDING por sede | `US-W1-01`–`US-W1-02` auth + shell | **Done** |
+| **3** | `US-E8-05` notificaciones a staff del venue | `US-W1-03`–`US-W1-04` lista + detalle + confirmar | **Done/Parcial** |
+| **4** | `US-E8-06` OpenAPI + tests | `US-W1-05`–`US-W1-06` editar cobro + auditoría | **Parcial** (W1-05 Done; W1-06 pendiente) |
 
 > **Nota**: la app **jugador** puede quedarse solo en “ver datos del club y subir comprobante”; la **conciliación** puede vivir **solo en web** en MVP. `US-M8-04` es opcional si el backoffice cubre todo el operativo.
 
@@ -182,14 +182,14 @@
 
 ## 2b) Historias de usuario — Web / Backoffice Club (US-W1-*)
 
-> **Stack sugerido**: Next.js (App Router), mismo `JWT` / API Cuádrala que mobile. Repo: por crear (p. ej. `apps/web-club`).
+> **Stack real**: Next.js 14 (App Router), mismo JWT / API Cuádrala que mobile. Repo: `apps/web` en el monorepo.
 
-- **US-W1-01** Scaffold Next.js + cliente API + login (email/contraseña o flujo alineado a `US-E1-01`) — **Pendiente**
-- **US-W1-02** Shell backoffice (sidebar, selector de sede si el usuario tiene varias) — **Pendiente**
-- **US-W1-03** Lista de pagos **PENDIENTE** asociados a partidos en **mis canchas** (usa `US-E8-04`) — **Pendiente**
-- **US-W1-04** Detalle: ver jugador, monto, partido, enlace/descarga de **comprobante** + botón **Confirmar pago** (`US-E8-03`) — **Pendiente**
-- **US-W1-05** Formulario **datos de cobro del venue** (CRUD o PATCH parcial; `US-E8-02`) — **Pendiente**
-- **US-W1-06** *(Fase 2)* Auditoría mínima: quién confirmó, timestamp (si el modelo de dominio lo permite) — **Pendiente**
+- **US-W1-01** Scaffold Next.js + cliente API + login (NextAuth + credenciales contra API propia, alineado a `US-E1-01`) — **Done** (`apps/web/src/app/(auth)/login`, `apps/web/src/lib/auth.ts`)
+- **US-W1-02** Shell backoffice (sidebar, selector de sede si el usuario tiene varias) — **Done** (`apps/web/src/app/dashboard/layout.tsx`, `apps/web/src/components/layout/sidebar.tsx`, `apps/web/src/contexts/venue-context.tsx`)
+- **US-W1-03** Lista de pagos **PENDIENTE** asociados a partidos en **mis canchas** (usa `US-E8-04`) — **Done** (`apps/web/src/app/dashboard/payments/page.tsx`, `apps/web/src/components/payments/payments-list.tsx`)
+- **US-W1-04** Detalle: ver jugador, monto, partido, enlace/descarga de **comprobante** + botón **Confirmar pago** (`US-E8-03`) — **Done** (`apps/web/src/components/payments/pending-payment-details.tsx`, `apps/web/src/components/payments/pending-payment-review-dialog.tsx`, `apps/web/src/components/payments/receipt-image-lightbox.tsx`)
+- **US-W1-05** Formulario **datos de cobro del venue** (CRUD métodos de pago por venue; `US-E8-02`) — **Done** (`apps/web/src/app/dashboard/settings/page.tsx`, `apps/web/src/components/settings/PaymentMethodsSettings.tsx`)
+- **US-W1-06** *(Fase 2)* Auditoría mínima: quién confirmó, timestamp (si el modelo de dominio lo permite) — **Pendiente** (no expuesta aún en UI)
 
 ---
 
@@ -205,18 +205,18 @@
 - **E5** (resultados/ranking/elo): `US-E5-01` **Done**, `US-E5-02` **Done**, `US-E5-03` **Parcial**
 - **E6** (pagos): `US-E6-01/02` **Cumplida**, `US-E6-03` **Done**
 - **E7** (chat/notificaciones): `US-E7-01` **Done**, `US-E7-02` **Parcial**, `US-E7-03` **Done**
-- **E8** (club / venue / conciliación): ver detalle debajo — **Pendiente**
+- **E8** (club / venue / conciliación): ver detalle debajo — **Done/Parcial** (core implementado; auditoría UI pendiente)
 
 ### E8 — Dueño de sede, cobro al venue y conciliación (detalle US-E8-*)
 
 > **Principio**: el pago de la cancha se concilia contra los **datos de cobro del `Venue`** seleccionado en la partida (`match.court → venue`). **Solo** usuarios con rol de **club** sobre ese venue pueden **confirmar** una transacción manual.
 
-- **US-E8-01** Modelar dueño/staff de sede: p. ej. `Venue.ownerUserId` y/o tabla `VenueStaff` (`venueId`, `userId`, `role`), migración Prisma, seed opcional — **Pendiente**
-- **US-E8-02** Persistir **instrucciones de transferencia** del venue (titular, banco, CBU/CVU, alias, texto libre, moneda) + endpoint de **lectura** para el jugador en contexto de partida/pago (`courtId` / `matchId`) — **Pendiente**
-- **US-E8-03** Endurecer `PATCH /transactions/:id/confirm-manual`: `requireAuth` + autorización **solo** si `_req.authUser.id` es owner/staff del **venue** del court del match de la transacción — **Pendiente**
-- **US-E8-04** `GET` (autenticado club) listado de transacciones **PENDING** (filtros por `venueId`, rango fechas, `matchId`) para backoffice — **Pendiente**
-- **US-E8-05** Notificaciones de comprobante / pago pendiente: destinatarios = **staff del venue** (ajustar creador de evento vs. organizer del match) — **Pendiente** (parcial: hoy puede apuntar al organizer)
-- **US-E8-06** OpenAPI + tests contrato/integración para E8 — **Pendiente**
+- **US-E8-01** Modelar dueño/staff de sede: `VenueStaff` (`venueId`, `userId`, `role`), migración Prisma, seed opcional — **Done** (`services/api/prisma/schema.prisma`, `services/api/src/domain/ports/venue_staff_repository.ts`, `services/api/src/infrastructure/adapters/prisma_venue_staff_repository.ts`)
+- **US-E8-02** Persistir **métodos de cobro del venue** (tipo, moneda, config bancaria/PagoMóvil) + lectura en contexto de partida/pago — **Done** (`VenuePaymentMethod` + `services/api/src/domain/ports/venue_payment_method_repository.ts`)
+- **US-E8-03** Confirmación de transacción **solo** por staff del venue (`ConfirmTransactionAsVenueStaffUseCase`; `PATCH /venues/:venueId/transactions/:transactionId/confirm`) — **Done**
+- **US-E8-04** `GET` (autenticado club) listado de transacciones **PENDING** por `venueId` (`GET /venues/:venueId/transactions/pending`) para backoffice — **Done**
+- **US-E8-05** Notificaciones de comprobante / pago pendiente: destinatarios = **staff del venue** — **Parcial** (evento de pago confirmado notifica; cobertura completa de pending pendiente de validación)
+- **US-E8-06** OpenAPI + tests contrato/integración para E8 — **Parcial/Done** (OpenAPI incluye endpoints; tests de integración y contrato presentes)
 
 ---
 
