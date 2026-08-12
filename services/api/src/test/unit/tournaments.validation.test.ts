@@ -59,6 +59,64 @@ describe('LIST_TOURNAMENTS_QUERY_SCHEMA', () => {
       expect(result.status).toBe(status);
     }
   });
+
+  it('should parse a valid venueId', () => {
+    const result = LIST_TOURNAMENTS_QUERY_SCHEMA.parse({
+      venueId: '123e4567-e89b-12d3-a456-426614174000',
+    });
+
+    expect(result.venueId).toBe('123e4567-e89b-12d3-a456-426614174000');
+  });
+
+  it('should throw on invalid UUID for venueId', () => {
+    expect(() =>
+      LIST_TOURNAMENTS_QUERY_SCHEMA.parse({ venueId: 'not-a-uuid' })
+    ).toThrow('venueId debe ser un UUID valido.');
+  });
+
+  it('should parse valid startsAtFrom and startsAtTo ISO datetimes', () => {
+    const result = LIST_TOURNAMENTS_QUERY_SCHEMA.parse({
+      startsAtFrom: '2026-06-01T00:00:00.000Z',
+      startsAtTo: '2026-06-30T23:59:59.000Z',
+    });
+
+    expect(result.startsAtFrom).toBe('2026-06-01T00:00:00.000Z');
+    expect(result.startsAtTo).toBe('2026-06-30T23:59:59.000Z');
+  });
+
+  it('should throw on non-ISO datetime for startsAtFrom', () => {
+    expect(() =>
+      LIST_TOURNAMENTS_QUERY_SCHEMA.parse({ startsAtFrom: 'not-a-date' })
+    ).toThrow();
+  });
+
+  it('should throw when startsAtFrom is after startsAtTo', () => {
+    expect(() =>
+      LIST_TOURNAMENTS_QUERY_SCHEMA.parse({
+        startsAtFrom: '2026-06-30T00:00:00.000Z',
+        startsAtTo: '2026-06-01T00:00:00.000Z',
+      })
+    ).toThrow();
+  });
+
+  it('should accept equal startsAtFrom and startsAtTo (inclusive bounds)', () => {
+    const result = LIST_TOURNAMENTS_QUERY_SCHEMA.parse({
+      startsAtFrom: '2026-06-01T00:00:00.000Z',
+      startsAtTo: '2026-06-01T00:00:00.000Z',
+    });
+
+    expect(result.startsAtFrom).toBe('2026-06-01T00:00:00.000Z');
+    expect(result.startsAtTo).toBe('2026-06-01T00:00:00.000Z');
+  });
+
+  it('should accept only startsAtFrom (open upper bound)', () => {
+    const result = LIST_TOURNAMENTS_QUERY_SCHEMA.parse({
+      startsAtFrom: '2026-06-01T00:00:00.000Z',
+    });
+
+    expect(result.startsAtFrom).toBe('2026-06-01T00:00:00.000Z');
+    expect(result.startsAtTo).toBeUndefined();
+  });
 });
 
 describe('TOURNAMENT_ID_PARAM_SCHEMA', () => {

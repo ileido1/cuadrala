@@ -38,10 +38,31 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
     _filters: ListTournamentsFiltersDTO,
     _page: PageDTO,
   ): Promise<{ items: TournamentListItemDTO[]; total: number }> {
-    const WHERE = {
+    const WHERE: {
+      status?: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+      sportId?: string;
+      categoryId?: string;
+      startsAt?: { gte?: Date; lte?: Date };
+      matches?: { some: { court: { venueId: string } } };
+    } = {
       ...(_filters.status !== undefined ? { status: _filters.status } : {}),
       ...(_filters.sportId !== undefined ? { sportId: _filters.sportId } : {}),
       ...(_filters.categoryId !== undefined ? { categoryId: _filters.categoryId } : {}),
+      ...(_filters.venueId !== undefined
+        ? { matches: { some: { court: { venueId: _filters.venueId } } } }
+        : {}),
+      ...(_filters.startsAtFrom !== undefined || _filters.startsAtTo !== undefined
+        ? {
+            startsAt: {
+              ...(_filters.startsAtFrom !== undefined
+                ? { gte: new Date(_filters.startsAtFrom) }
+                : {}),
+              ...(_filters.startsAtTo !== undefined
+                ? { lte: new Date(_filters.startsAtTo) }
+                : {}),
+            },
+          }
+        : {}),
     };
 
     const SKIP = (_page.page - 1) * _page.limit;

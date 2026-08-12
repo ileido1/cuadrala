@@ -24,6 +24,9 @@ export async function getListTournamentsCON(_req: Request, _res: Response): Prom
     ...(QUERY.status !== undefined ? { status: QUERY.status } : {}),
     ...(QUERY.sportId !== undefined ? { sportId: QUERY.sportId } : {}),
     ...(QUERY.categoryId !== undefined ? { categoryId: QUERY.categoryId } : {}),
+    ...(QUERY.venueId !== undefined ? { venueId: QUERY.venueId } : {}),
+    ...(QUERY.startsAtFrom !== undefined ? { startsAtFrom: QUERY.startsAtFrom } : {}),
+    ...(QUERY.startsAtTo !== undefined ? { startsAtTo: QUERY.startsAtTo } : {}),
   });
 
   _res.status(200).json({
