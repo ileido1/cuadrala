@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../data/models/court_dto.dart';
 import '../../data/models/venue_dto.dart';
+import 'slot_info.dart';
 
 final class VenueBookingState extends Equatable {
   const VenueBookingState({
@@ -34,8 +35,9 @@ final class VenueBookingState extends Equatable {
   final List<CourtDto> courts;
   final String? sportId;
 
-  /// courtId → list of available ISO scheduledAt strings.
-  final Map<String, List<String>> slotsByCourtId;
+  /// courtId → franjas devueltas por el backend (disponibles + ocupadas con
+  /// su motivo). La UI decide qué renderizar a partir de [SlotInfo.isAvailable].
+  final Map<String, List<SlotInfo>> slotsByCourtId;
 
   /// courtId → mensaje de error de carga de horarios (no silencioso).
   final Map<String, String> slotsErrorByCourtId;
@@ -99,7 +101,7 @@ final class VenueBookingState extends Equatable {
     Object? error = _sentinel,
     List<CourtDto>? courts,
     Object? sportId = _sentinel,
-    Map<String, List<String>>? slotsByCourtId,
+    Map<String, List<SlotInfo>>? slotsByCourtId,
     Map<String, String>? slotsErrorByCourtId,
     Object? slotsLoadingCourtId = _sentinel,
     Object? selectedCourtId = _sentinel,

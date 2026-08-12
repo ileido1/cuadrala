@@ -11,6 +11,7 @@ import 'package:cuadrala_mobile/src/features/onboarding/data/onboarding_reposito
 import 'package:cuadrala_mobile/src/features/venues/data/models/court_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
+import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/slot_info.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_booking_cubit.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_booking_state.dart';
 
@@ -117,9 +118,22 @@ MatchDetailDto _matchDetail({String id = 'match-1'}) => MatchDetailDto(
       affectsElo: true,
     );
 
+Map<String, Object?> _slot(
+  String scheduledAt, {
+  bool isAvailable = true,
+  String? reason,
+}) =>
+    {
+      'scheduledAt': scheduledAt,
+      'isAvailable': isAvailable,
+      'reason': ?reason,
+    };
+
 Map<String, Object?> _availabilityEnvelope({
   String courtId = 'court-1',
-  List<String> slots = const ['2024-06-01T10:00:00.000Z'],
+  List<Map<String, Object?>> slots = const [
+    {'scheduledAt': '2024-06-01T10:00:00.000Z', 'isAvailable': true},
+  ],
 }) =>
     {
       'venueId': 'venue-1',
@@ -131,9 +145,7 @@ Map<String, Object?> _availabilityEnvelope({
             'name': 'Pista 1',
             'venueId': 'venue-1',
           },
-          'slots': slots
-              .map((s) => {'scheduledAt': s, 'isAvailable': true})
-              .toList(),
+          'slots': slots,
         },
       ],
     };
@@ -301,7 +313,11 @@ void main() {
       venue: _venue(),
       selectedDate: DateTime(2024, 6, 1),
       selectedSlot: '2024-06-01T10:00:00.000Z',
-      slotsByCourtId: const {'court-1': ['2024-06-01T10:00:00.000Z']},
+      slotsByCourtId: const {
+        'court-1': [
+          SlotInfo(scheduledAt: '2024-06-01T10:00:00.000Z', isAvailable: true),
+        ],
+      },
     ),
     act: (cubit) => cubit.selectDate(DateTime(2024, 6, 2)),
     expect: () => [
@@ -400,6 +416,138 @@ void main() {
               (s) => s.slotsByCourtId.containsKey('court-1'), 'has slots', true)
           .having(
               (s) => s.slotsByCourtId['court-1']!.length, 'slot count', 1),
+    ],
+  );
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // selectCourt() — occupied slots conservan su motivo (reason)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should carry reason when the API returns an occupied slot',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer(
+        (_) async => _availabilityEnvelope(
+          slots: [
+            _slot(
+              '2024-06-01T11:30:00.000Z',
+              isAvailable: false,
+              reason: 'OCCUPIED_MATCH',
+            ),
+          ],
+        ),
+      );
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        onboardingRepository: onboardingRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsByCourtId['court-1']!.length,
+            'occupied slot kept',
+            1,
+          )
+          .having(
+            (s) => s.slotsByCourtId['court-1']!.single.isAvailable,
+            'isAvailable false',
+            false,
+          )
+          .having(
+            (s) => s.slotsByCourtId['court-1']!.single.reason,
+            'reason preserved',
+            'OCCUPIED_MATCH',
+          ),
+    ],
+  );
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should preserve both available and occupied slots (no available-only '
+    'filtering)',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer(
+        (_) async => _availabilityEnvelope(
+          slots: [
+            _slot('2024-06-01T10:00:00.000Z'),
+            _slot(
+              '2024-06-01T11:30:00.000Z',
+              isAvailable: false,
+              reason: 'OCCUPIED_MATCH',
+            ),
+          ],
+        ),
+      );
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        onboardingRepository: onboardingRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsByCourtId['court-1']!.length,
+            'all slots kept',
+            2,
+          )
+          .having(
+            (s) => s.slotsByCourtId['court-1']!
+                .where((sl) => sl.isAvailable)
+                .length,
+            'available count',
+            1,
+          )
+          .having(
+            (s) => s.slotsByCourtId['court-1']!
+                .where((sl) => !sl.isAvailable)
+                .length,
+            'occupied count',
+            1,
+          ),
     ],
   );
 
@@ -941,7 +1089,9 @@ void main() {
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenAnswer(
-        (_) async => _availabilityEnvelope(slots: [pastIso, futureIso]),
+        (_) async => _availabilityEnvelope(
+          slots: [_slot(pastIso), _slot(futureIso)],
+        ),
       );
 
       return VenueBookingCubit(

@@ -8,6 +8,7 @@ import '../../../matches/data/matches_repository.dart';
 import '../../../onboarding/data/onboarding_repository.dart';
 import '../../data/models/venue_dto.dart';
 import '../../data/venues_repository.dart';
+import 'slot_info.dart';
 import 'venue_booking_state.dart';
 
 class VenueBookingCubit extends Cubit<VenueBookingState> {
@@ -123,8 +124,8 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
 
     // Día cerrado: estado vacío explícito, sin solicitar disponibilidad al backend.
     if (dayHours == null) {
-      final emptied = Map<String, List<String>>.of(state.slotsByCourtId)
-        ..[courtId] = const <String>[];
+      final emptied = Map<String, List<SlotInfo>>.of(state.slotsByCourtId)
+        ..[courtId] = const <SlotInfo>[];
       final clearedErrors = Map<String, String>.of(state.slotsErrorByCourtId)
         ..remove(courtId);
       emit(state.copyWith(
@@ -201,22 +202,28 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
       );
 
       final slotsRaw = courtEntry['slots'];
-      final slots = <String>[];
+      final slots = <SlotInfo>[];
       if (slotsRaw is List) {
         for (final s in slotsRaw) {
-          if (s is Map && s['isAvailable'] == true) {
-            final scheduledAt = s['scheduledAt'];
-            if (scheduledAt is! String) continue;
-            if (isToday) {
-              final dt = DateTime.tryParse(scheduledAt);
-              if (dt != null && dt.isBefore(nowWallClock)) continue;
-            }
-            slots.add(scheduledAt);
+          if (s is! Map) continue;
+          final scheduledAt = s['scheduledAt'];
+          if (scheduledAt is! String) continue;
+          if (isToday) {
+            final dt = DateTime.tryParse(scheduledAt);
+            if (dt != null && dt.isBefore(nowWallClock)) continue;
           }
+          // Se conservan TODOS los slots (no solo isAvailable==true) para que
+          // la UI pueda renderizar los ocupados como chips deshabilitados con
+          // su motivo (REQ-MCP-003). Los pasados se ocultan igual para todos.
+          slots.add(SlotInfo(
+            scheduledAt: scheduledAt,
+            isAvailable: s['isAvailable'] == true,
+            reason: s['reason'] is String ? s['reason'] as String : null,
+          ));
         }
       }
 
-      final updated = Map<String, List<String>>.of(state.slotsByCourtId)
+      final updated = Map<String, List<SlotInfo>>.of(state.slotsByCourtId)
         ..[courtId] = slots;
       final clearedErrors = Map<String, String>.of(state.slotsErrorByCourtId)
         ..remove(courtId);

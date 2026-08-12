@@ -4,6 +4,7 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../shared/widgets/selectable_chip.dart';
 import '../../../../shared/widgets/surface_tag.dart';
 import '../../data/models/court_dto.dart';
+import '../cubit/slot_info.dart';
 
 /// Selector de cancha + horario (rediseño Crear partida).
 ///
@@ -30,8 +31,8 @@ class CourtPicker extends StatelessWidget {
   final String? selectedCourtId;
   final String? selectedSlot;
 
-  /// courtId → lista de ISO `scheduledAt` disponibles.
-  final Map<String, List<String>> slotsByCourtId;
+  /// courtId → franjas de horario (disponibles + ocupadas con motivo).
+  final Map<String, List<SlotInfo>> slotsByCourtId;
 
   /// courtId → mensaje de error de carga de horarios (si aplica).
   final Map<String, String> errorByCourtId;
@@ -100,7 +101,7 @@ class _CourtRow extends StatelessWidget {
   final CourtDto court;
   final bool selected;
   final String? selectedSlot;
-  final List<String>? slots;
+  final List<SlotInfo>? slots;
   final String? error;
   final bool loading;
   final String dateLabel;
@@ -181,7 +182,7 @@ class _Slots extends StatelessWidget {
     required this.onChangeDate,
   });
 
-  final List<String>? slots;
+  final List<SlotInfo>? slots;
   final String? error;
   final bool loading;
   final String? selectedSlot;
@@ -212,8 +213,8 @@ class _Slots extends StatelessWidget {
       return _ErrorSlots(message: errorMessage);
     }
 
-    final available = slots ?? const <String>[];
-    if (available.isEmpty) {
+    final slotsList = slots ?? const <SlotInfo>[];
+    if (slotsList.isEmpty) {
       return _EmptySlots(dateLabel: dateLabel, onChangeDate: onChangeDate);
     }
 
@@ -221,13 +222,24 @@ class _Slots extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        for (final iso in available)
-          SelectableChip(
-            label: _formatSlot(iso, durationMinutes),
-            selected: selectedSlot == iso,
-            onTap: () => onSelectSlot(iso),
-            icon: AppIcons.clock,
-          ),
+        for (final slot in slotsList)
+          if (slot.isAvailable)
+            SelectableChip(
+              label: _formatSlot(slot.scheduledAt, durationMinutes),
+              selected: selectedSlot == slot.scheduledAt,
+              onTap: () => onSelectSlot(slot.scheduledAt),
+              icon: AppIcons.clock,
+            )
+          else
+            Tooltip(
+              message: slot.reasonLabel ?? 'No disponible',
+              child: SelectableChip(
+                label: _formatSlot(slot.scheduledAt, durationMinutes),
+                selected: false,
+                disabled: true,
+                icon: AppIcons.calendarBusy,
+              ),
+            ),
       ],
     );
   }
