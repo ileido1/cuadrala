@@ -38,6 +38,9 @@ export type ListTournamentsFiltersDTO = {
   status?: TournamentStatus;
   sportId?: string;
   categoryId?: string;
+  venueId?: string;
+  startsAtFrom?: string;
+  startsAtTo?: string;
 };
 
 export type PageDTO = {

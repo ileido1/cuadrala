@@ -82,4 +82,34 @@ describe('ListTournamentsUseCase', () => {
       { page: 1, limit: 20 }
     );
   });
+
+  it('should pass venueId filter to repository', async () => {
+    mockRepository.listTournamentsSV.mockResolvedValue({ items: [], total: 0 });
+
+    await useCase.executeSV({ page: 1, limit: 20, venueId: 'venue-uuid' });
+
+    expect(mockRepository.listTournamentsSV).toHaveBeenCalledWith(
+      { venueId: 'venue-uuid' },
+      { page: 1, limit: 20 }
+    );
+  });
+
+  it('should pass startsAtFrom/startsAtTo range to repository', async () => {
+    mockRepository.listTournamentsSV.mockResolvedValue({ items: [], total: 0 });
+
+    await useCase.executeSV({
+      page: 1,
+      limit: 20,
+      startsAtFrom: '2026-06-01T00:00:00.000Z',
+      startsAtTo: '2026-06-30T00:00:00.000Z',
+    });
+
+    expect(mockRepository.listTournamentsSV).toHaveBeenCalledWith(
+      {
+        startsAtFrom: '2026-06-01T00:00:00.000Z',
+        startsAtTo: '2026-06-30T00:00:00.000Z',
+      },
+      { page: 1, limit: 20 }
+    );
+  });
 });

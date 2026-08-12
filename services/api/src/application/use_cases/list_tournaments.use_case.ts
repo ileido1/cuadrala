@@ -10,6 +10,9 @@ export type ListTournamentsUseCaseInput = {
   status?: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   sportId?: string;
   categoryId?: string;
+  venueId?: string;
+  startsAtFrom?: string;
+  startsAtTo?: string;
   page: number;
   limit: number;
 };
@@ -32,6 +35,9 @@ export class ListTournamentsUseCase {
       ...(_input.status !== undefined ? { status: _input.status } : {}),
       ...(_input.sportId !== undefined ? { sportId: _input.sportId } : {}),
       ...(_input.categoryId !== undefined ? { categoryId: _input.categoryId } : {}),
+      ...(_input.venueId !== undefined ? { venueId: _input.venueId } : {}),
+      ...(_input.startsAtFrom !== undefined ? { startsAtFrom: _input.startsAtFrom } : {}),
+      ...(_input.startsAtTo !== undefined ? { startsAtTo: _input.startsAtTo } : {}),
     };
     const PAGE: PageDTO = { page: _input.page, limit: _input.limit };
 
