@@ -69,8 +69,8 @@
 - **Objetivo**: el jugador **ve horarios libres** por sede/pista al publicar una partida; el backend ya **rechaza** reservas inválidas (**`US-E2-05`**).
 - **US incluidas**:
   - **`US-E2-05`** Validación al crear/actualizar partida (`venueId`+`courtId`+`scheduledAt`, anti‑solape, alineación con `VacantHour` publicada, códigos `CANCHA_*` / `HORARIO_RESERVA_INCOMPATIBLE`) — **Done (back)**
-  - **`US-E4-06`** API: listar **slots disponibles/ocupados** por `venueId` y/o `courtId` en rango `from`–`to` (granularidad y contrato en OpenAPI) — **Pendiente (back)**
-  - **`US-M3-08`** Crear partida: tras elegir sede y pista, mostrar **selector de horarios** alimentado por `US-E4-06` (estados vacío/error/carga) — **Pendiente (front)** · depende `US-E4-06`
+  - **`US-E4-06`** API: listar **slots disponibles/ocupados** por `venueId` y/o `courtId` en rango `from`–`to` (granularidad y contrato en OpenAPI) — **Done (back)**
+  - **`US-M3-08`** Crear partida: tras elegir sede y pista, mostrar **selector de horarios** alimentado por `US-E4-06` (estados vacío/error/carga) — **Done (front)** · depende `US-E4-06`
   - **`US-M3-09`** *(Opcional, mismo sprint)* Errores `CANCHA_OCUPADA` / `HORARIO_RESERVA_INCOMPATIBLE`: mensajes claros + CTA si existe `details.conflictingMatchId` (p. ej. ir al partido / unirse) — **Pendiente (front)**
 
 #### Sprint M5 — Torneos (MVP)
@@ -145,7 +145,7 @@
 - **US-M3-05** Cancelar / iniciar / finalizar — **Done (front)**
 - **US-M3-06** Proponer / confirmar resultado — **Done (front)**
 - **US-M3-07** Sugerencias de matchmaking — **Done (front)** (`matchmaking_screen`; backend `GET /matchmaking/.../suggestions`)
-- **US-M3-08** Crear partida: **horarios disponibles** por pista/sede (consume `US-E4-06`) — **Pendiente (front)**
+- **US-M3-08** Crear partida: **horarios disponibles** por pista/sede (consume `US-E4-06`) — **Done (front)**
 - **US-M3-09** Tratamiento UX de conflictos de reserva (`CANCHA_OCUPADA`, etc.) — **Pendiente (front)** *(opcional dentro de Sprint M19)*
 
 ### Torneos
@@ -201,7 +201,7 @@
 - **E1** (auth/perfil): `US-E1-01` **Done**, `US-E1-02` **Done**, `US-E1-03` **Parcial**
 - **E2** (matches/discovery/join): `US-E2-01` **Parcial**, `US-E2-02` **Done**, `US-E2-03` **Done**, `US-E2-04` **Done**, `US-E2-05` **Done** (validación disponibilidad sede/cancha al crear o actualizar)
 - **E3** (torneos): `US-E3-01` **Parcial**, `US-E3-02` **Done**, `US-E3-03` **Done**, `US-E3-04` **Parcial**
-- **E4** (sedes/geo): `US-E4-01` **Parcial**, `US-E4-02` **Parcial**, `US-E4-03` **Done**, `US-E4-04` **Done**, `US-E4-05` **Pendiente**, `US-E4-06` **Pendiente** (slots disponibles por venue/court)
+- **E4** (sedes/geo): `US-E4-01` **Parcial**, `US-E4-02` **Parcial**, `US-E4-03` **Done**, `US-E4-04` **Done**, `US-E4-05` **Pendiente**, `US-E4-06` **Done** (slots disponibles por venue/court)
 - **E5** (resultados/ranking/elo): `US-E5-01` **Done**, `US-E5-02` **Done**, `US-E5-03` **Parcial**
 - **E6** (pagos): `US-E6-01/02` **Cumplida**, `US-E6-03` **Done**
 - **E7** (chat/notificaciones): `US-E7-01` **Done**, `US-E7-02` **Parcial**, `US-E7-03` **Done**
