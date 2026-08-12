@@ -8,6 +8,7 @@ import '../../core/theme/brand_colors.dart';
 /// - Apagado: `surfaceContainerHighest` + borde `outlineVariant` + texto muted.
 /// - Encendido (verde): tinte verde + borde verde + texto verde + check.
 /// - Encendido (lime): fondo lima + texto navy (para badges destacados).
+/// - Deshabilitado ([disabled]): muted sin interacción (para horarios ocupados).
 class SelectableChip extends StatelessWidget {
   const SelectableChip({
     super.key,
@@ -16,6 +17,7 @@ class SelectableChip extends StatelessWidget {
     this.onTap,
     this.accent = ChipAccent.green,
     this.icon,
+    this.disabled = false,
   });
 
   final String label;
@@ -26,6 +28,9 @@ class SelectableChip extends StatelessWidget {
   /// Ícono opcional al inicio (sustituye al check cuando está presente).
   final IconData? icon;
 
+  /// Cuando es true, el chip se renderiza apagado y sin interacción.
+  final bool disabled;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -34,7 +39,11 @@ class SelectableChip extends StatelessWidget {
     final Color fg;
     final Color bg;
     final Color border;
-    if (selected) {
+    if (disabled) {
+      fg = scheme.onSurface.withValues(alpha: 0.38);
+      bg = scheme.surfaceContainerHighest.withValues(alpha: 0.6);
+      border = scheme.outlineVariant;
+    } else if (selected) {
       fg = isLime ? BrandColors.navy : scheme.primary;
       bg = isLime
           ? BrandColors.limeAccent
@@ -50,7 +59,7 @@ class SelectableChip extends StatelessWidget {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: disabled ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
         height: 38,
