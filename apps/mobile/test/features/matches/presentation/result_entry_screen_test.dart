@@ -187,13 +187,18 @@ void main() {
     testWidgets(
         'tapping a pool player then a position slot assigns them via the cubit',
         (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await _setupGetIt(matchesApi, catalogApi);
       await tester.pumpWidget(_buildTestApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Ana'));
+      await tester.tap(find.byKey(const ValueKey('pool-u1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Drive').first);
+      await tester.tap(find.byKey(const ValueKey('slot-teamADrive')));
       await tester.pumpAndSettle();
 
       expect(_lastCubit!.state.courtPositions[CourtPosition.teamADrive], 'u1');
