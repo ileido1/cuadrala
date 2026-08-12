@@ -12,14 +12,14 @@ export type NotificationSubscriptionDTO = {
 };
 
 export type UpsertNotificationSubscriptionDTO = {
-  id?: string;
+  id?: string | undefined;
   userId: string;
   categoryId: string | null;
   nearLat: number | null;
   nearLng: number | null;
   radiusKm: number | null;
   enabled: boolean;
-  enabledTypes?: unknown | null;
+  enabledTypes?: unknown | null | undefined;
 };
 
 export type NotificationSubscriptionRecipientFilterDTO = {

@@ -63,17 +63,17 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 11 — E2: Lifecycle match (l
   });
 
   it('leave happy (user participante, match SCHEDULED) => 204 y reduce participantes', async () => {
-    const MATCH_ID = await createMatchSV(TOKENS[0], 4);
-    await joinSV(MATCH_ID, TOKENS[1]);
-    await joinSV(MATCH_ID, TOKENS[2]);
-    await joinSV(MATCH_ID, TOKENS[3]);
+    const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
+    await joinSV(MATCH_ID, TOKENS[1]!);
+    await joinSV(MATCH_ID, TOKENS[2]!);
+    await joinSV(MATCH_ID, TOKENS[3]!);
 
     const BEFORE = await PRISMA.matchParticipant.count({ where: { matchId: MATCH_ID } });
     expect(BEFORE).toBe(4);
 
     const LEAVE = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/leave`)
-      .set('Authorization', `Bearer ${TOKENS[1]}`);
+      .set('Authorization', `Bearer ${TOKENS[1]!}`);
 
     expect(LEAVE.status).toBe(204);
 
@@ -82,14 +82,14 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 11 — E2: Lifecycle match (l
   });
 
   it('leave no participant (match SCHEDULED) => 204 idempotente', async () => {
-    const MATCH_ID = await createMatchSV(TOKENS[0], 4);
+    const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
 
     const BEFORE = await PRISMA.matchParticipant.count({ where: { matchId: MATCH_ID } });
     expect(BEFORE).toBe(1);
 
     const LEAVE = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/leave`)
-      .set('Authorization', `Bearer ${TOKENS[4]}`);
+      .set('Authorization', `Bearer ${TOKENS[4]!}`);
 
     expect(LEAVE.status).toBe(204);
 
@@ -98,29 +98,29 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 11 — E2: Lifecycle match (l
   });
 
   it('leave invalid state (IN_PROGRESS o FINISHED) => 409', async () => {
-    const MATCH_IN_PROGRESS = await createMatchSV(TOKENS[0], 4);
+    const MATCH_IN_PROGRESS = await createMatchSV(TOKENS[0]!, 4);
     await PRISMA.match.update({ where: { id: MATCH_IN_PROGRESS }, data: { status: 'IN_PROGRESS' } });
 
     const LEAVE_IN_PROGRESS = await request(APP)
       .post(`/api/v1/matches/${MATCH_IN_PROGRESS}/leave`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
     expect(LEAVE_IN_PROGRESS.status).toBe(409);
 
-    const MATCH_FINISHED = await createMatchSV(TOKENS[0], 4);
+    const MATCH_FINISHED = await createMatchSV(TOKENS[0]!, 4);
     await PRISMA.match.update({ where: { id: MATCH_FINISHED }, data: { status: 'FINISHED' } });
 
     const LEAVE_FINISHED = await request(APP)
       .post(`/api/v1/matches/${MATCH_FINISHED}/leave`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
     expect(LEAVE_FINISHED.status).toBe(409);
   });
 
   it('start happy (participante, SCHEDULED) => 204 y estado IN_PROGRESS', async () => {
-    const MATCH_ID = await createMatchSV(TOKENS[0], 4);
+    const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
 
     const START = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/start`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
 
     expect(START.status).toBe(204);
 
@@ -129,42 +129,42 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 11 — E2: Lifecycle match (l
   });
 
   it('start no organizer (aunque sea participante) => 403', async () => {
-    const MATCH_ID = await createMatchSV(TOKENS[0], 4);
-    await joinSV(MATCH_ID, TOKENS[4]);
+    const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
+    await joinSV(MATCH_ID, TOKENS[4]!);
 
     const START = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/start`)
-      .set('Authorization', `Bearer ${TOKENS[4]}`);
+      .set('Authorization', `Bearer ${TOKENS[4]!}`);
 
     expect(START.status).toBe(403);
     expect(START.body.code).toBe('NO_AUTORIZADO');
   });
 
   it('start invalid state => 409', async () => {
-    const MATCH_ID = await createMatchSV(TOKENS[0], 4);
+    const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
     await PRISMA.match.update({ where: { id: MATCH_ID }, data: { status: 'IN_PROGRESS' } });
 
     const START = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/start`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
 
     expect(START.status).toBe(409);
   });
 
   it('finish happy (participante, IN_PROGRESS, 4 participantes) => 204 y estado FINISHED', async () => {
-    const MATCH_ID = await createMatchSV(TOKENS[0], 4);
-    await joinSV(MATCH_ID, TOKENS[1]);
-    await joinSV(MATCH_ID, TOKENS[2]);
-    await joinSV(MATCH_ID, TOKENS[3]);
+    const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
+    await joinSV(MATCH_ID, TOKENS[1]!);
+    await joinSV(MATCH_ID, TOKENS[2]!);
+    await joinSV(MATCH_ID, TOKENS[3]!);
 
     const START = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/start`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
     expect(START.status).toBe(204);
 
     const FINISH = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/finish`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
 
     expect(FINISH.status).toBe(204);
 
@@ -173,50 +173,50 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 11 — E2: Lifecycle match (l
   });
 
   it('finish no organizer (aunque sea participante) => 403', async () => {
-    const MATCH_ID = await createMatchSV(TOKENS[0], 4);
-    await joinSV(MATCH_ID, TOKENS[1]);
-    await joinSV(MATCH_ID, TOKENS[2]);
-    await joinSV(MATCH_ID, TOKENS[3]);
+    const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
+    await joinSV(MATCH_ID, TOKENS[1]!);
+    await joinSV(MATCH_ID, TOKENS[2]!);
+    await joinSV(MATCH_ID, TOKENS[3]!);
 
     const START = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/start`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
     expect(START.status).toBe(204);
 
     const FINISH = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/finish`)
-      .set('Authorization', `Bearer ${TOKENS[1]}`);
+      .set('Authorization', `Bearer ${TOKENS[1]!}`);
 
     expect(FINISH.status).toBe(403);
     expect(FINISH.body.code).toBe('NO_AUTORIZADO');
   });
 
   it('finish not 4 participants => 409', async () => {
-    const MATCH_ID = await createMatchSV(TOKENS[0], 4);
-    await joinSV(MATCH_ID, TOKENS[1]);
-    await joinSV(MATCH_ID, TOKENS[2]);
+    const MATCH_ID = await createMatchSV(TOKENS[0]!, 4);
+    await joinSV(MATCH_ID, TOKENS[1]!);
+    await joinSV(MATCH_ID, TOKENS[2]!);
 
     await PRISMA.match.update({ where: { id: MATCH_ID }, data: { status: 'IN_PROGRESS' } });
 
     const FINISH = await request(APP)
       .post(`/api/v1/matches/${MATCH_ID}/finish`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
 
     expect(FINISH.status).toBe(409);
   });
 
   it('finish invalid state => 409', async () => {
-    const MATCH_SCHEDULED = await createMatchSV(TOKENS[0], 4);
+    const MATCH_SCHEDULED = await createMatchSV(TOKENS[0]!, 4);
     const FINISH_SCHEDULED = await request(APP)
       .post(`/api/v1/matches/${MATCH_SCHEDULED}/finish`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
     expect(FINISH_SCHEDULED.status).toBe(409);
 
-    const MATCH_FINISHED = await createMatchSV(TOKENS[0], 4);
+    const MATCH_FINISHED = await createMatchSV(TOKENS[0]!, 4);
     await PRISMA.match.update({ where: { id: MATCH_FINISHED }, data: { status: 'FINISHED' } });
     const FINISH_FINISHED = await request(APP)
       .post(`/api/v1/matches/${MATCH_FINISHED}/finish`)
-      .set('Authorization', `Bearer ${TOKENS[0]}`);
+      .set('Authorization', `Bearer ${TOKENS[0]!}`);
     expect(FINISH_FINISHED.status).toBe(409);
   });
 });

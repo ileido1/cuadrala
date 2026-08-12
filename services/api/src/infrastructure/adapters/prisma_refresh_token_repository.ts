@@ -39,9 +39,9 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
         jti: _data.jti,
         sessionId: _data.sessionId,
         expiresAt: _data.expiresAt,
-        userAgent: _data.userAgent,
-        deviceId: _data.deviceId,
-        ip: _data.ip,
+        userAgent: _data.userAgent ?? null,
+        deviceId: _data.deviceId ?? null,
+        ip: _data.ip ?? null,
       },
     });
 

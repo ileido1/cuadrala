@@ -2,6 +2,7 @@ import type {
   VenuePaymentMethodDTO,
   VenuePaymentMethodType,
 } from '../../domain/entities/payments/venue_payment_method.entity.js';
+import type { CurrencyCode } from '../../domain/money/currency_code.js';
 import type { VenuePaymentMethodRepository } from '../../domain/ports/venue_payment_method_repository.js';
 
 import { PRISMA } from '../prisma_client.js';
@@ -70,7 +71,7 @@ export class PrismaVenuePaymentMethodRepository implements VenuePaymentMethodRep
         config: _data.config as object,
         position: _data.position,
         isActive: true,
-        settlementCurrency: SETTLEMENT_CURRENCY,
+        settlementCurrency: SETTLEMENT_CURRENCY as CurrencyCode,
       },
     });
     return mapVenuePaymentMethodSV(ROW);
@@ -93,7 +94,7 @@ export class PrismaVenuePaymentMethodRepository implements VenuePaymentMethodRep
         ...(_data.type !== undefined && { type: _data.type }),
         ...(_data.name !== undefined && { name: _data.name }),
         ...(_data.settlementCurrency !== undefined
-          ? { settlementCurrency: _data.settlementCurrency }
+          ? { settlementCurrency: _data.settlementCurrency as CurrencyCode }
           : {}),
         ...(_data.config !== undefined && { config: _data.config as object }),
         ...(_data.isActive !== undefined && { isActive: _data.isActive }),

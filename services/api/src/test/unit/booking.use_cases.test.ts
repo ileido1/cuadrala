@@ -45,6 +45,11 @@ function createMockVenueStaffRepository() {
     isUserStaffOfVenueSV: vi.fn(),
     findByIdSV: vi.fn(),
     listByVenueSV: vi.fn(),
+    upsertSV: vi.fn(),
+    findByVenueAndUserSV: vi.fn(),
+    listByVenueIdSV: vi.fn(),
+    listByUserIdSV: vi.fn(),
+    removeByVenueAndUserSV: vi.fn(),
   };
 }
 
@@ -83,6 +88,9 @@ function createBookingDTO(overrides: Partial<{
   maxParticipants: number;
   pricePerPlayerCents: number;
   matchStatus: MatchStatus | null;
+  totalAmountCents: number;
+  paidAmountCents: number;
+  paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
 }> = {}) {
   return {
     id: 'booking-1',

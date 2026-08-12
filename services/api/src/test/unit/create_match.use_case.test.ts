@@ -133,4 +133,45 @@ describe('CreateMatchUseCase', () => {
       'user-1',
     );
   });
+
+  it('should propagate affectsElo=false and gender to the repository', async () => {
+    const availability = buildAvailabilityRepo();
+    const crud: MatchCrudRepository = {
+      createMatchSV: vi.fn().mockResolvedValue({
+        id: 'match-1',
+        sportId: 's',
+        categoryId: 'c',
+        type: 'REGULAR',
+        status: 'SCHEDULED',
+        scheduledAt: new Date(),
+        courtId: null,
+        tournamentId: null,
+        pricePerPlayerCents: 0,
+        maxParticipants: 4,
+        participantCount: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      updateMatchSV: vi.fn(),
+      cancelMatchSV: vi.fn(),
+    };
+
+    const uc = new CreateMatchUseCase(crud, availability, buildUserCategoryRepo());
+
+    await uc.executeSV({
+      creatorUserId: 'user-1',
+      sportId: '00000000-0000-4000-8000-000000000001',
+      categoryId: '00000000-0000-4000-8000-000000000002',
+      affectsElo: false,
+      gender: 'FEMALE',
+    });
+
+    expect(crud.createMatchSV).toHaveBeenCalledWith(
+      expect.objectContaining({
+        affectsElo: false,
+        gender: 'FEMALE',
+      }),
+      'user-1',
+    );
+  });
 });

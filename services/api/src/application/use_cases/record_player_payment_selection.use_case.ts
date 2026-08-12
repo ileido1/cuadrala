@@ -58,9 +58,9 @@ export class RecordPlayerPaymentSelectionUseCase {
   async executeSV(_input: {
     transactionId: string;
     actorUserId: string;
-    venuePaymentMethodId?: string;
-    paymentMethodType?: string;
-    reportedSettlement?: { amountMinor: bigint; currencyCode: string };
+    venuePaymentMethodId?: string | undefined;
+    paymentMethodType?: string | undefined;
+    reportedSettlement?: { amountMinor: bigint; currencyCode: string } | undefined;
   }): Promise<{ recorded: true }> {
     const CAN_ACCESS = await this._receiptAccessRepository.userCanAccessTransactionSV(
       _input.transactionId,

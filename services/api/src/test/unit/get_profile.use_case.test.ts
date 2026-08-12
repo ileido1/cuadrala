@@ -14,7 +14,14 @@ const BASE_USER = {
 describe('GetProfileUseCase', () => {
   it('should include primaryRating (categoría + ELO) when the player has ratings', async () => {
     const UC = new GetProfileUseCase(
-      { findByIdSV: vi.fn().mockResolvedValue(BASE_USER) },
+      {
+        findByIdSV: vi.fn().mockResolvedValue(BASE_USER),
+        findByEmailSV: vi.fn(),
+        createUserSV: vi.fn(),
+        updateUserNameSV: vi.fn(),
+        countByIdsSV: vi.fn(),
+        findByDocumentNumberSV: vi.fn(),
+      },
       {
         getUserRatingsSV: vi.fn(),
         getUserRatingHistorySV: vi.fn(),
@@ -39,7 +46,14 @@ describe('GetProfileUseCase', () => {
 
   it('should degrade primaryRating to null when the player has no ratings', async () => {
     const UC = new GetProfileUseCase(
-      { findByIdSV: vi.fn().mockResolvedValue(BASE_USER) },
+      {
+        findByIdSV: vi.fn().mockResolvedValue(BASE_USER),
+        findByEmailSV: vi.fn(),
+        createUserSV: vi.fn(),
+        updateUserNameSV: vi.fn(),
+        countByIdsSV: vi.fn(),
+        findByDocumentNumberSV: vi.fn(),
+      },
       {
         getUserRatingsSV: vi.fn(),
         getUserRatingHistorySV: vi.fn(),
@@ -54,7 +68,14 @@ describe('GetProfileUseCase', () => {
 
   it('should throw USUARIO_NO_ENCONTRADO when the user does not exist', async () => {
     const UC = new GetProfileUseCase(
-      { findByIdSV: vi.fn().mockResolvedValue(null) },
+      {
+        findByIdSV: vi.fn().mockResolvedValue(null),
+        findByEmailSV: vi.fn(),
+        createUserSV: vi.fn(),
+        updateUserNameSV: vi.fn(),
+        countByIdsSV: vi.fn(),
+        findByDocumentNumberSV: vi.fn(),
+      },
       {
         getUserRatingsSV: vi.fn(),
         getUserRatingHistorySV: vi.fn(),

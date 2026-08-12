@@ -47,8 +47,8 @@ export class GetMatchmakingSuggestionsV2UseCase {
   async executeSV(_input: {
     matchId: string;
     limit: number;
-    radiusKm?: number;
-    defaultRadiusKm?: number;
+    radiusKm?: number | undefined;
+    defaultRadiusKm?: number | undefined;
   }): Promise<MatchmakingSuggestionV2DTO[]> {
     const MATCH = await this._matchContextReadRepository.getByMatchIdSV(_input.matchId);
     if (MATCH === null) {

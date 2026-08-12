@@ -5,14 +5,14 @@ import type {
 } from '../../domain/ports/notification_subscription_repository.js';
 
 export type UpsertMyNotificationSubscriptionInputDTO = {
-  id?: string;
+  id?: string | undefined;
   actorUserId: string;
   categoryId: string | null;
   nearLat: number | null;
   nearLng: number | null;
   radiusKm: number | null;
   enabled: boolean;
-  enabledTypes?: unknown | null;
+  enabledTypes?: unknown | null | undefined;
 };
 
 export class UpsertMyNotificationSubscriptionUseCase {

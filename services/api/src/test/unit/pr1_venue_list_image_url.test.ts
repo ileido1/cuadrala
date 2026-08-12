@@ -57,6 +57,7 @@ function makeDetailRow(overrides: Partial<FakeVenueDetailRow> = {}): FakeVenueDe
     pricingCurrency: 'ARS',
     countryCode: 'AR',
     imageUrl: null,
+    averageRating: null,
     monetizationSettings: null,
     _count: { courts: 0 },
     courts: [],

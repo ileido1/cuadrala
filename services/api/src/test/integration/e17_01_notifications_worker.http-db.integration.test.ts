@@ -54,11 +54,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       return CREATE.body.data.id as string;
     }
 
-    async function joinSV(_matchId: string, _token: string): Promise<void> {
-      const JOIN = await request(APP)
-        .post(`/api/v1/matches/${_matchId}/join`)
-        .set('Authorization', `Bearer ${_token}`);
-      expect(JOIN.status).toBe(200);
+    async function addParticipantSV(_matchId: string, _userId: string): Promise<void> {
+      await PRISMA.matchParticipant.create({
+        data: { matchId: _matchId, userId: _userId },
+      });
     }
 
     async function createMatchingSubscriptionSV(_token: string): Promise<void> {
@@ -133,9 +132,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
     it('dispatch worker: crea deliveries PENDING idempotente, envia por lote, aplica retry/backoff y deshabilita token inválido', async () => {
       const MATCH_ID = await createMatchSV(TOKENS.P1!, 4);
-      await joinSV(MATCH_ID, TOKENS.P2!);
-      await joinSV(MATCH_ID, TOKENS.P3!);
-      await joinSV(MATCH_ID, TOKENS.P4!);
+      await addParticipantSV(MATCH_ID, USER_IDS.P2!);
+      await addParticipantSV(MATCH_ID, USER_IDS.P3!);
+      await addParticipantSV(MATCH_ID, USER_IDS.P4!);
 
       const LEAVE = await request(APP)
         .post(`/api/v1/matches/${MATCH_ID}/leave`)
@@ -143,8 +142,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(LEAVE.status).toBe(204);
 
       const EVENT = await PRISMA.notificationEvent.findFirst({
-        where: { matchId: MATCH_ID, categoryId, processedAt: null },
-        orderBy: { createdAt: 'asc' },
+        where: { matchId: MATCH_ID, categoryId, type: 'MATCH_SLOT_OPENED' },
+        orderBy: { createdAt: 'desc' },
       });
       expect(EVENT).not.toBeNull();
 

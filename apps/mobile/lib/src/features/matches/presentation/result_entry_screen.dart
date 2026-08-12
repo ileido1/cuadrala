@@ -377,6 +377,8 @@ class _CourtAssignStepState extends State<_CourtAssignStep> {
               : null;
           return Expanded(
             child: _CourtSlot(
+              key: ValueKey('slot-${pos.name}'),
+              position: pos,
               name: p != null ? _firstName(p.displayName ?? uid!) : null,
               colorIndex: uid != null ? (colorIndexOf[uid] ?? 0) : 0,
               label: label,
@@ -479,6 +481,7 @@ class _CourtAssignStepState extends State<_CourtAssignStep> {
                 children: [
                   for (final p in pool)
                     _PoolAvatar(
+                      key: ValueKey('pool-${p.userId}'),
                       name: _firstName(p.displayName ?? p.userId),
                       colorIndex: colorIndexOf[p.userId] ?? 0,
                       selected: _selected == p.userId,
@@ -499,6 +502,8 @@ class _CourtAssignStepState extends State<_CourtAssignStep> {
 /// Drive/Revés; ocupado = avatar + primer nombre, borde sólido.
 class _CourtSlot extends StatelessWidget {
   const _CourtSlot({
+    super.key,
+    required this.position,
     required this.name,
     required this.colorIndex,
     required this.label,
@@ -506,6 +511,7 @@ class _CourtSlot extends StatelessWidget {
     required this.onTap,
   });
 
+  final CourtPosition position;
   final String? name;
   final int colorIndex;
   final String label;
@@ -606,6 +612,7 @@ class _DashedSlotPainter extends CustomPainter {
 /// Avatar del pool "Sin asignar" (tappable, con halo lime al seleccionar).
 class _PoolAvatar extends StatelessWidget {
   const _PoolAvatar({
+    super.key,
     required this.name,
     required this.colorIndex,
     required this.selected,
@@ -623,39 +630,43 @@ class _PoolAvatar extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: selected ? scheme.tertiary : Colors.transparent,
-                width: 2,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 64, minHeight: 80),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? scheme.tertiary : Colors.transparent,
+                  width: 2,
+                ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: scheme.tertiary.withValues(alpha: 0.22),
+                          blurRadius: 0,
+                          spreadRadius: 3,
+                        ),
+                      ]
+                    : null,
               ),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: scheme.tertiary.withValues(alpha: 0.22),
-                        blurRadius: 0,
-                        spreadRadius: 3,
-                      ),
-                    ]
-                  : null,
+              child: _ResultAvatar(name: name, colorIndex: colorIndex, size: 48),
             ),
-            child: _ResultAvatar(name: name, colorIndex: colorIndex, size: 48),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+            const SizedBox(height: 6),
+            Text(
+              name,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

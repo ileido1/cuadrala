@@ -27,6 +27,7 @@ function createMockReservationRepository() {
     findByCourtAndScheduledAtSV: vi.fn(),
     listReservationsSV: vi.fn(),
     cancelReservationSV: vi.fn(),
+    updateTotalAmountCentsSV: vi.fn(),
   };
 }
 

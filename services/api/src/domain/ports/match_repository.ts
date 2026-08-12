@@ -29,11 +29,11 @@ export type OpenMatchDTO = {
   maxParticipants: number;
   participantCount: number;
   openSpots: number;
-  clubName?: string;
-  courtName?: string;
-  locationLabel?: string;
-  pricingCurrency?: string;
-  displayCurrency?: string;
+  clubName?: string | undefined;
+  courtName?: string | undefined;
+  locationLabel?: string | undefined;
+  pricingCurrency?: string | undefined;
+  displayCurrency?: string | undefined;
   participantPreview?: { userId: string; displayName: string }[];
   affectsElo: boolean;
   venueImageUrl?: string;

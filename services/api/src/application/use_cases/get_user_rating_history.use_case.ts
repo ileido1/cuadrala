@@ -9,7 +9,7 @@ export class GetUserRatingHistoryUseCase {
 
   async executeSV(_params: {
     userId: string;
-    categoryId?: string;
+    categoryId?: string | undefined;
     page: number;
     limit: number;
   }): Promise<PaginatedUserRatingHistoryDTO> {

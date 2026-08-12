@@ -3,7 +3,7 @@ export type ReceiptPutDTO = {
   receiptId: string;
   mimeType: string;
   sizeBytes: number;
-  originalFileName?: string;
+  originalFileName?: string | undefined;
   content: Buffer;
 };
 

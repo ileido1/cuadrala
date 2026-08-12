@@ -3,11 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
-import 'package:cuadrala_mobile/src/features/catalog/data/catalog_api.dart';
-import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
-import 'package:cuadrala_mobile/src/features/catalog/data/models/category_dto.dart';
+import 'package:cuadrala_mobile/src/core/venue/opening_hours.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/match_detail_dto.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/models/player_sport_profile_dto.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/onboarding_repository.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/court_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
@@ -22,20 +22,40 @@ class _MockVenuesRepository extends Mock implements VenuesRepository {}
 
 class _MockMatchesRepository extends Mock implements MatchesRepository {}
 
-// CatalogRepository is final — mock CatalogApi and build a real CatalogRepository.
-class _MockCatalogApi extends Mock implements CatalogApi {}
+class _MockOnboardingRepository extends Mock implements OnboardingRepository {}
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
 // ---------------------------------------------------------------------------
 
-VenueDto _venue({String id = 'venue-1', String name = 'Club Padel Norte'}) =>
+// Sede abierta toda la semana 00:00–23:59 por defecto: mantiene el rango
+// equivalente al genérico anterior y evita fragilidad por día de la semana.
+// Los tests que ejercitan día cerrado pasan su propio mapa de horarios.
+OpeningHoursMap _allWeekOpenHours() => {
+      for (final day in const [
+        'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+      ])
+        day: const OpeningHoursDay(open: '00:00', close: '23:59'),
+    };
+
+VenueDto _venue({
+  String id = 'venue-1',
+  String name = 'Club Padel Norte',
+  OpeningHoursMap? openingHours,
+}) =>
     VenueDto(
       id: id,
       name: name,
       address: 'Av. Corrientes 1234',
       latitude: -34.6,
       longitude: -58.4,
+      openingHours: openingHours ?? _allWeekOpenHours(),
     );
 
 CourtDto _court({
@@ -59,14 +79,20 @@ CourtDto _court({
       durationMinutes: durationMinutes,
     );
 
-CategoryDto _category({String id = 'cat-1', String name = 'Primera'}) =>
-    CategoryDto(
+PlayerSportProfileDto _sportProfile({
+  String id = 'profile-1',
+  String sportId = 'sport-1',
+  String? categoryId = 'cat-1',
+  String? categoryName = 'Primera',
+}) =>
+    PlayerSportProfileDto(
       id: id,
-      sportId: 'sport-1',
-      name: name,
-      slug: 'primera',
-      scheme: 'TIERED',
-      sortOrder: 1,
+      sportId: sportId,
+      skillLevel: 3.5,
+      sidePreference: SidePreference.any,
+      categoryId: categoryId,
+      categoryName: categoryName,
+      categorySlug: 'primera',
     );
 
 MatchDetailDto _matchDetail({String id = 'match-1'}) => MatchDetailDto(
@@ -97,9 +123,14 @@ Map<String, Object?> _availabilityEnvelope({
 }) =>
     {
       'venueId': 'venue-1',
+      // Forma real del backend: cada cancha viene como { court: {...}, slots }.
       'courts': [
         {
-          'courtId': courtId,
+          'court': {
+            'id': courtId,
+            'name': 'Pista 1',
+            'venueId': 'venue-1',
+          },
           'slots': slots
               .map((s) => {'scheduledAt': s, 'isAvailable': true})
               .toList(),
@@ -108,19 +139,6 @@ Map<String, Object?> _availabilityEnvelope({
     };
 
 
-Map<String, Object?> _categoriesEnvelope() => {
-      'categories': [
-        {
-          'id': 'cat-1',
-          'sportId': 'sport-1',
-          'name': 'Primera',
-          'slug': 'primera',
-          'scheme': 'TIERED',
-          'sortOrder': 1,
-        },
-      ],
-    };
-
 // ---------------------------------------------------------------------------
 // Builder helpers
 // ---------------------------------------------------------------------------
@@ -128,18 +146,15 @@ Map<String, Object?> _categoriesEnvelope() => {
 ({
   _MockVenuesRepository venuesRepo,
   _MockMatchesRepository matchesRepo,
-  _MockCatalogApi catalogApi,
-  CatalogRepository catalogRepo,
+  _MockOnboardingRepository onboardingRepo,
 }) _mocks() {
   final venuesRepo = _MockVenuesRepository();
   final matchesRepo = _MockMatchesRepository();
-  final catalogApi = _MockCatalogApi();
-  final catalogRepo = CatalogRepository(catalogApi: catalogApi);
+  final onboardingRepo = _MockOnboardingRepository();
   return (
     venuesRepo: venuesRepo,
     matchesRepo: matchesRepo,
-    catalogApi: catalogApi,
-    catalogRepo: catalogRepo,
+    onboardingRepo: onboardingRepo,
   );
 }
 
@@ -147,29 +162,27 @@ VenueBookingCubit _buildCubit({
   VenueDto? venue,
   _MockVenuesRepository? venuesRepo,
   _MockMatchesRepository? matchesRepo,
-  CatalogRepository? catalogRepo,
+  _MockOnboardingRepository? onboardingRepo,
 }) {
   final m = _mocks();
   return VenueBookingCubit(
     venue: venue ?? _venue(),
     venuesRepository: venuesRepo ?? m.venuesRepo,
     matchesRepository: matchesRepo ?? m.matchesRepo,
-    catalogRepository: catalogRepo ?? m.catalogRepo,
+    onboardingRepository: onboardingRepo ?? m.onboardingRepo,
   );
 }
 
 void main() {
   late _MockVenuesRepository venuesRepo;
   late _MockMatchesRepository matchesRepo;
-  late _MockCatalogApi catalogApi;
-  late CatalogRepository catalogRepo;
+  late _MockOnboardingRepository onboardingRepo;
 
   setUp(() {
     final m = _mocks();
     venuesRepo = m.venuesRepo;
     matchesRepo = m.matchesRepo;
-    catalogApi = m.catalogApi;
-    catalogRepo = m.catalogRepo;
+    onboardingRepo = m.onboardingRepo;
 
     registerFallbackValue(DateTime(2024));
   });
@@ -179,7 +192,7 @@ void main() {
   // ──────────────────────────────────────────────────────────────────────────
 
   blocTest<VenueBookingCubit, VenueBookingState>(
-    'load() — fetches courts + categories in parallel, emits loaded',
+    "load() — prefija la categoría del jugador (no categories.first), emits loaded",
     build: () {
       when(() => matchesRepo.resolveDefaultSportId())
           .thenAnswer((_) async => 'sport-1');
@@ -187,14 +200,19 @@ void main() {
             venueId: any(named: 'venueId'),
             status: any(named: 'status'),
           )).thenAnswer((_) async => [_court()]);
-      when(() => catalogApi.listCategoriesEnvelope(sportId: any(named: 'sportId')))
-          .thenAnswer((_) async => _categoriesEnvelope());
+      // El perfil del jugador trae su categoría real para este deporte.
+      when(() => onboardingRepo.listSportProfiles()).thenAnswer(
+        (_) async => [
+          _sportProfile(sportId: 'otro', categoryId: 'cat-otra'),
+          _sportProfile(sportId: 'sport-1', categoryId: 'cat-1', categoryName: 'Primera'),
+        ],
+      );
 
       return VenueBookingCubit(
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     act: (cubit) => cubit.load(),
@@ -203,10 +221,41 @@ void main() {
       isA<VenueBookingState>()
           .having((s) => s.loading, 'loading=false', false)
           .having((s) => s.courts.length, 'courts', 1)
-          .having((s) => s.categories.length, 'categories', 1)
           .having((s) => s.sportId, 'sportId resolved', 'sport-1')
-          .having(
-              (s) => s.selectedCategoryId, 'first category auto-selected', 'cat-1'),
+          .having((s) => s.selectedCategoryId, "player's category", 'cat-1')
+          .having((s) => s.playerCategoryLabel, 'category label', 'Primera'),
+    ],
+  );
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'load() — sin categoría del jugador para el deporte → selectedCategoryId null '
+    '(submit bloqueado)',
+    build: () {
+      when(() => matchesRepo.resolveDefaultSportId())
+          .thenAnswer((_) async => 'sport-1');
+      when(() => venuesRepo.listVenueCourts(
+            venueId: any(named: 'venueId'),
+            status: any(named: 'status'),
+          )).thenAnswer((_) async => [_court()]);
+      // El jugador no tiene perfil para este deporte.
+      when(() => onboardingRepo.listSportProfiles()).thenAnswer(
+        (_) async => [_sportProfile(sportId: 'otro', categoryId: 'cat-otra')],
+      );
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        onboardingRepository: onboardingRepo,
+      );
+    },
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<VenueBookingState>().having((s) => s.loading, 'loading=true', true),
+      isA<VenueBookingState>()
+          .having((s) => s.loading, 'loading=false', false)
+          .having((s) => s.selectedCategoryId, 'no category', isNull)
+          .having((s) => s.playerCategoryLabel, 'no label', isNull),
     ],
   );
 
@@ -224,14 +273,12 @@ void main() {
             venueId: any(named: 'venueId'),
             status: any(named: 'status'),
           )).thenAnswer((_) async => []);
-      when(() => catalogApi.listCategoriesEnvelope(sportId: any(named: 'sportId')))
-          .thenAnswer((_) async => _categoriesEnvelope());
 
       return VenueBookingCubit(
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     act: (cubit) => cubit.load(),
@@ -278,6 +325,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenAnswer((_) async => _availabilityEnvelope());
@@ -285,7 +333,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -320,6 +368,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenAnswer((_) async => _availabilityEnvelope());
@@ -328,7 +377,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -366,21 +415,6 @@ void main() {
     expect: () => [
       isA<VenueBookingState>()
           .having((s) => s.selectedSlot, 'slot set', '2024-06-01T10:00:00.000Z'),
-    ],
-  );
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // selectCategory()
-  // ──────────────────────────────────────────────────────────────────────────
-
-  blocTest<VenueBookingCubit, VenueBookingState>(
-    'selectCategory() — emits state with selectedCategoryId set',
-    build: () => _buildCubit(),
-    seed: () => VenueBookingState(venue: _venue(), selectedDate: DateTime(2024)),
-    act: (cubit) => cubit.selectCategory('cat-2'),
-    expect: () => [
-      isA<VenueBookingState>()
-          .having((s) => s.selectedCategoryId, 'category set', 'cat-2'),
     ],
   );
 
@@ -531,7 +565,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -558,7 +592,8 @@ void main() {
       verify(() => matchesRepo.createMatch(
             sportId: 'sport-1',
             categoryId: 'cat-1',
-            type: 'OPEN',
+            // Mobile ya no envía type:'OPEN'; se omite (null) → backend default.
+            type: null,
             courtId: 'court-1',
             venueId: 'venue-1',
             scheduledAt: any(named: 'scheduledAt'),
@@ -583,7 +618,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -629,7 +664,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -669,6 +704,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenAnswer((_) async => _availabilityEnvelope());
@@ -677,7 +713,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -695,6 +731,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: 'sport-1',
             categoryId: 'cat-1',
           )).called(1);
@@ -710,6 +747,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenAnswer((_) async => _availabilityEnvelope());
@@ -718,7 +756,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -736,6 +774,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: null,
             categoryId: null,
           )).called(1);
@@ -756,6 +795,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenThrow(
@@ -766,7 +806,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -800,6 +840,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenThrow(
@@ -810,7 +851,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -844,6 +885,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenThrow(Exception('boom'));
@@ -852,7 +894,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -877,6 +919,63 @@ void main() {
   );
 
   blocTest<VenueBookingCubit, VenueBookingState>(
+    'should hide past slots and keep future ones when selected date is today',
+    build: () {
+      final now = DateTime.now();
+      DateTime wall(Duration offset) {
+        final base = DateTime.utc(now.year, now.month, now.day, now.hour, now.minute)
+            .add(offset);
+        return base;
+      }
+
+      final pastIso = wall(const Duration(hours: -2)).toIso8601String();
+      final futureIso = wall(const Duration(hours: 2)).toIso8601String();
+
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer(
+        (_) async => _availabilityEnvelope(slots: [pastIso, futureIso]),
+      );
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        onboardingRepository: onboardingRepo,
+      );
+    },
+    seed: () {
+      final now = DateTime.now();
+      return VenueBookingState(
+        venue: _venue(),
+        selectedDate: DateTime(now.year, now.month, now.day),
+        courts: [_court()],
+        sportId: 'sport-1',
+        selectedCategoryId: 'cat-1',
+      );
+    },
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsByCourtId['court-1']!.length,
+            'only future slot kept',
+            1,
+          ),
+    ],
+  );
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
     'should clear the previous per-court error when a subsequent fetch succeeds',
     build: () {
       when(() => venuesRepo.getVenueAvailability(
@@ -885,6 +984,7 @@ void main() {
             to: any(named: 'to'),
             courtId: any(named: 'courtId'),
             durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
             sportId: any(named: 'sportId'),
             categoryId: any(named: 'categoryId'),
           )).thenAnswer((_) async => _availabilityEnvelope());
@@ -893,7 +993,7 @@ void main() {
         venue: _venue(),
         venuesRepository: venuesRepo,
         matchesRepository: matchesRepo,
-        catalogRepository: catalogRepo,
+        onboardingRepository: onboardingRepo,
       );
     },
     seed: () => VenueBookingState(
@@ -921,5 +1021,112 @@ void main() {
             true,
           ),
     ],
+  );
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // selectCourt() — bloques según configuración de la cancha (step = duración)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should request blocks sized by court.durationMinutes (step == duration) '
+    'anchored at the venue opening time',
+    build: () {
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer((_) async => _availabilityEnvelope());
+
+      return VenueBookingCubit(
+        venue: _venue(
+          openingHours: {
+            'monday': const OpeningHoursDay(open: '07:00', close: '23:00'),
+          },
+        ),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        onboardingRepository: onboardingRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(
+        openingHours: {
+          'monday': const OpeningHoursDay(open: '07:00', close: '23:00'),
+        },
+      ),
+      // 2024-06-03 es lunes.
+      selectedDate: DateTime(2024, 6, 3),
+      courts: [_court(durationMinutes: 90)],
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    verify: (_) {
+      verify(() => venuesRepo.getVenueAvailability(
+            venueId: 'venue-1',
+            courtId: 'court-1',
+            from: DateTime.utc(2024, 6, 3, 7),
+            to: DateTime.utc(2024, 6, 3, 23),
+            durationMinutes: 90,
+            stepMinutes: 90,
+            sportId: null,
+            categoryId: null,
+          )).called(1);
+    },
+  );
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // selectCourt() — día cerrado → estado vacío sin pegarle al backend
+  // ──────────────────────────────────────────────────────────────────────────
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should emit empty slots and skip the availability call on a closed day',
+    build: () => VenueBookingCubit(
+      venue: _venue(
+        openingHours: {
+          'monday': const OpeningHoursDay(open: '08:00', close: '22:00'),
+        },
+      ),
+      venuesRepository: venuesRepo,
+      matchesRepository: matchesRepo,
+      onboardingRepository: onboardingRepo,
+    ),
+    seed: () => VenueBookingState(
+      venue: _venue(
+        openingHours: {
+          'monday': const OpeningHoursDay(open: '08:00', close: '22:00'),
+        },
+      ),
+      // 2024-06-04 es martes (sin horario → cerrado).
+      selectedDate: DateTime(2024, 6, 4),
+      courts: [_court()],
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsByCourtId['court-1'],
+            'empty slots',
+            isEmpty,
+          ),
+    ],
+    verify: (_) {
+      verifyNever(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          ));
+    },
   );
 }

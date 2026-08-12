@@ -23,7 +23,7 @@ type MatchListRow = {
   _count: { participants: number };
   court?: null | {
     name: string;
-    venue: {
+    venue?: {
       name: string;
       pricingCurrency: string;
       displayCurrency: string;
@@ -38,13 +38,13 @@ type MatchListRow = {
 function toListItemDTO(_row: MatchListRow): MatchListItemDTO {
   const PARTICIPANT_COUNT = _row._count.participants;
   const OPEN_SPOTS = Math.max(0, _row.maxParticipants - PARTICIPANT_COUNT);
-  const CLUB_NAME = _row.court?.venue.name;
+  const CLUB_NAME = _row.court?.venue?.name;
   const COURT_NAME = _row.court?.name;
   const LOCATION_LABEL =
-    _row.court?.venue.addressLine1 ??
-    _row.court?.venue.formattedAddress ??
-    _row.court?.venue.address ??
-    _row.court?.venue.addressCity ??
+    _row.court?.venue?.addressLine1 ??
+    _row.court?.venue?.formattedAddress ??
+    _row.court?.venue?.address ??
+    _row.court?.venue?.addressCity ??
     undefined;
 
   return {
@@ -62,10 +62,10 @@ function toListItemDTO(_row: MatchListRow): MatchListItemDTO {
     ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
     ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
     ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
-    ...(_row.court?.venue.pricingCurrency !== undefined
+    ...(_row.court?.venue?.pricingCurrency !== undefined
       ? { pricingCurrency: _row.court.venue.pricingCurrency }
       : {}),
-    ...(_row.court?.venue.displayCurrency !== undefined
+    ...(_row.court?.venue?.displayCurrency !== undefined
       ? { displayCurrency: _row.court.venue.displayCurrency }
       : {}),
   };
@@ -168,13 +168,13 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
     if (ROW === null) return null;
 
     const BASE = toListItemDTO(ROW);
-    const CLUB_NAME = ROW.court?.venue.name;
+    const CLUB_NAME = ROW.court?.venue?.name;
     const COURT_NAME = ROW.court?.name;
     const LOCATION_LABEL =
-      ROW.court?.venue.addressLine1 ??
-      ROW.court?.venue.formattedAddress ??
-      ROW.court?.venue.address ??
-      ROW.court?.venue.addressCity ??
+      ROW.court?.venue?.addressLine1 ??
+      ROW.court?.venue?.formattedAddress ??
+      ROW.court?.venue?.address ??
+      ROW.court?.venue?.addressCity ??
       undefined;
 
     return {

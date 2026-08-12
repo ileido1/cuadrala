@@ -14,6 +14,7 @@ final class VenueMapState extends Equatable {
     this.userLng,
     this.selectedVenue,
     this.error,
+    this.fellBackToAll = false,
   });
 
   final VenueMapStatus status;
@@ -24,6 +25,10 @@ final class VenueMapState extends Equatable {
   final double? userLng;
   final VenueDto? selectedVenue;
   final String? error;
+
+  /// True cuando la búsqueda por cercanía no halló sedes y se cayó a la lista
+  /// completa (sin `near`). La UI lo usa para avisar "mostrando todas".
+  final bool fellBackToAll;
 
   static const _sentinel = Object();
 
@@ -36,6 +41,7 @@ final class VenueMapState extends Equatable {
     Object? userLng = _sentinel,
     Object? selectedVenue = _sentinel,
     Object? error = _sentinel,
+    bool? fellBackToAll,
   }) {
     return VenueMapState(
       status: status ?? this.status,
@@ -47,10 +53,20 @@ final class VenueMapState extends Equatable {
       selectedVenue:
           selectedVenue == _sentinel ? this.selectedVenue : selectedVenue as VenueDto?,
       error: error == _sentinel ? this.error : error as String?,
+      fellBackToAll: fellBackToAll ?? this.fellBackToAll,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [status, venues, filtered, searchQuery, userLat, userLng, selectedVenue, error];
+  List<Object?> get props => [
+        status,
+        venues,
+        filtered,
+        searchQuery,
+        userLat,
+        userLng,
+        selectedVenue,
+        error,
+        fellBackToAll,
+      ];
 }

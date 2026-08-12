@@ -86,10 +86,10 @@ export class UpdateCourtPricingTierUseCase {
   async executeSV(
     _ctx: VenueCourtContext & { tierId: string },
     _patch: {
-      label?: string;
-      startTime?: string;
-      endTime?: string;
-      pricePerHourCents?: number;
+      label?: string | undefined;
+      startTime?: string | undefined;
+      endTime?: string | undefined;
+      pricePerHourCents?: number | undefined;
     },
   ): Promise<CourtPricingTier> {
     await assertVenueStaffAndCourtSV(_ctx, this._venueStaffRepository, this._courtRepository);

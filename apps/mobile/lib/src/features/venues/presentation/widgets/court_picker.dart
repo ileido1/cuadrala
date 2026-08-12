@@ -158,6 +158,7 @@ class _CourtRow extends StatelessWidget {
               loading: loading,
               selectedSlot: selectedSlot,
               dateLabel: dateLabel,
+              durationMinutes: court.durationMinutes,
               onSelectSlot: onSelectSlot,
               onChangeDate: onChangeDate,
             ),
@@ -175,6 +176,7 @@ class _Slots extends StatelessWidget {
     required this.loading,
     required this.selectedSlot,
     required this.dateLabel,
+    required this.durationMinutes,
     required this.onSelectSlot,
     required this.onChangeDate,
   });
@@ -184,6 +186,10 @@ class _Slots extends StatelessWidget {
   final bool loading;
   final String? selectedSlot;
   final String dateLabel;
+
+  /// Duración del bloque de la cancha (minutos), para mostrar el rango horario.
+  final int durationMinutes;
+
   final void Function(String iso) onSelectSlot;
   final VoidCallback onChangeDate;
 
@@ -217,7 +223,7 @@ class _Slots extends StatelessWidget {
       children: [
         for (final iso in available)
           SelectableChip(
-            label: _formatSlot(iso),
+            label: _formatSlot(iso, durationMinutes),
             selected: selectedSlot == iso,
             onTap: () => onSelectSlot(iso),
             icon: AppIcons.clock,
@@ -226,12 +232,21 @@ class _Slots extends StatelessWidget {
     );
   }
 
-  static String _formatSlot(String iso) {
-    final dt = DateTime.tryParse(iso)?.toLocal();
+  /// Devuelve el rango del bloque, p. ej. `14:00 - 15:00` para una cancha de
+  /// 60 min, o `14:00 - 15:30` para 90 min.
+  ///
+  /// Convención wall-clock-as-UTC: los componentes UTC son la hora local de la
+  /// sede; se muestran tal cual (sin toLocal), igual que las tarjetas de partida.
+  static String _formatSlot(String iso, int durationMinutes) {
+    final dt = DateTime.tryParse(iso);
     if (dt == null) return iso;
-    return '${dt.hour.toString().padLeft(2, '0')}:'
-        '${dt.minute.toString().padLeft(2, '0')}';
+    final end = dt.add(Duration(minutes: durationMinutes));
+    return '${_hhmm(dt)} - ${_hhmm(end)}';
   }
+
+  static String _hhmm(DateTime dt) =>
+      '${dt.hour.toString().padLeft(2, '0')}:'
+      '${dt.minute.toString().padLeft(2, '0')}';
 }
 
 

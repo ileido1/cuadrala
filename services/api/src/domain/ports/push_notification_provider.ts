@@ -7,7 +7,7 @@ export type PushNotificationMessageDTO = {
 export type PushSendResultDTO = {
   successCount: number;
   failureCount: number;
-  failures: Array<{ token: string; error: string; errorCode?: string }>;
+  failures: Array<{ token: string; error: string; errorCode?: string | undefined }>;
 };
 
 export interface PushNotificationProvider {

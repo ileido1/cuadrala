@@ -9,7 +9,7 @@ export class GetUserRatingsUseCase {
 
   async executeSV(_params: {
     userId: string;
-    categoryId?: string;
+    categoryId?: string | undefined;
   }): Promise<{ items: UserRatingReadRowDTO[] }> {
     const ITEMS = await this._userRatingReadRepository.getUserRatingsSV(_params.userId, _params.categoryId);
 

@@ -67,8 +67,118 @@ void main() {
             .having((s) => s.status, 'status', VenueMapStatus.loaded)
             .having((s) => s.userLat, 'userLat', -34.6)
             .having((s) => s.userLng, 'userLng', -58.4)
-            .having((s) => s.venues.length, 'venues count', 1),
+            .having((s) => s.venues.length, 'venues count', 1)
+            .having((s) => s.fellBackToAll, 'fellBackToAll', false),
       ],
+      verify: (_) {
+        verify(
+          () => repository.listVenues(near: '-34.6,-58.4', radiusKm: 25),
+        ).called(1);
+        verifyNever(() => repository.listVenues());
+      },
+    );
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // load() — GPS granted but near-query empty → fallback to flat list
+    // ──────────────────────────────────────────────────────────────────────────
+
+    blocTest<VenueMapCubit, VenueMapState>(
+      'load() — GPS granted, near-query empty → retries without near, '
+      'fellBackToAll=true, listVenues called twice, coords preserved',
+      build: () {
+        when(() => locationService.getCurrentLocation()).thenAnswer(
+          (_) async => const DeviceLocation(latitude: -34.6, longitude: -58.4),
+        );
+        // Near-query (con coords) → vacía.
+        when(
+          () => repository.listVenues(near: '-34.6,-58.4', radiusKm: 25),
+        ).thenAnswer((_) async => const <VenueDto>[]);
+        // Fallback sin near → lista completa.
+        when(() => repository.listVenues())
+            .thenAnswer((_) async => [_venue(id: 'far-away')]);
+        return VenueMapCubit(
+          repository: repository,
+          locationService: locationService,
+        );
+      },
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loading)
+            .having((s) => s.fellBackToAll, 'reset on loading', false),
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loaded)
+            .having((s) => s.venues.length, 'flat list', 1)
+            .having((s) => s.venues.first.id, 'fallback venue', 'far-away')
+            .having((s) => s.fellBackToAll, 'fellBackToAll', true)
+            .having((s) => s.userLat, 'coords preserved', -34.6)
+            .having((s) => s.userLng, 'coords preserved', -58.4),
+      ],
+      verify: (_) {
+        verify(
+          () => repository.listVenues(near: '-34.6,-58.4', radiusKm: 25),
+        ).called(1);
+        verify(() => repository.listVenues()).called(1);
+      },
+    );
+
+    blocTest<VenueMapCubit, VenueMapState>(
+      'load() — GPS granted, near-query empty AND fallback empty → '
+      'loaded empty, fellBackToAll=true, no crash',
+      build: () {
+        when(() => locationService.getCurrentLocation()).thenAnswer(
+          (_) async => const DeviceLocation(latitude: -34.6, longitude: -58.4),
+        );
+        when(
+          () => repository.listVenues(near: '-34.6,-58.4', radiusKm: 25),
+        ).thenAnswer((_) async => const <VenueDto>[]);
+        when(() => repository.listVenues())
+            .thenAnswer((_) async => const <VenueDto>[]);
+        return VenueMapCubit(
+          repository: repository,
+          locationService: locationService,
+        );
+      },
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loaded)
+            .having((s) => s.filtered.length, 'empty', 0)
+            .having((s) => s.fellBackToAll, 'fellBackToAll', true),
+      ],
+    );
+
+    blocTest<VenueMapCubit, VenueMapState>(
+      'load() — GPS granted, near-query empty, fallback throws → failure, '
+      'no extra retry',
+      build: () {
+        when(() => locationService.getCurrentLocation()).thenAnswer(
+          (_) async => const DeviceLocation(latitude: -34.6, longitude: -58.4),
+        );
+        when(
+          () => repository.listVenues(near: '-34.6,-58.4', radiusKm: 25),
+        ).thenAnswer((_) async => const <VenueDto>[]);
+        when(() => repository.listVenues()).thenThrow(
+          const AppFailure(code: 'NETWORK_ERROR', message: 'Sin conexión.'),
+        );
+        return VenueMapCubit(
+          repository: repository,
+          locationService: locationService,
+        );
+      },
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.failure)
+            .having((s) => s.error, 'error message', 'Sin conexión.'),
+      ],
+      verify: (_) {
+        verify(() => repository.listVenues()).called(1);
+      },
     );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -100,8 +210,12 @@ void main() {
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.loaded)
             .having((s) => s.userLat, 'userLat', isNull)
-            .having((s) => s.userLng, 'userLng', isNull),
+            .having((s) => s.userLng, 'userLng', isNull)
+            .having((s) => s.fellBackToAll, 'fellBackToAll', false),
       ],
+      verify: (_) {
+        verify(() => repository.listVenues()).called(1);
+      },
     );
 
     // ──────────────────────────────────────────────────────────────────────────

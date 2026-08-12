@@ -9,10 +9,10 @@ export type CreateCourtPricingTierInputDTO = {
 };
 
 export type UpdateCourtPricingTierInputDTO = {
-  label?: string;
-  startTime?: string;
-  endTime?: string;
-  pricePerHourCents?: number;
+  label?: string | undefined;
+  startTime?: string | undefined;
+  endTime?: string | undefined;
+  pricePerHourCents?: number | undefined;
 };
 
 export interface CourtPricingTierRepository {

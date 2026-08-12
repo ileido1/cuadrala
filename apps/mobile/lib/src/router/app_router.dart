@@ -291,7 +291,7 @@ final class AppRouter {
                     venue: venue,
                     venuesRepository: getIt(),
                     matchesRepository: getIt(),
-                    catalogRepository: getIt(),
+                    onboardingRepository: getIt(),
                   )..load(),
                   child: const VenueBookingScreen(),
                 );

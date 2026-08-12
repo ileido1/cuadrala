@@ -15,7 +15,7 @@ import { computeOpenMatchDTOSV } from '../../infrastructure/adapters/prisma_matc
 
 const SPORT_ID = '00000000-0000-4000-8000-000000000001';
 const VENUE_A_ID = '00000000-0000-4000-8000-000000000010';
-const VENUE_B_ID = '00000000-0000-4000-8000-000000000011';
+const _VENUE_B_ID = '00000000-0000-4000-8000-000000000011';
 
 function makeOpenMatchDTO(overrides: Partial<OpenMatchDTO> = {}): OpenMatchDTO {
   return {

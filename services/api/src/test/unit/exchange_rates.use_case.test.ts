@@ -11,6 +11,7 @@ describe('ListExchangeRatesByCountryUseCase', () => {
         { countryCode: 'VE', currency: 'USD', rateToBs: 50, source: 'test' },
       ]),
       findByCountryAndCurrencySV: vi.fn(),
+      findByCountryCurrencyAndDateSV: vi.fn(),
       upsertManySV: vi.fn(),
     };
     const UC = new ListExchangeRatesByCountryUseCase(REPO);
@@ -27,6 +28,7 @@ describe('RefreshExchangeRatesUseCase', () => {
     const REPO = {
       listByCountrySV: vi.fn(),
       findByCountryAndCurrencySV: vi.fn(),
+      findByCountryCurrencyAndDateSV: vi.fn(),
       upsertManySV: vi.fn().mockResolvedValue([
         { countryCode: 'VE', currency: 'USD', rateToBs: 50, source: 'dolarapi.com' },
       ]),
@@ -56,6 +58,7 @@ describe('RefreshExchangeRatesUseCase', () => {
     const REPO = {
       listByCountrySV: vi.fn(),
       findByCountryAndCurrencySV: vi.fn(),
+      findByCountryCurrencyAndDateSV: vi.fn(),
       upsertManySV: vi.fn(),
     };
     const PROVIDER = {

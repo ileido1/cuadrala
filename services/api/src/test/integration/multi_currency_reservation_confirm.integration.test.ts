@@ -15,6 +15,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
   'Integración MCP — confirmación reserva con settlementAmount',
   () => {
     let app: Awaited<ReturnType<typeof import('../../app.js').createApp>>;
+    let sportPadelId: string;
     let staffUserId: string;
     let payerUserId: string;
     let venueId: string;
@@ -29,7 +30,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       app = createApp();
 
       await resetDatabaseForTestsSV();
-      await ensureTestCatalogSV();
+      const CATALOG = await ensureTestCatalogSV();
+      sportPadelId = CATALOG.sportPadelId;
 
       const SPORT = await PRISMA.sport.findUnique({ where: { code: 'PADEL' } });
       const CAT = await createTestCategorySV(sportPadelId, `mcp-${Date.now()}`, 'MCP Cat');

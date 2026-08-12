@@ -218,24 +218,6 @@ final class _HeroCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          // Glow radial verde en la esquina superior derecha.
-          Positioned(
-            right: -40,
-            top: -60,
-            child: Container(
-              width: 200,
-              height: 160,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    scheme.primary.withValues(alpha: 0.22),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
             child: Column(

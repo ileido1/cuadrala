@@ -24,7 +24,7 @@ export class PrismaTransactionReceiptNotifyContextRepository
         },
       },
     });
-    if (ROW === null) {
+    if (ROW === null || ROW.match === null) {
       return null;
     }
     return {

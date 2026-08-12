@@ -25,6 +25,9 @@ export const RESERVATION_LIST_SELECT = {
   totalAmountCents: true,
   paidAmountCents: true,
   paymentStatus: true,
+  pricingCurrency: true,
+  totalAmountMinor: true,
+  paidAmountMinor: true,
   court: { select: { name: true } },
   createdAt: true,
   updatedAt: true,
@@ -47,6 +50,9 @@ export type ReservationPrismaListRow = {
   totalAmountCents: number | null;
   paidAmountCents: number;
   paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+  pricingCurrency: string;
+  totalAmountMinor: bigint | null;
+  paidAmountMinor: bigint;
   court: { name: string } | null;
   createdAt: Date;
   updatedAt: Date;
@@ -72,6 +78,9 @@ export function mapPrismaReservationRowToDtoSV(
     totalAmountCents: _row.totalAmountCents,
     paidAmountCents: _row.paidAmountCents,
     paymentStatus: _row.paymentStatus,
+    pricingCurrency: _row.pricingCurrency,
+    totalAmountMinor: _row.totalAmountMinor,
+    paidAmountMinor: _row.paidAmountMinor,
     courtName: _row.court?.name ?? null,
     createdAt: _row.createdAt,
     updatedAt: _row.updatedAt,

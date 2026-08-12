@@ -138,7 +138,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
       status?: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
       sportId?: string;
       categoryId?: string;
-      matches: { tournament: { court: { venueId: string } } };
+      matches?: { some: { court: { venueId: string } } };
     } = {
       matches: {
         some: {

@@ -57,16 +57,16 @@ export class MapboxGeocodingProvider implements GeocodingProvider {
     limit?: number;
   }): Promise<GeocodingPlaceCandidateDTO[]> {
     const LIMIT = Math.min(10, Math.max(1, _dto.limit ?? 5));
-    const URL = new URL(
+    const REQUEST_URL = new URL(
       `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(_dto.query)}.json`,
     );
-    URL.searchParams.set('access_token', this._accessToken);
-    URL.searchParams.set('limit', String(LIMIT));
+    REQUEST_URL.searchParams.set('access_token', this._accessToken);
+    REQUEST_URL.searchParams.set('limit', String(LIMIT));
     if (_dto.nearLat !== undefined && _dto.nearLng !== undefined) {
-      URL.searchParams.set('proximity', `${_dto.nearLng},${_dto.nearLat}`);
+      REQUEST_URL.searchParams.set('proximity', `${_dto.nearLng},${_dto.nearLat}`);
     }
 
-    const RES = await fetch(URL.toString());
+    const RES = await fetch(REQUEST_URL.toString());
     if (!RES.ok) {
       throw new AppError('MAPS_ERROR', 'Error consultando el proveedor de mapas.', 502, {
         provider: 'mapbox',
@@ -88,11 +88,11 @@ export class MapboxGeocodingProvider implements GeocodingProvider {
   }
 
   async getPlaceDetailsSV(_placeId: string): Promise<GeocodingPlaceDetailsDTO> {
-    const URL = new URL(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(_placeId)}.json`);
-    URL.searchParams.set('access_token', this._accessToken);
-    URL.searchParams.set('limit', '1');
+    const REQUEST_URL = new URL(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(_placeId)}.json`);
+    REQUEST_URL.searchParams.set('access_token', this._accessToken);
+    REQUEST_URL.searchParams.set('limit', '1');
 
-    const RES = await fetch(URL.toString());
+    const RES = await fetch(REQUEST_URL.toString());
     if (!RES.ok) {
       throw new AppError('MAPS_ERROR', 'Error consultando el proveedor de mapas.', 502, {
         provider: 'mapbox',

@@ -3,14 +3,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { CreateAmericanoUseCase } from '../../application/use_cases/create_americano.use_case.js';
 import { AppError } from '../../domain/errors/app_error.js';
 
-const mockCategoryRepository = { findByIdSV: vi.fn(), findAllSV: vi.fn() };
-const mockCourtRepository = { findById: vi.fn() };
+const mockCategoryRepository = {
+  findByIdSV: vi.fn(),
+  findAllSV: vi.fn(),
+  findAllBySportIdSV: vi.fn(),
+  findByIdAndSportIdSV: vi.fn(),
+};
+const mockCourtRepository = { findById: vi.fn(), findByVenue: vi.fn(), create: vi.fn(), update: vi.fn(), cancel: vi.fn() };
 const mockUserRepository = {
   findByIdSV: vi.fn(),
   findByEmailSV: vi.fn(),
   createUserSV: vi.fn(),
   updateUserNameSV: vi.fn(),
   countByIdsSV: vi.fn(),
+  findByDocumentNumberSV: vi.fn(),
 };
 const mockTournamentRepository = {
   findByIdSV: vi.fn(),

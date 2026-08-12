@@ -5,9 +5,9 @@ export class SearchPlacesUseCase {
 
   async executeSV(_dto: {
     query: string;
-    nearLat?: number;
-    nearLng?: number;
-    limit?: number;
+    nearLat?: number | undefined;
+    nearLng?: number | undefined;
+    limit?: number | undefined;
   }): Promise<GeocodingPlaceCandidateDTO[]> {
     return this._geocodingProvider.searchPlacesSV(_dto);
   }

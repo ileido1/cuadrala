@@ -22,9 +22,9 @@ export type GeocodingPlaceDetailsDTO = {
 export interface GeocodingProvider {
   searchPlacesSV(_dto: {
     query: string;
-    nearLat?: number;
-    nearLng?: number;
-    limit?: number;
+    nearLat?: number | undefined;
+    nearLng?: number | undefined;
+    limit?: number | undefined;
   }): Promise<GeocodingPlaceCandidateDTO[]>;
 
   getPlaceDetailsSV(_placeId: string): Promise<GeocodingPlaceDetailsDTO>;

@@ -34,7 +34,7 @@ export type PaginatedUserRatingHistoryDTO = {
 };
 
 export interface UserRatingReadRepository {
-  getUserRatingsSV(_userId: string, _categoryId?: string): Promise<UserRatingReadRowDTO[] | null>;
+  getUserRatingsSV(_userId: string, _categoryId?: string | undefined): Promise<UserRatingReadRowDTO[] | null>;
   /**
    * Devuelve el rating de mayor ELO del usuario con datos de categoría/deporte,
    * o `null` si el usuario no tiene ratings registrados.
@@ -42,7 +42,7 @@ export interface UserRatingReadRepository {
   getPrimaryUserRatingSV(_userId: string): Promise<PrimaryUserRatingDTO | null>;
   getUserRatingHistorySV(_params: {
     userId: string;
-    categoryId?: string;
+    categoryId?: string | undefined;
     page: number;
     limit: number;
   }): Promise<PaginatedUserRatingHistoryDTO | null>;

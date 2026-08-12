@@ -1,4 +1,5 @@
 import { Prisma } from '../../generated/prisma/client.js';
+import type { PaymentMethod, TransactionStatus } from '../../generated/prisma/client.js';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -17,8 +18,8 @@ function sampleTransaction() {
     amountBase: new Prisma.Decimal('8.00'),
     feeAmount: new Prisma.Decimal('0.50'),
     amountTotal: new Prisma.Decimal('8.50'),
-    status: 'PENDING',
-    paymentMethod: 'MANUAL',
+    status: 'PENDING' as TransactionStatus,
+    paymentMethod: 'MANUAL' as PaymentMethod,
     confirmedAt: null,
     createdAt: CREATED_AT,
     updatedAt: CREATED_AT,

@@ -6,8 +6,13 @@ import { AppError } from '../../domain/errors/app_error.js';
 describe('UpdatePlayerProfileUseCase', () => {
   it('should reject documentNumber already used by another user', async () => {
     const UC = new UpdatePlayerProfileUseCase(
-      { upsertByUserIdSV: vi.fn() },
+      { upsertByUserIdSV: vi.fn(), findByUserIdSV: vi.fn() },
       {
+        findByIdSV: vi.fn(),
+        findByEmailSV: vi.fn(),
+        createUserSV: vi.fn(),
+        updateUserNameSV: vi.fn(),
+        countByIdsSV: vi.fn(),
         findByDocumentNumberSV: vi.fn().mockResolvedValue([
           { id: 'other-user', name: 'Otro', email: 'o@test.local', documentNumber: '12345678' },
         ]),
@@ -38,8 +43,13 @@ describe('UpdatePlayerProfileUseCase', () => {
       updatedAt: new Date(),
     });
     const UC = new UpdatePlayerProfileUseCase(
-      { upsertByUserIdSV: UPSERT },
+      { upsertByUserIdSV: UPSERT, findByUserIdSV: vi.fn() },
       {
+        findByIdSV: vi.fn(),
+        findByEmailSV: vi.fn(),
+        createUserSV: vi.fn(),
+        updateUserNameSV: vi.fn(),
+        countByIdsSV: vi.fn(),
         findByDocumentNumberSV: vi.fn().mockResolvedValue([
           { id: 'user-a', name: 'Yo', email: 'yo@test.local', documentNumber: '12345678' },
         ]),
@@ -58,8 +68,16 @@ describe('UpdatePlayerProfileUseCase', () => {
     const UC = new UpdatePlayerProfileUseCase(
       {
         upsertByUserIdSV: vi.fn().mockRejectedValue(PRISMA_ERROR),
+        findByUserIdSV: vi.fn(),
       },
-      { findByDocumentNumberSV: vi.fn().mockResolvedValue([]) },
+      {
+        findByIdSV: vi.fn(),
+        findByEmailSV: vi.fn(),
+        createUserSV: vi.fn(),
+        updateUserNameSV: vi.fn(),
+        countByIdsSV: vi.fn(),
+        findByDocumentNumberSV: vi.fn().mockResolvedValue([]),
+      },
     );
 
     await expect(UC.executeSV('user-a', { dominantHand: 'LEFT' })).rejects.toBeInstanceOf(
