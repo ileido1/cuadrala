@@ -1,7 +1,38 @@
+import 'package:equatable/equatable.dart';
+
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_json.dart';
 
+/// Filters for the tournament list endpoint.
+final class TournamentListFilters extends Equatable {
+  const TournamentListFilters({
+    this.venueId,
+    this.startsAtFrom,
+    this.startsAtTo,
+    this.status,
+    this.sportId,
+    this.categoryId,
+  });
+
+  final String? venueId;
+  final DateTime? startsAtFrom;
+  final DateTime? startsAtTo;
+  final String? status;
+  final String? sportId;
+  final String? categoryId;
+
+  @override
+  List<Object?> get props =>
+      [venueId, startsAtFrom, startsAtTo, status, sportId, categoryId];
+}
+
 abstract interface class TournamentsApi {
+  Future<Map<String, Object?>> listTournamentsEnvelope({
+    required int page,
+    required int limit,
+    TournamentListFilters? filters,
+  });
+
   Future<Map<String, Object?>> listTournamentFormatPresetsEnvelope({
     required String sportId,
   });
@@ -42,6 +73,34 @@ final class DioTournamentsApi implements TournamentsApi {
   DioTournamentsApi({required ApiClient apiClient}) : _apiClient = apiClient;
 
   final ApiClient _apiClient;
+
+  @override
+  Future<Map<String, Object?>> listTournamentsEnvelope({
+    required int page,
+    required int limit,
+    TournamentListFilters? filters,
+  }) {
+    final params = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+    if (filters != null) {
+      if (filters.venueId != null) params['venueId'] = filters.venueId!;
+      if (filters.startsAtFrom != null) {
+        params['startsAtFrom'] = filters.startsAtFrom!.toIso8601String();
+      }
+      if (filters.startsAtTo != null) {
+        params['startsAtTo'] = filters.startsAtTo!.toIso8601String();
+      }
+      if (filters.status != null) params['status'] = filters.status!;
+      if (filters.sportId != null) params['sportId'] = filters.sportId!;
+      if (filters.categoryId != null) params['categoryId'] = filters.categoryId!;
+    }
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/tournaments',
+      queryParameters: params,
+    );
+  }
 
   @override
   Future<Map<String, Object?>> listTournamentFormatPresetsEnvelope({

@@ -1,6 +1,8 @@
 import '../../../core/failures/app_failure.dart';
 import 'models/create_tournament_request.dart';
 import 'models/create_tournament_response.dart';
+import 'models/tournament_list_item_dto.dart';
+import 'models/tournament_list_page.dart';
 import 'models/tournament_preset_dto.dart';
 import 'models/tournament_registration_dto.dart';
 import 'models/tournament_schedule_dto.dart';
@@ -12,6 +14,19 @@ class TournamentsRepository {
       : _tournamentsApi = tournamentsApi;
 
   final TournamentsApi _tournamentsApi;
+
+  Future<TournamentListPage> listTournaments({
+    required int page,
+    required int limit,
+    TournamentListFilters? filters,
+  }) async {
+    final data = await _tournamentsApi.listTournamentsEnvelope(
+      page: page,
+      limit: limit,
+      filters: filters,
+    );
+    return TournamentListPage.fromJson(data);
+  }
 
   Future<List<TournamentPresetDto>> getPresetsBySportId({
     required String sportId,

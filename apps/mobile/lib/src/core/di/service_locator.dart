@@ -47,6 +47,7 @@ import '../../features/profile/data/profile_repository.dart';
 import '../../features/tournaments/data/tournaments_api.dart';
 import '../../features/tournaments/data/tournaments_repository.dart';
 import '../../features/tournaments/presentation/cubit/create_tournament_cubit.dart';
+import '../../features/tournaments/presentation/cubit/tournaments_list_cubit.dart';
 import '../../features/tournaments/presentation/cubit/tournament_presets_cubit.dart';
 import '../../features/tournaments/presentation/cubit/tournament_schedule_cubit.dart';
 import '../../features/tournaments/presentation/cubit/tournament_scoreboard_cubit.dart';
@@ -254,6 +255,9 @@ Future<void> setupDependencies() async {
 
   getIt.registerFactory<CreateTournamentCubit>(
     () => CreateTournamentCubit(tournamentsRepository: getIt<TournamentsRepository>()),
+  );
+  getIt.registerFactory<TournamentsListCubit>(
+    () => TournamentsListCubit(tournamentsRepository: getIt<TournamentsRepository>()),
   );
   getIt.registerFactory<TournamentPresetsCubit>(
     () => TournamentPresetsCubit(tournamentsRepository: getIt<TournamentsRepository>()),
