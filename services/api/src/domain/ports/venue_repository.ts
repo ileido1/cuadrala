@@ -45,6 +45,8 @@ export type VenueListItemDTO = {
   distanceKm?: number | null;
   imageUrl?: string | null;
   averageRating?: number | null;
+  /** Deportes ofrecidos (deduplicados desde las canchas activas). */
+  sports: string[];
 };
 
 export type VenueDetailDTO = {
@@ -107,9 +109,11 @@ export interface VenueRepository {
   ): Promise<Record<string, { open: string; close: string }> | null>;
   updateSV(_venueId: string, _data: UpdateVenueDataDTO): Promise<VenueSettingsDTO>;
   getPaymentInfoSV(_venueId: string): Promise<VenuePaymentInfoDTO | null>;
-  listVenuesSV(_page: PageDTO): Promise<{ items: VenueListItemDTO[]; total: number }>;
+  listVenuesSV(
+    _page: PageDTO & { sportType?: string },
+  ): Promise<{ items: VenueListItemDTO[]; total: number }>;
   listVenuesNearSV(
-    _input: PageDTO & { lat: number; lng: number; radiusKm: number },
+    _input: PageDTO & { lat: number; lng: number; radiusKm: number; sportType?: string },
   ): Promise<{ items: VenueListItemDTO[]; total: number }>;
   listVenuesForUserSV(_userId: string): Promise<VenueListItemDTO[]>;
   createVenueSV(_input: CreateVenueInputDTO): Promise<VenueListItemDTO>;

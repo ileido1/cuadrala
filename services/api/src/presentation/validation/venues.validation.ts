@@ -9,6 +9,7 @@ export const LIST_VENUES_QUERY_SCHEMA = z
     radiusKm: z.coerce.number().positive().max(200).default(10),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     page: z.coerce.number().int().min(1).default(1),
+    sportType: z.enum(['PADEL', 'TENNIS']).optional(),
   })
   .strict();
 

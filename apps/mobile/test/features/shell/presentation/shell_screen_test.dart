@@ -5,6 +5,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/notifications/data/models/notification_delivery_dto.dart';
 import 'package:cuadrala_mobile/src/features/notifications/presentation/cubit/notifications_cubit.dart';
 import 'package:cuadrala_mobile/src/features/notifications/presentation/cubit/notifications_state.dart';
@@ -185,6 +186,40 @@ void main() {
       expect(find.text('Avisos'), findsAtLeastNWidgets(1));
       expect(find.text('Perfil'), findsAtLeastNWidgets(1));
       expect(find.text('Torneos'), findsNothing);
+    });
+  });
+
+  // ── 2b. Descubrir tab (real _defaultTabs, no stub) ────────────────────────
+
+  group('Descubrir tab', () {
+    Widget buildWithRealTabs() {
+      return MaterialApp(
+        theme: AppTheme.light(),
+        home: BlocProvider<NotificationsCubit>.value(
+          value: notifCubit,
+          child: ShellBody(
+            currentIndex: 0,
+            onSelectTab: (_) {},
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('Descubrir tab is present in the real tab list', (tester) async {
+      when(() => notifCubit.state).thenReturn(_notifState());
+
+      await tester.pumpWidget(buildWithRealTabs());
+
+      expect(find.text('Descubrir'), findsOneWidget);
+    });
+
+    testWidgets('Descubrir tab uses the explore (compass) icon', (tester) async {
+      when(() => notifCubit.state).thenReturn(_notifState());
+
+      await tester.pumpWidget(buildWithRealTabs());
+
+      expect(find.byIcon(AppIcons.explore), findsOneWidget);
     });
   });
 

@@ -28,6 +28,7 @@ import '../features/notifications/presentation/notification_detail_screen.dart';
 import '../features/notifications/presentation/notification_prefs_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
+import '../features/venue_detail/venue_detail_screen.dart';
 import '../features/venues/data/models/venue_dto.dart';
 import '../features/venues/presentation/create_match_panel.dart';
 import '../features/venues/presentation/venue_booking_screen.dart';
@@ -295,6 +296,13 @@ final class AppRouter {
                   )..load(),
                   child: const VenueBookingScreen(),
                 );
+              },
+            ),
+            GoRoute(
+              path: '/descubrir/:venueId',
+              builder: (context, state) {
+                final venueId = state.pathParameters['venueId'] ?? '';
+                return VenueDetailScreen(venueId: venueId);
               },
             ),
           ],

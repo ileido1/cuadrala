@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -14,8 +15,20 @@ import 'cubit/venue_map_state.dart';
 
 /// Full-screen map-based venue discovery screen (legacy / tests).
 /// La ruta `/matches/create` usa [CreateMatchRouteScreen] + [showCreateMatchSheet].
-class VenueMapScreen extends StatelessWidget {
+class VenueMapScreen extends StatefulWidget {
   const VenueMapScreen({super.key});
+
+  @override
+  State<VenueMapScreen> createState() => _VenueMapScreenState();
+}
+
+class _VenueMapScreenState extends State<VenueMapScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Carga inicial de sedes cercanas al abrir la pestaña Descubrir.
+    context.read<VenueMapCubit>().load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,23 +135,42 @@ class _MapView extends StatelessWidget {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.cuadrala.mobile',
               ),
-              MarkerLayer(
-                markers: [
-                  for (final venue in state.filtered)
-                    Marker(
-                      point: LatLng(venue.latitude!, venue.longitude!),
-                      width: 40,
-                      height: 40,
-                      child: GestureDetector(
-                        onTap: () => cubit.selectVenue(venue),
-                        child: const Icon(
-                          AppIcons.pin,
-                          size: 36,
-                          color: Colors.red,
+              MarkerClusterLayerWidget(
+                options: MarkerClusterLayerOptions(
+                  maxClusterRadius: 50,
+                  size: const Size(40, 40),
+                  markers: [
+                    for (final venue in state.filtered)
+                      Marker(
+                        point: LatLng(venue.latitude!, venue.longitude!),
+                        width: 40,
+                        height: 40,
+                        child: GestureDetector(
+                          onTap: () => cubit.selectVenue(venue),
+                          child: const Icon(
+                            AppIcons.pin,
+                            size: 36,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                  ],
+                  builder: (context, markers) => Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${markers.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -150,6 +182,11 @@ class _MapView extends StatelessWidget {
               children: [
                 _SearchBar(onChanged: cubit.search),
                 const SizedBox(height: 8),
+                _SportFilterChips(
+                  selected: state.sportType,
+                  onSelect: (sportType) => cubit.load(sportType: sportType),
+                ),
+                const SizedBox(height: 8),
                 _ZoneChips(
                   savedZones: state.savedZones,
                   selectedZone: state.selectedZone,
@@ -157,6 +194,15 @@ class _MapView extends StatelessWidget {
                   onManage: () => _showZonesSheet(context, cubit, state.savedZones),
                 ),
               ],
+            ),
+          ),
+          Positioned(
+            right: 16,
+            bottom: (state.selectedVenue != null ? 160 : 24),
+            child: FloatingActionButton.small(
+              heroTag: 'gps-recenter',
+              onPressed: cubit.recenterToCurrentLocation,
+              child: const Icon(AppIcons.myLocation),
             ),
           ),
           if (state.selectedVenue != null)
@@ -167,14 +213,55 @@ class _MapView extends StatelessWidget {
               child: _VenueMiniSheet(
                 venue: state.selectedVenue!,
                 onClose: () => cubit.selectVenue(null),
-                onReservar: () => context.push(
-                  Routes.venueCreateMatch(state.selectedVenue!.id),
-                  extra: state.selectedVenue,
+                onViewDetails: () => context.push(
+                  Routes.venueDetail(state.selectedVenue!.id),
                 ),
               ),
             ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sport filter chip bar (Todos / Pádel / Tenis)
+// ---------------------------------------------------------------------------
+
+class _SportFilterChips extends StatelessWidget {
+  const _SportFilterChips({
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final String? selected;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildChip(context, label: 'Todos', value: null),
+          const SizedBox(width: 6),
+          _buildChip(context, label: 'Pádel', value: 'PADEL'),
+          const SizedBox(width: 6),
+          _buildChip(context, label: 'Tenis', value: 'TENNIS'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChip(
+    BuildContext context, {
+    required String label,
+    required String? value,
+  }) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected == value,
+      onSelected: (_) => onSelect(value),
     );
   }
 }
@@ -413,12 +500,12 @@ class _VenueMiniSheet extends StatelessWidget {
   const _VenueMiniSheet({
     required this.venue,
     required this.onClose,
-    required this.onReservar,
+    required this.onViewDetails,
   });
 
   final VenueDto venue;
   final VoidCallback onClose;
-  final VoidCallback onReservar;
+  final VoidCallback onViewDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -460,23 +547,54 @@ class _VenueMiniSheet extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-              if (venue.distanceKm != null) ...[
+              if (venue.sports.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Chip(
-                  label: Text(
-                    '${venue.distanceKm!.toStringAsFixed(1)} km',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
+                Row(
+                  children: [
+                    for (final sport in venue.sports)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(
+                          _sportIcon(sport),
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+              if (venue.distanceKm != null || venue.averageRating != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (venue.distanceKm != null) ...[
+                      Chip(
+                        label: Text(
+                          '${venue.distanceKm!.toStringAsFixed(1)} km',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (venue.averageRating != null) ...[
+                      const Icon(AppIcons.star, size: 16, color: Colors.amber),
+                      const SizedBox(width: 4),
+                      Text(
+                        venue.averageRating!.toStringAsFixed(1),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
                 ),
               ],
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: onReservar,
-                  child: const Text('Reservar'),
+                  onPressed: onViewDetails,
+                  child: const Text('Ver detalles'),
                 ),
               ),
             ],
@@ -484,5 +602,15 @@ class _VenueMiniSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+IconData _sportIcon(String sport) {
+  switch (sport) {
+    case 'TENNIS':
+      return AppIcons.tennisBall;
+    case 'PADEL':
+    default:
+      return AppIcons.racquetSport;
   }
 }

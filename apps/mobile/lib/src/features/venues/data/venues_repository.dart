@@ -13,12 +13,14 @@ class VenuesRepository {
     int limit = 100,
     String? near,
     int? radiusKm,
+    String? sportType,
   }) async {
     final data = await _venuesApi.listVenuesEnvelope(
       page: page,
       limit: limit,
       near: near,
       radiusKm: radiusKm,
+      sportType: sportType,
     );
 
     final itemsRaw = data['items'];
