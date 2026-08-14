@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../features/catalog/data/catalog_repository.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../router/routes.dart';
 import '../data/tournaments_repository.dart';
@@ -18,7 +19,10 @@ final class TournamentsHomeScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => TournamentsListCubit(
         tournamentsRepository: getIt<TournamentsRepository>(),
-      )..load(),
+        catalogRepository: getIt<CatalogRepository>(),
+      )
+        ..loadSportsAndCategories()
+        ..load(),
       child: const _TournamentsHomeView(),
     );
   }
@@ -65,12 +69,16 @@ final class _TournamentsHomeView extends StatelessWidget {
             );
           }
           if (state is TournamentsListLoaded) {
+            final cubit = context.read<TournamentsListCubit>();
             return Column(
               children: [
                 TournamentFiltersBar(
                   filters: state.filters,
-                  onApply: (f) =>
-                      context.read<TournamentsListCubit>().applyFilters(f),
+                  onApply: (f) => cubit.applyFilters(f),
+                  sports: cubit.sports,
+                  categories: cubit.categories,
+                  onSportChanged: (sportId) =>
+                      cubit.loadCategoriesForSport(sportId),
                 ),
                 Expanded(
                   child: state.items.isEmpty

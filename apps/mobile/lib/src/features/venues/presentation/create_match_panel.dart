@@ -240,7 +240,17 @@ class _CreateMatchPanelState extends State<CreateMatchPanel> {
                             ScaffoldMessenger.of(context)
                               ..clearSnackBars()
                               ..showSnackBar(
-                                SnackBar(content: Text(error)),
+                                SnackBar(
+                                  content: Text(error),
+                                  action: state.conflictingMatchId != null
+                                      ? SnackBarAction(
+                                          label: 'Ver partido',
+                                          onPressed: () => context.push(
+                                            '/matches/${state.conflictingMatchId}',
+                                          ),
+                                        )
+                                      : null,
+                                ),
                               );
                           }
                         },

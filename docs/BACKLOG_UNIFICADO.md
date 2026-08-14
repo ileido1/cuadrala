@@ -75,7 +75,7 @@
 
 #### Sprint M5 — Torneos (MVP)
 - **US incluidas**: `US-M4-01`, `US-M4-02`, `US-M4-03`, `US-M4-04`
-- **Estado**: **Parcial (front)** / **Parcial (back)** — crear torneo, detalle, scoreboard y schedule en app; **pendiente** listado/catálogo (`US-M4-01`, tab torneos sin listado completo)
+- **Estado**: **Parcial (front)** — `SavedZonesRepository` + modelo `SavedZone` implementados (infraestructura de storage); UI de selección de zona en venue discovery pendiente / **Parcial (back)** — crear torneo, detalle, scoreboard y schedule en app; **pendiente** listado/catálogo (`US-M4-01`, tab torneos sin listado completo)
 
 #### Sprint M16 — Notificaciones “pro”
 - **Alcance**:
@@ -90,7 +90,7 @@
   - “Zonas” guardadas (radios múltiples, favoritos)
   - Búsqueda de clubes cercanos con maps provider real
   - Integración con onboarding (ubicación)
-- **Estado**: **Pendiente (front/back)** (backend `US-E4-01/02` parcial; falta “zonas” como modelo de usuario)
+- **Estado**: **Parcial (front)** (backend `US-E4-01/02` parcial; falta “zonas” como modelo de usuario)
 
 #### Sprint M18 — Pagos al club (Mobile): datos del venue en el flujo de pago
 - **Regla de negocio**: el cobro de cancha es **al club (venue)** asociado al `court` de la partida; **solo el club** valida el pago (no el organizador de la partida como autoridad de conciliación).
@@ -146,10 +146,10 @@
 - **US-M3-06** Proponer / confirmar resultado — **Done (front)**
 - **US-M3-07** Sugerencias de matchmaking — **Done (front)** (`matchmaking_screen`; backend `GET /matchmaking/.../suggestions`)
 - **US-M3-08** Crear partida: **horarios disponibles** por pista/sede (consume `US-E4-06`) — **Done (front)**
-- **US-M3-09** Tratamiento UX de conflictos de reserva (`CANCHA_OCUPADA`, etc.) — **Pendiente (front)** *(opcional dentro de Sprint M19)*
+- **US-M3-09** Tratamiento UX de conflictos de reserva (`CANCHA_OCUPADA`, etc.) — **Done (front)** (SnackBar con CTA "Ver partido" que navega al partido conflictingMatchId)
 
 ### Torneos
-- **US-M4-01** Catálogo deportes + presets + **listado** de torneos — **Pendiente (front)** (MVP: tab con placeholder “Próximamente: listado”; presets usados al crear)
+- **US-M4-01** Catálogo deportes + presets + **listado** de torneos — **Done (front)** (listing con paginación, filtros status/fecha/deporte/categoría, pull-to-refresh; sport/category cargados del catálogo)
 - **US-M4-02** Crear torneo — **Done (front)** (`create_tournament_screen`)
 - **US-M4-03** Detalle + scoreboard — **Done (front)** (`tournament_detail_screen`, scoreboard)
 - **US-M4-04** Schedule genérico — **Done (front)** (fixture en detalle)
@@ -168,7 +168,7 @@
 ### Pagos
 - **US-M8-01** Obligaciones + summary — **Done (front)**
 - **US-M8-02** Comprobantes + flujo de espera (jugador); **confirmación** pasa a rol club vía API/backoffice — **Done (front)** / **Pendiente (regla negocio E8-03)**
-- **US-M8-03** En el flujo de pago, mostrar **instrucciones de transferencia del `Venue`** ligado al `court` de la partida (no textos genéricos) — **Pendiente (front)** · requiere `US-E8-02`
+- **US-M8-03** En el flujo de pago, mostrar **instrucciones de transferencia del `Venue`** ligado al `court` de la partida (no textos genéricos) — **Done (front)** (`PayMethodScreen` consume `listVenuePaymentMethods` + `getMatchPaymentInfo`)
 - **US-M8-04** *(Opcional)* Rol “staff club” en app: bandeja mínima de pagos pendientes por sede — **Pendiente (front)** · requiere `US-E8-04`; *alternativa: solo `W1`*
 
 ### Geo / Sedes

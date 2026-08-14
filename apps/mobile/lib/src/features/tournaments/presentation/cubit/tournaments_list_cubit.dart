@@ -1,6 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../../catalog/data/catalog_repository.dart';
+import '../../../catalog/data/models/category_dto.dart';
+import '../../../catalog/data/models/sport_dto.dart';
 import '../../data/tournaments_api.dart';
 import '../../data/tournaments_repository.dart';
 import 'tournaments_list_state.dart';
@@ -8,13 +11,18 @@ import 'tournaments_list_state.dart';
 final class TournamentsListCubit extends Cubit<TournamentsListState> {
   TournamentsListCubit({
     required TournamentsRepository tournamentsRepository,
+    required CatalogRepository catalogRepository,
     TournamentListFilters? initialFilters,
   })  : _tournamentsRepository = tournamentsRepository,
+        _catalogRepository = catalogRepository,
         _currentFilters = initialFilters ?? const TournamentListFilters(),
         super(const TournamentsListInitial());
 
   final TournamentsRepository _tournamentsRepository;
+  final CatalogRepository _catalogRepository;
   TournamentListFilters _currentFilters;
+  List<SportDto> _sports = [];
+  List<CategoryDto> _categories = [];
   static const _pageLimit = 20;
 
   Future<void> load() async {
@@ -73,6 +81,14 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
 
   Future<void> applyFilters(TournamentListFilters filters) async {
     _currentFilters = filters;
+    // Reload categories if sport changed
+    if (filters.sportId != null && filters.sportId != _currentFilters.sportId) {
+      try {
+        _categories = await _catalogRepository.listCategories(sportId: filters.sportId);
+      } catch (_) {
+        _categories = [];
+      }
+    }
     emit(const TournamentsListLoading());
     try {
       final page = await _tournamentsRepository.listTournaments(
@@ -99,5 +115,39 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
 
   void clearFilters() {
     applyFilters(const TournamentListFilters());
+  }
+
+  List<SportDto> get sports => _sports;
+
+  List<CategoryDto> get categories => _categories;
+
+  Future<void> loadSportsAndCategories() async {
+    try {
+      _sports = await _catalogRepository.listSports();
+      if (_currentFilters.sportId != null) {
+        _categories = await _catalogRepository.listCategories(
+          sportId: _currentFilters.sportId,
+        );
+      }
+      // Emit updated state with new sports/categories if already loaded
+      final current = state;
+      if (current is TournamentsListLoaded) {
+        emit(current.copyWith());
+      }
+    } catch (_) {
+      // Silently fail - filters still work without sports/categories
+    }
+  }
+
+  Future<void> loadCategoriesForSport(String sportId) async {
+    try {
+      _categories = await _catalogRepository.listCategories(sportId: sportId);
+      final current = state;
+      if (current is TournamentsListLoaded) {
+        emit(current.copyWith());
+      }
+    } catch (_) {
+      // Silently fail
+    }
   }
 }

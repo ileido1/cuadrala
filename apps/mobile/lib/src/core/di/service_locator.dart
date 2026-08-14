@@ -16,6 +16,7 @@ import '../push/noop_push_token_sync_service.dart';
 import '../push/push_token_sync_service.dart';
 import '../storage/flutter_secure_token_storage.dart';
 import '../storage/saved_clubs_repository.dart';
+import '../storage/saved_zones_repository.dart';
 import '../../features/auth/data/auth_api.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/secure_token_storage.dart';
@@ -25,6 +26,7 @@ import '../../features/auth/presentation/cubit/session_cubit.dart';
 import '../../features/availability/data/availability_repository.dart';
 import '../../features/availability/presentation/cubit/availability_cubit.dart';
 import '../../features/catalog/data/catalog_api.dart';
+import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/home/presentation/cubit/home_cubit.dart';
 import '../../features/profile/presentation/cubit/profile_cubit.dart';
@@ -94,6 +96,10 @@ Future<void> setupDependencies() async {
 
   getIt.registerLazySingleton<SavedClubsRepository>(
     () => SavedClubsRepository(secureStorage: getIt<FlutterSecureStorage>()),
+  );
+
+  getIt.registerLazySingleton<SavedZonesRepository>(
+    () => SavedZonesRepository(secureStorage: getIt<FlutterSecureStorage>()),
   );
 
   getIt.registerLazySingleton<ApiClient>(
@@ -257,7 +263,10 @@ Future<void> setupDependencies() async {
     () => CreateTournamentCubit(tournamentsRepository: getIt<TournamentsRepository>()),
   );
   getIt.registerFactory<TournamentsListCubit>(
-    () => TournamentsListCubit(tournamentsRepository: getIt<TournamentsRepository>()),
+    () => TournamentsListCubit(
+      tournamentsRepository: getIt<TournamentsRepository>(),
+      catalogRepository: getIt<CatalogRepository>(),
+    ),
   );
   getIt.registerFactory<TournamentPresetsCubit>(
     () => TournamentPresetsCubit(tournamentsRepository: getIt<TournamentsRepository>()),

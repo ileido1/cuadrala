@@ -3,7 +3,7 @@ import 'catalog_api.dart';
 import 'models/category_dto.dart';
 import 'models/sport_dto.dart';
 
-final class CatalogRepository {
+class CatalogRepository {
   CatalogRepository({required CatalogApi catalogApi}) : _catalogApi = catalogApi;
 
   final CatalogApi _catalogApi;

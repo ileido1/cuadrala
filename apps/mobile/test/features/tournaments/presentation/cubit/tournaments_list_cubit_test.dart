@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
+import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_page.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_api.dart';
@@ -11,13 +12,21 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournaments_list_state.dart';
 
 class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockCatalogRepository extends Mock implements CatalogRepository {}
 
 void main() {
   group('TournamentsListCubit', () {
     late _MockTournamentsRepository tournamentsRepository;
+    late _MockCatalogRepository catalogRepository;
 
     setUp(() {
       tournamentsRepository = _MockTournamentsRepository();
+      catalogRepository = _MockCatalogRepository();
+      // Default: loading sports/categories returns empty (silent fail for tests)
+      when(() => catalogRepository.listSports())
+          .thenAnswer((_) async => []);
+      when(() => catalogRepository.listCategories(sportId: any(named: 'sportId')))
+          .thenAnswer((_) async => []);
     });
 
     final testPage = TournamentListPage(
@@ -45,7 +54,10 @@ void main() {
               limit: any(named: 'limit'),
               filters: any(named: 'filters'),
             )).thenAnswer((_) async => testPage);
-        return TournamentsListCubit(tournamentsRepository: tournamentsRepository);
+        return TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+        );
       },
       act: (cubit) => cubit.load(),
       expect: () => [
@@ -66,7 +78,10 @@ void main() {
             )).thenThrow(
           const AppFailure(code: 'HTTP_500', message: 'Error del servidor.'),
         );
-        return TournamentsListCubit(tournamentsRepository: tournamentsRepository);
+        return TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+        );
       },
       act: (cubit) => cubit.load(),
       expect: () => [
@@ -102,7 +117,10 @@ void main() {
             total: 1,
           );
         });
-        return TournamentsListCubit(tournamentsRepository: tournamentsRepository);
+        return TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+        );
       },
       act: (cubit) async {
         await cubit.load();
@@ -134,7 +152,10 @@ void main() {
           }
           return testPage;
         });
-        return TournamentsListCubit(tournamentsRepository: tournamentsRepository);
+        return TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+        );
       },
       act: (cubit) async {
         await cubit.load();
@@ -168,7 +189,10 @@ void main() {
           }
           return testPage;
         });
-        return TournamentsListCubit(tournamentsRepository: tournamentsRepository);
+        return TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+        );
       },
       act: (cubit) async {
         await cubit.applyFilters(const TournamentListFilters(status: 'FINISHED'));
@@ -198,7 +222,10 @@ void main() {
           }
           return testPage;
         });
-        return TournamentsListCubit(tournamentsRepository: tournamentsRepository);
+        return TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+        );
       },
       act: (cubit) async {
         await cubit.applyFilters(const TournamentListFilters(status: 'FINISHED'));

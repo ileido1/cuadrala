@@ -303,7 +303,19 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
         error: null,
       ));
     } on AppFailure catch (e) {
-      emit(state.copyWith(submitting: false, error: e.message));
+      String? conflictingMatchId;
+      if (e.code == 'CANCHA_OCUPADA' ||
+          e.code == 'HORARIO_RESERVA_INCOMPATIBLE') {
+        final details = e.details;
+        if (details is Map<String, Object?>) {
+          conflictingMatchId = details['conflictingMatchId'] as String?;
+        }
+      }
+      emit(state.copyWith(
+        submitting: false,
+        error: e.message,
+        conflictingMatchId: conflictingMatchId,
+      ));
     } catch (_) {
       emit(state.copyWith(
         submitting: false,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../features/catalog/data/models/category_dto.dart';
+import '../../../../features/catalog/data/models/sport_dto.dart';
 import '../../data/tournaments_api.dart';
 
 final class TournamentFiltersBar extends StatelessWidget {
@@ -7,10 +9,22 @@ final class TournamentFiltersBar extends StatelessWidget {
     super.key,
     required this.filters,
     required this.onApply,
+    this.sports = const [],
+    this.categories = const [],
+    this.onSportChanged,
   });
 
   final TournamentListFilters filters;
   final ValueChanged<TournamentListFilters> onApply;
+  final List<SportDto> sports;
+  final List<CategoryDto> categories;
+  final ValueChanged<String>? onSportChanged;
+
+  bool get _hasActiveFilters =>
+      filters.status != null ||
+      filters.startsAtFrom != null ||
+      filters.sportId != null ||
+      filters.categoryId != null;
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +33,26 @@ final class TournamentFiltersBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
+          // Sport chip
+          FilterChip(
+            label: Text(_sportLabel()),
+            selected: filters.sportId != null,
+            onSelected: (_) => _showSportPicker(context),
+            avatar: filters.sportId != null
+                ? const Icon(Icons.check, size: 16)
+                : const Icon(Icons.sports_tennis, size: 16),
+          ),
+          const SizedBox(width: 8),
+          // Category chip (only enabled when sport is selected)
+          FilterChip(
+            label: Text(_categoryLabel()),
+            selected: filters.categoryId != null,
+            onSelected: filters.sportId == null ? null : (_) => _showCategoryPicker(context),
+            avatar: filters.categoryId != null
+                ? const Icon(Icons.check, size: 16)
+                : const Icon(Icons.category, size: 16),
+          ),
+          const SizedBox(width: 8),
           // Status chip
           FilterChip(
             label: Text(_statusLabel(filters.status)),
@@ -38,8 +72,7 @@ final class TournamentFiltersBar extends StatelessWidget {
                 ? const Icon(Icons.check, size: 16)
                 : const Icon(Icons.calendar_today, size: 16),
           ),
-          if (filters.status != null ||
-              filters.startsAtFrom != null) ...[
+          if (_hasActiveFilters) ...[
             const SizedBox(width: 8),
             ActionChip(
               label: const Text('Limpiar'),
@@ -50,6 +83,24 @@ final class TournamentFiltersBar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _sportLabel() {
+    if (filters.sportId == null) return 'Deporte';
+    final sport = sports.cast<SportDto?>().firstWhere(
+          (s) => s?.id == filters.sportId,
+          orElse: () => null,
+        );
+    return sport?.name ?? 'Deporte';
+  }
+
+  String _categoryLabel() {
+    if (filters.categoryId == null) return 'Categoría';
+    final category = categories.cast<CategoryDto?>().firstWhere(
+          (c) => c?.id == filters.categoryId,
+          orElse: () => null,
+        );
+    return category?.name ?? 'Categoría';
   }
 
   String _statusLabel(String? status) {
@@ -75,6 +126,88 @@ final class TournamentFiltersBar extends StatelessWidget {
 
   String _formatDate(DateTime d) =>
       '${d.day}/${d.month}/${d.year}';
+
+  TournamentListFilters _mergeFilters({
+    String? status,
+    DateTime? startsAtFrom,
+    String? sportId,
+    String? categoryId,
+    String? venueId,
+    bool clearStatus = false,
+    bool clearStartsAtFrom = false,
+    bool clearSport = false,
+    bool clearCategory = false,
+  }) {
+    return TournamentListFilters(
+      status: clearStatus ? null : (status ?? filters.status),
+      startsAtFrom: clearStartsAtFrom ? null : (startsAtFrom ?? filters.startsAtFrom),
+      startsAtTo: filters.startsAtTo,
+      venueId: venueId ?? filters.venueId,
+      sportId: clearSport ? null : (sportId ?? filters.sportId),
+      categoryId: clearCategory ? null : (categoryId ?? filters.categoryId),
+    );
+  }
+
+  Future<void> _showSportPicker(BuildContext context) async {
+    if (sports.isEmpty) return;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Deporte'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, ''),
+            child: const Text('Todos'),
+          ),
+          ...sports.map(
+            (s) => SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, s.id),
+              child: Text(s.name),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    final newSportId = result.isEmpty ? null : result;
+    final cleared = newSportId == null || newSportId != filters.sportId;
+    onApply(_mergeFilters(
+      sportId: newSportId,
+      clearSport: cleared,
+      clearCategory: cleared, // Category depends on sport
+    ));
+    if (newSportId != null && newSportId != filters.sportId) {
+      onSportChanged?.call(newSportId);
+    }
+  }
+
+  Future<void> _showCategoryPicker(BuildContext context) async {
+    if (categories.isEmpty) return;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Categoría'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, ''),
+            child: const Text('Todas'),
+          ),
+          ...categories.map(
+            (c) => SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, c.id),
+              child: Text(c.name),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    final newCategoryId = result.isEmpty ? null : result;
+    onApply(_mergeFilters(
+      categoryId: newCategoryId,
+      clearCategory: newCategoryId == null,
+    ));
+  }
 
   Future<void> _showStatusPicker(BuildContext context) async {
     final result = await showDialog<String>(
@@ -106,13 +239,9 @@ final class TournamentFiltersBar extends StatelessWidget {
       ),
     );
     if (result == null) return;
-    onApply(TournamentListFilters(
-      status: result.isEmpty ? null : result,
-      venueId: filters.venueId,
-      startsAtFrom: filters.startsAtFrom,
-      startsAtTo: filters.startsAtTo,
-      sportId: filters.sportId,
-      categoryId: filters.categoryId,
+    onApply(_mergeFilters(
+      status: result,
+      clearStatus: result.isEmpty,
     ));
   }
 
@@ -125,13 +254,6 @@ final class TournamentFiltersBar extends StatelessWidget {
       lastDate: now.add(const Duration(days: 365)),
     );
     if (picked == null) return;
-    onApply(TournamentListFilters(
-      status: filters.status,
-      venueId: filters.venueId,
-      startsAtFrom: picked,
-      startsAtTo: filters.startsAtTo,
-      sportId: filters.sportId,
-      categoryId: filters.categoryId,
-    ));
+    onApply(_mergeFilters(startsAtFrom: picked));
   }
 }

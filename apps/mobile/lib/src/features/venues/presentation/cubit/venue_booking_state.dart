@@ -25,6 +25,7 @@ final class VenueBookingState extends Equatable {
     this.maxParticipants = 4,
     this.notes = '',
     this.submittedMatchId,
+    this.conflictingMatchId,
   });
 
   final VenueDto venue;
@@ -59,6 +60,10 @@ final class VenueBookingState extends Equatable {
 
   /// Non-null when submission succeeds → triggers navigation in BlocListener.
   final String? submittedMatchId;
+
+  /// Non-null when submission fails with CANCHA_OCUPADA / HORARIO_RESERVA_INCOMPATIBLE.
+  /// Contains the ID of the conflicting match so we can offer a CTA.
+  final String? conflictingMatchId;
 
   // ---------------------------------------------------------------------------
   // Derived getters
@@ -113,6 +118,7 @@ final class VenueBookingState extends Equatable {
     int? maxParticipants,
     String? notes,
     Object? submittedMatchId = _sentinel,
+    Object? conflictingMatchId = _sentinel,
   }) {
     return VenueBookingState(
       venue: venue ?? this.venue,
@@ -145,6 +151,9 @@ final class VenueBookingState extends Equatable {
       submittedMatchId: submittedMatchId == _sentinel
           ? this.submittedMatchId
           : submittedMatchId as String?,
+      conflictingMatchId: conflictingMatchId == _sentinel
+          ? this.conflictingMatchId
+          : conflictingMatchId as String?,
     );
   }
 
@@ -169,5 +178,6 @@ final class VenueBookingState extends Equatable {
         maxParticipants,
         notes,
         submittedMatchId,
+        conflictingMatchId,
       ];
 }
