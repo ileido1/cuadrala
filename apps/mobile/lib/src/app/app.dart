@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/di/service_locator.dart';
+import '../core/push/foreground_notification_handler.dart';
 import '../core/push/push_notification_tap_handler.dart';
 import '../core/push/push_token_sync_lifecycle.dart';
 import '../core/theme/app_theme.dart';
@@ -20,12 +21,14 @@ final class App extends StatelessWidget {
           final router = AppRouter(sessionCubit: context.read<SessionCubit>());
           setupPushNotificationTapHandler(router.router);
           return PushTokenSyncLifecycle(
-            child: MaterialApp.router(
-              title: 'Cuádrala',
-              theme: AppTheme.light(),
-              darkTheme: AppTheme.dark(),
-              themeMode: ThemeMode.system,
-              routerConfig: router.router,
+            child: ForegroundNotificationHandler(
+              child: MaterialApp.router(
+                title: 'Cuádrala',
+                theme: AppTheme.light(),
+                darkTheme: AppTheme.dark(),
+                themeMode: ThemeMode.system,
+                routerConfig: router.router,
+              ),
             ),
           );
         },
