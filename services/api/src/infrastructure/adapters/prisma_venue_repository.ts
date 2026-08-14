@@ -9,7 +9,7 @@ import type {
   VenueRepository,
   VenueSettingsDTO,
 } from '../../domain/ports/venue_repository.js';
-import type { PrismaClient } from '../../generated/prisma/client.js';
+import type { PrismaClient, SportType } from '../../generated/prisma/client.js';
 
 const VENUE_LIST_SELECT = {
   id: true,
@@ -22,6 +22,7 @@ const VENUE_LIST_SELECT = {
   createdAt: true,
   imageUrl: true,
   averageRating: true,
+  courts: { where: { status: 'ACTIVE' as const }, select: { sportType: true } },
 } as const;
 
 function kmToLatitudeDeltaSV(_radiusKm: number): number {
@@ -46,6 +47,42 @@ function haversineKmSV(_lat1: number, _lng1: number, _lat2: number, _lng2: numbe
       * Math.sin(D_LNG / 2);
   const C = 2 * Math.atan2(Math.sqrt(A), Math.sqrt(1 - A));
   return R * C;
+}
+
+type VenueListRow = {
+  id: string;
+  name: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  displayCurrency: string;
+  pricingCurrency: string;
+  createdAt: Date;
+  imageUrl: string | null;
+  averageRating: number | null;
+  courts: { sportType: string }[];
+  distanceKm?: number | null;
+};
+
+/**
+ * Mapea una fila del SELECT de listado de sedes al DTO de dominio,
+ * derivando `sports[]` (deportes deduplicados) desde las canchas activas.
+ */
+export function mapVenueListItemSV(_venue: VenueListRow): VenueListItemDTO {
+  return {
+    id: _venue.id,
+    name: _venue.name,
+    address: _venue.address,
+    latitude: _venue.latitude,
+    longitude: _venue.longitude,
+    displayCurrency: _venue.displayCurrency,
+    pricingCurrency: _venue.pricingCurrency,
+    createdAt: _venue.createdAt,
+    imageUrl: _venue.imageUrl,
+    averageRating: _venue.averageRating,
+    ...(_venue.distanceKm !== undefined ? { distanceKm: _venue.distanceKm } : {}),
+    sports: [...new Set(_venue.courts.map((_c) => _c.sportType))],
+  };
 }
 
 function mapVenueDetailSV(_venue: {
@@ -191,22 +228,28 @@ export class PrismaVenueRepository implements VenueRepository {
     });
   }
 
-  async listVenuesSV(_page: PageDTO): Promise<{ items: VenueListItemDTO[]; total: number }> {
+  async listVenuesSV(
+    _page: PageDTO & { sportType?: string },
+  ): Promise<{ items: VenueListItemDTO[]; total: number }> {
     const SKIP = (_page.page - 1) * _page.limit;
+    const WHERE = _page.sportType !== undefined
+      ? { courts: { some: { sportType: _page.sportType as SportType, status: 'ACTIVE' as const } } }
+      : {};
     const [TOTAL, ROWS] = await this._prisma.$transaction([
-      this._prisma.venue.count(),
+      this._prisma.venue.count({ where: WHERE }),
       this._prisma.venue.findMany({
+        where: WHERE,
         orderBy: [{ createdAt: 'desc' }],
         skip: SKIP,
         take: _page.limit,
         select: VENUE_LIST_SELECT,
       }),
     ]);
-    return { items: ROWS, total: TOTAL };
+    return { items: ROWS.map(mapVenueListItemSV), total: TOTAL };
   }
 
   async listVenuesNearSV(
-    _input: PageDTO & { lat: number; lng: number; radiusKm: number },
+    _input: PageDTO & { lat: number; lng: number; radiusKm: number; sportType?: string },
   ): Promise<{ items: VenueListItemDTO[]; total: number }> {
     const SKIP = (_input.page - 1) * _input.limit;
     const LAT_DELTA = kmToLatitudeDeltaSV(_input.radiusKm);
@@ -216,6 +259,9 @@ export class PrismaVenueRepository implements VenueRepository {
       where: {
         latitude: { gte: _input.lat - LAT_DELTA, lte: _input.lat + LAT_DELTA },
         longitude: { gte: _input.lng - LNG_DELTA, lte: _input.lng + LNG_DELTA },
+        ...(_input.sportType !== undefined
+          ? { courts: { some: { sportType: _input.sportType as SportType, status: 'ACTIVE' as const } } }
+          : {}),
       },
       select: VENUE_LIST_SELECT,
     });
@@ -235,13 +281,13 @@ export class PrismaVenueRepository implements VenueRepository {
       );
 
     return {
-      items: WITH_DISTANCE.slice(SKIP, SKIP + _input.limit),
+      items: WITH_DISTANCE.slice(SKIP, SKIP + _input.limit).map(mapVenueListItemSV),
       total: WITH_DISTANCE.length,
     };
   }
 
   async listVenuesForUserSV(_userId: string): Promise<VenueListItemDTO[]> {
-    return this._prisma.venue.findMany({
+    const ROWS = await this._prisma.venue.findMany({
       where: {
         OR: [
           { ownerUserId: _userId },
@@ -251,6 +297,7 @@ export class PrismaVenueRepository implements VenueRepository {
       select: VENUE_LIST_SELECT,
       orderBy: { createdAt: 'desc' },
     });
+    return ROWS.map(mapVenueListItemSV);
   }
 
   async createVenueSV(_input: CreateVenueInputDTO): Promise<VenueListItemDTO> {
@@ -281,7 +328,7 @@ export class PrismaVenueRepository implements VenueRepository {
         });
       }
 
-      return VENUE;
+      return mapVenueListItemSV(VENUE);
     });
   }
 

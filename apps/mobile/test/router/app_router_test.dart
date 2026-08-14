@@ -21,6 +21,8 @@ import 'package:cuadrala_mobile/src/features/notifications/presentation/cubit/no
 import 'package:cuadrala_mobile/src/features/notifications/presentation/cubit/notifications_state.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
+import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map_cubit.dart';
+import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map_state.dart';
 import 'package:cuadrala_mobile/src/router/app_router.dart';
 
 // ---------------------------------------------------------------------------
@@ -37,6 +39,9 @@ class _MockHomeCubit extends MockCubit<HomeState> implements HomeCubit {}
 
 class _MockNotificationsCubit extends MockCubit<NotificationsState>
     implements NotificationsCubit {}
+
+class _MockVenueMapCubit extends MockCubit<VenueMapState>
+    implements VenueMapCubit {}
 
 final class _FakeCatalogApi implements CatalogApi {
   @override
@@ -204,6 +209,7 @@ final class _FakeMonetizationApi implements MonetizationApi {
 Future<void> _setupGetIt({
   required _MockHomeCubit homeCubit,
   required _MockNotificationsCubit notifCubit,
+  required _MockVenueMapCubit venueMapCubit,
 }) async {
   await getIt.reset();
   getIt.registerSingleton<AuthRepository>(_MockAuthRepository());
@@ -244,6 +250,7 @@ Future<void> _setupGetIt({
     () => OpenMatchesCubit(matchesRepository: matchesRepo),
   );
   getIt.registerFactory<NotificationsCubit>(() => notifCubit);
+  getIt.registerFactory<VenueMapCubit>(() => venueMapCubit);
 }
 
 // ---------------------------------------------------------------------------
@@ -253,22 +260,27 @@ Future<void> _setupGetIt({
 void main() {
   late _MockHomeCubit homeCubit;
   late _MockNotificationsCubit notifCubit;
+  late _MockVenueMapCubit venueMapCubit;
 
   setUp(() async {
     homeCubit = _MockHomeCubit();
     notifCubit = _MockNotificationsCubit();
+    venueMapCubit = _MockVenueMapCubit();
 
     // Stub initial states so BlocBuilder does not blow up
     when(() => homeCubit.state).thenReturn(const HomeInitial());
     when(() => notifCubit.state).thenReturn(NotificationsState.initial());
+    when(() => venueMapCubit.state).thenReturn(const VenueMapState(status: VenueMapStatus.loaded));
 
     // load() is called on mount — stub as no-op
     when(() => homeCubit.load()).thenAnswer((_) async {});
     when(() => notifCubit.load()).thenAnswer((_) async {});
+    when(() => venueMapCubit.load()).thenAnswer((_) async {});
 
     await _setupGetIt(
       homeCubit: homeCubit,
       notifCubit: notifCubit,
+      venueMapCubit: venueMapCubit,
     );
   });
 
@@ -355,6 +367,26 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BottomNavigationBar), findsOneWidget);
+    });
+
+    // ── 4b. /descubrir is a shell branch (shows bottom nav) ──────────────────
+
+    testWidgets(
+        'navigating to /descubrir via router renders within the shell (bottom nav visible)',
+        (tester) async {
+      final sessionCubit = _MockSessionCubit();
+      when(() => sessionCubit.state)
+          .thenReturn(const SessionState.authenticated());
+      whenListen(sessionCubit, const Stream<SessionState>.empty());
+
+      final router = AppRouter(sessionCubit: sessionCubit).router;
+      router.go('/descubrir');
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BottomNavigationBar), findsOneWidget);
+      expect(find.text('Descubrir'), findsOneWidget);
     });
 
     // ── 5. Unauthenticated user gets redirected ──────────────────────────────

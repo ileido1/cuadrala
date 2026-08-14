@@ -14,11 +14,15 @@ export class ListVenuesUseCase {
     limit: number;
     near?: string;
     radiusKm: number;
+    sportType?: string;
   }) {
     const PAGE: PageDTO = { page: _input.page, limit: _input.limit };
 
     if (_input.near === undefined) {
-      return this._venueRepository.listVenuesSV(PAGE);
+      return this._venueRepository.listVenuesSV({
+        ...PAGE,
+        ...(_input.sportType !== undefined ? { sportType: _input.sportType } : {}),
+      });
     }
 
     const [LAT_STR, LNG_STR] = _input.near.split(',');
@@ -30,6 +34,7 @@ export class ListVenuesUseCase {
       lat: LAT,
       lng: LNG,
       radiusKm: _input.radiusKm,
+      ...(_input.sportType !== undefined ? { sportType: _input.sportType } : {}),
     });
   }
 }

@@ -19,6 +19,7 @@ final class VenueMapState extends Equatable {
     this.savedZones = const [],
     this.selectedZone,
     this.radiusKm = 25,
+    this.sportType,
   });
 
   final VenueMapStatus status;
@@ -43,6 +44,9 @@ final class VenueMapState extends Equatable {
   /// Radio de búsqueda en km.
   final int radiusKm;
 
+  /// Filtro de deporte activo (null = Todos, 'PADEL', 'TENNIS').
+  final String? sportType;
+
   static const _sentinel = Object();
 
   VenueMapState copyWith({
@@ -58,6 +62,7 @@ final class VenueMapState extends Equatable {
     List<SavedZone>? savedZones,
     Object? selectedZone = _sentinel,
     int? radiusKm,
+    Object? sportType = _sentinel,
   }) {
     return VenueMapState(
       status: status ?? this.status,
@@ -74,6 +79,7 @@ final class VenueMapState extends Equatable {
       selectedZone:
           selectedZone == _sentinel ? this.selectedZone : selectedZone as SavedZone?,
       radiusKm: radiusKm ?? this.radiusKm,
+      sportType: sportType == _sentinel ? this.sportType : sportType as String?,
     );
   }
 
@@ -91,5 +97,6 @@ final class VenueMapState extends Equatable {
         savedZones,
         selectedZone,
         radiusKm,
+        sportType,
       ];
 }

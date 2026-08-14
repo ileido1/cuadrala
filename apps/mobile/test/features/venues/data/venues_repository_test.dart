@@ -105,4 +105,54 @@ void main() {
       expect(DateTime.parse(fromIso).isBefore(DateTime.parse(toIso)), isTrue);
     });
   });
+
+  group('VenuesRepository.listVenues — sportType', () {
+    late _MockVenuesApi api;
+    late VenuesRepository repo;
+
+    setUp(() {
+      api = _MockVenuesApi();
+      repo = VenuesRepository(venuesApi: api);
+    });
+
+    test('pasa sportType al API cuando está presente', () async {
+      when(() => api.listVenuesEnvelope(
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            near: any(named: 'near'),
+            radiusKm: any(named: 'radiusKm'),
+            sportType: any(named: 'sportType'),
+          )).thenAnswer((_) async => {'items': const <Object?>[]});
+
+      await repo.listVenues(near: '-34.6,-58.4', radiusKm: 25, sportType: 'PADEL');
+
+      verify(() => api.listVenuesEnvelope(
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            near: '-34.6,-58.4',
+            radiusKm: 25,
+            sportType: 'PADEL',
+          )).called(1);
+    });
+
+    test('no pasa sportType al API cuando está ausente', () async {
+      when(() => api.listVenuesEnvelope(
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            near: any(named: 'near'),
+            radiusKm: any(named: 'radiusKm'),
+            sportType: any(named: 'sportType'),
+          )).thenAnswer((_) async => {'items': const <Object?>[]});
+
+      await repo.listVenues(near: '-34.6,-58.4', radiusKm: 25);
+
+      verify(() => api.listVenuesEnvelope(
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            near: '-34.6,-58.4',
+            radiusKm: 25,
+            sportType: null,
+          )).called(1);
+    });
+  });
 }

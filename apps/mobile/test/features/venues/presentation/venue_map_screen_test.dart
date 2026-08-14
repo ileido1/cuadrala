@@ -2,10 +2,12 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map_cubit.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map_state.dart';
@@ -30,6 +32,8 @@ VenueDto _venue({
   double lat = -34.6,
   double lng = -58.4,
   double? distanceKm,
+  double? averageRating,
+  List<String> sports = const [],
 }) =>
     VenueDto(
       id: id,
@@ -38,6 +42,8 @@ VenueDto _venue({
       latitude: lat,
       longitude: lng,
       distanceKm: distanceKm,
+      averageRating: averageRating,
+      sports: sports,
     );
 
 // ---------------------------------------------------------------------------
@@ -65,6 +71,13 @@ Widget _buildTestApp({
         builder: (context, routeState) =>
             const Scaffold(body: Text('Booking')),
       ),
+      GoRoute(
+        path: '/descubrir/:venueId',
+        builder: (context, routeState) {
+          final venueId = routeState.pathParameters['venueId'] ?? '';
+          return Scaffold(body: Text('Detail:$venueId'));
+        },
+      ),
     ],
   );
 
@@ -80,6 +93,7 @@ void main() {
     when(() => cubit.search(any())).thenReturn(null);
     when(() => cubit.selectVenue(any())).thenReturn(null);
     when(() => cubit.selectVenue(null)).thenReturn(null);
+    when(() => cubit.recenterToCurrentLocation()).thenAnswer((_) async {});
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -139,8 +153,9 @@ void main() {
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
+    // initState ya llama load() una vez; el botón Reintentar lo llama de nuevo.
     await tester.tap(find.text('Reintentar'));
-    verify(() => cubit.load()).called(1);
+    verify(() => cubit.load()).called(2);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -162,14 +177,15 @@ void main() {
     await tester.pump();
 
     expect(find.byType(FlutterMap), findsOneWidget);
-    expect(find.byType(MarkerLayer), findsOneWidget);
+    expect(find.byType(MarkerClusterLayerWidget), findsOneWidget);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 5. loaded with venues → MarkerLayer present
+  // 5. loaded with venues → MarkerClusterLayerWidget present
   // ──────────────────────────────────────────────────────────────────────────
 
-  testWidgets('status=loaded with venues → MarkerLayer present', (tester) async {
+  testWidgets('status=loaded with venues → MarkerClusterLayerWidget present',
+      (tester) async {
     final venues = [_venue(id: 'v1'), _venue(id: 'v2', name: 'Club Sur')];
     when(() => cubit.state).thenReturn(
       VenueMapState(
@@ -184,7 +200,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(FlutterMap), findsOneWidget);
-    expect(find.byType(MarkerLayer), findsOneWidget);
+    expect(find.byType(MarkerClusterLayerWidget), findsOneWidget);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -223,6 +239,55 @@ void main() {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
+  // 7b. sport filter chips (Phase 3)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  testWidgets('status=loaded → sport filter chips (Todos, Pádel, Tenis) present',
+      (tester) async {
+    when(() => cubit.state).thenReturn(
+      const VenueMapState(status: VenueMapStatus.loaded),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    expect(find.text('Todos'), findsOneWidget);
+    expect(find.text('Pádel'), findsOneWidget);
+    expect(find.text('Tenis'), findsOneWidget);
+  });
+
+  testWidgets('tapping Pádel chip → calls cubit.load(sportType: PADEL)',
+      (tester) async {
+    when(() => cubit.state).thenReturn(
+      const VenueMapState(status: VenueMapStatus.loaded),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+    when(() => cubit.load(sportType: 'PADEL')).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    await tester.tap(find.text('Pádel'));
+    verify(() => cubit.load(sportType: 'PADEL')).called(1);
+  });
+
+  testWidgets('tapping Tenis chip → calls cubit.load(sportType: TENNIS)',
+      (tester) async {
+    when(() => cubit.state).thenReturn(
+      const VenueMapState(status: VenueMapStatus.loaded),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+    when(() => cubit.load(sportType: 'TENNIS')).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    await tester.tap(find.text('Tenis'));
+    verify(() => cubit.load(sportType: 'TENNIS')).called(1);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
   // 8. selectedVenue=null → mini sheet not present
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -238,14 +303,14 @@ void main() {
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
-    expect(find.text('Reservar'), findsNothing);
+    expect(find.text('Ver detalles'), findsNothing);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 9. selectedVenue=venue → mini sheet visible with venue name
+  // 9. selectedVenue=venue → mini sheet visible with venue name + Ver detalles
   // ──────────────────────────────────────────────────────────────────────────
 
-  testWidgets('selectedVenue=venue → mini sheet visible with venue name',
+  testWidgets('selectedVenue=venue → mini sheet visible with name + Ver detalles',
       (tester) async {
     final venue = _venue(id: 'v1', name: 'Club Norte');
     when(() => cubit.state).thenReturn(
@@ -262,14 +327,47 @@ void main() {
     await tester.pump();
 
     expect(find.text('Club Norte'), findsWidgets);
-    expect(find.text('Reservar'), findsOneWidget);
+    expect(find.text('Ver detalles'), findsOneWidget);
+    expect(find.text('Reservar'), findsNothing);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 10. tapping Reservar → navigates to venueCreateMatch route
+  // 9b. mini sheet shows sport icons + rating + distance
   // ──────────────────────────────────────────────────────────────────────────
 
-  testWidgets('tapping Reservar in mini sheet → navigates to booking route',
+  testWidgets('mini sheet shows sport icons, rating and distance',
+      (tester) async {
+    final venue = _venue(
+      id: 'v1',
+      name: 'Club Norte',
+      distanceKm: 3.2,
+      averageRating: 4.7,
+      sports: ['PADEL', 'TENNIS'],
+    );
+    when(() => cubit.state).thenReturn(
+      VenueMapState(
+        status: VenueMapStatus.loaded,
+        venues: [venue],
+        filtered: [venue],
+        selectedVenue: venue,
+      ),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    expect(find.text('3.2 km'), findsOneWidget);
+    expect(find.text('4.7'), findsOneWidget);
+    expect(find.byIcon(AppIcons.racquetSport), findsOneWidget);
+    expect(find.byIcon(AppIcons.tennisBall), findsOneWidget);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 10. tapping Ver detalles → navigates to venue detail route
+  // ──────────────────────────────────────────────────────────────────────────
+
+  testWidgets('tapping Ver detalles in mini sheet → navigates to detail route',
       (tester) async {
     final venue = _venue(id: 'v1', name: 'Club Norte');
     when(() => cubit.state).thenReturn(
@@ -285,9 +383,39 @@ void main() {
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
-    await tester.tap(find.text('Reservar'));
+    await tester.tap(find.text('Ver detalles'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Booking'), findsOneWidget);
+    expect(find.text('Detail:v1'), findsOneWidget);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 11. GPS floating button → calls recenterToCurrentLocation
+  // ──────────────────────────────────────────────────────────────────────────
+
+  testWidgets('status=loaded → GPS button present', (tester) async {
+    when(() => cubit.state).thenReturn(
+      const VenueMapState(status: VenueMapStatus.loaded),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    expect(find.byIcon(AppIcons.myLocation), findsOneWidget);
+  });
+
+  testWidgets('tapping GPS button → calls cubit.recenterToCurrentLocation()',
+      (tester) async {
+    when(() => cubit.state).thenReturn(
+      const VenueMapState(status: VenueMapStatus.loaded),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    await tester.tap(find.byIcon(AppIcons.myLocation));
+    verify(() => cubit.recenterToCurrentLocation()).called(1);
   });
 }

@@ -396,6 +396,120 @@ void main() {
     );
 
     // ──────────────────────────────────────────────────────────────────────────
+    // load() — sportType filter (Phase 3)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    blocTest<VenueMapCubit, VenueMapState>(
+      "load(sportType: 'PADEL') → pasa sportType al repository y emite sportType",
+      build: () {
+        when(() => locationService.getCurrentLocation()).thenAnswer(
+          (_) async => const DeviceLocation(latitude: -34.6, longitude: -58.4),
+        );
+        when(
+          () => repository.listVenues(
+            near: any(named: 'near'),
+            radiusKm: any(named: 'radiusKm'),
+            sportType: any(named: 'sportType'),
+          ),
+        ).thenAnswer((_) async => [_venue()]);
+        return VenueMapCubit(
+          repository: repository,
+          locationService: locationService,
+          zonesRepository: zonesRepository,
+        );
+      },
+      act: (cubit) => cubit.load(sportType: 'PADEL'),
+      expect: () => [
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loaded)
+            .having((s) => s.sportType, 'sportType', 'PADEL'),
+      ],
+      verify: (_) {
+        verify(
+          () => repository.listVenues(
+            near: '-34.6,-58.4',
+            radiusKm: 25,
+            sportType: 'PADEL',
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<VenueMapCubit, VenueMapState>(
+      'load() sin sportType → preserva el filtro actual del estado',
+      build: () {
+        when(() => locationService.getCurrentLocation()).thenAnswer(
+          (_) async => const DeviceLocation(latitude: -34.6, longitude: -58.4),
+        );
+        when(
+          () => repository.listVenues(
+            near: any(named: 'near'),
+            radiusKm: any(named: 'radiusKm'),
+            sportType: any(named: 'sportType'),
+          ),
+        ).thenAnswer((_) async => [_venue()]);
+        return VenueMapCubit(
+          repository: repository,
+          locationService: locationService,
+          zonesRepository: zonesRepository,
+        );
+      },
+      seed: () => const VenueMapState(sportType: 'TENNIS'),
+      act: (cubit) => cubit.load(),
+      verify: (_) {
+        verify(
+          () => repository.listVenues(
+            near: '-34.6,-58.4',
+            radiusKm: 25,
+            sportType: 'TENNIS',
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<VenueMapCubit, VenueMapState>(
+      'load(sportType: null) → limpia el filtro (Todos)',
+      build: () {
+        when(() => locationService.getCurrentLocation()).thenAnswer(
+          (_) async => const DeviceLocation(latitude: -34.6, longitude: -58.4),
+        );
+        when(
+          () => repository.listVenues(
+            near: any(named: 'near'),
+            radiusKm: any(named: 'radiusKm'),
+            sportType: any(named: 'sportType'),
+          ),
+        ).thenAnswer((_) async => [_venue()]);
+        return VenueMapCubit(
+          repository: repository,
+          locationService: locationService,
+          zonesRepository: zonesRepository,
+        );
+      },
+      seed: () => const VenueMapState(sportType: 'PADEL'),
+      act: (cubit) => cubit.load(sportType: null),
+      expect: () => [
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loaded)
+            .having((s) => s.sportType, 'sportType', isNull),
+      ],
+      verify: (_) {
+        final captured = verify(
+          () => repository.listVenues(
+            near: '-34.6,-58.4',
+            radiusKm: 25,
+            sportType: captureAny(named: 'sportType'),
+          ),
+        ).captured;
+        expect(captured.single, isNull);
+      },
+    );
+
+    // ──────────────────────────────────────────────────────────────────────────
     // selectVenue()
     // ──────────────────────────────────────────────────────────────────────────
 

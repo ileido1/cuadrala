@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/feature_flags.dart';
+import '../core/di/service_locator.dart';
 
 import '../features/home/presentation/home_screen.dart';
 import '../features/matches/presentation/open_matches_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/tournaments/presentation/tournaments_home_screen.dart';
+import '../features/venues/presentation/cubit/venue_map_cubit.dart';
+import '../features/venues/presentation/venue_map_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Branch navigator keys — one GlobalKey per tab so GoRouter can maintain
@@ -17,6 +21,7 @@ import '../features/tournaments/presentation/tournaments_home_screen.dart';
 final _homeNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'home-branch');
 final _partidasNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'partidas-branch');
 final _torneosNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'torneos-branch');
+final _descubrirNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'descubrir-branch');
 final _avisosNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'avisos-branch');
 final _perfilNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'perfil-branch');
 
@@ -54,6 +59,19 @@ final _torneosBranch = StatefulShellBranch(
   ],
 );
 
+final _descubrirBranch = StatefulShellBranch(
+  navigatorKey: _descubrirNavigatorKey,
+  routes: [
+    GoRoute(
+      path: '/descubrir',
+      builder: (context, state) => BlocProvider<VenueMapCubit>(
+        create: (_) => getIt<VenueMapCubit>(),
+        child: const VenueMapScreen(),
+      ),
+    ),
+  ],
+);
+
 final _avisosBranch = StatefulShellBranch(
   navigatorKey: _avisosNavigatorKey,
   routes: [
@@ -84,6 +102,7 @@ List<StatefulShellBranch> get shellBranches => [
       _homeBranch,
       _partidasBranch,
       if (FeatureFlags.torneosEnabled) _torneosBranch,
+      _descubrirBranch,
       _avisosBranch,
       _perfilBranch,
     ];

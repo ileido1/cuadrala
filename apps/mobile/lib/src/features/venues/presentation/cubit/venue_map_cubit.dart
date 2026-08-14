@@ -21,9 +21,16 @@ class VenueMapCubit extends Cubit<VenueMapState> {
   final LocationService _locationService;
   final SavedZonesRepository _zonesRepository;
 
+  /// Sentinel para distinguir "sportType no pasado" (preservar filtro actual)
+  /// de "sportType: null" (limpiar filtro → Todos).
+  static const Object _sportSentinel = Object();
+
   /// Loads saved zones from storage, then loads venues.
-  Future<void> load({int radiusKm = 25}) async {
+  Future<void> load({int radiusKm = 25, Object? sportType = _sportSentinel}) async {
     emit(state.copyWith(status: VenueMapStatus.loading, fellBackToAll: false));
+
+    final effectiveSportType =
+        sportType == _sportSentinel ? state.sportType : sportType as String?;
 
     // Load saved zones first
     List<SavedZone> savedZones;
@@ -61,6 +68,7 @@ class VenueMapCubit extends Cubit<VenueMapState> {
       final all = await _repository.listVenues(
         near: near,
         radiusKm: near != null ? (state.selectedZone?.radiusKm ?? radiusKm) : null,
+        sportType: effectiveSportType,
       );
 
       var withCoords = all
@@ -72,7 +80,7 @@ class VenueMapCubit extends Cubit<VenueMapState> {
       // vez sin `near` (lista completa) para no dejar al usuario sin resultados
       // cuando su ubicación está lejos del catálogo disponible.
       if (near != null && withCoords.isEmpty) {
-        final fallback = await _repository.listVenues();
+        final fallback = await _repository.listVenues(sportType: effectiveSportType);
         withCoords = fallback
             .where((v) => v.latitude != null && v.longitude != null)
             .toList();
@@ -91,6 +99,7 @@ class VenueMapCubit extends Cubit<VenueMapState> {
           error: null,
           fellBackToAll: fellBack,
           savedZones: savedZones,
+          sportType: effectiveSportType,
         ),
       );
     } on AppFailure catch (e) {
@@ -98,6 +107,7 @@ class VenueMapCubit extends Cubit<VenueMapState> {
         status: VenueMapStatus.failure,
         error: e.message,
         savedZones: savedZones,
+        sportType: effectiveSportType,
       ));
     } catch (_) {
       emit(
@@ -105,6 +115,7 @@ class VenueMapCubit extends Cubit<VenueMapState> {
           status: VenueMapStatus.failure,
           error: 'No pudimos cargar las sedes.',
           savedZones: savedZones,
+          sportType: effectiveSportType,
         ),
       );
     }
@@ -125,6 +136,12 @@ class VenueMapCubit extends Cubit<VenueMapState> {
   Future<void> selectZone(SavedZone? zone) async {
     emit(state.copyWith(selectedZone: zone, radiusKm: zone?.radiusKm ?? 25));
     await load();
+  }
+
+  /// Re-centers the map on the user's current GPS location: deselects any
+  /// saved zone and reloads venues near the current position.
+  Future<void> recenterToCurrentLocation() async {
+    await selectZone(null);
   }
 
   /// Saves the current GPS position as a new zone with the given name.

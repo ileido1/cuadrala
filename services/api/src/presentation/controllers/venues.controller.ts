@@ -35,6 +35,7 @@ export async function getVenuesCON(_req: Request, _res: Response): Promise<void>
     limit: QUERY.limit,
     ...(QUERY.near !== undefined ? { near: QUERY.near } : {}),
     radiusKm: QUERY.radiusKm,
+    ...(QUERY.sportType !== undefined ? { sportType: QUERY.sportType } : {}),
   });
 
   _res.status(200).json({

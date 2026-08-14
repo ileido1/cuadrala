@@ -6,6 +6,7 @@ abstract class VenuesApi {
     int limit,
     String? near,
     int? radiusKm,
+    String? sportType,
   });
 
   Future<Map<String, Object?>> getVenueDetailEnvelope({required String venueId});
@@ -62,6 +63,7 @@ final class DioVenuesApi implements VenuesApi {
     int limit = 50,
     String? near,
     int? radiusKm,
+    String? sportType,
   }) {
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/venues',
@@ -70,6 +72,7 @@ final class DioVenuesApi implements VenuesApi {
         'limit': limit,
         'near': ?near,
         'radiusKm': ?radiusKm,
+        'sportType': ?sportType,
       },
     );
   }

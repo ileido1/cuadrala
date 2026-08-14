@@ -13,6 +13,7 @@ final class Routes {
   static const avisos = '/avisos';
   static const perfil = '/perfil';
   static const torneos = '/torneos';
+  static const descubrir = '/descubrir';
 
   static const matches = '/matches';
   static const createMatch = '/matches/create';
@@ -31,6 +32,8 @@ final class Routes {
   static const availability = '/availability';
   static String venueCreateMatch(String venueId) =>
       '/venues/$venueId/create-match';
+
+  static String venueDetail(String venueId) => '/descubrir/$venueId';
 
   static String matchDetail(String matchId) => '/matches/$matchId';
   static String tournamentDetail(String tournamentId) => '/tournaments/$tournamentId';
