@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../features/catalog/data/models/category_dto.dart';
 import '../../../../features/catalog/data/models/sport_dto.dart';
+import '../../../../features/venues/data/models/venue_dto.dart';
 import '../../data/tournaments_api.dart';
 
 final class TournamentFiltersBar extends StatelessWidget {
@@ -11,6 +12,7 @@ final class TournamentFiltersBar extends StatelessWidget {
     required this.onApply,
     this.sports = const [],
     this.categories = const [],
+    this.venues = const [],
     this.onSportChanged,
   });
 
@@ -18,13 +20,15 @@ final class TournamentFiltersBar extends StatelessWidget {
   final ValueChanged<TournamentListFilters> onApply;
   final List<SportDto> sports;
   final List<CategoryDto> categories;
+  final List<VenueDto> venues;
   final ValueChanged<String>? onSportChanged;
 
   bool get _hasActiveFilters =>
       filters.status != null ||
       filters.startsAtFrom != null ||
       filters.sportId != null ||
-      filters.categoryId != null;
+      filters.categoryId != null ||
+      filters.venueId != null;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +75,16 @@ final class TournamentFiltersBar extends StatelessWidget {
             avatar: filters.startsAtFrom != null
                 ? const Icon(Icons.check, size: 16)
                 : const Icon(Icons.calendar_today, size: 16),
+          ),
+          const SizedBox(width: 8),
+          // Venue chip
+          FilterChip(
+            label: Text(_venueLabel()),
+            selected: filters.venueId != null,
+            onSelected: (_) => _showVenuePicker(context),
+            avatar: filters.venueId != null
+                ? const Icon(Icons.check, size: 16)
+                : const Icon(Icons.place_outlined, size: 16),
           ),
           if (_hasActiveFilters) ...[
             const SizedBox(width: 8),
@@ -124,6 +138,15 @@ final class TournamentFiltersBar extends StatelessWidget {
     return 'Desde ${_formatDate(filters.startsAtFrom!)}';
   }
 
+  String _venueLabel() {
+    if (filters.venueId == null) return 'Sede';
+    final venue = venues.cast<VenueDto?>().firstWhere(
+          (v) => v?.id == filters.venueId,
+          orElse: () => null,
+        );
+    return venue?.name ?? 'Sede';
+  }
+
   String _formatDate(DateTime d) =>
       '${d.day}/${d.month}/${d.year}';
 
@@ -137,12 +160,13 @@ final class TournamentFiltersBar extends StatelessWidget {
     bool clearStartsAtFrom = false,
     bool clearSport = false,
     bool clearCategory = false,
+    bool clearVenue = false,
   }) {
     return TournamentListFilters(
       status: clearStatus ? null : (status ?? filters.status),
       startsAtFrom: clearStartsAtFrom ? null : (startsAtFrom ?? filters.startsAtFrom),
       startsAtTo: filters.startsAtTo,
-      venueId: venueId ?? filters.venueId,
+      venueId: clearVenue ? null : (venueId ?? filters.venueId),
       sportId: clearSport ? null : (sportId ?? filters.sportId),
       categoryId: clearCategory ? null : (categoryId ?? filters.categoryId),
     );
@@ -255,5 +279,31 @@ final class TournamentFiltersBar extends StatelessWidget {
     );
     if (picked == null) return;
     onApply(_mergeFilters(startsAtFrom: picked));
+  }
+
+  Future<void> _showVenuePicker(BuildContext context) async {
+    if (venues.isEmpty) return;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Sede'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, ''),
+            child: const Text('Todas'),
+          ),
+          ...venues.map(
+            (v) => SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, v.id),
+              child: Text(v.name),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    final newVenueId = result.isEmpty ? null : result;
+    final cleared = newVenueId == null || newVenueId != filters.venueId;
+    onApply(_mergeFilters(venueId: newVenueId, clearVenue: cleared));
   }
 }

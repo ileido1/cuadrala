@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
+import '../data/models/tournament_list_item_dto.dart';
 import '../data/models/tournament_schedule_dto.dart';
 import '../data/models/tournament_scoreboard_dto.dart';
 import 'cubit/tournament_registrations_cubit.dart';
@@ -15,9 +17,16 @@ import 'cubit/tournament_scoreboard_cubit.dart';
 import 'cubit/tournament_scoreboard_state.dart';
 
 final class TournamentDetailScreen extends StatelessWidget {
-  const TournamentDetailScreen({super.key, required this.tournamentId});
+  const TournamentDetailScreen({
+    super.key,
+    required this.tournamentId,
+    this.extra,
+  });
 
   final String tournamentId;
+  final Object? extra;
+
+  TournamentListItemDto? get tournament => extra as TournamentListItemDto?;
 
   @override
   Widget build(BuildContext context) {
@@ -33,39 +42,330 @@ final class TournamentDetailScreen extends StatelessWidget {
           create: (_) => getIt<TournamentRegistrationsCubit>(param1: tournamentId)..load(),
         ),
       ],
-      child: DefaultTabController(
-        length: 3,
-        child: Scaffold(
-          key: const Key('tournament.detail'),
-          appBar: AppBar(
-            title: const Text('Torneo'),
-            actions: [
-              IconButton(
-                onPressed: () => context.push(Routes.tournamentChat(tournamentId)),
-                icon: const Icon(AppIcons.chat),
-                tooltip: 'Chat del torneo',
+      child: _TournamentDetailBody(tournamentId: tournamentId, tournament: tournament),
+    );
+  }
+}
+
+final class _TournamentDetailBody extends StatelessWidget {
+  const _TournamentDetailBody({required this.tournamentId, required this.tournament});
+
+  final String tournamentId;
+  final TournamentListItemDto? tournament;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFormat = DateFormat('dd MMM yyyy', 'es_ES');
+
+    return Scaffold(
+      key: const Key('tournament.detail'),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            // Header image + title + enroll
+            SliverAppBar(
+              expandedHeight: tournament?.imageUrl != null ? 220 : 120,
+              pinned: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
               ),
-            ],
-            bottom: const TabBar(
-              tabs: [
-                Tab(text: 'Fixture'),
-                Tab(text: 'Tabla'),
-                Tab(text: 'Inscripciones'),
+              actions: [
+                IconButton(
+                  onPressed: () => context.push(Routes.tournamentChat(tournamentId)),
+                  icon: const Icon(AppIcons.chat),
+                  tooltip: 'Chat del torneo',
+                ),
               ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: tournament?.imageUrl != null
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            tournament!.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _TournamentHeaderBg(tournament: tournament),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.7),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            right: 16,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  tournament!.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${tournament!.sportName} · ${tournament!.categoryName}',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : _TournamentHeaderBg(tournament: tournament),
+              ),
             ),
-          ),
-          body: TabBarView(
-            children: [
-              _ScheduleTab(tournamentId: tournamentId),
-              _ScoreboardTab(tournamentId: tournamentId),
-              _RegistrationsTab(tournamentId: tournamentId),
-            ],
-          ),
+
+            // Info row
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    _StatusBadge(status: tournament?.status ?? ''),
+                    const SizedBox(width: 12),
+                    if (tournament?.startsAt != null) ...[
+                      Icon(Icons.calendar_today, size: 14,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text(
+                        dateFormat.format(tournament!.startsAt!),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                    const Spacer(),
+                    _EnrollButton(tournamentId: tournamentId),
+                  ],
+                ),
+              ),
+            ),
+
+            // Tab bar
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _TabBarDelegate(
+                TabBar(
+                  labelColor: Theme.of(context).colorScheme.primary,
+                  unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                  indicatorColor: Theme.of(context).colorScheme.primary,
+                  tabs: const [
+                    Tab(text: 'Fixture'),
+                    Tab(text: 'Tabla'),
+                    Tab(text: 'Inscripciones'),
+                  ],
+                ),
+              ),
+            ),
+          ];
+        },
+        body: TabBarView(
+          children: [
+            _ScheduleTab(tournamentId: tournamentId),
+            _ScoreboardTab(tournamentId: tournamentId),
+            _RegistrationsTab(tournamentId: tournamentId),
+          ],
         ),
       ),
     );
   }
 }
+
+final class _TournamentHeaderBg extends StatelessWidget {
+  const _TournamentHeaderBg({required this.tournament});
+  final TournamentListItemDto? tournament;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: tournament != null
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    tournament!.name,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${tournament!.sportName} · ${tournament!.categoryName}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+final class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        _label(status),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Color _statusColor(String s) {
+    switch (s.toUpperCase()) {
+      case 'REGISTRATION_OPEN':
+        return Colors.green;
+      case 'REGISTRATION_CLOSED':
+        return Colors.orange;
+      case 'IN_PROGRESS':
+        return Colors.blue;
+      case 'FINISHED':
+        return Colors.indigo;
+      case 'CANCELLED':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _label(String s) {
+    switch (s.toUpperCase()) {
+      case 'DRAFT':
+        return 'Borrador';
+      case 'REGISTRATION_OPEN':
+        return 'Inscripciones abiertas';
+      case 'REGISTRATION_CLOSED':
+        return 'Inscripciones cerradas';
+      case 'IN_PROGRESS':
+        return 'En curso';
+      case 'FINISHED':
+        return 'Finalizado';
+      case 'CANCELLED':
+        return 'Cancelado';
+      default:
+        return s;
+    }
+  }
+}
+
+final class _EnrollButton extends StatelessWidget {
+  const _EnrollButton({required this.tournamentId});
+  final String tournamentId;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+      builder: (context, state) {
+        if (state is! TournamentRegistrationsLoaded) {
+          return const SizedBox.shrink();
+        }
+        final cubit = context.read<TournamentRegistrationsCubit>();
+        final isRegistered = cubit.isCurrentUserRegistered;
+        final isLoading = state.registering;
+        final status = state.registerError;
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (status != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            FilledButton.icon(
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      if (isRegistered) {
+                        cubit.withdraw();
+                      } else {
+                        cubit.register();
+                      }
+                    },
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(isRegistered ? Icons.person_remove : Icons.person_add),
+              label: Text(isRegistered ? 'Desinscribirse' : 'Inscribirse'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+final class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  _TabBarDelegate(this._tabBar);
+  final TabBar _tabBar;
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Theme.of(context).colorScheme.surface,
+      child: _tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_TabBarDelegate oldDelegate) => false;
+}
+
+// ---------------------------------------------------------------------------
+// Original tab classes
+// ---------------------------------------------------------------------------
 
 final class _ScheduleTab extends StatelessWidget {
   const _ScheduleTab({required this.tournamentId});
