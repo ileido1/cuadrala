@@ -156,6 +156,7 @@ Future<void> setupDependencies() async {
     () => VenueMapCubit(
       repository: getIt<VenuesRepository>(),
       locationService: getIt<LocationService>(),
+      zonesRepository: getIt<SavedZonesRepository>(),
     ),
   );
 

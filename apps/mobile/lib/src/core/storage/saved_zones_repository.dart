@@ -74,7 +74,7 @@ final class SavedZone {
 }
 
 /// Stores saved geographic zones (name + coords + radius) in secure storage.
-final class SavedZonesRepository {
+class SavedZonesRepository {
   SavedZonesRepository({required FlutterSecureStorage secureStorage})
       : _secureStorage = secureStorage;
 

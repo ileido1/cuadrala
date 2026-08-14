@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/storage/saved_zones_repository.dart';
 import '../../data/models/venue_dto.dart';
 
 enum VenueMapStatus { initial, loading, loaded, failure }
@@ -15,6 +16,9 @@ final class VenueMapState extends Equatable {
     this.selectedVenue,
     this.error,
     this.fellBackToAll = false,
+    this.savedZones = const [],
+    this.selectedZone,
+    this.radiusKm = 25,
   });
 
   final VenueMapStatus status;
@@ -30,6 +34,15 @@ final class VenueMapState extends Equatable {
   /// completa (sin `near`). La UI lo usa para avisar "mostrando todas".
   final bool fellBackToAll;
 
+  /// Zonas guardadas del usuario.
+  final List<SavedZone> savedZones;
+
+  /// Zona actualmente seleccionada (null = usar GPS actual).
+  final SavedZone? selectedZone;
+
+  /// Radio de búsqueda en km.
+  final int radiusKm;
+
   static const _sentinel = Object();
 
   VenueMapState copyWith({
@@ -42,6 +55,9 @@ final class VenueMapState extends Equatable {
     Object? selectedVenue = _sentinel,
     Object? error = _sentinel,
     bool? fellBackToAll,
+    List<SavedZone>? savedZones,
+    Object? selectedZone = _sentinel,
+    int? radiusKm,
   }) {
     return VenueMapState(
       status: status ?? this.status,
@@ -54,6 +70,10 @@ final class VenueMapState extends Equatable {
           selectedVenue == _sentinel ? this.selectedVenue : selectedVenue as VenueDto?,
       error: error == _sentinel ? this.error : error as String?,
       fellBackToAll: fellBackToAll ?? this.fellBackToAll,
+      savedZones: savedZones ?? this.savedZones,
+      selectedZone:
+          selectedZone == _sentinel ? this.selectedZone : selectedZone as SavedZone?,
+      radiusKm: radiusKm ?? this.radiusKm,
     );
   }
 
@@ -68,5 +88,8 @@ final class VenueMapState extends Equatable {
         selectedVenue,
         error,
         fellBackToAll,
+        savedZones,
+        selectedZone,
+        radiusKm,
       ];
 }

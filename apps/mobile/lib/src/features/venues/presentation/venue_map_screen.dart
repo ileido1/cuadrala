@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/storage/saved_zones_repository.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -77,6 +78,27 @@ class _MapView extends StatelessWidget {
 
   final VenueMapState state;
 
+  Future<void> _showSaveZoneDialog(BuildContext context, VenueMapCubit cubit) async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _SaveZoneDialog(),
+    );
+    if (name != null && name.isNotEmpty) {
+      await cubit.saveCurrentLocationAsZone(name: name, radiusKm: 25);
+    }
+  }
+
+  Future<void> _showZonesSheet(BuildContext context, VenueMapCubit cubit, List<SavedZone> zones) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => BlocProvider.value(
+        value: cubit,
+        child: _ZonesBottomSheet(zones: zones),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<VenueMapCubit>();
@@ -124,7 +146,18 @@ class _MapView extends StatelessWidget {
             top: MediaQuery.of(context).padding.top + 12,
             left: 16,
             right: 16,
-            child: _SearchBar(onChanged: cubit.search),
+            child: Column(
+              children: [
+                _SearchBar(onChanged: cubit.search),
+                const SizedBox(height: 8),
+                _ZoneChips(
+                  savedZones: state.savedZones,
+                  selectedZone: state.selectedZone,
+                  onSelect: (z) => cubit.selectZone(z),
+                  onManage: () => _showZonesSheet(context, cubit, state.savedZones),
+                ),
+              ],
+            ),
           ),
           if (state.selectedVenue != null)
             Positioned(
@@ -141,6 +174,204 @@ class _MapView extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Zone chips bar
+// ---------------------------------------------------------------------------
+
+class _ZoneChips extends StatelessWidget {
+  const _ZoneChips({
+    required this.savedZones,
+    required this.selectedZone,
+    required this.onSelect,
+    required this.onManage,
+  });
+
+  final List<SavedZone> savedZones;
+  final SavedZone? selectedZone;
+  final ValueChanged<SavedZone?> onSelect;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // Current location chip
+          ActionChip(
+            avatar: Icon(
+              selectedZone == null ? Icons.my_location : Icons.check,
+              size: 16,
+              color: selectedZone == null ? scheme.primary : null,
+            ),
+            label: const Text('Mi ubicación'),
+            onPressed: () => onSelect(null),
+          ),
+          const SizedBox(width: 6),
+          // Saved zones chips
+          for (final zone in savedZones)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: FilterChip(
+                avatar: Icon(
+                  selectedZone?.id == zone.id ? Icons.check : Icons.place,
+                  size: 16,
+                ),
+                label: Text(zone.name),
+                selected: selectedZone?.id == zone.id,
+                onSelected: (_) => onSelect(
+                  selectedZone?.id == zone.id ? null : zone,
+                ),
+              ),
+            ),
+          // Add zone button
+          ActionChip(
+            avatar: const Icon(Icons.add, size: 16),
+            label: const Text('Zona'),
+            onPressed: onManage,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Save zone dialog
+// ---------------------------------------------------------------------------
+
+class _SaveZoneDialog extends StatefulWidget {
+  @override
+  State<_SaveZoneDialog> createState() => _SaveZoneDialogState();
+}
+
+class _SaveZoneDialogState extends State<_SaveZoneDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Guardar zona'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          labelText: 'Nombre de la zona',
+          hintText: 'Ej: Casa, Trabajo',
+        ),
+        textCapitalization: TextCapitalization.words,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Zones bottom sheet
+// ---------------------------------------------------------------------------
+
+class _ZonesBottomSheet extends StatelessWidget {
+  const _ZonesBottomSheet({required this.zones});
+
+  final List<SavedZone> zones;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Zonas guardadas',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (zones.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.place_outlined,
+                        size: 40,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No hay zonas guardadas',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Guardá tu ubicación para encontrar sedes más rápido',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ...zones.map(
+                (z) => ListTile(
+                  leading: const Icon(Icons.place),
+                  title: Text(z.name),
+                  subtitle: Text('${z.radiusKm} km de radio'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () {
+                      context.read<VenueMapCubit>().deleteZone(z.id);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  onTap: () {
+                    context.read<VenueMapCubit>().selectZone(z);
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

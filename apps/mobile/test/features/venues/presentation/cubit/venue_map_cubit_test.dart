@@ -4,6 +4,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/core/location/location_service.dart';
+import 'package:cuadrala_mobile/src/core/storage/saved_zones_repository.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map_cubit.dart';
@@ -12,6 +13,8 @@ import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map
 class _MockVenuesRepository extends Mock implements VenuesRepository {}
 
 class _MockLocationService extends Mock implements LocationService {}
+
+class _MockSavedZonesRepository extends Mock implements SavedZonesRepository {}
 
 VenueDto _venue({
   String id = 'v1',
@@ -32,10 +35,14 @@ void main() {
   group('VenueMapCubit', () {
     late _MockVenuesRepository repository;
     late _MockLocationService locationService;
+    late _MockSavedZonesRepository zonesRepository;
 
     setUp(() {
       repository = _MockVenuesRepository();
       locationService = _MockLocationService();
+      zonesRepository = _MockSavedZonesRepository();
+      // Default: listZones returns empty, no-op
+      when(() => zonesRepository.listZones()).thenAnswer((_) async => []);
     });
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -57,6 +64,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -99,6 +107,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -137,6 +146,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -166,6 +176,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -201,6 +212,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -239,6 +251,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -269,6 +282,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -300,6 +314,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) async {
@@ -333,6 +348,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) async {
@@ -365,6 +381,7 @@ void main() {
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
+          zonesRepository: zonesRepository,
         );
       },
       act: (cubit) async {
@@ -387,6 +404,7 @@ void main() {
       build: () => VenueMapCubit(
         repository: repository,
         locationService: locationService,
+        zonesRepository: zonesRepository,
       ),
       act: (cubit) => cubit.selectVenue(_venue()),
       expect: () => [
@@ -401,6 +419,7 @@ void main() {
       build: () => VenueMapCubit(
         repository: repository,
         locationService: locationService,
+        zonesRepository: zonesRepository,
       ),
       seed: () => VenueMapState(selectedVenue: _venue()),
       act: (cubit) => cubit.selectVenue(null),
