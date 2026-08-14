@@ -57,6 +57,7 @@ import '../../features/tournaments/presentation/cubit/tournament_registrations_c
 import '../../features/venues/data/venues_api.dart';
 import '../../features/venues/data/venues_repository.dart';
 import '../../features/venues/presentation/cubit/venue_map_cubit.dart';
+import '../../features/venue_detail/venue_detail_cubit.dart';
 import '../../features/matchmaking/data/matchmaking_api.dart';
 import '../../features/matchmaking/data/matchmaking_repository.dart';
 import '../../features/matchmaking/presentation/cubit/matchmaking_cubit.dart';
@@ -157,6 +158,13 @@ Future<void> setupDependencies() async {
       repository: getIt<VenuesRepository>(),
       locationService: getIt<LocationService>(),
       zonesRepository: getIt<SavedZonesRepository>(),
+    ),
+  );
+
+  getIt.registerFactoryParam<VenueDetailCubit, String, void>(
+    (venueId, _) => VenueDetailCubit(
+      venuesRepository: getIt<VenuesRepository>(),
+      venueId: venueId,
     ),
   );
 
