@@ -23,7 +23,7 @@ final class TournamentListItemTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(Routes.tournamentDetail(tournament.id)),
+        onTap: () => context.push(Routes.tournamentDetail(tournament.id), extra: tournament),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

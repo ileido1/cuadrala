@@ -4,6 +4,8 @@ import '../../../../core/failures/app_failure.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../../catalog/data/models/category_dto.dart';
 import '../../../catalog/data/models/sport_dto.dart';
+import '../../../venues/data/models/venue_dto.dart';
+import '../../../venues/data/venues_repository.dart';
 import '../../data/tournaments_api.dart';
 import '../../data/tournaments_repository.dart';
 import 'tournaments_list_state.dart';
@@ -12,17 +14,21 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
   TournamentsListCubit({
     required TournamentsRepository tournamentsRepository,
     required CatalogRepository catalogRepository,
+    required VenuesRepository venuesRepository,
     TournamentListFilters? initialFilters,
   })  : _tournamentsRepository = tournamentsRepository,
         _catalogRepository = catalogRepository,
+        _venuesRepository = venuesRepository,
         _currentFilters = initialFilters ?? const TournamentListFilters(),
         super(const TournamentsListInitial());
 
   final TournamentsRepository _tournamentsRepository;
   final CatalogRepository _catalogRepository;
+  final VenuesRepository _venuesRepository;
   TournamentListFilters _currentFilters;
   List<SportDto> _sports = [];
   List<CategoryDto> _categories = [];
+  List<VenueDto> _venues = [];
   static const _pageLimit = 20;
 
   Future<void> load() async {
@@ -121,6 +127,8 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
 
   List<CategoryDto> get categories => _categories;
 
+  List<VenueDto> get venues => _venues;
+
   Future<void> loadSportsAndCategories() async {
     try {
       _sports = await _catalogRepository.listSports();
@@ -148,6 +156,18 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
       }
     } catch (_) {
       // Silently fail
+    }
+  }
+
+  Future<void> loadVenues() async {
+    try {
+      _venues = await _venuesRepository.listVenues(page: 1, limit: 50);
+      final current = state;
+      if (current is TournamentsListLoaded) {
+        emit(current.copyWith());
+      }
+    } catch (_) {
+      // Silently fail - filters still work without venues
     }
   }
 }

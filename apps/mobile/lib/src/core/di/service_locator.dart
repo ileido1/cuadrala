@@ -275,6 +275,7 @@ Future<void> setupDependencies() async {
     () => TournamentsListCubit(
       tournamentsRepository: getIt<TournamentsRepository>(),
       catalogRepository: getIt<CatalogRepository>(),
+      venuesRepository: getIt<VenuesRepository>(),
     ),
   );
   getIt.registerFactory<TournamentPresetsCubit>(
@@ -296,6 +297,7 @@ Future<void> setupDependencies() async {
   getIt.registerFactoryParam<TournamentRegistrationsCubit, String, void>(
     (tournamentId, _) => TournamentRegistrationsCubit(
       tournamentsRepository: getIt<TournamentsRepository>(),
+      profileRepository: getIt<ProfileRepository>(),
       tournamentId: tournamentId,
     ),
   );
