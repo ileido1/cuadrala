@@ -356,58 +356,8 @@ async function seedVenueOwnerSV(_venueId: string, _userId: string): Promise<void
     update: { role: 'OWNER' },
   });
 
-  //? 3. Crear métodos de pago para el venue
-  const PAYMENT_METHODS = [
-    {
-      id: 'a1000001-0001-4001-8001-000000000001',
-      type: 'CASH',
-      name: 'Efectivo',
-    },
-    {
-      id: 'a1000001-0001-4001-8001-000000000002',
-      type: 'BANK_TRANSFER',
-      name: 'Transferencia Bancaria',
-      config: {
-        bank: 'Banesco',
-        accountNumber: '01234567890123456789',
-        idType: 'V',
-        idNumber: 'V12345678',
-      },
-    },
-    {
-      id: 'a1000001-0001-4001-8001-000000000003',
-      type: 'PAGO_MOVIL',
-      name: 'Pago Móvil Banesco',
-      config: {
-        bank: 'Banesco',
-        phoneNumber: '+58-412-1234567',
-        idType: 'V',
-        idNumber: 'V12345678',
-      },
-    },
-  ] as const;
-
-  for (let i = 0; i < PAYMENT_METHODS.length; i++) {
-    const pm = PAYMENT_METHODS[i]!;
-    await PRISMA.venuePaymentMethod.upsert({
-      where: { id: pm.id },
-      create: {
-        id: pm.id,
-        venueId: _venueId,
-        type: pm.type,
-        name: pm.name,
-        config: (pm.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
-        settlementCurrency: SETTLEMENT_CURRENCY,
-        position: i,
-      },
-      update: {
-        type: pm.type,
-        name: pm.name,
-        config: (pm.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
-        position: i,
-      },
-    });
-  }
+  //? Nota: Payment methods se crean en seedPaymentMethodsForAllVenuesSV()
+  //? para evitar duplicados y garantizar que TODAS las venues tengan los mismos métodos
 }
 
 async function seedPaymentMethodsForAllVenuesSV(): Promise<void> {
