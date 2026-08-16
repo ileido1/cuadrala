@@ -1,8 +1,29 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { PaymentTransactionRepository } from '../../domain/ports/payment_transaction_repository.js';
 import type { TransactionReceiptAccessRepository } from '../../domain/ports/transaction_receipt_access_repository.js';
-import type { TransactionReceiptNotifyContextRepository } from '../../domain/ports/transaction_receipt_notify_context_repository.js';
+import type {
+  TransactionReceiptNotifyContextDTO,
+  TransactionReceiptNotifyContextRepository,
+} from '../../domain/ports/transaction_receipt_notify_context_repository.js';
 import type { CreatePaymentPendingNotificationEventUseCase } from './create_payment_pending_notification_event.use_case.js';
+
+/**
+ * Resuelve los destinatarios de staff a notificar, excluyendo:
+ * - al propio pagador (self-notify skip, D1/REQ-VSN-002)
+ * - al organizador, solo si ya recibió el evento (a) por ser distinto del pagador
+ */
+function resolveStaffRecipientsSV(_ctx: TransactionReceiptNotifyContextDTO): string[] {
+  const ORGANIZER_ALREADY_NOTIFIED = _ctx.payerUserId !== _ctx.organizerUserId;
+  return _ctx.venueStaffUserIds.filter((_userId) => {
+    if (_userId === _ctx.payerUserId) {
+      return false;
+    }
+    if (ORGANIZER_ALREADY_NOTIFIED && _userId === _ctx.organizerUserId) {
+      return false;
+    }
+    return true;
+  });
+}
 
 function mapRecordSelectionErrorSV(_error: unknown): never {
   if (_error instanceof AppError) {
@@ -104,29 +125,55 @@ export class RecordPlayerPaymentSelectionUseCase {
     ) {
       return;
     }
+
+    //? 1. Cargar el contexto de notificación una sola vez (sede + organizador + staff)
+    let CTX: TransactionReceiptNotifyContextDTO | null;
     try {
-      const CTX = await this._notifyContextRepository.getForTransactionSV(_input.transactionId);
-      if (CTX === null) {
-        return;
-      }
-      if (CTX.payerUserId !== _input.actorUserId) {
-        return;
-      }
-      if (CTX.payerUserId === CTX.organizerUserId) {
-        return;
-      }
-      await this._createPaymentPendingNotificationEvent.executeSV({
-        matchId: CTX.matchId,
-        categoryId: CTX.categoryId,
-        userIds: [CTX.organizerUserId],
-        payload: {
-          kind: 'PAYMENT_METHOD_SELECTED',
-          transactionId: _input.transactionId,
-          payerUserId: CTX.payerUserId,
-        },
-      });
+      CTX = await this._notifyContextRepository.getForTransactionSV(_input.transactionId);
     } catch {
-      // No bloquear el registro si falla la notificación.
+      // No bloquear el registro si falla la resolución del contexto de notificación.
+      return;
+    }
+    if (CTX === null) {
+      return;
+    }
+
+    //? 2. (a) Aviso al organizador — comportamiento existente, sin cambios (A3/REQ-VSN-004)
+    if (CTX.payerUserId === _input.actorUserId && CTX.payerUserId !== CTX.organizerUserId) {
+      try {
+        await this._createPaymentPendingNotificationEvent.executeSV({
+          matchId: CTX.matchId,
+          categoryId: CTX.categoryId,
+          userIds: [CTX.organizerUserId],
+          payload: {
+            kind: 'PAYMENT_METHOD_SELECTED',
+            transactionId: _input.transactionId,
+            payerUserId: CTX.payerUserId,
+          },
+        });
+      } catch {
+        // No bloquear el registro si falla la notificación al organizador.
+      }
+    }
+
+    //? 3. (b) Aviso al staff de la sede — adición (US-E8-05), en su propio try/catch (A4)
+    const STAFF_RECIPIENTS = resolveStaffRecipientsSV(CTX);
+    if (CTX.venueId !== null && STAFF_RECIPIENTS.length > 0) {
+      try {
+        await this._createPaymentPendingNotificationEvent.executeSV({
+          matchId: CTX.matchId,
+          categoryId: CTX.categoryId,
+          userIds: STAFF_RECIPIENTS,
+          payload: {
+            kind: 'VENUE_PAYMENT_PENDING',
+            venueId: CTX.venueId,
+            transactionId: _input.transactionId,
+            payerUserId: CTX.payerUserId,
+          },
+        });
+      } catch {
+        // No bloquear el registro si falla la notificación al staff.
+      }
     }
   }
 }

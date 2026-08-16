@@ -3,9 +3,30 @@ import { randomUUID } from 'node:crypto';
 import { AppError } from '../../domain/errors/app_error.js';
 import type { ReceiptStorage } from '../../domain/ports/receipt_storage.js';
 import type { TransactionReceiptAccessRepository } from '../../domain/ports/transaction_receipt_access_repository.js';
-import type { TransactionReceiptNotifyContextRepository } from '../../domain/ports/transaction_receipt_notify_context_repository.js';
+import type {
+  TransactionReceiptNotifyContextDTO,
+  TransactionReceiptNotifyContextRepository,
+} from '../../domain/ports/transaction_receipt_notify_context_repository.js';
 import type { TransactionReceiptRepository } from '../../domain/ports/transaction_receipt_repository.js';
 import type { CreatePaymentPendingNotificationEventUseCase } from './create_payment_pending_notification_event.use_case.js';
+
+/**
+ * Resuelve los destinatarios de staff a notificar, excluyendo:
+ * - al propio pagador (self-notify skip, D1/REQ-VSN-002)
+ * - al organizador, solo si ya recibió el evento (a) por ser distinto del pagador
+ */
+function resolveStaffRecipientsSV(_ctx: TransactionReceiptNotifyContextDTO): string[] {
+  const ORGANIZER_ALREADY_NOTIFIED = _ctx.payerUserId !== _ctx.organizerUserId;
+  return _ctx.venueStaffUserIds.filter((_userId) => {
+    if (_userId === _ctx.payerUserId) {
+      return false;
+    }
+    if (ORGANIZER_ALREADY_NOTIFIED && _userId === _ctx.organizerUserId) {
+      return false;
+    }
+    return true;
+  });
+}
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -124,30 +145,59 @@ export class UploadTransactionReceiptUseCase {
     if (this._notifyContextRepository === null || this._createPaymentPendingNotificationEvent === null) {
       return;
     }
-    const CTX = await this._notifyContextRepository.getForTransactionSV(_input.transactionId);
+
+    //? 1. Cargar el contexto de notificación una sola vez (sede + organizador + staff).
+    //?    Bugfix: antes esta llamada estaba FUERA del try — un fallo del adapter rompía
+    //?    el upload completo en lugar de solo omitir la notificación.
+    let CTX: TransactionReceiptNotifyContextDTO | null;
+    try {
+      CTX = await this._notifyContextRepository.getForTransactionSV(_input.transactionId);
+    } catch {
+      // No bloquear el upload si falla la resolución del contexto de notificación.
+      return;
+    }
     if (CTX === null) {
       return;
     }
-    if (CTX.payerUserId !== _input.uploaderUserId) {
-      return;
+
+    //? 2. (a) Aviso al organizador — comportamiento existente, sin cambios (A3/REQ-VSN-004)
+    if (CTX.payerUserId === _input.uploaderUserId && CTX.payerUserId !== CTX.organizerUserId) {
+      try {
+        await this._createPaymentPendingNotificationEvent.executeSV({
+          matchId: CTX.matchId,
+          categoryId: CTX.categoryId,
+          userIds: [CTX.organizerUserId],
+          payload: {
+            kind: 'RECEIPT_UPLOADED',
+            transactionId: _input.transactionId,
+            receiptId: _input.receiptId,
+            payerUserId: CTX.payerUserId,
+          },
+        });
+      } catch {
+        // No bloquear el upload si falla la notificación al organizador.
+      }
     }
-    if (CTX.payerUserId === CTX.organizerUserId) {
-      return;
-    }
-    try {
-      await this._createPaymentPendingNotificationEvent.executeSV({
-        matchId: CTX.matchId,
-        categoryId: CTX.categoryId,
-        userIds: [CTX.organizerUserId],
-        payload: {
-          kind: 'RECEIPT_UPLOADED',
-          transactionId: _input.transactionId,
-          receiptId: _input.receiptId,
-          payerUserId: CTX.payerUserId,
-        },
-      });
-    } catch {
-      // No bloquear el upload si falla el evento de notificación.
+
+    //? 3. (b) Aviso al staff de la sede — adición (US-E8-05), en su propio try/catch (A4)
+    const STAFF_RECIPIENTS = resolveStaffRecipientsSV(CTX);
+    if (CTX.venueId !== null && STAFF_RECIPIENTS.length > 0) {
+      try {
+        await this._createPaymentPendingNotificationEvent.executeSV({
+          matchId: CTX.matchId,
+          categoryId: CTX.categoryId,
+          userIds: STAFF_RECIPIENTS,
+          payload: {
+            kind: 'VENUE_PAYMENT_PENDING',
+            venueId: CTX.venueId,
+            transactionId: _input.transactionId,
+            payerUserId: CTX.payerUserId,
+            receiptId: _input.receiptId,
+          },
+        });
+      } catch {
+        // No bloquear el upload si falla la notificación al staff.
+      }
     }
   }
 }
