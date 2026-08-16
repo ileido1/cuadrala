@@ -14,6 +14,7 @@ import {
   isPendingApiStatus,
   transactionStatusBadgeClass,
 } from '~/lib/transaction-status';
+import { resolveVenueTimezone } from '~/lib/venue-timezone';
 import type {
   TransactionStatsResponse,
   TransactionHistoryItem,
@@ -30,6 +31,9 @@ export default function PaymentsPage() {
     currentVenue?.pricingCurrency,
     currentVenue?.displayCurrency,
   );
+  // A7: la API devuelve timezone: string | null tal cual; este helper decide
+  // el fallback en el borde de UI y expone si se está usando (isFallback).
+  const venueTimezoneResolution = resolveVenueTimezone(currentVenue);
   const formatCurrency = (amount: number) =>
     formatMoneyFromMajor(amount, venueCurrency);
   const [stats, setStats] = useState<TransactionStatsResponse | null>(null);
@@ -154,12 +158,19 @@ export default function PaymentsPage() {
       {activeTab === 'pending' && currentVenue ? (
         <div className="card p-5 sm:p-6 animate-fade-in">
           <h2 className="section-heading mb-4">Pagos por confirmar</h2>
+          {venueTimezoneResolution.isFallback ? (
+            <p className="mb-4 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+              Esta sede no tiene zona horaria configurada. Se está usando{' '}
+              <strong>{venueTimezoneResolution.timezone}</strong> por defecto: la
+              fecha de tipo de cambio podría no coincidir con la sede real.
+            </p>
+          ) : null}
           <PaymentsList
             venueId={currentVenue.id}
             pricingCurrency={currentVenue.pricingCurrency}
             displayCurrency={currentVenue.displayCurrency}
-            countryCode={currentVenue.countryCode ?? 'VE'}
-            venueTimezone={currentVenue.timezone ?? 'America/Caracas'}
+            countryCode={currentVenue.countryCode}
+            venueTimezone={venueTimezoneResolution.timezone}
             focusTransactionId={focusPendingId}
             onFocusConsumed={() => setFocusPendingId(null)}
             externalSelected={selectedPending}
@@ -175,8 +186,8 @@ export default function PaymentsPage() {
           venueId={currentVenue.id}
           pricingCurrency={currentVenue.pricingCurrency}
           displayCurrency={currentVenue.displayCurrency}
-          countryCode={currentVenue.countryCode ?? 'VE'}
-          venueTimezone={currentVenue.timezone ?? 'America/Caracas'}
+          countryCode={currentVenue.countryCode}
+          venueTimezone={venueTimezoneResolution.timezone}
           onClose={() => setSelectedPending(null)}
           onUpdated={handlePendingUpdated}
         />
