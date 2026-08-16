@@ -45,6 +45,8 @@ export type VenueListItemDTO = {
   distanceKm?: number | null;
   imageUrl?: string | null;
   averageRating?: number | null;
+  /** Horario de atención por día; `null` si la sede no lo configuró. */
+  openingHours: Record<string, { open: string; close: string }> | null;
   /** Deportes ofrecidos (deduplicados desde las canchas activas). */
   sports: string[];
 };

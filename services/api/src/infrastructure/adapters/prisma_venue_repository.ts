@@ -22,6 +22,7 @@ const VENUE_LIST_SELECT = {
   createdAt: true,
   imageUrl: true,
   averageRating: true,
+  openingHours: true,
   courts: { where: { status: 'ACTIVE' as const }, select: { sportType: true } },
 } as const;
 
@@ -60,6 +61,7 @@ type VenueListRow = {
   createdAt: Date;
   imageUrl: string | null;
   averageRating: number | null;
+  openingHours: unknown;
   courts: { sportType: string }[];
   distanceKm?: number | null;
 };
@@ -80,6 +82,7 @@ export function mapVenueListItemSV(_venue: VenueListRow): VenueListItemDTO {
     createdAt: _venue.createdAt,
     imageUrl: _venue.imageUrl,
     averageRating: _venue.averageRating,
+    openingHours: _venue.openingHours as Record<string, { open: string; close: string }> | null,
     ...(_venue.distanceKm !== undefined ? { distanceKm: _venue.distanceKm } : {}),
     sports: [...new Set(_venue.courts.map((_c) => _c.sportType))],
   };
