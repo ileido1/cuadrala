@@ -108,8 +108,6 @@ class ApiClient {
         this.client.get(`/venues/${venueId}/transactions/history`, {
           params: page ? { page } : {},
         }),
-      confirm: (venueId: string, transactionId: string) =>
-        this.client.patch(`/venues/${venueId}/transactions/${transactionId}/confirm`),
     },
     update: (venueId: string, data: VenueUpdateData) =>
       this.client.patch(`/venues/${venueId}`, data),
@@ -263,8 +261,6 @@ class ApiClient {
   };
 
   readonly transactions = {
-    confirm: (venueId: string, transactionId: string) =>
-      this.client.patch(`/venues/${venueId}/transactions/${transactionId}/confirm`),
     getReceipt: (transactionId: string, receiptId: string) =>
       this.client.get(`/transactions/${transactionId}/receipt/${receiptId}`, {
         responseType: 'blob',

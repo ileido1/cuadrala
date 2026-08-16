@@ -23,6 +23,8 @@ const VENUE_LIST_SELECT = {
   imageUrl: true,
   averageRating: true,
   courts: { where: { status: 'ACTIVE' as const }, select: { sportType: true } },
+  countryCode: true,
+  monetizationSettings: { select: { timezone: true } },
 } as const;
 
 function kmToLatitudeDeltaSV(_radiusKm: number): number {
@@ -62,6 +64,8 @@ type VenueListRow = {
   averageRating: number | null;
   courts: { sportType: string }[];
   distanceKm?: number | null;
+  countryCode: string;
+  monetizationSettings: { timezone: string } | null;
 };
 
 /**
@@ -82,6 +86,9 @@ export function mapVenueListItemSV(_venue: VenueListRow): VenueListItemDTO {
     averageRating: _venue.averageRating,
     ...(_venue.distanceKm !== undefined ? { distanceKm: _venue.distanceKm } : {}),
     sports: [...new Set(_venue.courts.map((_c) => _c.sportType))],
+    countryCode: _venue.countryCode,
+    // A7: sin fallback silencioso en la API — null se resuelve en el consumidor web.
+    timezone: _venue.monetizationSettings?.timezone ?? null,
   };
 }
 
