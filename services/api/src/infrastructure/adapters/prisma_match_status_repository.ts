@@ -1,19 +1,32 @@
-import type {
-  MatchStatusRepository,
-  MatchStatusTransitionInputDTO,
-} from '../../domain/ports/match_status_repository.js';
-import type { MatchStatus } from '../../generated/prisma/client.js';
-
+import type { MatchStatusRepository } from '../../domain/ports/match_status_repository.js';
 import { PRISMA } from '../prisma_client.js';
 
 export class PrismaMatchStatusRepository implements MatchStatusRepository {
-  async transitionStatusIfCurrentSV(_input: MatchStatusTransitionInputDTO): Promise<boolean> {
-    const RESULT = await PRISMA.match.updateMany({
-      where: { id: _input.matchId, status: _input.fromStatus as MatchStatus },
-      data: { status: _input.toStatus as MatchStatus },
+  async updateScheduledToInProgressSV(): Promise<{ updatedCount: number }> {
+    //? 1. Buscar partidas SCHEDULED cuyo scheduledAt sea <= ahora
+    const NOW = new Date();
+
+    const UPDATED = await PRISMA.match.updateMany({
+      where: {
+        status: 'SCHEDULED',
+        scheduledAt: { lte: NOW },
+      },
+      data: {
+        status: 'IN_PROGRESS',
+      },
     });
 
-    return RESULT.count > 0;
+    //? 2. Actualizar también la reserva asociada si existe
+    await PRISMA.reservation.updateMany({
+      where: {
+        matchStatus: 'SCHEDULED',
+        scheduledAt: { lte: NOW },
+      },
+      data: {
+        matchStatus: 'IN_PROGRESS',
+      },
+    });
+
+    return { updatedCount: UPDATED.count };
   }
 }
-

@@ -1,10 +1,4 @@
-export type MatchStatusTransitionInputDTO = {
-  matchId: string;
-  fromStatus: string;
-  toStatus: string;
-};
-
 export interface MatchStatusRepository {
-  transitionStatusIfCurrentSV(_input: MatchStatusTransitionInputDTO): Promise<boolean>;
+  //? Actualiza partidas SCHEDULED cuyo scheduledAt sea <= ahora a IN_PROGRESS
+  updateScheduledToInProgressSV(): Promise<{ updatedCount: number }>;
 }
-

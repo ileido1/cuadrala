@@ -47,6 +47,13 @@ const ENV_SCHEMA = z.object({
   NOTIFICATIONS_WORKER_ALERT_BACKLOG_DELIVERIES: z.coerce.number().int().nonnegative().default(5000),
   NOTIFICATIONS_WORKER_ALERT_FAILURE_RATE_PCT: z.coerce.number().int().min(0).max(100).default(50),
   NOTIFICATIONS_WORKER_ALERT_FAILURE_RATE_MIN_ATTEMPTS: z.coerce.number().int().nonnegative().default(20),
+  MATCH_STATUS_WORKER_ENABLED: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((_v) => _v === 'true')
+    .default(true),
+  MATCH_STATUS_WORKER_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
+  MATCH_STATUS_WORKER_TICK_TIMEOUT_MS: z.coerce.number().int().positive().default(55_000),
   FCM_SERVICE_ACCOUNT_JSON_BASE64: z.string().optional(),
   FCM_DRY_RUN: z
     .enum(['true', 'false'])
