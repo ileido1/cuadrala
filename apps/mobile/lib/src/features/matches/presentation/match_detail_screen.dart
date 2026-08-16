@@ -1026,7 +1026,8 @@ final class _Footer extends StatelessWidget {
               onPressed: () => context.push(
                 PayMethodScreen.route(
                   matchId: m.id,
-                  amountPerPersonCents: m.pricePerPlayerCents,
+                  amountPerPersonCents:
+                      (m.pricePerPlayerCents / m.maxParticipants).toInt(),
                   matchTitle: m.clubName ?? 'Partida',
                   venueId: m.venueId,
                   pricingCurrency: m.pricingCurrency,
