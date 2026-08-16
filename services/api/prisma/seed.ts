@@ -315,7 +315,8 @@ async function seedTestUsers(): Promise<Array<{ id: string; email: string; name:
     ),
   );
 
-  //? 4. Crear perfiles de jugador para cada usuario
+  //? 4. Crear perfiles de jugador para cada usuario (onboarding ya completado)
+  const NOW = new Date();
   await Promise.all(
     CREATED_USERS.map(async (_u, _idx) =>
       PRISMA.playerProfile.upsert({
@@ -324,11 +325,16 @@ async function seedTestUsers(): Promise<Array<{ id: string; email: string; name:
           userId: _u.id,
           dominantHand: _idx % 3 === 0 ? 'LEFT' : 'RIGHT',
           sidePreference: _idx % 2 === 0 ? 'RIGHT' : 'LEFT',
+          birthDate: new Date(1990 + (_idx % 20), _idx % 12, 1 + (_idx % 28)),
           documentNumber: `DOC${String(_idx + 1).padStart(8, '0')}`,
           phone: `+58-412-${String(_idx * 111).padStart(7, '0')}`,
           city: 'Caracas',
+          avatarUrl: null,
+          onboardingCompletedAt: NOW,
         },
-        update: {},
+        update: {
+          onboardingCompletedAt: NOW,
+        },
       }),
     ),
   );
