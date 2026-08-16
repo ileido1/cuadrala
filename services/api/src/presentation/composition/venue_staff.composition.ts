@@ -1,7 +1,4 @@
-export {
-  CONFIRM_TRANSACTION_AS_VENUE_STAFF_UC,
-  LIST_VENUE_PENDING_TRANSACTIONS_UC,
-} from './monetization.composition.js';
+export { LIST_VENUE_PENDING_TRANSACTIONS_UC } from './monetization.composition.js';
 
 import { ListVenueStaffUseCase } from '../../application/use_cases/list_venue_staff.use_case.js';
 import { UpsertVenueStaffUseCase } from '../../application/use_cases/upsert_venue_staff.use_case.js';

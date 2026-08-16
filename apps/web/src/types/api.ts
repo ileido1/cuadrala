@@ -13,7 +13,7 @@ export interface Venue {
   displayCurrency?: string;
   pricingCurrency?: string;
   countryCode?: string;
-  timezone?: string;
+  timezone?: string | null;
 }
 
 export interface VenueSummary {

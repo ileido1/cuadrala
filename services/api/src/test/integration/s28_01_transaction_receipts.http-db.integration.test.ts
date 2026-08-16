@@ -26,6 +26,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración receipts (upload + down
   let userB: string;
   let matchId: string;
   let txAId: string;
+  let venueId: string;
+  let venueStaffUserIds: string[];
 
   beforeAll(async () => {
     await resetDatabaseForTestsSV();
@@ -57,6 +59,30 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración receipts (upload + down
 
     expect(CREATE.status).toBe(201);
     matchId = CREATE.body.data.matchId as string;
+
+    // Setup: Venue + Court + VenueStaff para que el aviso de pago pendiente a staff dispare (US-E8-05).
+    const VENUE = await PRISMA.venue.create({ data: { name: 'Sede Test Receipts' } });
+    venueId = VENUE.id;
+    const COURT = await PRISMA.court.create({
+      data: { name: 'Cancha Receipts', venueId },
+    });
+    await PRISMA.match.update({
+      where: { id: matchId },
+      data: { courtId: COURT.id },
+    });
+    const STAFF_1 = await PRISMA.user.create({
+      data: { email: `staff1-${TS}@test.local`, name: 'Staff 1' },
+    });
+    const STAFF_2 = await PRISMA.user.create({
+      data: { email: `staff2-${TS}@test.local`, name: 'Staff 2' },
+    });
+    await PRISMA.venueStaff.createMany({
+      data: [
+        { venueId, userId: STAFF_1.id, role: 'STAFF' },
+        { venueId, userId: STAFF_2.id, role: 'OWNER' },
+      ],
+    });
+    venueStaffUserIds = [STAFF_1.id, STAFF_2.id];
 
     const TX = await PRISMA.transaction.create({
       data: {
@@ -118,6 +144,24 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración receipts (upload + down
     expect(DOWNLOAD.headers['content-type']).toContain('image/png');
     expect(Buffer.isBuffer(DOWNLOAD.body)).toBe(true);
     expect(Buffer.compare(DOWNLOAD.body as Buffer, ONE_PX_PNG)).toBe(0);
+
+    // US-E8-05: al subir el comprobante, cada VenueStaff de la sede recibe un delivery.
+    const STAFF_DELIVERIES = await PRISMA.notificationDelivery.findMany({
+      where: { userId: { in: venueStaffUserIds } },
+      include: { event: true },
+    });
+    expect(STAFF_DELIVERIES).toHaveLength(venueStaffUserIds.length);
+    for (const DELIVERY of STAFF_DELIVERIES) {
+      expect(DELIVERY.event.type).toBe('PAYMENT_PENDING');
+      expect(DELIVERY.event.matchId).toBe(matchId);
+      expect(DELIVERY.event.payload).toMatchObject({
+        kind: 'VENUE_PAYMENT_PENDING',
+        venueId,
+        transactionId: txAId,
+        payerUserId: userA.id,
+        receiptId: RECEIPT_ID,
+      });
+    }
   });
 });
 

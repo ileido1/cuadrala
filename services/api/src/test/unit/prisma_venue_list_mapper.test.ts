@@ -20,6 +20,8 @@ function makeRow(overrides: Partial<Parameters<typeof mapVenueListItemSV>[0]> = 
     averageRating: 4.5,
     openingHours: null,
     courts: [],
+    countryCode: 'VE',
+    monetizationSettings: null,
     ...overrides,
   };
 }
