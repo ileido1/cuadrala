@@ -19,8 +19,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let categoryId: string;
     let staffUserId: string;
     let payerUserId: string;
+    let payerEmail: string;
     let matchId: string;
     let venueId: string;
+    let courtId: string;
     let txPendingId: string;
     let authToken: string;
 
@@ -42,6 +44,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       });
       staffUserId = STAFF.id;
       payerUserId = PAYER.id;
+      payerEmail = PAYER.email;
       authToken = signAccessTokenSV(staffUserId, `gate-staff-${TS}@test.local`);
 
       await PRISMA.feeRule.create({
@@ -61,6 +64,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const COURT = await PRISMA.court.create({
         data: { name: 'Cancha Gate', venueId },
       });
+      courtId = COURT.id;
 
       await PRISMA.venueStaff.create({
         data: { venueId, userId: staffUserId, role: 'STAFF' },
@@ -165,8 +169,69 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(RES.status).toBe(200);
-      const IDS = RES.body.data.items.map((_i: { id: string }) => _i.id);
+      expect(RES.body.success).toBe(true);
+
+      const ITEMS = RES.body.data.items as Array<Record<string, unknown>>;
+      const IDS = ITEMS.map((_i) => _i.id);
       expect(IDS).toContain(txPendingId);
+
+      const ITEM = ITEMS.find((_i) => _i.id === txPendingId);
+      expect(ITEM).toBeDefined();
+
+      // Shape completo del DTO de ListVenuePendingTransactionsUseCase (REQ-MCP-048):
+      // no basta con la membresía por id, hay que cubrir las 27 claves reales.
+      expect(Object.keys(ITEM as Record<string, unknown>).sort()).toEqual(
+        [
+          'id',
+          'matchId',
+          'reservationId',
+          'userId',
+          'amountTotal',
+          'status',
+          'createdAt',
+          'payerName',
+          'payerEmail',
+          'obligationAmountMinor',
+          'obligationCurrency',
+          'pricingCurrency',
+          'contextLabel',
+          'bookingType',
+          'courtId',
+          'courtName',
+          'sportId',
+          'categoryId',
+          'scheduledAt',
+          'durationMinutes',
+          'receiptId',
+          'receiptMimeType',
+          'paymentMethodType',
+          'paymentMethodName',
+          'paymentMethodConfig',
+          'venuePaymentMethodId',
+          'playerReportedSettlementMinor',
+          'playerReportedSettlementCurrency',
+        ].sort(),
+      );
+
+      expect(ITEM?.status).toBe('PENDING');
+      expect(ITEM?.matchId).toBe(matchId);
+      expect(ITEM?.reservationId).toBeNull();
+      expect(ITEM?.userId).toBe(payerUserId);
+      expect(typeof ITEM?.amountTotal).toBe('string');
+      expect(ITEM?.payerName).toBe('Payer');
+      expect(ITEM?.payerEmail).toBe(payerEmail);
+      expect(ITEM?.bookingType).toBe('MATCH');
+      expect(ITEM?.courtId).toBe(courtId);
+      expect(ITEM?.courtName).toBe('Cancha Gate');
+      expect(ITEM?.sportId).toBe(sportPadelId);
+      expect(ITEM?.categoryId).toBe(categoryId);
+      expect(ITEM?.durationMinutes).toBe(90);
+      expect(ITEM?.receiptId).toBeNull();
+      expect(ITEM?.venuePaymentMethodId).toBeNull();
+
+      // Fechas en ISO — verificable con round-trip, no solo presencia del campo.
+      expect(new Date(ITEM?.scheduledAt as string).toISOString()).toBe(ITEM?.scheduledAt);
+      expect(new Date(ITEM?.createdAt as string).toISOString()).toBe(ITEM?.createdAt);
     });
 
     it('PATCH /transactions/:id/reject-manual rechaza transacción pendiente', async () => {

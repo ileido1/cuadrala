@@ -1378,6 +1378,42 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/transactions/{transactionId}/reject-manual': {
+      patch: {
+        tags: ['Monetization'],
+        summary: 'Rechazar pago manual (solo staff de la sede)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'transactionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['reason'],
+                properties: {
+                  reason: { type: 'string', minLength: 1, maxLength: 500 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'OK' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+          '403': { description: 'Prohibido (no staff)' },
+          '404': { description: 'Transacción no encontrada' },
+        },
+      },
+    },
     '/api/v1/transactions/{transactionId}/receipt': {
       post: {
         tags: ['Monetization'],

@@ -19,6 +19,8 @@ function makeRow(overrides: Partial<Parameters<typeof mapVenueListItemSV>[0]> = 
     imageUrl: null,
     averageRating: 4.5,
     courts: [],
+    countryCode: 'VE',
+    monetizationSettings: null,
     ...overrides,
   };
 }
@@ -61,5 +63,22 @@ describe('mapVenueListItemSV — sports[] derivation', () => {
     );
     expect(DTO.imageUrl).toBe('https://cdn.example.com/x.jpg');
     expect(DTO.averageRating).toBe(4.8);
+  });
+
+  it('propaga countryCode', () => {
+    const DTO = mapVenueListItemSV(makeRow({ countryCode: 'CO' }));
+    expect(DTO.countryCode).toBe('CO');
+  });
+
+  it('resuelve timezone desde monetizationSettings cuando existe', () => {
+    const DTO = mapVenueListItemSV(
+      makeRow({ monetizationSettings: { timezone: 'America/Bogota' } }),
+    );
+    expect(DTO.timezone).toBe('America/Bogota');
+  });
+
+  it('retorna timezone: null cuando no hay monetizationSettings (A7 — sin fallback silencioso)', () => {
+    const DTO = mapVenueListItemSV(makeRow({ monetizationSettings: null }));
+    expect(DTO.timezone).toBeNull();
   });
 });

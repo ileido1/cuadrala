@@ -773,5 +773,17 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
       expect(RES.status).toBe(401);
       expect(RES.body.code).toBe('NO_AUTORIZADO');
     });
+
+    it('PATCH /api/v1/venues/:venueId/transactions/:transactionId/confirm responde 404 (ruta eliminada, ver D2)', async () => {
+      const RES = await request(APP)
+        .patch(
+          '/api/v1/venues/550e8400-e29b-41d4-a716-446655440001/transactions/550e8400-e29b-41d4-a716-446655440002/confirm',
+        )
+        .set('Authorization', `Bearer ${VALID_ACCESS_TOKEN}`);
+
+      expect(RES.status).toBe(404);
+      expect(RES.body).toEqual({});
+      expect(RES.text).toMatch(/Cannot PATCH/i);
+    });
   });
 });

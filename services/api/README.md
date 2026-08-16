@@ -141,11 +141,21 @@ Sin `TEST_DATABASE_URL`, las pruebas de integración se marcan como omitidas (`d
 
 - `POST /api/v1/matches/:matchId/transactions/create-obligations` — cuerpo: `{ amountBasePerPerson, participantUserIds? }`
 - `GET /api/v1/matches/:matchId/transactions/summary` — totales y conteos por estado
-- `PATCH /api/v1/transactions/:transactionId/confirm-manual` — confirma pago manual
+- `PATCH /api/v1/transactions/:transactionId/player-payment-selection` — jugador registra el medio de pago elegido antes de subir comprobante — requiere Bearer
+- `PATCH /api/v1/transactions/:transactionId/confirm-manual` — confirma pago manual (solo staff de la sede) — requiere Bearer
+- `PATCH /api/v1/transactions/:transactionId/reject-manual` — rechaza pago manual, cuerpo: `{ reason }` (solo staff de la sede) — requiere Bearer
+- `POST /api/v1/transactions/:transactionId/receipt` — adjunta comprobante (imagen jpeg/png/webp) a la transacción — requiere Bearer
+- `GET /api/v1/transactions/:transactionId/receipt/:receiptId` — descarga el comprobante — requiere Bearer
 - `PATCH /api/v1/users/:userId/subscription` — cuerpo: `{ subscriptionType: "FREE" | "PRO" }`
 - `GET /api/v1/users/:userId/transactions` — query opcional: `limit` (1–100, default 50)
 
 La comisión de servicio usa la regla activa en `FeeRule` con `scope=MATCH` (si no hay regla activa, fee = 0).
+
+### Venue-staff (E8)
+
+- `POST /api/v1/venues/:venueId/staff` — registra/actualiza un miembro de staff de la sede — requiere Bearer
+- `GET /api/v1/venues/:venueId/staff` — lista el staff de la sede
+- `GET /api/v1/venues/:venueId/transactions/pending` — lista transacciones pendientes de la sede (obligaciones de partido y reserva) — requiere Bearer, solo staff de la sede
 
 ## OpenAPI / Swagger
 

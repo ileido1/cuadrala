@@ -47,6 +47,10 @@ export type VenueListItemDTO = {
   averageRating?: number | null;
   /** Deportes ofrecidos (deduplicados desde las canchas activas). */
   sports: string[];
+  /** Código de país de la sede (p. ej. VE). Siempre presente (default DB "VE"). */
+  countryCode: string;
+  /** IANA tz de monetizationSettings. null = sin configurar (el cliente decide el fallback, A7). */
+  timezone: string | null;
 };
 
 export type VenueDetailDTO = {
