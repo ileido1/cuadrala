@@ -27,11 +27,12 @@ import 'open_match_display.dart';
 
 // ─── Fases del detalle (handoff) ──────────────────────────────────────────────
 
-enum _Phase { browse, joined, pending, confirmed, played }
+enum _Phase { browse, joined, pending, confirmed, inProgress, played }
 
 _Phase _phaseFor(MatchDetailLoaded l) {
   final m = l.match;
   if (m.status == 'FINISHED') return _Phase.played;
+  if (m.status == 'IN_PROGRESS') return _Phase.inProgress;
   if (!l.isParticipant) return _Phase.browse;
   final hasPrice = m.pricePerPlayerCents > 0;
   if (!hasPrice || l.viewerHasConfirmedPayment) return _Phase.confirmed;
@@ -1053,6 +1054,19 @@ final class _Footer extends StatelessWidget {
                 icon: AppIcons.chat,
                 label: 'Compartir partida',
                 onPressed: () => _shareMatchInvite(context, m),
+              ),
+            ),
+          ],
+        );
+
+      case _Phase.inProgress:
+        return Row(
+          children: [
+            Expanded(
+              child: _PrimaryCta(
+                icon: AppIcons.play,
+                label: 'Ver partido en vivo',
+                onPressed: () => context.push('/matches/${m.id}/live'),
               ),
             ),
           ],
