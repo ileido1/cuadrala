@@ -410,6 +410,48 @@ async function seedVenueOwnerSV(_venueId: string, _userId: string): Promise<void
   }
 }
 
+async function seedPaymentMethodsForAllVenuesSV(): Promise<void> {
+  //? 1. Obtener todas las venues
+  const ALL_VENUES = await PRISMA.venue.findMany({ select: { id: true, name: true } });
+  if (ALL_VENUES.length === 0) return;
+
+  //? 2. Crear payment methods para cada venue
+  const SETTLEMENT_CURRENCY = 'USD' as const;
+  const PAYMENT_METHODS = [
+    { id: 'pm-cash-', type: 'CASH', name: 'Efectivo' },
+    { id: 'pm-bank-', type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Banesco', accountNumber: '01234567890123456789', idType: 'V', idNumber: 'V12345678' } },
+    { id: 'pm-pago-', type: 'PAGO_MOVIL', name: 'Pago Móvil', config: { bank: 'Banesco', phoneNumber: '+58-412-1234567', idType: 'V', idNumber: 'V12345678' } },
+  ];
+
+  for (const VENUE of ALL_VENUES) {
+    for (let i = 0; i < PAYMENT_METHODS.length; i++) {
+      const pm = PAYMENT_METHODS[i]!;
+      const UNIQUE_ID = pm.id + VENUE.id.substring(0, 8);
+
+      await PRISMA.venuePaymentMethod.upsert({
+        where: { id: UNIQUE_ID },
+        create: {
+          id: UNIQUE_ID,
+          venueId: VENUE.id,
+          type: pm.type as any,
+          name: pm.name,
+          config: (pm.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+          settlementCurrency: SETTLEMENT_CURRENCY,
+          position: i,
+        },
+        update: {
+          type: pm.type as any,
+          name: pm.name,
+          config: (pm.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+          position: i,
+        },
+      });
+    }
+  }
+
+  console.log(`[seed] Payment methods creados para ${ALL_VENUES.length} venues`);
+}
+
 async function seedExchangeRatesSV(): Promise<void> {
   //? 1. Crear tasas de cambio
   const EXCHANGE_RATES = [
@@ -807,6 +849,9 @@ async function main(): Promise<void> {
 
   //? 2. Crear venues con canchas
   await seedVenuesSV();
+
+  //? 2.5. Crear payment methods para todas las venues
+  await seedPaymentMethodsForAllVenuesSV();
 
   //? 3. Crear usuarios de prueba
   const TEST_USERS = await seedTestUsersSV();
