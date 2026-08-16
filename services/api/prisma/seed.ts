@@ -18,7 +18,7 @@ const POOL = new Pool({ connectionString: DATABASE_URL });
 const ADAPTER = new PrismaPg(POOL);
 const PRISMA = new PrismaClient({ adapter: ADAPTER });
 
-async function seedCatalogSV(): Promise<void> {
+async function seedCatalog(): Promise<void> {
   const SPORTS_TO_SEED: Array<{ code: string; name: string }> = [
     { code: 'PADEL', name: 'Pádel' },
     { code: 'TENNIS', name: 'Tenis' },
@@ -81,7 +81,7 @@ async function seedCatalogSV(): Promise<void> {
   );
 }
 
-async function seedFeeRuleSV(): Promise<void> {
+async function seedFeeRule(): Promise<void> {
   const EXISTING = await PRISMA.feeRule.findFirst({
     where: { scope: 'MATCH', isActive: true },
   });
@@ -103,7 +103,7 @@ async function seedFeeRuleSV(): Promise<void> {
   console.log('[seed] FeeRule por defecto creada: MATCH, 5% (porcentaje).');
 }
 
-async function seedVenuesSV(): Promise<void> {
+async function seedVenues(): Promise<void> {
   //? 1. Definir venues seed con datos completos y realistas
   const SEED_VENUES: Array<{
     placeId: string;
@@ -279,7 +279,7 @@ async function seedVenuesSV(): Promise<void> {
   console.log(`[seed] ${SEEDED_VENUES.length} venues creados con ${SEED_VENUES.reduce((sum, v) => sum + v.courts.length, 0)} canchas totales.`);
 }
 
-async function seedTestUsersSV(): Promise<Array<{ id: string; email: string; name: string }>> {
+async function seedTestUsers(): Promise<Array<{ id: string; email: string; name: string }>> {
   //? 1. Generar hash de contraseña
   const bcryptModule = await import('bcryptjs');
   const bcrypt = bcryptModule.default ?? bcryptModule;
@@ -337,7 +337,7 @@ async function seedTestUsersSV(): Promise<Array<{ id: string; email: string; nam
   return CREATED_USERS;
 }
 
-async function seedVenueOwnerSV(_venueId: string, _userId: string): Promise<void> {
+async function seedVenueOwner(_venueId: string, _userId: string): Promise<void> {
   //? 1. Asignar propietario a la sede con monedas
   const SETTLEMENT_CURRENCY = 'USD' as const;
   await PRISMA.venue.update({
@@ -360,7 +360,7 @@ async function seedVenueOwnerSV(_venueId: string, _userId: string): Promise<void
   //? para evitar duplicados y garantizar que TODAS las venues tengan los mismos métodos
 }
 
-async function seedPaymentMethodsForAllVenuesSV(): Promise<void> {
+async function seedPaymentMethodsForAllVenues(): Promise<void> {
   //? 1. Obtener todas las venues
   const ALL_VENUES = await PRISMA.venue.findMany({ select: { id: true, name: true } });
   if (ALL_VENUES.length === 0) return;
@@ -369,8 +369,9 @@ async function seedPaymentMethodsForAllVenuesSV(): Promise<void> {
   const SETTLEMENT_CURRENCY = 'USD' as const;
   const PAYMENT_METHODS = [
     { id: 'pm-cash-', type: 'CASH', name: 'Efectivo' },
-    { id: 'pm-bank-', type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Banesco', accountNumber: '01234567890123456789', idType: 'V', idNumber: 'V12345678' } },
-    { id: 'pm-pago-', type: 'PAGO_MOVIL', name: 'Pago Móvil', config: { bank: 'Banesco', phoneNumber: '+58-412-1234567', idType: 'V', idNumber: 'V12345678' } },
+    { id: 'pm-bank-banesco-', type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Banesco', accountNumber: '01234567890123456789', idType: 'V', idNumber: 'V12345678' } },
+    { id: 'pm-bank-mercantil-', type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Mercantil', accountNumber: '98765432109876543210', idType: 'V', idNumber: 'V87654321' } },
+    { id: 'pm-pago-banesco-', type: 'PAGO_MOVIL', name: 'Pago Móvil', config: { bank: 'Banesco', phoneNumber: '+58-412-1234567', idType: 'V', idNumber: 'V12345678' } },
   ];
 
   for (const VENUE of ALL_VENUES) {
@@ -402,7 +403,7 @@ async function seedPaymentMethodsForAllVenuesSV(): Promise<void> {
   console.log(`[seed] Payment methods creados para ${ALL_VENUES.length} venues`);
 }
 
-async function seedExchangeRatesSV(): Promise<void> {
+async function seedExchangeRates(): Promise<void> {
   //? 1. Crear tasas de cambio
   const EXCHANGE_RATES = [
     { countryCode: 'VE', currency: 'USD', rateToBs: 50.0000, source: 'dolarapi.com' },
@@ -447,7 +448,7 @@ async function seedExchangeRatesSV(): Promise<void> {
   console.log('[seed] Tasas de cambio creadas: VE/USD @ 50 BS, VE/EUR @ 55 BS');
 }
 
-async function seedSportCategoriesSV(): Promise<void> {
+async function seedSportCategories(): Promise<void> {
   const RACKET_ORDINALS: Array<{
     slug: string;
     name: string;
@@ -531,7 +532,7 @@ async function seedSportCategoriesSV(): Promise<void> {
   console.log('[seed] Categorías por deporte: ordinales 8va–1ra (raqueta) y 3 tiers equipo.');
 }
 
-async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name: string }>): Promise<void> {
+async function seedTestMatches(_users: Array<{ id: string; email: string; name: string }>): Promise<void> {
   //? 1. Cargar deporte PADEL y preset AMERICANO
   const SPORT = await PRISMA.sport.findUnique({ where: { code: 'PADEL' } });
   if (SPORT === null) {
@@ -793,21 +794,21 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
 
 async function main(): Promise<void> {
   //? 1. Crear catálogo base (deportes, presets, categorías, reglas de comisión)
-  await seedCatalogSV();
-  await seedSportCategoriesSV();
-  await seedFeeRuleSV();
+  await seedCatalog();
+  await seedSportCategories();
+  await seedFeeRule();
 
   //? 2. Crear venues con canchas
-  await seedVenuesSV();
+  await seedVenues();
 
   //? 2.5. Crear payment methods para todas las venues
-  await seedPaymentMethodsForAllVenuesSV();
+  await seedPaymentMethodsForAllVenues();
 
   //? 3. Crear usuarios de prueba
-  const TEST_USERS = await seedTestUsersSV();
+  const TEST_USERS = await seedTestUsers();
 
   //? 4. Crear tasas de cambio
-  await seedExchangeRatesSV();
+  await seedExchangeRates();
 
   //? 5. Asignar owner al primer venue (Club Cuádrala)
   const OWNER = TEST_USERS[0]!;
@@ -816,12 +817,12 @@ async function main(): Promise<void> {
     select: { id: true },
   });
   if (VENUE_CUADRALA !== null) {
-    await seedVenueOwnerSV(VENUE_CUADRALA.id, OWNER.id);
+    await seedVenueOwner(VENUE_CUADRALA.id, OWNER.id);
     console.log(`[seed] Owner '${OWNER.email}' asignado al venue Club Cuádrala`);
   }
 
   //? 6. Crear matches de prueba en diferentes estados
-  await seedTestMatchesSV(TEST_USERS);
+  await seedTestMatches(TEST_USERS);
 
   console.log('[seed] ✅ Seed completado exitosamente — base de datos lista para desarrollo.');
 }

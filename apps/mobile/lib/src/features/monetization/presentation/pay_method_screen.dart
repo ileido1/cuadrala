@@ -430,18 +430,32 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
                     const SizedBox(height: 10),
                     if (_methods.isNotEmpty)
                       ..._methods.map(
-                        (m) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _MethodOption(
-                            selected: _selectedMethodId == m.id,
-                            title: m.displayLabel,
-                            subtitle: '${m.name} · ${m.settlementCurrency}',
-                            onTap: () {
-                              setState(() => _selectedMethodId = m.id);
-                              _recomputeFx();
-                            },
-                          ),
-                        ),
+                        (m) {
+                          //? Mostrar banco si hay múltiples transferencias bancarias
+                          final sameTypeCount = _methods
+                              .where((x) => x.type == m.type)
+                              .length;
+                          final bank = m.type == 'BANK_TRANSFER' &&
+                                  sameTypeCount > 1
+                              ? (m.config?['bank'] as String?) ?? ''
+                              : '';
+                          final subtitle = bank.isNotEmpty
+                              ? '$bank · ${m.settlementCurrency}'
+                              : '${m.name} · ${m.settlementCurrency}';
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _MethodOption(
+                              selected: _selectedMethodId == m.id,
+                              title: m.displayLabel,
+                              subtitle: subtitle,
+                              onTap: () {
+                                setState(() => _selectedMethodId = m.id);
+                                _recomputeFx();
+                              },
+                            ),
+                          );
+                        },
                       )
                     else ...[
                       _MethodOption(
