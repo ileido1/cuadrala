@@ -18,6 +18,7 @@ function makeRow(overrides: Partial<Parameters<typeof mapVenueListItemSV>[0]> = 
     createdAt: new Date('2026-01-01'),
     imageUrl: null,
     averageRating: 4.5,
+    openingHours: null,
     courts: [],
     ...overrides,
   };
@@ -61,5 +62,16 @@ describe('mapVenueListItemSV — sports[] derivation', () => {
     );
     expect(DTO.imageUrl).toBe('https://cdn.example.com/x.jpg');
     expect(DTO.averageRating).toBe(4.8);
+  });
+
+  it('propaga openingHours cuando está configurado', () => {
+    const OPENING_HOURS = { monday: { open: '08:00', close: '23:00' } };
+    const DTO = mapVenueListItemSV(makeRow({ openingHours: OPENING_HOURS }));
+    expect(DTO.openingHours).toEqual(OPENING_HOURS);
+  });
+
+  it('propaga openingHours: null cuando la sede no lo configuró', () => {
+    const DTO = mapVenueListItemSV(makeRow({ openingHours: null }));
+    expect(DTO.openingHours).toBeNull();
   });
 });
