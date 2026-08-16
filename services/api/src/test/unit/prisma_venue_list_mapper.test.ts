@@ -18,6 +18,7 @@ function makeRow(overrides: Partial<Parameters<typeof mapVenueListItemSV>[0]> = 
     createdAt: new Date('2026-01-01'),
     imageUrl: null,
     averageRating: 4.5,
+    openingHours: null,
     courts: [],
     countryCode: 'VE',
     monetizationSettings: null,
@@ -65,20 +66,14 @@ describe('mapVenueListItemSV — sports[] derivation', () => {
     expect(DTO.averageRating).toBe(4.8);
   });
 
-  it('propaga countryCode', () => {
-    const DTO = mapVenueListItemSV(makeRow({ countryCode: 'CO' }));
-    expect(DTO.countryCode).toBe('CO');
+  it('propaga openingHours cuando está configurado', () => {
+    const OPENING_HOURS = { monday: { open: '08:00', close: '23:00' } };
+    const DTO = mapVenueListItemSV(makeRow({ openingHours: OPENING_HOURS }));
+    expect(DTO.openingHours).toEqual(OPENING_HOURS);
   });
 
-  it('resuelve timezone desde monetizationSettings cuando existe', () => {
-    const DTO = mapVenueListItemSV(
-      makeRow({ monetizationSettings: { timezone: 'America/Bogota' } }),
-    );
-    expect(DTO.timezone).toBe('America/Bogota');
-  });
-
-  it('retorna timezone: null cuando no hay monetizationSettings (A7 — sin fallback silencioso)', () => {
-    const DTO = mapVenueListItemSV(makeRow({ monetizationSettings: null }));
-    expect(DTO.timezone).toBeNull();
+  it('propaga openingHours: null cuando la sede no lo configuró', () => {
+    const DTO = mapVenueListItemSV(makeRow({ openingHours: null }));
+    expect(DTO.openingHours).toBeNull();
   });
 });

@@ -10,23 +10,34 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_api.da
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournaments_list_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournaments_list_state.dart';
+import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
 
 class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
+class _MockVenuesRepository extends Mock implements VenuesRepository {}
 
 void main() {
   group('TournamentsListCubit', () {
     late _MockTournamentsRepository tournamentsRepository;
     late _MockCatalogRepository catalogRepository;
+    late _MockVenuesRepository venuesRepository;
 
     setUp(() {
       tournamentsRepository = _MockTournamentsRepository();
       catalogRepository = _MockCatalogRepository();
-      // Default: loading sports/categories returns empty (silent fail for tests)
+      venuesRepository = _MockVenuesRepository();
+      // Default: loading sports/categories/venues returns empty (silent fail for tests)
       when(() => catalogRepository.listSports())
           .thenAnswer((_) async => []);
       when(() => catalogRepository.listCategories(sportId: any(named: 'sportId')))
           .thenAnswer((_) async => []);
+      when(() => venuesRepository.listVenues(
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            near: any(named: 'near'),
+            radiusKm: any(named: 'radiusKm'),
+            sportType: any(named: 'sportType'),
+          )).thenAnswer((_) async => []);
     });
 
     final testPage = TournamentListPage(
@@ -57,6 +68,7 @@ void main() {
         return TournamentsListCubit(
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -81,6 +93,7 @@ void main() {
         return TournamentsListCubit(
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -120,6 +133,7 @@ void main() {
         return TournamentsListCubit(
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
         );
       },
       act: (cubit) async {
@@ -155,6 +169,7 @@ void main() {
         return TournamentsListCubit(
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
         );
       },
       act: (cubit) async {
@@ -192,6 +207,7 @@ void main() {
         return TournamentsListCubit(
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
         );
       },
       act: (cubit) async {
@@ -225,6 +241,7 @@ void main() {
         return TournamentsListCubit(
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
         );
       },
       act: (cubit) async {
