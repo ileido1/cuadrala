@@ -82,14 +82,13 @@ final class VenueBookingState extends Equatable {
         orElse: () => null,
       );
 
-  /// Price per player in cents: court.pricePerHourCents * (durationMinutes/60) / maxParticipants.
+  /// Costo total de la cancha para la duración seleccionada (en cents).
+  /// Calculado: pricePerHourCents × durationMinutes / 60.
+  /// Nota: no es "por persona" — ese reparto lo define quien crea la partida.
   int? get pricePerPlayerCents {
     final court = selectedCourt;
     if (court == null) return null;
-    final totalCents =
-        (court.pricePerHourCents * court.durationMinutes / 60).round();
-    if (maxParticipants == 0) return null;
-    return (totalCents / maxParticipants).round();
+    return (court.pricePerHourCents * court.durationMinutes / 60).round();
   }
 
   // ---------------------------------------------------------------------------

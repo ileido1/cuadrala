@@ -583,7 +583,7 @@ class VenueBookingStickyFooter extends StatelessWidget {
                       rates: exchangeRates,
                       effectiveDateIso: dateIso,
                     ),
-                    suffix: 'p/p',
+                    suffix: 'costo total',
                   ),
               ],
             ),
