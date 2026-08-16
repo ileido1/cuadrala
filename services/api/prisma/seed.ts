@@ -18,7 +18,7 @@ const POOL = new Pool({ connectionString: DATABASE_URL });
 const ADAPTER = new PrismaPg(POOL);
 const PRISMA = new PrismaClient({ adapter: ADAPTER });
 
-async function seedCatalog(): Promise<void> {
+async function seedCatalogSV(): Promise<void> {
   const SPORTS_TO_SEED: Array<{ code: string; name: string }> = [
     { code: 'PADEL', name: 'Pádel' },
     { code: 'TENNIS', name: 'Tenis' },
@@ -81,7 +81,7 @@ async function seedCatalog(): Promise<void> {
   );
 }
 
-async function seedFeeRule(): Promise<void> {
+async function seedFeeRuleSV(): Promise<void> {
   const EXISTING = await PRISMA.feeRule.findFirst({
     where: { scope: 'MATCH', isActive: true },
   });
@@ -103,13 +103,15 @@ async function seedFeeRule(): Promise<void> {
   console.log('[seed] FeeRule por defecto creada: MATCH, 5% (porcentaje).');
 }
 
-async function seedVenueOwner(): Promise<void> {
+async function seedVenueOwnerSV(): Promise<void> {
+  //? 1. Generar hash de contraseña
   const bcryptModule = await import('bcryptjs');
   const bcrypt = bcryptModule.default ?? bcryptModule;
   const PASSWORD_HASH = bcrypt.hashSync('password123', 10);
 
   console.log('[seed] Hash generado:', PASSWORD_HASH.substring(0, 30) + '...');
 
+  //? 2. Crear/actualizar usuario propietario
   const OWNER = await PRISMA.user.upsert({
     where: { email: 'owner@cuadrala.dev' },
     create: {
@@ -123,7 +125,7 @@ async function seedVenueOwner(): Promise<void> {
     },
   });
 
-  // Obtener primer venue
+  //? 3. Obtener sede seed
   const VENUE = await PRISMA.venue.findFirst({
     where: { placeId: 'seed:venue:club-cuadrala' },
     select: { id: true, name: true },
@@ -134,7 +136,7 @@ async function seedVenueOwner(): Promise<void> {
     return;
   }
 
-  // Asignar owner al venue y monedas de referencia (pricing = liquidación en seed dev).
+  //? 4. Asignar propietario a la sede con monedas
   const SETTLEMENT_CURRENCY = 'USD' as const;
   await PRISMA.venue.update({
     where: { id: VENUE.id },
@@ -145,7 +147,7 @@ async function seedVenueOwner(): Promise<void> {
     },
   });
 
-  // Crear VenueStaff con rol OWNER
+  //? 5. Crear rol VenueStaff OWNER
   await PRISMA.venueStaff.upsert({
     where: { venueId_userId: { venueId: VENUE.id, userId: OWNER.id } },
     create: { venueId: VENUE.id, userId: OWNER.id, role: 'OWNER' },
@@ -155,7 +157,7 @@ async function seedVenueOwner(): Promise<void> {
   console.log(`[seed] Owner creado: ${OWNER.email} / password123 (hash generado con bcrypt)`);
   console.log(`[seed] Asignado al venue: ${VENUE.name} (${VENUE.id})`);
 
-  // Crear payment methods para el venue (ids UUID fijos para desarrollo)
+  //? 6. Crear métodos de pago
   const PAYMENT_METHODS = [
     {
       id: 'a1000001-0001-4001-8001-000000000001',
@@ -220,7 +222,7 @@ async function seedVenueOwner(): Promise<void> {
 
   console.log(`[seed] Payment methods creados para ${VENUE.name}`);
 
-  // Crear exchange rates para Venezuela
+  //? 7. Crear tasas de cambio
   const EXCHANGE_RATES = [
     { countryCode: 'VE', currency: 'USD', rateToBs: 50.0000, source: 'dolarapi.com' },
     { countryCode: 'VE', currency: 'EUR', rateToBs: 55.0000, source: 'dolarapi.com' },
@@ -261,7 +263,7 @@ async function seedVenueOwner(): Promise<void> {
   console.log('[seed] Exchange rates creados: VE/USD @ 50 BS, VE/EUR @ 55 BS');
 }
 
-async function seedSportCategories(): Promise<void> {
+async function seedSportCategoriesSV(): Promise<void> {
   const RACKET_ORDINALS: Array<{
     slug: string;
     name: string;
@@ -292,6 +294,7 @@ async function seedSportCategories(): Promise<void> {
   const RACKET_CODES = ['PADEL', 'TENNIS', 'PICKLEBALL'];
   const TEAM_CODES = ['FOOTBALL5', 'BASKETBALL3X3', 'VOLLEY_BEACH'];
 
+  //? 1. Crear categorías de deporte de raqueta (ordinales 8va–1ra)
   for (const CODE of RACKET_CODES) {
     const SPORT = await PRISMA.sport.findUnique({ where: { code: CODE } });
     if (SPORT === null) continue;
@@ -316,6 +319,7 @@ async function seedSportCategories(): Promise<void> {
     }
   }
 
+  //? 2. Crear categorías de deporte de equipo (niveles: recreativo/intermedio/competitivo)
   for (const CODE of TEAM_CODES) {
     const SPORT = await PRISMA.sport.findUnique({ where: { code: CODE } });
     if (SPORT === null) continue;
@@ -343,7 +347,8 @@ async function seedSportCategories(): Promise<void> {
   console.log('[seed] Categorías por deporte: ordinales 8va–1ra (raqueta) y 3 tiers equipo.');
 }
 
-async function seedMatchLifecycle(): Promise<void> {
+async function seedMatchLifecycleSV(): Promise<void> {
+  //? 1. Cargar deporte PADEL y preset AMERICANO
   const SPORT = await PRISMA.sport.findUnique({ where: { code: 'PADEL' } });
   if (SPORT === null) {
     throw new Error('[seed] Falta el deporte PADEL (seedCatalog debió crearlo).');
@@ -357,6 +362,7 @@ async function seedMatchLifecycle(): Promise<void> {
     throw new Error('[seed] Falta el preset AMERICANO v1 para PADEL.');
   }
 
+  //? 2. Cargar categoría PADEL 4ta
   const CATEGORY = await PRISMA.category.findFirst({
     where: { sportId: SPORT.id, slug: '4ta' },
   });
@@ -364,6 +370,7 @@ async function seedMatchLifecycle(): Promise<void> {
     throw new Error('[seed] Falta categoría 4ta para PADEL (ejecuta seedSportCategories).');
   }
 
+  //? 3. Crear/actualizar usuarios seed (organizador + 3 jugadores)
   const USERS = await Promise.all(
     [
       { email: 'organizer+seed@cuadrala.dev', name: 'Organizador Seed' },
@@ -379,6 +386,7 @@ async function seedMatchLifecycle(): Promise<void> {
     ),
   );
 
+  //? 4. Crear perfiles de jugador
   await Promise.all(
     USERS.map(async (_u, _idx) =>
       PRISMA.playerProfile.upsert({
@@ -394,6 +402,7 @@ async function seedMatchLifecycle(): Promise<void> {
     ),
   );
 
+  //? 5. Crear categorías de usuario (userCategory, userSportCategory)
   await Promise.all(
     USERS.map(async (_u) => {
       await PRISMA.userCategory.upsert({
@@ -409,6 +418,7 @@ async function seedMatchLifecycle(): Promise<void> {
     }),
   );
 
+  //? 6. Definir sedes y canchas seed
   const SEED_VENUES: Array<{
     placeId: string;
     name: string;
@@ -551,7 +561,7 @@ async function seedMatchLifecycle(): Promise<void> {
             data: {
               venueId: _seeded.id,
               name: _courtName,
-              pricePerHourCents: 850000, // $8.500/hr en centavos
+              pricePerHourCents: 2000, // $20.00/hr en centavos
               capacity: '4v4',
               durationMinutes: 60,
             },
@@ -575,6 +585,7 @@ async function seedMatchLifecycle(): Promise<void> {
   const ORGANIZER = USERS[0]!;
   const PLAYERS = USERS.slice(0, 4);
 
+  //? 7. Crear partido
   const EXISTING_MATCH = await PRISMA.match.findFirst({
     where: {
       organizerUserId: ORGANIZER.id,
@@ -605,6 +616,7 @@ async function seedMatchLifecycle(): Promise<void> {
       select: { id: true },
     }));
 
+  //? 8. Agregar participantes al partido
   await Promise.all(
     PLAYERS.map(async (_u, _idx) =>
       PRISMA.matchParticipant.upsert({
@@ -708,11 +720,11 @@ async function seedMatchLifecycle(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await seedCatalog();
-  await seedSportCategories();
-  await seedFeeRule();
-  await seedVenueOwner();
-  await seedMatchLifecycle();
+  await seedCatalogSV();
+  await seedSportCategoriesSV();
+  await seedFeeRuleSV();
+  await seedVenueOwnerSV();
+  await seedMatchLifecycleSV();
 }
 
 void main()
