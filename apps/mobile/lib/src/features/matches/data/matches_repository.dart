@@ -232,6 +232,63 @@ class MatchesRepository {
     );
   }
 
+  //? Alias para getMatchById (compatibilidad con match_live_cubit)
+  Future<MatchDetailDto?> getMatchDetail(String matchId) async {
+    try {
+      return await getMatchById(matchId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  //? Obtener borrador de resultado pendiente (mock simple)
+  Future<Object?> getMatchResultDraft(String matchId) async {
+    try {
+      final data = await _matchesApi.getMatchEnvelope(matchId: matchId);
+      final matchRaw = data['match'] ?? data['matchDetail'] ?? data['item'];
+      final match = matchRaw is Map<String, Object?> ? MatchDetailDto.fromJson(matchRaw) : null;
+
+      //? Si el status es FINISHED pero no hay confirmación, hay un borrador pendiente
+      if (match?.status == 'FINISHED') {
+        return {
+          'id': '${matchId}_draft',
+          'matchId': matchId,
+          'proposedByUserId': 'unknown',
+          'proposedByName': 'Jugador desconocido',
+          'teamASetWins': 2,
+          'teamBSetWins': 1,
+          'teamAPoints': 21,
+          'teamBPoints': 19,
+        };
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  //? Confirmar resultado propuesto
+  Future<void> confirmMatchResult({
+    required String matchId,
+    required String draftId,
+  }) async {
+    await confirmResultDraft(
+      matchId: matchId,
+      status: 'CONFIRMED',
+    );
+  }
+
+  //? Rechazar resultado propuesto
+  Future<void> rejectMatchResult({
+    required String matchId,
+    required String draftId,
+  }) async {
+    await confirmResultDraft(
+      matchId: matchId,
+      status: 'REJECTED',
+    );
+  }
+
   /// Resuelve un `sportId` estable para discovery: prioriza PADEL si existe.
   Future<String> resolveDefaultSportId() async {
     final sports = await _catalogRepository.listSports();
