@@ -421,7 +421,7 @@ final class _InfoTilesRow extends StatelessWidget {
               label: 'Precio',
               child: hasPrice
                   ? Text(
-                      '${formatMoneyLabel(m.pricePerPlayerCents, matchDetailDisplayCurrency(m))} p/p',
+                      '${formatMoneyLabel((m.pricePerPlayerCents / m.maxParticipants).toInt(), matchDetailDisplayCurrency(m))} p/p',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -936,7 +936,7 @@ final class _Footer extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final m = loaded.match;
     final priceLabel = formatMoneyLabel(
-      m.pricePerPlayerCents,
+      (m.pricePerPlayerCents / m.maxParticipants).toInt(),
       matchDetailDisplayCurrency(m),
     );
 
