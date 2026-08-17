@@ -17,6 +17,15 @@ export class WithdrawTournamentRegistrationUseCase {
       throw new AppError('TORNEO_NO_ENCONTRADO', 'El torneo indicado no existe.', 404);
     }
 
+    //? El roster se bloquea desde IN_PROGRESS; retiros solo mientras DRAFT/OPEN
+    if (TOURNAMENT.status !== 'DRAFT' && TOURNAMENT.status !== 'OPEN') {
+      throw new AppError(
+        'TORNEO_CERRADO',
+        'El torneo no admite retiros de inscripción en su estado actual.',
+        409,
+      );
+    }
+
     await this._registrationRepository.disableByTournamentAndUserSV(
       _input.tournamentId,
       _input.userId,

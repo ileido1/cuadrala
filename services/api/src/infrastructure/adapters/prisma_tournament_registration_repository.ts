@@ -75,6 +75,17 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
     return ROWS.map(mapRowSV);
   }
 
+  async listByTournamentIdAndStatusSV(
+    _tournamentId: string,
+    _status: string,
+  ): Promise<TournamentRegistrationDTO[]> {
+    const ROWS = await PRISMA.tournamentRegistration.findMany({
+      where: { tournamentId: _tournamentId, status: _status as never },
+      orderBy: { createdAt: 'asc' },
+    });
+    return ROWS.map(mapRowSV);
+  }
+
   async countByTournamentIdSV(_tournamentId: string): Promise<number> {
     return PRISMA.tournamentRegistration.count({
       where: { tournamentId: _tournamentId, status: { not: 'WITHDRAWN' } },

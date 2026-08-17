@@ -19,6 +19,8 @@ export interface TournamentRegistrationRepository {
 
   listByTournamentIdSV(_tournamentId: string): Promise<TournamentRegistrationDTO[]>;
 
+  listByTournamentIdAndStatusSV(_tournamentId: string, _status: string): Promise<TournamentRegistrationDTO[]>;
+
   countByTournamentIdSV(_tournamentId: string): Promise<number>;
 
   disableByTournamentAndUserSV(_tournamentId: string, _userId: string): Promise<boolean>;
