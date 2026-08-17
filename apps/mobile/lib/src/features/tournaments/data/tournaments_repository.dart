@@ -1,6 +1,8 @@
 import '../../../core/failures/app_failure.dart';
+import '../../../core/network/api_json.dart';
 import 'models/create_tournament_request.dart';
 import 'models/create_tournament_response.dart';
+import 'models/tournament_invitation_dto.dart';
 import 'models/tournament_list_item_dto.dart';
 import 'models/tournament_list_page.dart';
 import 'models/tournament_preset_dto.dart';
@@ -158,6 +160,66 @@ class TournamentsRepository {
     await _tournamentsApi.withdrawRegistration(
       tournamentId: tournamentId,
       userId: userId,
+    );
+  }
+
+  Future<void> updateTournamentStatus({
+    required String tournamentId,
+    required String status,
+  }) async {
+    await _tournamentsApi.updateTournamentStatusEnvelope(
+      tournamentId: tournamentId,
+      body: {'status': status},
+    );
+  }
+
+  Future<List<TournamentInvitationDto>> listInvitations({
+    required String tournamentId,
+  }) async {
+    final json = await _tournamentsApi.listTournamentInvitationsEnvelope(
+      tournamentId: tournamentId,
+    );
+    final raw = json['data'];
+    if (raw is! List) {
+      throw const AppFailure(code: 'INVALID_RESPONSE', message: 'Respuesta inválida del servidor.');
+    }
+    return raw
+        .whereType<Map<String, Object?>>()
+        .map(TournamentInvitationDto.fromJson)
+        .toList();
+  }
+
+  Future<TournamentInvitationDto> inviteParticipant({
+    required String tournamentId,
+    required String userId,
+  }) async {
+    final data = await _tournamentsApi.createTournamentInvitationEnvelope(
+      tournamentId: tournamentId,
+      body: {'userId': userId},
+    );
+    return TournamentInvitationDto.fromJson(decodeEnvelopeDataMap(data));
+  }
+
+  Future<TournamentInvitationDto> respondToInvitation({
+    required String tournamentId,
+    required String invitationId,
+    required bool accept,
+  }) async {
+    final data = await _tournamentsApi.respondTournamentInvitationEnvelope(
+      tournamentId: tournamentId,
+      invitationId: invitationId,
+      body: {'action': accept ? 'ACCEPT' : 'REJECT'},
+    );
+    return TournamentInvitationDto.fromJson(decodeEnvelopeDataMap(data));
+  }
+
+  Future<void> cancelInvitation({
+    required String tournamentId,
+    required String invitationId,
+  }) async {
+    await _tournamentsApi.cancelTournamentInvitation(
+      tournamentId: tournamentId,
+      invitationId: invitationId,
     );
   }
 }

@@ -4,7 +4,9 @@ import '../../../../core/failures/app_failure.dart';
 import '../../data/tournaments_repository.dart';
 import 'tournament_scoreboard_state.dart';
 
-final class TournamentScoreboardCubit extends Cubit<TournamentScoreboardState> {
+// Not `final`: widget tests mock this cubit via `MockCubit implements
+// TournamentScoreboardCubit` (see tournament_detail_screen_test.dart).
+class TournamentScoreboardCubit extends Cubit<TournamentScoreboardState> {
   TournamentScoreboardCubit({
     required TournamentsRepository tournamentsRepository,
     required String tournamentId,

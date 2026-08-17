@@ -67,6 +67,31 @@ abstract interface class TournamentsApi {
     required String tournamentId,
     required String userId,
   });
+
+  Future<Map<String, Object?>> updateTournamentStatusEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  });
+
+  Future<Map<String, Object?>> listTournamentInvitationsEnvelope({
+    required String tournamentId,
+  });
+
+  Future<Map<String, Object?>> createTournamentInvitationEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  });
+
+  Future<Map<String, Object?>> respondTournamentInvitationEnvelope({
+    required String tournamentId,
+    required String invitationId,
+    required Map<String, Object?> body,
+  });
+
+  Future<void> cancelTournamentInvitation({
+    required String tournamentId,
+    required String invitationId,
+  });
 }
 
 final class DioTournamentsApi implements TournamentsApi {
@@ -176,6 +201,57 @@ final class DioTournamentsApi implements TournamentsApi {
   }) async {
     await _apiClient.postNoContent(
       '/api/v1/tournaments/$tournamentId/registrations/$userId/withdraw',
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> updateTournamentStatusEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  }) {
+    return _apiClient.patchJson(
+      '/api/v1/tournaments/$tournamentId/status',
+      body: body,
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> listTournamentInvitationsEnvelope({
+    required String tournamentId,
+  }) {
+    return _apiClient.getJson('/api/v1/tournaments/$tournamentId/invitations');
+  }
+
+  @override
+  Future<Map<String, Object?>> createTournamentInvitationEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  }) {
+    return _apiClient.postJson(
+      '/api/v1/tournaments/$tournamentId/invitations',
+      body: body,
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> respondTournamentInvitationEnvelope({
+    required String tournamentId,
+    required String invitationId,
+    required Map<String, Object?> body,
+  }) {
+    return _apiClient.postJson(
+      '/api/v1/tournaments/$tournamentId/invitations/$invitationId/respond',
+      body: body,
+    );
+  }
+
+  @override
+  Future<void> cancelTournamentInvitation({
+    required String tournamentId,
+    required String invitationId,
+  }) async {
+    await _apiClient.deleteNoContent(
+      '/api/v1/tournaments/$tournamentId/invitations/$invitationId',
     );
   }
 }

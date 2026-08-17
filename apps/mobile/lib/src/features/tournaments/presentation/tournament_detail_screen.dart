@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/failures/app_failure.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
+import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';
 import '../data/models/tournament_schedule_dto.dart';
 import '../data/models/tournament_scoreboard_dto.dart';
+import '../data/tournaments_repository.dart';
 import 'cubit/tournament_registrations_cubit.dart';
 import 'cubit/tournament_registrations_state.dart';
 import 'cubit/tournament_schedule_cubit.dart';
@@ -42,13 +45,16 @@ final class TournamentDetailScreen extends StatelessWidget {
           create: (_) => getIt<TournamentRegistrationsCubit>(param1: tournamentId)..load(),
         ),
       ],
-      child: _TournamentDetailBody(tournamentId: tournamentId, tournament: tournament),
+      child: TournamentDetailBody(tournamentId: tournamentId, tournament: tournament),
     );
   }
 }
 
-final class _TournamentDetailBody extends StatelessWidget {
-  const _TournamentDetailBody({required this.tournamentId, required this.tournament});
+/// Body of [TournamentDetailScreen], separated so it can be pumped directly
+/// in widget tests against mocked cubits (see `tournament_detail_screen_test.dart`).
+@visibleForTesting
+final class TournamentDetailBody extends StatelessWidget {
+  const TournamentDetailBody({super.key, required this.tournamentId, required this.tournament});
 
   final String tournamentId;
   final TournamentListItemDto? tournament;
@@ -57,9 +63,15 @@ final class _TournamentDetailBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd MMM yyyy', 'es_ES');
 
-    return Scaffold(
-      key: const Key('tournament.detail'),
-      body: NestedScrollView(
+    // A `DefaultTabController` is required by the `TabBar`/`TabBarView` pair
+    // below; without it, mounting this screen throws
+    // "No TabController for TabBarView" (pre-existing gap fixed here since
+    // it blocks every tab, including the invitations/schedule work below).
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        key: const Key('tournament.detail'),
+        body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             // Header image + title + enroll
@@ -158,6 +170,19 @@ final class _TournamentDetailBody extends StatelessWidget {
               ),
             ),
 
+            // Organizer-only status transition control
+            if (tournament?.organizerUserId != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: OrganizerStatusControl(
+                    tournamentId: tournamentId,
+                    organizerUserId: tournament!.organizerUserId!,
+                    currentStatus: tournament!.status,
+                  ),
+                ),
+              ),
+
             // Tab bar
             SliverPersistentHeader(
               pinned: true,
@@ -183,6 +208,7 @@ final class _TournamentDetailBody extends StatelessWidget {
             _RegistrationsTab(tournamentId: tournamentId),
           ],
         ),
+      ),
       ),
     );
   }
@@ -341,6 +367,139 @@ final class _EnrollButton extends StatelessWidget {
   }
 }
 
+/// Legal next statuses for the current one, mirroring the backend's
+/// `tournament_status_machine.ts` (table-driven edges: DRAFT→OPEN,
+/// OPEN→IN_PROGRESS, IN_PROGRESS→COMPLETED, {DRAFT,OPEN}→CANCELLED).
+List<String> _legalNextStatuses(String currentStatus) {
+  switch (currentStatus.toUpperCase()) {
+    case 'DRAFT':
+      return const ['OPEN', 'CANCELLED'];
+    case 'OPEN':
+      return const ['IN_PROGRESS', 'CANCELLED'];
+    case 'IN_PROGRESS':
+      return const ['COMPLETED'];
+    default:
+      return const [];
+  }
+}
+
+String _statusActionLabel(String status) {
+  switch (status) {
+    case 'OPEN':
+      return 'Abrir inscripciones';
+    case 'IN_PROGRESS':
+      return 'Iniciar torneo';
+    case 'COMPLETED':
+      return 'Finalizar torneo';
+    case 'CANCELLED':
+      return 'Cancelar torneo';
+    default:
+      return status;
+  }
+}
+
+/// Organizer-only status-transition control. Only the tournament organizer
+/// (`organizerUserId == currentUserId`) sees this; the backend enforces the
+/// same guard independently, so this is a UX affordance, not the source of
+/// authorization truth.
+///
+/// Public (`@visibleForTesting`) so widget tests can pump it directly without
+/// dragging in the rest of [TournamentDetailBody] (see
+/// `tournament_detail_screen_test.dart`).
+@visibleForTesting
+final class OrganizerStatusControl extends StatefulWidget {
+  const OrganizerStatusControl({
+    super.key,
+    required this.tournamentId,
+    required this.organizerUserId,
+    required this.currentStatus,
+  });
+
+  final String tournamentId;
+  final String organizerUserId;
+  final String currentStatus;
+
+  @override
+  State<OrganizerStatusControl> createState() => _OrganizerStatusControlState();
+}
+
+final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
+  bool _submitting = false;
+  String? _error;
+
+  Future<void> _submitSV(String nextStatus) async {
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await getIt<TournamentsRepository>().updateTournamentStatus(
+        tournamentId: widget.tournamentId,
+        status: nextStatus,
+      );
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      if (context.mounted) {
+        context.read<TournamentScheduleCubit>().load();
+        context.read<TournamentRegistrationsCubit>().load();
+      }
+    } on AppFailure catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = 'No se pudo cambiar el estado del torneo.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+      builder: (context, state) {
+        final cubit = context.read<TournamentRegistrationsCubit>();
+        if (cubit.currentUserId == null || cubit.currentUserId != widget.organizerUserId) {
+          return const SizedBox.shrink();
+        }
+
+        final nextStatuses = _legalNextStatuses(widget.currentStatus);
+        if (nextStatuses.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          key: const Key('tournament.organizerStatusControl'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_error != null) ...[
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+            ],
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final next in nextStatuses)
+                  OutlinedButton(
+                    onPressed: _submitting ? null : () => _submitSV(next),
+                    child: Text(_statusActionLabel(next)),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 final class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   _TabBarDelegate(this._tabBar);
   final TabBar _tabBar;
@@ -480,6 +639,10 @@ final class _RegistrationsTab extends StatelessWidget {
 
           final loaded = state as TournamentRegistrationsLoaded;
           final activeItems = loaded.items.where((r) => r.status != 'WITHDRAWN').toList();
+          final cubit = context.read<TournamentRegistrationsCubit>();
+          final currentUserId = cubit.currentUserId;
+          final myPendingInvite =
+              currentUserId != null ? loaded.pendingInvitationFor(currentUserId) : null;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -495,6 +658,30 @@ final class _RegistrationsTab extends StatelessWidget {
                 Text(
                   loaded.registerError!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              if (loaded.invitationError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  loaded.invitationError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              if (myPendingInvite != null) ...[
+                const SizedBox(height: 12),
+                _PendingInviteBanner(
+                  invitation: myPendingInvite,
+                  responding: loaded.responding,
+                  onAccept: () => cubit.acceptInvitation(myPendingInvite.id),
+                  onReject: () => cubit.rejectInvitation(myPendingInvite.id),
+                ),
+              ],
+              if (loaded.canManageInvitations) ...[
+                const SizedBox(height: 12),
+                _OrganizerInvitationsSection(
+                  tournamentId: tournamentId,
+                  invitations: loaded.invitations.where((i) => i.isPending).toList(),
+                  busy: loaded.inviting,
                 ),
               ],
               const SizedBox(height: 12),
@@ -557,6 +744,172 @@ final class _RegistrationsTab extends StatelessWidget {
   }
 }
 
+/// Banner shown to a player with a PENDING invitation for this tournament,
+/// with accept/reject actions (spec R4: "Player sees pending invite").
+final class _PendingInviteBanner extends StatelessWidget {
+  const _PendingInviteBanner({
+    required this.invitation,
+    required this.responding,
+    required this.onAccept,
+    required this.onReject,
+  });
+
+  final TournamentInvitationDto invitation;
+  final bool responding;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('tournament.pendingInviteBanner'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tienes una invitación pendiente para este torneo.',
+            style: TextStyle(fontWeight: FontWeight.w800, color: scheme.onPrimaryContainer),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              FilledButton(
+                onPressed: responding ? null : onAccept,
+                child: const Text('Aceptar'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: responding ? null : onReject,
+                child: const Text('Rechazar'),
+              ),
+              if (responding) ...[
+                const SizedBox(width: 12),
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Organizer-only invitation management: send a new invite and cancel
+/// pending ones. Only rendered when the invitations read succeeded with
+/// organizer privileges (`TournamentRegistrationsLoaded.canManageInvitations`).
+final class _OrganizerInvitationsSection extends StatefulWidget {
+  const _OrganizerInvitationsSection({
+    required this.tournamentId,
+    required this.invitations,
+    required this.busy,
+  });
+
+  final String tournamentId;
+  final List<TournamentInvitationDto> invitations;
+  final bool busy;
+
+  @override
+  State<_OrganizerInvitationsSection> createState() => _OrganizerInvitationsSectionState();
+}
+
+final class _OrganizerInvitationsSectionState extends State<_OrganizerInvitationsSection> {
+  final _userIdController = TextEditingController();
+
+  @override
+  void dispose() {
+    _userIdController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final cubit = context.read<TournamentRegistrationsCubit>();
+
+    return Container(
+      key: const Key('tournament.organizerInvitations'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Invitar jugador',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _userIdController,
+                  decoration: const InputDecoration(
+                    hintText: 'ID de usuario a invitar',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: widget.busy
+                    ? null
+                    : () {
+                        final userId = _userIdController.text.trim();
+                        if (userId.isEmpty) return;
+                        cubit.invite(userId);
+                        _userIdController.clear();
+                      },
+                child: const Text('Invitar'),
+              ),
+            ],
+          ),
+          if (widget.invitations.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Invitaciones pendientes',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            for (final invitation in widget.invitations)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(invitation.invitedUserId)),
+                    TextButton(
+                      onPressed:
+                          widget.busy ? null : () => cubit.cancelInvitation(invitation.id),
+                      child: const Text('Cancelar'),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 final class _ScheduleList extends StatelessWidget {
   const _ScheduleList({required this.schedule});
 
@@ -585,34 +938,63 @@ final class _ScheduleList extends StatelessWidget {
             )
           else
             ...round.matches.map(
-              (m) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHighest,
+              (m) {
+                final canNavigateToLive = m.matchId != null;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: scheme.outlineVariant),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          m.label.isEmpty ? 'Partido' : m.label,
-                          style: const TextStyle(fontWeight: FontWeight.w900),
-                        ),
+                    onTap: canNavigateToLive
+                        ? () => context.push(Routes.matchLive(m.matchId!))
+                        : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: scheme.outlineVariant),
                       ),
-                      Text(
-                        m.status,
-                        style: TextStyle(
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  m.label.isEmpty ? 'Partido' : m.label,
+                                  style: const TextStyle(fontWeight: FontWeight.w900),
+                                ),
+                                if (m.scheduledAt != null || m.courtName != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    [
+                                      if (m.scheduledAt != null)
+                                        DateFormat('dd MMM HH:mm', 'es_ES').format(m.scheduledAt!),
+                                      if (m.courtName != null) m.courtName!,
+                                    ].join(' · '),
+                                    style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Text(
+                            m.status,
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           const SizedBox(height: 16),
         ],

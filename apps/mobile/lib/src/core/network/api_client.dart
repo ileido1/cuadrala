@@ -104,6 +104,22 @@ final class ApiClient {
     }
   }
 
+  Future<void> deleteNoContent(
+    String path, {
+    Map<String, Object?>? queryParameters,
+    Map<String, Object?>? headers,
+  }) async {
+    try {
+      await _dio.delete<Object?>(
+        path,
+        queryParameters: queryParameters,
+        options: Options(headers: headers),
+      );
+    } catch (e) {
+      throw _failureMapper.fromException(e);
+    }
+  }
+
   Future<Map<String, Object?>> getEnvelopeDataMap(
     String path, {
     Map<String, Object?>? queryParameters,
