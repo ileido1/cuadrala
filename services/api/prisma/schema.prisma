@@ -312,12 +312,15 @@ model User {
   venueStaffRoles             VenueStaff[]
   ownedVenue                  Venue?
 
-  categories       UserCategory[]
-  sportCategories  UserSportCategory[]
-  playerProfile    PlayerProfile?
-  availability     UserAvailability[]
-  location         UserLocation?
-  organizedMatches Match[]            @relation("MatchOrganizer")
+  categories           UserCategory[]
+  sportCategories      UserSportCategory[]
+  playerProfile        PlayerProfile?
+  availability         UserAvailability[]
+  location             UserLocation?
+  organizedMatches     Match[]            @relation("MatchOrganizer")
+  organizedTournaments Tournament[]       @relation("TournamentOrganizer")
+  invitationsReceived  TournamentInvitation[] @relation("TournamentInvitee")
+  invitationsCreated   TournamentInvitation[] @relation("TournamentInviter")
 }
 
 model RefreshToken {
@@ -550,6 +553,7 @@ model Venue {
   venuePaymentMethods  VenuePaymentMethod[]
   venueFeeRules        VenueFeeRule[]
   monetizationSettings VenueMonetizationSettings?
+  tournaments          Tournament[]
 
   @@index([latitude, longitude])
 }
@@ -629,10 +633,17 @@ model Tournament {
   presetSchemaVersion Int                    @default(1)
   status              TournamentStatus       @default(DRAFT)
   startsAt            DateTime?
+  /// Usuario organizador del torneo (nullable para compatibilidad hacia atrás). Habilita los guards R1.
+  organizerUserId     String?
+  organizer           User?                  @relation("TournamentOrganizer", fields: [organizerUserId], references: [id], onDelete: SetNull)
+  /// Sede asociada al torneo (nullable; habilita fallback de autorización vía venue-staff).
+  venueId             String?
+  venue               Venue?                 @relation(fields: [venueId], references: [id], onDelete: SetNull)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
   registrations     TournamentRegistration[]
+  invitations       TournamentInvitation[]
   matches           Match[]
   americanoSchedule TournamentAmericanoSchedule?
   schedule          TournamentSchedule?
@@ -640,6 +651,8 @@ model Tournament {
 
   @@index([sportId])
   @@index([formatPresetId])
+  @@index([organizerUserId])
+  @@index([venueId])
 }
 
 /// Schedule genérico por torneo (MVP: reutiliza payload JSON).
@@ -684,6 +697,33 @@ model TournamentRegistration {
   createdAt    DateTime           @default(now())
 
   @@unique([tournamentId, userId])
+  @@index([tournamentId, status])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+/// Invitación explícita de un organizador a un jugador (Slice B). Separada de
+/// TournamentRegistration: PENDING de registro = autoinscripción esperando confirmación
+/// del organizador; PENDING de invitación = invitación esperando respuesta del jugador.
+model TournamentInvitation {
+  id              String            @id @default(uuid())
+  tournamentId    String
+  tournament      Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  invitedUserId   String
+  invitedUser     User              @relation("TournamentInvitee", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdBy       User              @relation("TournamentInviter", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  status          InvitationStatus  @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([tournamentId, invitedUserId])
+  @@index([invitedUserId, status])
 }
 
 model Match {

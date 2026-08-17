@@ -5,11 +5,13 @@ import {
   postGenerateTournamentScheduleCON,
 } from '../controllers/tournament_schedule.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 export const TOURNAMENT_SCHEDULE_ROUTER = Router();
 
 TOURNAMENT_SCHEDULE_ROUTER.post(
   '/tournaments/:tournamentId/schedule\\:generate',
+  requireAuth,
   asyncHandler(postGenerateTournamentScheduleCON),
 );
 

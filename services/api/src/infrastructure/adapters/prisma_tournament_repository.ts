@@ -8,6 +8,7 @@ import { PRISMA } from '../prisma_client.js';
 export class PrismaTournamentRepository implements TournamentRepository {
   async findByIdSV(_id: string): Promise<{
     id: string;
+    name: string;
     sportId: string;
     categoryId: string;
     formatPresetId: string;
@@ -15,6 +16,8 @@ export class PrismaTournamentRepository implements TournamentRepository {
     formatParameters: unknown | null;
     status: string;
     startsAt: Date | null;
+    organizerUserId: string | null;
+    venueId: string | null;
     createdAt: Date;
     updatedAt: Date;
   } | null> {
@@ -22,6 +25,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
     if (ROW === null) return null;
     return {
       id: ROW.id,
+      name: ROW.name,
       sportId: ROW.sportId,
       categoryId: ROW.categoryId,
       formatPresetId: ROW.formatPresetId,
@@ -29,6 +33,8 @@ export class PrismaTournamentRepository implements TournamentRepository {
       formatParameters: (ROW.formatParameters as unknown) ?? null,
       status: ROW.status,
       startsAt: ROW.startsAt,
+      organizerUserId: ROW.organizerUserId,
+      venueId: ROW.venueId,
       createdAt: ROW.createdAt,
       updatedAt: ROW.updatedAt,
     };

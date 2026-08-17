@@ -17,6 +17,15 @@ export class RegisterTournamentParticipantUseCase {
       throw new AppError('TORNEO_NO_ENCONTRADO', 'El torneo indicado no existe.', 404);
     }
 
+    //? Autoinscripción solo permitida mientras el torneo está en DRAFT (MVP).
+    if (TOURNAMENT.status !== 'DRAFT') {
+      throw new AppError(
+        'TORNEO_CERRADO',
+        'El torneo no admite nuevas inscripciones en su estado actual.',
+        409,
+      );
+    }
+
     const RESULT = await this._registrationRepository.upsertSV({
       tournamentId: _input.tournamentId,
       userId: _input.userId,
