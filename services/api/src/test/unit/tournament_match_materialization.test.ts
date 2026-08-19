@@ -22,10 +22,10 @@ describe('buildMaterializedMatchPlansSV', () => {
         roundNumber: 1,
         matchNumber: 1,
         participants: [
-          { userId: 'user-a', teamLabel: 'A' },
-          { userId: 'user-b', teamLabel: 'A' },
-          { userId: 'user-c', teamLabel: 'B' },
-          { userId: 'user-d', teamLabel: 'B' },
+          { participantRef: 'user-a', teamLabel: 'A' },
+          { participantRef: 'user-b', teamLabel: 'A' },
+          { participantRef: 'user-c', teamLabel: 'B' },
+          { participantRef: 'user-d', teamLabel: 'B' },
         ],
       },
     ]);
@@ -46,16 +46,16 @@ describe('buildMaterializedMatchPlansSV', () => {
         roundNumber: 1,
         matchNumber: 1,
         participants: [
-          { userId: 'user-a', teamLabel: null },
-          { userId: 'user-b', teamLabel: null },
+          { participantRef: 'user-a', teamLabel: null },
+          { participantRef: 'user-b', teamLabel: null },
         ],
       },
       {
         roundNumber: 2,
         matchNumber: 1,
         participants: [
-          { userId: 'user-a', teamLabel: null },
-          { userId: 'user-c', teamLabel: null },
+          { participantRef: 'user-a', teamLabel: null },
+          { participantRef: 'user-c', teamLabel: null },
         ],
       },
     ]);
@@ -89,8 +89,8 @@ describe('buildMaterializedMatchPlansSV', () => {
         roundNumber: 1,
         matchNumber: 1,
         participants: [
-          { userId: 'user-a', teamLabel: null },
-          { userId: 'user-b', teamLabel: null },
+          { participantRef: 'user-a', teamLabel: null },
+          { participantRef: 'user-b', teamLabel: null },
         ],
       },
     ]);

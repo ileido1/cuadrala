@@ -5,6 +5,7 @@ import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { PrismaTournamentMatchMaterializationRepository } from '../../infrastructure/adapters/prisma_tournament_match_materialization_repository.js';
+import { remapScheduleTokensSV } from '../../domain/tournament/tournament_schedule_token_migration.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -203,8 +204,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
             scheduledAt: null,
             courtId: null,
             participants: [
-              { userId: organizerUserId, teamLabel: 'A' },
-              { userId: organizerUserId, teamLabel: 'B' },
+              { userId: organizerUserId, tournamentRegistrationId: 'replay-registration-a', teamLabel: 'A' },
+              { userId: organizerUserId, tournamentRegistrationId: 'replay-registration-b', teamLabel: 'B' },
             ],
           },
         ],
@@ -215,6 +216,171 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       const COUNT_AFTER_REPLAY = await PRISMA.match.count({ where: { tournamentId: TOURNAMENT.id } });
       expect(COUNT_AFTER_REPLAY).toBe(3);
+    });
+
+    async function createGuestRegistrationSV(_tournamentId: string, _guestName: string) {
+      const REG = await PRISMA.tournamentRegistration.create({
+        data: {
+          tournamentId: _tournamentId,
+          registrationType: 'GUEST' as never,
+          guestName: _guestName,
+          registeredByUserId: organizerUserId,
+          status: 'CONFIRMED',
+        },
+      });
+      return REG.id;
+    }
+
+    it('materializes matches with mixed auth+guest registrationId tokens: guest rows get userId=null + tournamentRegistrationId set (Slice 1: tournament-guest-registration)', async () => {
+      const TOURNAMENT = await PRISMA.tournament.create({
+        data: {
+          name: `Torneo Guest Materialize ${Date.now()}`,
+          categoryId,
+          sportId,
+          formatPresetId: presetAmericanoId,
+          organizerUserId,
+          status: 'DRAFT',
+        },
+      });
+
+      const AUTH_A = await createConfirmedPlayerSV('guest-mat-auth-a', TOURNAMENT.id);
+      const AUTH_B = await createConfirmedPlayerSV('guest-mat-auth-b', TOURNAMENT.id);
+      await createGuestRegistrationSV(TOURNAMENT.id, 'Carlos Invitado');
+      await createGuestRegistrationSV(TOURNAMENT.id, 'Marta Invitada');
+
+      await request(APP)
+        .patch(`/api/v1/tournaments/${TOURNAMENT.id}/status`)
+        .send({ status: 'OPEN' })
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+
+      const GENERATE_RES = await request(APP)
+        .post(`/api/v1/tournaments/${TOURNAMENT.id}/schedule:generate`)
+        .send({})
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+      expect(GENERATE_RES.status).toBe(201);
+
+      const IN_PROGRESS_RES = await request(APP)
+        .patch(`/api/v1/tournaments/${TOURNAMENT.id}/status`)
+        .send({ status: 'IN_PROGRESS' })
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+      expect(IN_PROGRESS_RES.status).toBe(200);
+
+      const MATCHES = await PRISMA.match.findMany({
+        where: { tournamentId: TOURNAMENT.id },
+        include: { participants: true },
+      });
+      expect(MATCHES.length).toBeGreaterThan(0);
+
+      const ALL_PARTICIPANTS = MATCHES.flatMap((_m) => _m.participants);
+      expect(ALL_PARTICIPANTS.length).toBeGreaterThan(0);
+
+      //? No token queda sin resolver: toda fila tiene tournamentRegistrationId (auth o guest).
+      for (const PARTICIPANT of ALL_PARTICIPANTS) {
+        expect(PARTICIPANT.tournamentRegistrationId).not.toBeNull();
+      }
+
+      const AUTH_PARTICIPANTS = ALL_PARTICIPANTS.filter((_p) => _p.userId !== null);
+      const GUEST_PARTICIPANTS = ALL_PARTICIPANTS.filter((_p) => _p.userId === null);
+      expect(AUTH_PARTICIPANTS.length).toBeGreaterThan(0);
+      expect(GUEST_PARTICIPANTS.length).toBeGreaterThan(0);
+      expect(AUTH_PARTICIPANTS.every((_p) => [AUTH_A, AUTH_B].includes(_p.userId as string))).toBe(true);
+    });
+
+    it('responds 409 CALENDARIO_OBSOLETO when materializing a stale pre-Slice-1 schedule (userId tokens, not registrationId)', async () => {
+      const TOURNAMENT = await PRISMA.tournament.create({
+        data: {
+          name: `Torneo Stale Schedule ${Date.now()}`,
+          categoryId,
+          sportId,
+          formatPresetId: presetAmericanoId,
+          organizerUserId,
+          status: 'DRAFT',
+        },
+      });
+
+      const STALE_A = await createConfirmedPlayerSV('stale-a', TOURNAMENT.id);
+      const STALE_B = await createConfirmedPlayerSV('stale-b', TOURNAMENT.id);
+      const STALE_C = await createConfirmedPlayerSV('stale-c', TOURNAMENT.id);
+      const STALE_D = await createConfirmedPlayerSV('stale-d', TOURNAMENT.id);
+
+      await request(APP)
+        .patch(`/api/v1/tournaments/${TOURNAMENT.id}/status`)
+        .send({ status: 'OPEN' })
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+
+      //? Simula un TournamentSchedule generado antes de Slice 1 (tournament-guest-registration):
+      //? el payload referencia `userId` directamente, no `TournamentRegistration.id`.
+      await PRISMA.tournamentSchedule.create({
+        data: {
+          tournamentId: TOURNAMENT.id,
+          formatCode: 'AMERICANO',
+          scheduleKey: `americano:v1:${[STALE_A, STALE_B, STALE_C, STALE_D].sort().join(',')}`,
+          payload: {
+            rounds: [
+              {
+                roundNumber: 1,
+                courts: [{ courtNumber: 1, teamA: [STALE_A, STALE_B], teamB: [STALE_C, STALE_D] }],
+              },
+            ],
+          },
+        },
+      });
+
+      const IN_PROGRESS_RES = await request(APP)
+        .patch(`/api/v1/tournaments/${TOURNAMENT.id}/status`)
+        .send({ status: 'IN_PROGRESS' })
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+
+      expect(IN_PROGRESS_RES.status).toBe(409);
+      expect(IN_PROGRESS_RES.body.code).toBe('CALENDARIO_OBSOLETO');
+
+      const MATCH_COUNT = await PRISMA.match.count({ where: { tournamentId: TOURNAMENT.id } });
+      expect(MATCH_COUNT).toBe(0);
+      const TOURNAMENT_AFTER = await PRISMA.tournament.findUnique({ where: { id: TOURNAMENT.id } });
+      expect(TOURNAMENT_AFTER?.status).toBe('OPEN');
+
+      //? Re-disparar `schedule:generate` NO es la vía de recuperación: el scheduleKey derivado
+      //? del roster actual (tokens registrationId) difiere del legado (tokens userId) persistido
+      //? en la misma fila `TournamentSchedule` (única por torneo), así que
+      //? `createOrValidateIdempotencySV` responde 409 `SCHEDULE_CONFLICT` en vez de sobrescribir.
+      const REGENERATE_ATTEMPT_RES = await request(APP)
+        .post(`/api/v1/tournaments/${TOURNAMENT.id}/schedule:generate`)
+        .send({})
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+      expect(REGENERATE_ATTEMPT_RES.status).toBe(409);
+      expect(REGENERATE_ATTEMPT_RES.body.code).toBe('SCHEDULE_CONFLICT');
+
+      //? La vía de recuperación real es la migración de datos (`scripts/migrate-stale-tournament-schedules.ts`,
+      //? locked decision: "auto-migration script + 409 fallback"): convierte los tokens `userId`
+      //? del payload legado a `registrationId` in place, usando la misma función de dominio pura
+      //? (`remapScheduleTokensSV`) que el script ejecuta contra la base real.
+      const STALE_SCHEDULE = await PRISMA.tournamentSchedule.findUniqueOrThrow({
+        where: { tournamentId: TOURNAMENT.id },
+      });
+      const REGISTRATIONS = await PRISMA.tournamentRegistration.findMany({
+        where: { tournamentId: TOURNAMENT.id },
+        select: { id: true, userId: true },
+      });
+      const TOKEN_MAP = new Map(
+        REGISTRATIONS.filter((_r) => _r.userId !== null).map((_r) => [_r.userId as string, _r.id]),
+      );
+      await PRISMA.tournamentSchedule.update({
+        where: { id: STALE_SCHEDULE.id },
+        data: { payload: remapScheduleTokensSV(STALE_SCHEDULE.payload, TOKEN_MAP) as never },
+      });
+
+      const RETRY_IN_PROGRESS_RES = await request(APP)
+        .patch(`/api/v1/tournaments/${TOURNAMENT.id}/status`)
+        .send({ status: 'IN_PROGRESS' })
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+      expect(RETRY_IN_PROGRESS_RES.status).toBe(200);
     });
   },
 );

@@ -49,12 +49,15 @@ export class GenerateTournamentScheduleUseCase {
       );
     }
 
-    //? 3. Los participantes se derivan de las inscripciones CONFIRMED; se ignora cualquier lista enviada por el cliente
+    //? 3. Los participantes se derivan de las inscripciones CONFIRMED; se ignora cualquier lista enviada por el cliente.
+    //? El token de cada participante es `registration.id`, no `userId`: desde Slice 1
+    //? (tournament-guest-registration) las inscripciones GUEST no tienen `userId`, así que el
+    //? calendario debe referenciar la inscripción (resuelta luego en materialización), no al usuario.
     const CONFIRMED_REGISTRATIONS = await this._tournamentRegistrationRepository.listByTournamentIdAndStatusSV(
       TOURNAMENT.id,
       'CONFIRMED',
     );
-    const PARTICIPANT_USER_IDS = CONFIRMED_REGISTRATIONS.map((_r) => _r.userId);
+    const PARTICIPANT_REGISTRATION_IDS = CONFIRMED_REGISTRATIONS.map((_r) => _r.id);
 
     const PRESET = await this._formatPresetRepository.findByIdSV(TOURNAMENT.formatPresetId);
     if (PRESET === null) {

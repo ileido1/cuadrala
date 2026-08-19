@@ -61,7 +61,10 @@ export class PrismaTournamentMatchMaterializationRepository
             } as never,
             participants: {
               create: PLAN.participants.map((_p) => ({
-                userId: _p.userId,
+                //? Slice 1 (tournament-guest-registration): userId es nulo para participantes GUEST;
+                //? tournamentRegistrationId siempre identifica la inscripción de origen.
+                ...(_p.userId !== null ? { userId: _p.userId } : {}),
+                tournamentRegistrationId: _p.tournamentRegistrationId,
                 ...(_p.teamLabel !== null ? { teamLabel: _p.teamLabel } : {}),
               })),
             },

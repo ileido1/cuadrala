@@ -3,7 +3,11 @@ export type MatchMaterializationPlanDTO = {
   matchNumber: number;
   scheduledAt: Date | null;
   courtId: string | null;
-  participants: Array<{ userId: string; teamLabel: string | null }>;
+  /**
+   * `userId` es nulo para participantes GUEST (Slice 1: tournament-guest-registration).
+   * `tournamentRegistrationId` siempre identifica la inscripción de origen (AUTHENTICATED o GUEST).
+   */
+  participants: Array<{ userId: string | null; tournamentRegistrationId: string; teamLabel: string | null }>;
 };
 
 export interface TournamentMatchMaterializationRepository {

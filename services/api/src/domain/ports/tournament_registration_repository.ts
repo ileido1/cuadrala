@@ -1,7 +1,8 @@
 export type TournamentRegistrationDTO = {
   id: string;
   tournamentId: string;
-  userId: string;
+  /** Nulo para inscripciones GUEST (Slice 1: tournament-guest-registration). */
+  userId: string | null;
   status: string;
   createdAt: Date;
 };

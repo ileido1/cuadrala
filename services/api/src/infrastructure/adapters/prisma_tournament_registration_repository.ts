@@ -4,7 +4,7 @@ import { PRISMA } from '../prisma_client.js';
 function mapRowSV(_row: {
   id: string;
   tournamentId: string;
-  userId: string;
+  userId: string | null;
   status: string;
   createdAt: Date;
 }): TournamentRegistrationDTO {

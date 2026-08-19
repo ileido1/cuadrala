@@ -3,8 +3,14 @@ import type { AmericanoScheduleDTO } from '../americano/americano_schedule_gener
 import type { RoundRobinScheduleDTO } from '../round_robin/round_robin_schedule_generator.js';
 import type { SingleEliminationScheduleDTO } from '../single_elimination/bracket_generator.js';
 
+/**
+ * `participantRef` es un token opaco de inscripción (`TournamentRegistration.id`), no un `userId`.
+ * Desde Slice 1 (tournament-guest-registration) el calendario referencia inscripciones, ya que las
+ * inscripciones GUEST no tienen `userId`. La resolución a `{userId | null, tournamentRegistrationId}`
+ * ocurre en `MaterializeTournamentMatchesUseCase`, que sí conoce el roster del torneo.
+ */
 export type MaterializedMatchParticipantPlanDTO = {
-  userId: string;
+  participantRef: string;
   teamLabel: string | null;
 };
 
@@ -37,10 +43,10 @@ export function buildMaterializedMatchPlansSV(_input: {
           roundNumber: ROUND.roundNumber,
           matchNumber: COURT.courtNumber,
           participants: [
-            { userId: COURT.teamA[0], teamLabel: 'A' },
-            { userId: COURT.teamA[1], teamLabel: 'A' },
-            { userId: COURT.teamB[0], teamLabel: 'B' },
-            { userId: COURT.teamB[1], teamLabel: 'B' },
+            { participantRef: COURT.teamA[0], teamLabel: 'A' },
+            { participantRef: COURT.teamA[1], teamLabel: 'A' },
+            { participantRef: COURT.teamB[0], teamLabel: 'B' },
+            { participantRef: COURT.teamB[1], teamLabel: 'B' },
           ],
         });
       }
@@ -58,8 +64,8 @@ export function buildMaterializedMatchPlansSV(_input: {
           roundNumber: ROUND.roundNumber,
           matchNumber: MATCH.matchNumber,
           participants: [
-            { userId: MATCH.playerA, teamLabel: null },
-            { userId: MATCH.playerB, teamLabel: null },
+            { participantRef: MATCH.playerA, teamLabel: null },
+            { participantRef: MATCH.playerB, teamLabel: null },
           ],
         });
       }
@@ -81,8 +87,8 @@ export function buildMaterializedMatchPlansSV(_input: {
           roundNumber: ROUND.roundNumber,
           matchNumber: MATCH.matchNumber,
           participants: [
-            { userId: MATCH.playerA, teamLabel: null },
-            { userId: MATCH.playerB, teamLabel: null },
+            { participantRef: MATCH.playerA, teamLabel: null },
+            { participantRef: MATCH.playerB, teamLabel: null },
           ],
         });
       }
