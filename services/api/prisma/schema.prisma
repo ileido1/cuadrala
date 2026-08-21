@@ -38,6 +38,13 @@ enum RegistrationStatus {
   WITHDRAWN
 }
 
+/// Slice 1 (tournament-guest-registration): distingue inscripciones con `User`
+/// (AUTHENTICATED) de inscripciones de invitados sin cuenta (GUEST).
+enum RegistrationType {
+  AUTHENTICATED
+  GUEST
+}
+
 enum SubscriptionType {
   FREE
   PRO
@@ -312,12 +319,17 @@ model User {
   venueStaffRoles             VenueStaff[]
   ownedVenue                  Venue?
 
-  categories       UserCategory[]
-  sportCategories  UserSportCategory[]
-  playerProfile    PlayerProfile?
-  availability     UserAvailability[]
-  location         UserLocation?
-  organizedMatches Match[]            @relation("MatchOrganizer")
+  categories           UserCategory[]
+  sportCategories      UserSportCategory[]
+  playerProfile        PlayerProfile?
+  availability         UserAvailability[]
+  location             UserLocation?
+  organizedMatches     Match[]            @relation("MatchOrganizer")
+  organizedTournaments Tournament[]       @relation("TournamentOrganizer")
+  invitationsReceived  TournamentInvitation[] @relation("TournamentInvitee")
+  invitationsCreated   TournamentInvitation[] @relation("TournamentInviter")
+  /// Slice 1 (tournament-guest-registration): invitados agregados por este organizador.
+  guestRegistrationsCreated TournamentRegistration[] @relation("TournamentGuestRegistrar")
 }
 
 model RefreshToken {
@@ -550,6 +562,7 @@ model Venue {
   venuePaymentMethods  VenuePaymentMethod[]
   venueFeeRules        VenueFeeRule[]
   monetizationSettings VenueMonetizationSettings?
+  tournaments          Tournament[]
 
   @@index([latitude, longitude])
 }
@@ -629,10 +642,22 @@ model Tournament {
   presetSchemaVersion Int                    @default(1)
   status              TournamentStatus       @default(DRAFT)
   startsAt            DateTime?
+  /// Usuario organizador del torneo (nullable para compatibilidad hacia atrás). Habilita los guards R1.
+  organizerUserId     String?
+  organizer           User?                  @relation("TournamentOrganizer", fields: [organizerUserId], references: [id], onDelete: SetNull)
+  /// Sede asociada al torneo (nullable; habilita fallback de autorización vía venue-staff).
+  venueId             String?
+  venue               Venue?                 @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  /// Slice 1 (tournament-guest-registration): torneo competitivo (aplica Elo) vs recreativo.
+  isCompetitive       Boolean                @default(false)
+  /// Slice 1 (tournament-guest-registration): precio de inscripción; null = gratuito.
+  /// Elo solo se aplica cuando `isCompetitive=true AND inscriptionPrice > 0`.
+  inscriptionPrice    Decimal?               @db.Decimal(10, 2)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
   registrations     TournamentRegistration[]
+  invitations       TournamentInvitation[]
   matches           Match[]
   americanoSchedule TournamentAmericanoSchedule?
   schedule          TournamentSchedule?
@@ -640,6 +665,8 @@ model Tournament {
 
   @@index([sportId])
   @@index([formatPresetId])
+  @@index([organizerUserId])
+  @@index([venueId])
 }
 
 /// Schedule genérico por torneo (MVP: reutiliza payload JSON).
@@ -678,12 +705,54 @@ model TournamentRegistration {
   id           String             @id @default(uuid())
   tournamentId String
   tournament   Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Nulo para inscripciones GUEST (Slice 1: tournament-guest-registration).
+  userId       String?
+  user         User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
   status       RegistrationStatus @default(PENDING)
+  /// AUTHENTICATED ⇒ userId set, campos de invitado null. GUEST ⇒ userId null,
+  /// guestName + registeredByUserId set. Ver `assertRegistrationIdentityInvariantSV`.
+  registrationType   RegistrationType @default(AUTHENTICATED)
+  guestName          String?
+  guestPhone         String?
+  guestEmail         String?
+  /// Organizador que dio de alta al invitado (requerido cuando registrationType=GUEST).
+  registeredByUserId String?
+  registeredBy       User?            @relation("TournamentGuestRegistrar", fields: [registeredByUserId], references: [id], onDelete: SetNull)
   createdAt    DateTime           @default(now())
 
+  matchParticipants MatchParticipant[]
+
+  // Postgres permite múltiples NULL en un índice único ⇒ las filas GUEST (userId=null)
+  // nunca colisionan entre sí; solo se deduplican inscripciones AUTHENTICATED reales.
   @@unique([tournamentId, userId])
+  @@index([tournamentId, status])
+  @@index([tournamentId, registrationType])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+/// Invitación explícita de un organizador a un jugador (Slice B). Separada de
+/// TournamentRegistration: PENDING de registro = autoinscripción esperando confirmación
+/// del organizador; PENDING de invitación = invitación esperando respuesta del jugador.
+model TournamentInvitation {
+  id              String            @id @default(uuid())
+  tournamentId    String
+  tournament      Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  invitedUserId   String
+  invitedUser     User              @relation("TournamentInvitee", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdBy       User              @relation("TournamentInviter", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  status          InvitationStatus  @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([tournamentId, invitedUserId])
+  @@index([invitedUserId, status])
 }
 
 model Match {
@@ -831,15 +900,25 @@ model MatchResultConfirmation {
 }
 
 model MatchParticipant {
-  id        String   @id @default(uuid())
-  matchId   String
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  /// Nulo para participantes GUEST (Slice 1: tournament-guest-registration).
+  /// Exactamente uno de (userId, tournamentRegistrationId apuntando a una fila GUEST)
+  /// identifica al participante; los lectores existentes de userId quedan intactos
+  /// para participantes autenticados.
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Slice 1 (tournament-guest-registration): referencia a la inscripción de torneo
+  /// (AUTHENTICATED o GUEST) que originó este participante materializado.
+  tournamentRegistrationId String?
+  tournamentRegistration   TournamentRegistration? @relation(fields: [tournamentRegistrationId], references: [id], onDelete: Cascade)
   teamLabel String?
   createdAt DateTime @default(now())
 
+  // Postgres permite múltiples NULL en un índice único ⇒ guest-safe.
   @@unique([matchId, userId])
+  @@unique([matchId, tournamentRegistrationId])
   @@index([userId])
 }
 

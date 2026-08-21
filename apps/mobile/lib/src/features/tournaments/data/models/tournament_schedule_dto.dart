@@ -65,17 +65,36 @@ final class TournamentScheduleMatchDto extends Equatable {
     required this.id,
     required this.label,
     required this.status,
+    this.matchId,
+    this.scheduledAt,
+    this.courtId,
+    this.courtName,
   });
 
   final String id;
   final String label;
   final String status;
 
+  /// Id of the materialized `Match` row once the tournament has transitioned
+  /// OPEN → IN_PROGRESS. `null` until materialized (or until the backend
+  /// exposes it — see `tournament-player-management-scheduling` apply-progress
+  /// backlog: `GET /tournaments/:id/schedule` does not serialize these fields
+  /// yet). Tap-to-live-match navigation is gated on this being non-null.
+  final String? matchId;
+  final DateTime? scheduledAt;
+  final String? courtId;
+  final String? courtName;
+
   factory TournamentScheduleMatchDto.fromJson(Map<String, Object?> json) {
+    final scheduledAtRaw = json['scheduledAt'];
     return TournamentScheduleMatchDto(
       id: (json['id'] ?? '').toString(),
       label: (json['label'] ?? '').toString(),
       status: (json['status'] ?? '').toString(),
+      matchId: json['matchId'] as String?,
+      scheduledAt: scheduledAtRaw is String ? DateTime.tryParse(scheduledAtRaw) : null,
+      courtId: json['courtId'] as String?,
+      courtName: json['courtName'] as String?,
     );
   }
 
@@ -83,9 +102,13 @@ final class TournamentScheduleMatchDto extends Equatable {
         'id': id,
         'label': label,
         'status': status,
+        'matchId': matchId,
+        'scheduledAt': scheduledAt?.toIso8601String(),
+        'courtId': courtId,
+        'courtName': courtName,
       };
 
   @override
-  List<Object?> get props => [id, label, status];
+  List<Object?> get props => [id, label, status, matchId, scheduledAt, courtId, courtName];
 }
 

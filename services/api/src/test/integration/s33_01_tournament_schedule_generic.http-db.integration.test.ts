@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -17,6 +18,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let sportId: string;
     let presetAmericanoId: string;
     let presetRoundRobinId: string;
+    let organizerId: string;
+    let organizerToken: string;
 
     beforeAll(async () => {
       await resetDatabaseForTestsSV();
@@ -29,53 +32,49 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       const CAT = await createTestCategorySV(sportPadelId, `s33-${Date.now()}`, 'Cat S33');
       categoryId = CAT.id;
+
+      const ORGANIZER = await PRISMA.user.create({
+        data: { email: `s33-organizer-${Date.now()}@test.local`, name: 'Organizer S33' },
+      });
+      organizerId = ORGANIZER.id;
+      organizerToken = signAccessTokenSV(ORGANIZER.id, ORGANIZER.email);
     });
 
     afterAll(async () => {
       await PRISMA.$disconnect();
     });
 
-    it('AMERICANO: generate es idempotente por scheduleKey y GET devuelve payload', async () => {
+    /** Crea N usuarios de prueba con una inscripción CONFIRMED al torneo (participantes derivados server-side). */
+    async function confirmParticipantsSV(_tournamentId: string, _count: number): Promise<void> {
       const TS = Date.now();
-      const REG = await request(APP)
-        .post('/api/v1/auth/register')
-        .send({ email: `s33-${TS}@test.local`, password: 'password123', name: 'User S33' })
-        .set('Content-Type', 'application/json');
-      expect(REG.status).toBe(201);
+      for (let i = 0; i < _count; i += 1) {
+        const USER = await PRISMA.user.create({
+          data: { email: `s33-participant-${TS}-${i}@test.local`, name: `Participant ${i}` },
+        });
+        await PRISMA.tournamentRegistration.create({
+          data: { tournamentId: _tournamentId, userId: USER.id, status: 'CONFIRMED' },
+        });
+      }
+    }
 
-      const PARTICIPANTS = await Promise.all(
-        [0, 1, 2].map(async (_i) => {
-          const R = await request(APP)
-            .post('/api/v1/auth/register')
-            .send({
-              email: `s33-${TS}-${_i}@test.local`,
-              password: 'password123',
-              name: `User S33-${_i}`,
-            })
-            .set('Content-Type', 'application/json');
-          expect(R.status).toBe(201);
-          return R.body.data.user.id as string;
-        }),
-      );
-
-      const PARTICIPANT_IDS = [REG.body.data.user.id as string, ...PARTICIPANTS];
-
-      const TOURNAMENT = await request(APP)
-        .post('/api/v1/tournaments')
-        .send({
+    it('AMERICANO: generate es idempotente por scheduleKey y GET devuelve payload', async () => {
+      const TOURNAMENT = await PRISMA.tournament.create({
+        data: {
           name: 'Torneo S33 Americano',
           categoryId,
           sportId,
           formatPresetId: presetAmericanoId,
-        })
-        .set('Content-Type', 'application/json');
-
-      expect(TOURNAMENT.status).toBe(201);
-      const TOURNAMENT_ID = TOURNAMENT.body.data.tournamentId as string;
+          organizerUserId: organizerId,
+          status: 'DRAFT',
+        },
+      });
+      const TOURNAMENT_ID = TOURNAMENT.id;
+      await confirmParticipantsSV(TOURNAMENT_ID, 4);
 
       const RES_1 = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT_ID}/schedule:generate`)
-        .send({ participantUserIds: PARTICIPANT_IDS })
+        .send({})
+        .set('Authorization', `Bearer ${organizerToken}`)
         .set('Content-Type', 'application/json');
       expect(RES_1.status).toBe(201);
       expect(RES_1.body.success).toBe(true);
@@ -85,7 +84,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       const RES_2 = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT_ID}/schedule:generate`)
-        .send({ participantUserIds: PARTICIPANT_IDS })
+        .send({})
+        .set('Authorization', `Bearer ${organizerToken}`)
         .set('Content-Type', 'application/json');
       expect(RES_2.status).toBe(201);
       expect(RES_2.body.data.created).toBe(false);
@@ -101,29 +101,23 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     });
 
     it('ROUND_ROBIN: generate genera calendario correctamente', async () => {
-      const TOURNAMENT = await request(APP)
-        .post('/api/v1/tournaments')
-        .send({
+      const TOURNAMENT = await PRISMA.tournament.create({
+        data: {
           name: 'Torneo S33 RoundRobin',
           categoryId,
           sportId,
           formatPresetId: presetRoundRobinId,
-        })
-        .set('Content-Type', 'application/json');
-
-      expect(TOURNAMENT.status).toBe(201);
-      const TOURNAMENT_ID = TOURNAMENT.body.data.tournamentId as string;
+          organizerUserId: organizerId,
+          status: 'DRAFT',
+        },
+      });
+      const TOURNAMENT_ID = TOURNAMENT.id;
+      await confirmParticipantsSV(TOURNAMENT_ID, 4);
 
       const RES = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT_ID}/schedule:generate`)
-        .send({
-          participantUserIds: [
-            '550e8400-e29b-41d4-a716-446655440001',
-            '550e8400-e29b-41d4-a716-446655440002',
-            '550e8400-e29b-41d4-a716-446655440003',
-            '550e8400-e29b-41d4-a716-446655440004',
-          ],
-        })
+        .send({})
+        .set('Authorization', `Bearer ${organizerToken}`)
         .set('Content-Type', 'application/json');
 
       expect(RES.status).toBe(201);
@@ -133,4 +127,3 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     });
   },
 );
-

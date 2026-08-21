@@ -4,7 +4,9 @@ import '../../../../core/failures/app_failure.dart';
 import '../../data/tournaments_repository.dart';
 import 'tournament_schedule_state.dart';
 
-final class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
+// Not `final`: widget tests mock this cubit via `MockCubit implements
+// TournamentScheduleCubit` (see tournament_detail_screen_test.dart).
+class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
   TournamentScheduleCubit({
     required TournamentsRepository tournamentsRepository,
     required String tournamentId,

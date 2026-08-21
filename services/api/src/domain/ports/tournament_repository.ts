@@ -9,6 +9,7 @@ export type TournamentCreatedDTO = {
 export interface TournamentRepository {
   findByIdSV(_id: string): Promise<{
     id: string;
+    name: string;
     sportId: string;
     categoryId: string;
     formatPresetId: string;
@@ -16,6 +17,10 @@ export interface TournamentRepository {
     formatParameters: unknown | null;
     status: string;
     startsAt: Date | null;
+    organizerUserId: string | null;
+    venueId: string | null;
+    isCompetitive: boolean;
+    inscriptionPrice: number | null;
     createdAt: Date;
     updatedAt: Date;
   } | null>;

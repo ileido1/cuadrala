@@ -19,6 +19,7 @@ final class Routes {
   static const createMatch = '/matches/create';
   static const discoverMatches = '/matches/discover';
   static String matchLifecycle(String matchId) => '/matches/$matchId/lifecycle';
+  static String matchLive(String matchId) => '/matches/$matchId/live';
   static String matchResult(String matchId) => '/matches/$matchId/result';
   static String matchChat(String matchId) => '/matches/$matchId/chat';
   static String matchChatReadOnly(String matchId) => '/matches/$matchId/chat/readonly';

@@ -21,7 +21,8 @@
     "seed": "prisma db seed",
     "backfill:multi-currency": "tsx scripts/backfill-multi-currency.ts",
     "backfill:reservation-ledger": "tsx scripts/backfill-reservation-ledger.ts",
-    "reconcile:reservation-ledger": "tsx scripts/reconcile-reservation-ledger.ts"
+    "reconcile:reservation-ledger": "tsx scripts/reconcile-reservation-ledger.ts",
+    "migrate:stale-tournament-schedules": "tsx scripts/migrate-stale-tournament-schedules.ts"
   },
   "keywords": [],
   "author": "",

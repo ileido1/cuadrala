@@ -11,6 +11,7 @@ final class TournamentListItemDto extends Equatable {
     required this.startsAt,
     required this.registrationCount,
     this.imageUrl,
+    this.organizerUserId,
   });
 
   final String id;
@@ -21,6 +22,16 @@ final class TournamentListItemDto extends Equatable {
   final DateTime? startsAt;
   final int registrationCount;
   final String? imageUrl;
+
+  /// Owner of the tournament (drives organizer-only UI controls).
+  ///
+  /// NOTE: as of this change, `GET /tournaments` and `GET /tournaments/:id`
+  /// do not yet serialize `organizerUserId` in their responses (backend gap
+  /// tracked in the SDD apply-progress backlog for
+  /// `tournament-player-management-scheduling`). This field is parsed
+  /// forward-compatibly and will always be `null` until that endpoint is
+  /// extended; organizer-only controls stay hidden for everyone until then.
+  final String? organizerUserId;
 
   factory TournamentListItemDto.fromJson(Map<String, Object?> json) {
     return TournamentListItemDto(
@@ -39,6 +50,8 @@ final class TournamentListItemDto extends Equatable {
                   json['registration_count'] ??
                   0) as int,
       imageUrl: json['imageUrl'] as String? ?? json['image_url'] as String?,
+      organizerUserId:
+          json['organizerUserId'] as String? ?? json['organizer_user_id'] as String?,
     );
   }
 
@@ -52,5 +65,6 @@ final class TournamentListItemDto extends Equatable {
         startsAt,
         registrationCount,
         imageUrl,
+        organizerUserId,
       ];
 }

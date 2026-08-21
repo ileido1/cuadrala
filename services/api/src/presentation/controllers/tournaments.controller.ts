@@ -80,6 +80,7 @@ export async function patchTournamentStatusCON(_req: Request, _res: Response): P
   const UPDATED = await UPDATE_TOURNAMENT_STATUS_UC.executeSV({
     tournamentId: PARAMS.tournamentId,
     status: BODY.status,
+    actorUserId: ACTOR_USER_ID,
   });
 
   _res.status(200).json({

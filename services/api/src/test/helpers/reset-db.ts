@@ -75,6 +75,7 @@ export async function resetDatabaseForTestsSV(): Promise<void> {
   await PRISMA.matchParticipant.deleteMany();
   await PRISMA.match.deleteMany();
   await PRISMA.rankingEntry.deleteMany();
+  await PRISMA.tournamentInvitation.deleteMany();
   await PRISMA.tournamentRegistration.deleteMany();
   await PRISMA.tournament.deleteMany();
   await PRISMA.tournamentFormatPreset.deleteMany();
