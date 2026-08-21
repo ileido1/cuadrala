@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_invitation_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_registration_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_schedule_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_registrations_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_registrations_state.dart';
@@ -42,6 +43,41 @@ TournamentInvitationDto _pendingInvite({String invitedUserId = 'user-1'}) =>
       createdByUserId: 'organizer-1',
       status: 'PENDING',
       createdAt: DateTime(2024),
+    );
+
+TournamentListItemDto _tournament({String? organizerUserId, String status = 'OPEN'}) =>
+    TournamentListItemDto(
+      id: 't-1',
+      name: 'Torneo Test',
+      status: status,
+      sportName: 'Pádel',
+      categoryName: 'Mixto',
+      startsAt: null,
+      registrationCount: 0,
+      organizerUserId: organizerUserId,
+    );
+
+TournamentRegistrationDto _authRegistration({String userId = 'user-2'}) =>
+    TournamentRegistrationDto(
+      id: 'reg-auth-1',
+      tournamentId: 't-1',
+      userId: userId,
+      status: 'CONFIRMED',
+      createdAt: DateTime(2024),
+    );
+
+TournamentRegistrationDto _guestRegistration({
+  String id = 'reg-guest-1',
+  String status = 'PENDING',
+}) =>
+    TournamentRegistrationDto(
+      id: id,
+      tournamentId: 't-1',
+      status: status,
+      createdAt: DateTime(2024),
+      registrationType: 'GUEST',
+      guestName: 'Carlos',
+      registeredByUserId: 'organizer-1',
     );
 
 // ---------------------------------------------------------------------------
@@ -269,6 +305,156 @@ void main() {
       await tester.pump();
 
       expect(find.byKey(const Key('tournament.organizerStatusControl')), findsOneWidget);
+    });
+  });
+
+  group('Guest registrations (Slice 1: tournament-guest-registration)', () {
+    Future<void> pumpAndOpenRegistrationsTab(
+      WidgetTester tester, {
+      required TournamentListItemDto tournament,
+    }) async {
+      await tester.pumpWidget(_buildTestApp(
+        registrationsCubit: registrationsCubit,
+        scheduleCubit: scheduleCubit,
+        scoreboardCubit: scoreboardCubit,
+        tournament: tournament,
+      ));
+      await tester.pump();
+      await tester.tap(find.text('Inscripciones'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows guests grouped separately with translated status labels',
+        (tester) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [
+            _authRegistration(),
+            _guestRegistration(id: 'reg-guest-1', status: 'PENDING'),
+            _guestRegistration(id: 'reg-guest-2', status: 'CONFIRMED'),
+          ],
+          total: 3,
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+
+      await pumpAndOpenRegistrationsTab(tester, tournament: _tournament());
+
+      expect(find.text('Invitados (sin ranking)'), findsOneWidget);
+      expect(find.text('Pendiente confirmación'), findsOneWidget);
+      expect(find.text('Confirmado'), findsOneWidget);
+    });
+
+    testWidgets('organizer sees "Invitar huésped" and non-organizer does not', (tester) async {
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
+      );
+      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+
+      // Non-organizer.
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      await pumpAndOpenRegistrationsTab(
+        tester,
+        tournament: _tournament(organizerUserId: 'organizer-1'),
+      );
+      expect(find.text('Invitar huésped'), findsNothing);
+
+      // Organizer.
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+      await pumpAndOpenRegistrationsTab(
+        tester,
+        tournament: _tournament(organizerUserId: 'organizer-1'),
+      );
+      expect(find.text('Invitar huésped'), findsOneWidget);
+    });
+
+    testWidgets('tapping "Invitar huésped" opens the invite sheet', (tester) async {
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+
+      await pumpAndOpenRegistrationsTab(
+        tester,
+        tournament: _tournament(organizerUserId: 'organizer-1'),
+      );
+
+      await tester.tap(find.text('Invitar huésped'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('tournament.inviteGuestSheet.name')), findsOneWidget);
+    });
+
+    testWidgets('organizer taps confirm on a PENDING guest -> calls cubit.confirmRegistration',
+        (tester) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [_guestRegistration(id: 'reg-guest-1', status: 'PENDING')],
+          total: 1,
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+      when(() => registrationsCubit.confirmRegistration(any())).thenAnswer((_) async {});
+      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+
+      await pumpAndOpenRegistrationsTab(
+        tester,
+        tournament: _tournament(organizerUserId: 'organizer-1'),
+      );
+
+      await tester.tap(find.byKey(const Key('tournament.confirmRegistration.reg-guest-1')));
+      await tester.pump();
+
+      verify(() => registrationsCubit.confirmRegistration('reg-guest-1')).called(1);
+    });
+
+    testWidgets(
+        'organizer taps remove on a guest, confirms the dialog -> calls cubit.removeRegistration',
+        (tester) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [_guestRegistration(id: 'reg-guest-1', status: 'CONFIRMED')],
+          total: 1,
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+      when(() => registrationsCubit.removeRegistration(any())).thenAnswer((_) async {});
+      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+
+      await pumpAndOpenRegistrationsTab(
+        tester,
+        tournament: _tournament(organizerUserId: 'organizer-1'),
+      );
+
+      await tester.tap(find.byKey(const Key('tournament.removeRegistration.reg-guest-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Eliminar'));
+      await tester.pumpAndSettle();
+
+      verify(() => registrationsCubit.removeRegistration('reg-guest-1')).called(1);
+    });
+
+    testWidgets(
+        'guest confirm/remove actions are hidden once the tournament is IN_PROGRESS',
+        (tester) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [_guestRegistration(id: 'reg-guest-1', status: 'CONFIRMED')],
+          total: 1,
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+
+      await pumpAndOpenRegistrationsTab(
+        tester,
+        tournament: _tournament(organizerUserId: 'organizer-1', status: 'IN_PROGRESS'),
+      );
+
+      expect(find.text('Invitar huésped'), findsNothing);
+      expect(find.byKey(const Key('tournament.removeRegistration.reg-guest-1')), findsNothing);
     });
   });
 }

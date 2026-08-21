@@ -92,6 +92,26 @@ abstract interface class TournamentsApi {
     required String tournamentId,
     required String invitationId,
   });
+
+  /// Slice 1 (tournament-guest-registration): organizer adds a player
+  /// without a `User` account.
+  Future<Map<String, Object?>> inviteGuestTournamentParticipantEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  });
+
+  /// Organizer confirms (or otherwise updates the status of) a registration
+  /// — currently used to transition a guest PENDING -> CONFIRMED.
+  Future<Map<String, Object?>> updateTournamentRegistrationStatusEnvelope({
+    required String tournamentId,
+    required String registrationId,
+    required Map<String, Object?> body,
+  });
+
+  Future<void> deleteTournamentRegistration({
+    required String tournamentId,
+    required String registrationId,
+  });
 }
 
 final class DioTournamentsApi implements TournamentsApi {
@@ -252,6 +272,39 @@ final class DioTournamentsApi implements TournamentsApi {
   }) async {
     await _apiClient.deleteNoContent(
       '/api/v1/tournaments/$tournamentId/invitations/$invitationId',
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> inviteGuestTournamentParticipantEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  }) {
+    return _apiClient.postJson(
+      '/api/v1/tournaments/$tournamentId/invite-guest',
+      body: body,
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> updateTournamentRegistrationStatusEnvelope({
+    required String tournamentId,
+    required String registrationId,
+    required Map<String, Object?> body,
+  }) {
+    return _apiClient.patchJson(
+      '/api/v1/tournaments/$tournamentId/registrations/$registrationId',
+      body: body,
+    );
+  }
+
+  @override
+  Future<void> deleteTournamentRegistration({
+    required String tournamentId,
+    required String registrationId,
+  }) async {
+    await _apiClient.deleteNoContent(
+      '/api/v1/tournaments/$tournamentId/registrations/$registrationId',
     );
   }
 }

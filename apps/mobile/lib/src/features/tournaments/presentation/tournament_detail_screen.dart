@@ -9,6 +9,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';
+import '../data/models/tournament_registration_dto.dart';
 import '../data/models/tournament_schedule_dto.dart';
 import '../data/models/tournament_scoreboard_dto.dart';
 import '../data/tournaments_repository.dart';
@@ -18,6 +19,13 @@ import 'cubit/tournament_schedule_cubit.dart';
 import 'cubit/tournament_schedule_state.dart';
 import 'cubit/tournament_scoreboard_cubit.dart';
 import 'cubit/tournament_scoreboard_state.dart';
+import 'widgets/invite_guest_sheet.dart';
+
+/// Tournament statuses that still allow generating/regenerating the
+/// schedule and managing guest registrations (organizer confirm/remove),
+/// mirroring the backend's `STATUSES_ALLOWING_SCHEDULE_GENERATION` /
+/// registration guards.
+const _kOrganizerManageableStatuses = {'DRAFT', 'OPEN'};
 
 final class TournamentDetailScreen extends StatelessWidget {
   const TournamentDetailScreen({
@@ -76,7 +84,12 @@ final class TournamentDetailBody extends StatelessWidget {
           return [
             // Header image + title + enroll
             SliverAppBar(
-              expandedHeight: tournament?.imageUrl != null ? 220 : 120,
+              // 120 was 8px too short for `_TournamentHeaderBg`'s own
+              // headline + subtitle + padding (pre-existing bug — the
+              // existing widget-test suite never surfaced it because it
+              // never pumped a non-null `tournament` fixture into this
+              // screen; found while adding guest-registration coverage).
+              expandedHeight: tournament?.imageUrl != null ? 220 : 136,
               pinned: true,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -205,7 +218,11 @@ final class TournamentDetailBody extends StatelessWidget {
           children: [
             _ScheduleTab(tournamentId: tournamentId),
             _ScoreboardTab(tournamentId: tournamentId),
-            _RegistrationsTab(tournamentId: tournamentId),
+            _RegistrationsTab(
+              tournamentId: tournamentId,
+              organizerUserId: tournament?.organizerUserId,
+              tournamentStatus: tournament?.status,
+            ),
           ],
         ),
       ),
@@ -554,18 +571,27 @@ final class _ScheduleTab extends StatelessWidget {
                   const SizedBox(height: 12),
                   BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
                     builder: (context, regState) {
-                      final participantIds = regState is TournamentRegistrationsLoaded
-                          ? regState.items.map((r) => r.userId).toList()
-                          : <String>[];
+                      final registrations = regState is TournamentRegistrationsLoaded
+                          ? regState.items
+                          : const <TournamentRegistrationDto>[];
+                      // The backend derives the actual participant list from
+                      // CONFIRMED registrations and ignores this field
+                      // (see generate_tournament_schedule.use_case.ts) — it
+                      // exists mainly for the request shape. We still send
+                      // authenticated userIds where available; guests have
+                      // no userId (Slice 1: tournament-guest-registration).
+                      final participantUserIds =
+                          registrations.where((r) => r.userId != null).map((r) => r.userId!).toList();
+                      final enoughParticipants = registrations.length >= 2;
                       return FilledButton.icon(
-                        onPressed: participantIds.length >= 2
+                        onPressed: enoughParticipants
                             ? () => context.read<TournamentScheduleCubit>().generate(
-                                  participantUserIds: participantIds,
+                                  participantUserIds: participantUserIds,
                                 )
                             : null,
                         icon: const Icon(AppIcons.sparkle),
                         label: Text(
-                          participantIds.length >= 2
+                          enoughParticipants
                               ? 'Generar fixture'
                               : 'Se necesitan al menos 2 inscritos',
                         ),
@@ -617,9 +643,15 @@ final class _ScoreboardTab extends StatelessWidget {
 }
 
 final class _RegistrationsTab extends StatelessWidget {
-  const _RegistrationsTab({required this.tournamentId});
+  const _RegistrationsTab({
+    required this.tournamentId,
+    required this.organizerUserId,
+    required this.tournamentStatus,
+  });
 
   final String tournamentId;
+  final String? organizerUserId;
+  final String? tournamentStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -639,19 +671,46 @@ final class _RegistrationsTab extends StatelessWidget {
 
           final loaded = state as TournamentRegistrationsLoaded;
           final activeItems = loaded.items.where((r) => r.status != 'WITHDRAWN').toList();
+          final authenticatedItems = activeItems.where((r) => !r.isGuest).toList();
+          final guestItems = activeItems.where((r) => r.isGuest).toList();
           final cubit = context.read<TournamentRegistrationsCubit>();
           final currentUserId = cubit.currentUserId;
           final myPendingInvite =
               currentUserId != null ? loaded.pendingInvitationFor(currentUserId) : null;
 
+          // Organizer-only affordance; the backend enforces the real guard
+          // independently (see `assertTournamentOrganizerAccess` on every
+          // guest-management use case).
+          final isOrganizer = organizerUserId != null && currentUserId == organizerUserId;
+          // Mirrors the backend's DRAFT/OPEN guard on invite-guest, PATCH
+          // confirm, and DELETE (Slice 1: tournament-guest-registration).
+          // Defaults to allowed when the tournament's status isn't known
+          // here (e.g. navigated to directly, without list-item `extra`).
+          final guestActionsAllowed =
+              tournamentStatus == null || _kOrganizerManageableStatuses.contains(tournamentStatus);
+          final canManageGuests = isOrganizer && guestActionsAllowed;
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                '${activeItems.length} inscrito${activeItems.length == 1 ? '' : 's'}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${activeItems.length} inscrito${activeItems.length == 1 ? '' : 's'}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
                     ),
+                  ),
+                  if (canManageGuests)
+                    FilledButton.icon(
+                      key: const Key('tournament.inviteGuestButton'),
+                      onPressed: () => showInviteGuestSheet(context),
+                      icon: const Icon(Icons.person_add_alt_1),
+                      label: const Text('Invitar huésped'),
+                    ),
+                ],
               ),
               if (loaded.registerError != null) ...[
                 const SizedBox(height: 8),
@@ -664,6 +723,13 @@ final class _RegistrationsTab extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   loaded.invitationError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              if (loaded.registrationActionError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  loaded.registrationActionError!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
@@ -688,57 +754,181 @@ final class _RegistrationsTab extends StatelessWidget {
               Expanded(
                 child: activeItems.isEmpty
                     ? const _InfoBox(message: 'Aún no hay inscritos en este torneo.')
-                    : ListView.separated(
-                        itemCount: activeItems.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final reg = activeItems[index];
-                          return Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(12),
+                    : ListView(
+                        children: [
+                          for (final reg in authenticatedItems)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _RegistrationTile(
+                                registration: reg,
+                                canManage: false,
+                                busy: false,
+                              ),
                             ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                  child: Text(
-                                    reg.userId.substring(0, 2).toUpperCase(),
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
+                          if (guestItems.isNotEmpty) ...[
+                            if (authenticatedItems.isNotEmpty) const SizedBox(height: 4),
+                            const _RegistrationsGroupHeader(label: 'Invitados (sin ranking)'),
+                            const SizedBox(height: 6),
+                            for (final reg in guestItems)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _RegistrationTile(
+                                  registration: reg,
+                                  canManage: canManageGuests,
+                                  busy: loaded.busyRegistrationId == reg.id,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        reg.userId,
-                                        style: const TextStyle(fontWeight: FontWeight.w600),
-                                      ),
-                                      Text(
-                                        reg.status,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                              ),
+                          ],
+                        ],
                       ),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+final class _RegistrationsGroupHeader extends StatelessWidget {
+  const _RegistrationsGroupHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
+          ),
+    );
+  }
+}
+
+/// Translates a GUEST registration's status for display. Authenticated
+/// rows keep the raw backend status (unchanged pre-existing behavior).
+String _guestStatusLabel(String status) {
+  switch (status) {
+    case 'PENDING':
+      return 'Pendiente confirmación';
+    case 'CONFIRMED':
+      return 'Confirmado';
+    default:
+      return status;
+  }
+}
+
+/// A single roster row. For guests with [canManage] true, shows a confirm
+/// action (PENDING only) and a remove action (any status), both organizer-
+/// only and hidden once the tournament closes for guest management.
+final class _RegistrationTile extends StatelessWidget {
+  const _RegistrationTile({
+    required this.registration,
+    required this.canManage,
+    required this.busy,
+  });
+
+  final TournamentRegistrationDto registration;
+  final bool canManage;
+  final bool busy;
+
+  Future<void> _confirmRemoveSV(BuildContext context) async {
+    final cubit = context.read<TournamentRegistrationsCubit>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar invitado'),
+        content: Text('¿Eliminar a ${registration.displayName} del torneo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      cubit.removeRegistration(registration.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = registration.displayName;
+    final statusLabel =
+        registration.isGuest ? _guestStatusLabel(registration.status) : registration.status;
+    final avatarLabel = label.substring(0, label.length >= 2 ? 2 : label.length).toUpperCase();
+
+    return Container(
+      key: Key('tournament.registrationTile.${registration.id}'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            child: Text(
+              avatarLabel,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  statusLabel,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          if (registration.isGuest && canManage) ...[
+            if (busy)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else ...[
+              if (registration.status == 'PENDING')
+                IconButton(
+                  key: Key('tournament.confirmRegistration.${registration.id}'),
+                  tooltip: 'Confirmar',
+                  icon: const Icon(Icons.check_circle_outline),
+                  onPressed: () => context
+                      .read<TournamentRegistrationsCubit>()
+                      .confirmRegistration(registration.id),
+                ),
+              IconButton(
+                key: Key('tournament.removeRegistration.${registration.id}'),
+                tooltip: 'Eliminar',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _confirmRemoveSV(context),
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }

@@ -37,6 +37,10 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
     this.inviting = false,
     this.invitationError,
     this.canManageInvitations = false,
+    this.invitingGuest = false,
+    this.guestInviteError,
+    this.busyRegistrationId,
+    this.registrationActionError,
   });
 
   final List<TournamentRegistrationDto> items;
@@ -61,6 +65,16 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
   /// True when the invitations list was fetched with organizer privileges
   /// (i.e. the read succeeded rather than being denied with 403).
   final bool canManageInvitations;
+
+  /// True while an invite-guest call is in flight (Slice 1:
+  /// tournament-guest-registration).
+  final bool invitingGuest;
+  final String? guestInviteError;
+
+  /// Id of the registration currently being confirmed or removed, if any.
+  /// Only one guest action runs at a time.
+  final String? busyRegistrationId;
+  final String? registrationActionError;
 
   bool isUserRegistered(String userId) {
     return items.any((r) => r.userId == userId && r.status != 'WITHDRAWN');
@@ -88,6 +102,13 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
     String? invitationError,
     bool clearInvitationError = false,
     bool? canManageInvitations,
+    bool? invitingGuest,
+    String? guestInviteError,
+    bool clearGuestInviteError = false,
+    String? busyRegistrationId,
+    bool clearBusyRegistrationId = false,
+    String? registrationActionError,
+    bool clearRegistrationActionError = false,
   }) {
     return TournamentRegistrationsLoaded(
       items: items ?? this.items,
@@ -99,6 +120,14 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
       inviting: inviting ?? this.inviting,
       invitationError: clearInvitationError ? null : (invitationError ?? this.invitationError),
       canManageInvitations: canManageInvitations ?? this.canManageInvitations,
+      invitingGuest: invitingGuest ?? this.invitingGuest,
+      guestInviteError:
+          clearGuestInviteError ? null : (guestInviteError ?? this.guestInviteError),
+      busyRegistrationId:
+          clearBusyRegistrationId ? null : (busyRegistrationId ?? this.busyRegistrationId),
+      registrationActionError: clearRegistrationActionError
+          ? null
+          : (registrationActionError ?? this.registrationActionError),
     );
   }
 
@@ -113,5 +142,9 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
         inviting,
         invitationError,
         canManageInvitations,
+        invitingGuest,
+        guestInviteError,
+        busyRegistrationId,
+        registrationActionError,
       ];
 }

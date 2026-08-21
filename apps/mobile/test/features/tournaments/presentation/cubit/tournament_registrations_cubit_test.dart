@@ -35,6 +35,20 @@ TournamentRegistrationDto _registration({
       createdAt: DateTime(2024),
     );
 
+TournamentRegistrationDto _guestRegistration({
+  String id = 'reg-guest-1',
+  String status = 'PENDING',
+}) =>
+    TournamentRegistrationDto(
+      id: id,
+      tournamentId: 't-1',
+      status: status,
+      createdAt: DateTime(2024),
+      registrationType: 'GUEST',
+      guestName: 'Carlos',
+      registeredByUserId: 'organizer-1',
+    );
+
 TournamentInvitationDto _invitation({
   String id = 'inv-1',
   String invitedUserId = 'user-1',
@@ -244,6 +258,198 @@ void main() {
               invitationId: 'inv-1',
             )).called(1);
       },
+    );
+
+    blocTest<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+      'inviteGuest calls repository and refreshes registrations with the new guest',
+      build: () {
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentRegistrationDto>[]);
+        when(() => tournamentsRepository.listInvitations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentInvitationDto>[]);
+        when(() => tournamentsRepository.inviteGuestToTournament(
+              tournamentId: tournamentId,
+              name: 'Carlos',
+              phone: '+584121234567',
+              email: null,
+            )).thenAnswer((_) async => _guestRegistration());
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentRegistrationDto>[]);
+        return TournamentRegistrationsCubit(
+          tournamentsRepository: tournamentsRepository,
+          profileRepository: profileRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) async {
+        await cubit.load();
+        // Second stub call after load() so the post-invite refresh sees the guest.
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => [_guestRegistration()]);
+        await cubit.inviteGuest(name: 'Carlos', phone: '+584121234567');
+      },
+      skip: 2,
+      expect: () => [
+        isA<TournamentRegistrationsLoaded>().having((s) => s.invitingGuest, 'invitingGuest', true),
+        isA<TournamentRegistrationsLoaded>()
+            .having((s) => s.invitingGuest, 'invitingGuest', false)
+            .having((s) => s.items.length, 'items.length', 1)
+            .having((s) => s.items.first.isGuest, 'items.first.isGuest', true),
+      ],
+      verify: (_) {
+        verify(() => tournamentsRepository.inviteGuestToTournament(
+              tournamentId: tournamentId,
+              name: 'Carlos',
+              phone: '+584121234567',
+              email: null,
+            )).called(1);
+      },
+    );
+
+    blocTest<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+      'inviteGuest sets guestInviteError on failure (e.g. tournament closed)',
+      build: () {
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentRegistrationDto>[]);
+        when(() => tournamentsRepository.listInvitations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentInvitationDto>[]);
+        when(() => tournamentsRepository.inviteGuestToTournament(
+              tournamentId: tournamentId,
+              name: 'Carlos',
+              phone: null,
+              email: null,
+            )).thenThrow(
+          const AppFailure(code: 'TORNEO_CERRADO', message: 'El torneo no acepta invitados.'),
+        );
+        return TournamentRegistrationsCubit(
+          tournamentsRepository: tournamentsRepository,
+          profileRepository: profileRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) async {
+        await cubit.load();
+        await cubit.inviteGuest(name: 'Carlos');
+      },
+      skip: 2,
+      expect: () => [
+        isA<TournamentRegistrationsLoaded>().having((s) => s.invitingGuest, 'invitingGuest', true),
+        isA<TournamentRegistrationsLoaded>()
+            .having((s) => s.invitingGuest, 'invitingGuest', false)
+            .having((s) => s.guestInviteError, 'guestInviteError', 'El torneo no acepta invitados.'),
+      ],
+    );
+
+    blocTest<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+      'confirmRegistration calls repository and refreshes registrations',
+      build: () {
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => [_guestRegistration(status: 'PENDING')]);
+        when(() => tournamentsRepository.listInvitations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentInvitationDto>[]);
+        when(() => tournamentsRepository.confirmRegistration(
+              tournamentId: tournamentId,
+              registrationId: 'reg-guest-1',
+            )).thenAnswer((_) async => _guestRegistration(status: 'CONFIRMED'));
+        return TournamentRegistrationsCubit(
+          tournamentsRepository: tournamentsRepository,
+          profileRepository: profileRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) async {
+        await cubit.load();
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => [_guestRegistration(status: 'CONFIRMED')]);
+        await cubit.confirmRegistration('reg-guest-1');
+      },
+      skip: 2,
+      expect: () => [
+        isA<TournamentRegistrationsLoaded>()
+            .having((s) => s.busyRegistrationId, 'busyRegistrationId', 'reg-guest-1'),
+        isA<TournamentRegistrationsLoaded>()
+            .having((s) => s.busyRegistrationId, 'busyRegistrationId', null)
+            .having((s) => s.items.first.status, 'items.first.status', 'CONFIRMED'),
+      ],
+      verify: (_) {
+        verify(() => tournamentsRepository.confirmRegistration(
+              tournamentId: tournamentId,
+              registrationId: 'reg-guest-1',
+            )).called(1);
+      },
+    );
+
+    blocTest<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+      'removeRegistration calls repository and refreshes registrations without the removed guest',
+      build: () {
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => [_guestRegistration()]);
+        when(() => tournamentsRepository.listInvitations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentInvitationDto>[]);
+        when(() => tournamentsRepository.removeRegistration(
+              tournamentId: tournamentId,
+              registrationId: 'reg-guest-1',
+            )).thenAnswer((_) async {});
+        return TournamentRegistrationsCubit(
+          tournamentsRepository: tournamentsRepository,
+          profileRepository: profileRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) async {
+        await cubit.load();
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentRegistrationDto>[]);
+        await cubit.removeRegistration('reg-guest-1');
+      },
+      skip: 2,
+      expect: () => [
+        isA<TournamentRegistrationsLoaded>()
+            .having((s) => s.busyRegistrationId, 'busyRegistrationId', 'reg-guest-1'),
+        isA<TournamentRegistrationsLoaded>()
+            .having((s) => s.busyRegistrationId, 'busyRegistrationId', null)
+            .having((s) => s.items.length, 'items.length', 0),
+      ],
+      verify: (_) {
+        verify(() => tournamentsRepository.removeRegistration(
+              tournamentId: tournamentId,
+              registrationId: 'reg-guest-1',
+            )).called(1);
+      },
+    );
+
+    blocTest<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+      'removeRegistration sets registrationActionError on failure (e.g. tournament in progress)',
+      build: () {
+        when(() => tournamentsRepository.listRegistrations(tournamentId: tournamentId))
+            .thenAnswer((_) async => [_guestRegistration()]);
+        when(() => tournamentsRepository.listInvitations(tournamentId: tournamentId))
+            .thenAnswer((_) async => <TournamentInvitationDto>[]);
+        when(() => tournamentsRepository.removeRegistration(
+              tournamentId: tournamentId,
+              registrationId: 'reg-guest-1',
+            )).thenThrow(
+          const AppFailure(code: 'TORNEO_CERRADO', message: 'El torneo ya está en curso.'),
+        );
+        return TournamentRegistrationsCubit(
+          tournamentsRepository: tournamentsRepository,
+          profileRepository: profileRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) async {
+        await cubit.load();
+        await cubit.removeRegistration('reg-guest-1');
+      },
+      skip: 2,
+      expect: () => [
+        isA<TournamentRegistrationsLoaded>()
+            .having((s) => s.busyRegistrationId, 'busyRegistrationId', 'reg-guest-1'),
+        isA<TournamentRegistrationsLoaded>()
+            .having((s) => s.busyRegistrationId, 'busyRegistrationId', null)
+            .having((s) => s.registrationActionError, 'registrationActionError',
+                'El torneo ya está en curso.'),
+      ],
     );
   });
 }

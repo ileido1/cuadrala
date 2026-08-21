@@ -203,4 +203,92 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
       ));
     }
   }
+
+  /// Organizer action: add a player without a `User` account (Slice 1:
+  /// tournament-guest-registration). Creates a GUEST registration in
+  /// `PENDING` status and refreshes the roster on success.
+  Future<void> inviteGuest({required String name, String? phone, String? email}) async {
+    final current = state;
+    if (current is! TournamentRegistrationsLoaded) return;
+    if (current.invitingGuest) return;
+
+    emit(current.copyWith(invitingGuest: true, clearGuestInviteError: true));
+
+    try {
+      await _repo.inviteGuestToTournament(
+        tournamentId: _tournamentId,
+        name: name,
+        phone: phone,
+        email: email,
+      );
+      final refreshed = await _repo.listRegistrations(tournamentId: _tournamentId);
+      emit(current.copyWith(items: refreshed, total: refreshed.length, invitingGuest: false));
+    } on AppFailure catch (e) {
+      emit(current.copyWith(invitingGuest: false, guestInviteError: e.message));
+    } catch (_) {
+      emit(current.copyWith(
+        invitingGuest: false,
+        guestInviteError: 'No se pudo invitar al huésped.',
+      ));
+    }
+  }
+
+  /// Organizer action: confirm a PENDING guest registration.
+  Future<void> confirmRegistration(String registrationId) async {
+    final current = state;
+    if (current is! TournamentRegistrationsLoaded) return;
+    if (current.busyRegistrationId != null) return;
+
+    emit(current.copyWith(
+      busyRegistrationId: registrationId,
+      clearRegistrationActionError: true,
+    ));
+
+    try {
+      await _repo.confirmRegistration(tournamentId: _tournamentId, registrationId: registrationId);
+      final refreshed = await _repo.listRegistrations(tournamentId: _tournamentId);
+      emit(current.copyWith(
+        items: refreshed,
+        total: refreshed.length,
+        clearBusyRegistrationId: true,
+      ));
+    } on AppFailure catch (e) {
+      emit(current.copyWith(clearBusyRegistrationId: true, registrationActionError: e.message));
+    } catch (_) {
+      emit(current.copyWith(
+        clearBusyRegistrationId: true,
+        registrationActionError: 'No se pudo confirmar la inscripción.',
+      ));
+    }
+  }
+
+  /// Organizer action: remove a guest registration (PENDING or CONFIRMED).
+  /// Rejected by the backend once the tournament is IN_PROGRESS or later.
+  Future<void> removeRegistration(String registrationId) async {
+    final current = state;
+    if (current is! TournamentRegistrationsLoaded) return;
+    if (current.busyRegistrationId != null) return;
+
+    emit(current.copyWith(
+      busyRegistrationId: registrationId,
+      clearRegistrationActionError: true,
+    ));
+
+    try {
+      await _repo.removeRegistration(tournamentId: _tournamentId, registrationId: registrationId);
+      final refreshed = await _repo.listRegistrations(tournamentId: _tournamentId);
+      emit(current.copyWith(
+        items: refreshed,
+        total: refreshed.length,
+        clearBusyRegistrationId: true,
+      ));
+    } on AppFailure catch (e) {
+      emit(current.copyWith(clearBusyRegistrationId: true, registrationActionError: e.message));
+    } catch (_) {
+      emit(current.copyWith(
+        clearBusyRegistrationId: true,
+        registrationActionError: 'No se pudo eliminar la inscripción.',
+      ));
+    }
+  }
 }

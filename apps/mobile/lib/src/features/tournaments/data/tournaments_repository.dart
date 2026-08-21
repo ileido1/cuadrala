@@ -222,5 +222,52 @@ class TournamentsRepository {
       invitationId: invitationId,
     );
   }
+
+  /// Organizer action: add a player without a `User` account (Slice 1:
+  /// tournament-guest-registration). Creates a GUEST registration in
+  /// `PENDING` status.
+  Future<TournamentRegistrationDto> inviteGuestToTournament({
+    required String tournamentId,
+    required String name,
+    String? phone,
+    String? email,
+  }) async {
+    final data = await _tournamentsApi.inviteGuestTournamentParticipantEnvelope(
+      tournamentId: tournamentId,
+      body: {
+        'name': name,
+        'phone': ?phone,
+        'email': ?email,
+      },
+    );
+    return TournamentRegistrationDto.fromJson(decodeEnvelopeDataMap(data));
+  }
+
+  /// Organizer action: confirm a PENDING registration (currently used for
+  /// guest registrations — authenticated players self-confirm via
+  /// [respondToInvitation]).
+  Future<TournamentRegistrationDto> confirmRegistration({
+    required String tournamentId,
+    required String registrationId,
+  }) async {
+    final data = await _tournamentsApi.updateTournamentRegistrationStatusEnvelope(
+      tournamentId: tournamentId,
+      registrationId: registrationId,
+      body: {'status': 'CONFIRMED'},
+    );
+    return TournamentRegistrationDto.fromJson(decodeEnvelopeDataMap(data));
+  }
+
+  /// Organizer action: remove a guest registration. Rejected by the backend
+  /// with `TORNEO_CERRADO` once the tournament is IN_PROGRESS or later.
+  Future<void> removeRegistration({
+    required String tournamentId,
+    required String registrationId,
+  }) async {
+    await _tournamentsApi.deleteTournamentRegistration(
+      tournamentId: tournamentId,
+      registrationId: registrationId,
+    );
+  }
 }
 
