@@ -1,4 +1,8 @@
-import type { TournamentRegistrationDTO, TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
+import type {
+  CreateGuestTournamentRegistrationDTO,
+  TournamentRegistrationDTO,
+  TournamentRegistrationRepository,
+} from '../../domain/ports/tournament_registration_repository.js';
 import { PRISMA } from '../prisma_client.js';
 
 function mapRowSV(_row: {
@@ -6,6 +10,11 @@ function mapRowSV(_row: {
   tournamentId: string;
   userId: string | null;
   status: string;
+  registrationType: string;
+  guestName: string | null;
+  guestPhone: string | null;
+  guestEmail: string | null;
+  registeredByUserId: string | null;
   createdAt: Date;
 }): TournamentRegistrationDTO {
   return {
@@ -13,6 +22,11 @@ function mapRowSV(_row: {
     tournamentId: _row.tournamentId,
     userId: _row.userId,
     status: _row.status,
+    registrationType: _row.registrationType as 'AUTHENTICATED' | 'GUEST',
+    guestName: _row.guestName,
+    guestPhone: _row.guestPhone,
+    guestEmail: _row.guestEmail,
+    registeredByUserId: _row.registeredByUserId,
     createdAt: _row.createdAt,
   };
 }
@@ -107,6 +121,45 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
       where: { id: EXISTING.id },
       data: { status: 'WITHDRAWN' as never },
     });
+    return true;
+  }
+
+  async findByIdSV(_id: string): Promise<TournamentRegistrationDTO | null> {
+    const ROW = await PRISMA.tournamentRegistration.findUnique({ where: { id: _id } });
+    return ROW === null ? null : mapRowSV(ROW);
+  }
+
+  async createGuestSV(_input: CreateGuestTournamentRegistrationDTO): Promise<TournamentRegistrationDTO> {
+    const CREATED = await PRISMA.tournamentRegistration.create({
+      data: {
+        tournamentId: _input.tournamentId,
+        registrationType: 'GUEST' as never,
+        status: 'PENDING' as never,
+        guestName: _input.guestName,
+        guestPhone: _input.guestPhone ?? null,
+        guestEmail: _input.guestEmail ?? null,
+        registeredByUserId: _input.registeredByUserId,
+      },
+    });
+    return mapRowSV(CREATED);
+  }
+
+  async updateStatusByIdSV(_id: string, _status: string): Promise<TournamentRegistrationDTO | null> {
+    const EXISTING = await PRISMA.tournamentRegistration.findUnique({ where: { id: _id } });
+    if (EXISTING === null) return null;
+
+    const UPDATED = await PRISMA.tournamentRegistration.update({
+      where: { id: _id },
+      data: { status: _status as never },
+    });
+    return mapRowSV(UPDATED);
+  }
+
+  async deleteByIdSV(_id: string): Promise<boolean> {
+    const EXISTING = await PRISMA.tournamentRegistration.findUnique({ where: { id: _id } });
+    if (EXISTING === null) return false;
+
+    await PRISMA.tournamentRegistration.delete({ where: { id: _id } });
     return true;
   }
 }

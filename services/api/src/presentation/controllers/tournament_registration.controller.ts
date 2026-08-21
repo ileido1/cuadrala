@@ -2,15 +2,29 @@ import type { Request, Response } from 'express';
 
 import { AppError } from '../../domain/errors/app_error.js';
 import {
+  INVITE_GUEST_TOURNAMENT_PARTICIPANT_UC,
   LIST_TOURNAMENT_REGISTRATIONS_UC,
   REGISTER_TOURNAMENT_PARTICIPANT_UC,
+  REMOVE_TOURNAMENT_REGISTRATION_UC,
+  UPDATE_TOURNAMENT_REGISTRATION_STATUS_UC,
   WITHDRAW_TOURNAMENT_REGISTRATION_UC,
 } from '../composition/tournament_registration.composition.js';
 import {
   CREATE_TOURNAMENT_REGISTRATION_BODY_SCHEMA,
+  INVITE_GUEST_TOURNAMENT_PARTICIPANT_BODY_SCHEMA,
+  TOURNAMENT_REGISTRATION_ID_PARAMS_SCHEMA,
   TOURNAMENT_REGISTRATION_PARAMS_SCHEMA,
+  UPDATE_TOURNAMENT_REGISTRATION_STATUS_BODY_SCHEMA,
   WITHDRAW_TOURNAMENT_REGISTRATION_PARAMS_SCHEMA,
 } from '../validation/tournament_registration.validation.js';
+
+function requireAuthUserIdSV(_req: Request): string {
+  const USER_ID = _req.authUser?.id;
+  if (USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+  return USER_ID;
+}
 
 export async function postRegisterTournamentParticipantCON(_req: Request, _res: Response): Promise<void> {
   const USER_ID = _req.authUser?.id;
@@ -58,6 +72,58 @@ export async function withdrawTournamentRegistrationCON(_req: Request, _res: Res
   await WITHDRAW_TOURNAMENT_REGISTRATION_UC.executeSV({
     tournamentId: PARAMS.tournamentId,
     userId: PARAMS.userId,
+  });
+
+  _res.status(204).send();
+}
+
+export async function postInviteGuestTournamentParticipantCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+  const PARAMS = TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
+  const BODY = INVITE_GUEST_TOURNAMENT_PARTICIPANT_BODY_SCHEMA.parse(_req.body);
+
+  const RESULT = await INVITE_GUEST_TOURNAMENT_PARTICIPANT_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    guestName: BODY.name,
+    guestPhone: BODY.phone ?? null,
+    guestEmail: BODY.email ?? null,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(201).json({
+    success: true,
+    message: 'Invitado agregado correctamente.',
+    data: RESULT,
+  });
+}
+
+export async function patchTournamentRegistrationStatusCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+  const PARAMS = TOURNAMENT_REGISTRATION_ID_PARAMS_SCHEMA.parse(_req.params);
+  const BODY = UPDATE_TOURNAMENT_REGISTRATION_STATUS_BODY_SCHEMA.parse(_req.body);
+
+  const RESULT = await UPDATE_TOURNAMENT_REGISTRATION_STATUS_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    registrationId: PARAMS.registrationId,
+    status: BODY.status,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Inscripción confirmada correctamente.',
+    data: RESULT,
+  });
+}
+
+export async function deleteTournamentRegistrationCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+  const PARAMS = TOURNAMENT_REGISTRATION_ID_PARAMS_SCHEMA.parse(_req.params);
+
+  await REMOVE_TOURNAMENT_REGISTRATION_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    registrationId: PARAMS.registrationId,
+    actorUserId: ACTOR_USER_ID,
   });
 
   _res.status(204).send();
