@@ -242,7 +242,7 @@ class MatchesRepository {
   }
 
   //? Obtener borrador de resultado pendiente (mock simple)
-  Future<Object?> getMatchResultDraft(String matchId) async {
+  Future<Map<String, Object?>?> getMatchResultDraft(String matchId) async {
     try {
       final data = await _matchesApi.getMatchEnvelope(matchId: matchId);
       final matchRaw = data['match'] ?? data['matchDetail'] ?? data['item'];

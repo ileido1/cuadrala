@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _socialLoading = false;
+  final bool _socialLoading = false;
   // Future<void>? _googleInit;
   //
   // Future<void> _ensureGoogleInitialized() {

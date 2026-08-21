@@ -76,7 +76,7 @@ class _MatchChatViewState extends State<_MatchChatView> {
                 return (prev.sending && !curr.sending) ||
                     curr.items.length > prev.items.length;
               },
-              listener: (_, __) {
+              listener: (_, _) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   scrollChatToBottom(_scroll);
                 });
@@ -120,7 +120,7 @@ class _MatchChatViewState extends State<_MatchChatView> {
                     controller: _scroll,
                     padding: const EdgeInsets.all(16),
                     itemCount: loaded.items.length + (loaded.isLoadingMore ? 1 : 0),
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       if (loaded.isLoadingMore && index == 0) {
                         return const Padding(

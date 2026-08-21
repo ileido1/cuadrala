@@ -109,7 +109,7 @@ final class _Body extends StatelessWidget {
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
         itemCount: state.slots.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           final slot = state.slots[index];
           return _SlotCard(

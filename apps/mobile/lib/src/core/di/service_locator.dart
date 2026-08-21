@@ -27,7 +27,6 @@ import '../../features/availability/data/availability_repository.dart';
 import '../../features/availability/presentation/cubit/availability_cubit.dart';
 import '../../features/catalog/data/catalog_api.dart';
 import '../../features/catalog/data/catalog_repository.dart';
-import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/home/presentation/cubit/home_cubit.dart';
 import '../../features/profile/presentation/cubit/profile_cubit.dart';
 import '../../features/chat/data/chat_api.dart';

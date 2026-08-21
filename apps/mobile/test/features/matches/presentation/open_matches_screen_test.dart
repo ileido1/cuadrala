@@ -8,7 +8,6 @@ import 'package:cuadrala_mobile/src/features/catalog/data/catalog_api.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_api.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_repository.dart';
-import 'package:cuadrala_mobile/src/features/matches/data/models/open_match_dto.dart';
 import 'package:cuadrala_mobile/src/features/matches/presentation/cubit/open_matches_cubit.dart';
 import 'package:cuadrala_mobile/src/features/matches/presentation/cubit/open_matches_state.dart';
 import 'package:cuadrala_mobile/src/features/matches/presentation/open_matches_screen.dart';
@@ -16,23 +15,6 @@ import 'package:cuadrala_mobile/src/features/matches/presentation/open_matches_s
 class _MockMatchesApi extends Mock implements MatchesApi {}
 
 class _MockCatalogApi extends Mock implements CatalogApi {}
-
-OpenMatchDto _match({String id = 'match-1'}) {
-  return OpenMatchDto(
-    id: id,
-    sportId: 'sport',
-    categoryId: 'cat',
-    status: 'SCHEDULED',
-    scheduledAt: DateTime.now().add(const Duration(days: 1)),
-    pricePerPlayerCents: 1500,
-    maxParticipants: 4,
-    participantCount: 2,
-    openSpots: 2,
-    clubName: 'Club Test',
-    courtName: 'Cancha 1',
-    locationLabel: null,
-  );
-}
 
 final _myMatchesResponse = <String, Object?>{
   'items': [

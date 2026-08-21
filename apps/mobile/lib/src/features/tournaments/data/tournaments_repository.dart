@@ -3,7 +3,6 @@ import '../../../core/network/api_json.dart';
 import 'models/create_tournament_request.dart';
 import 'models/create_tournament_response.dart';
 import 'models/tournament_invitation_dto.dart';
-import 'models/tournament_list_item_dto.dart';
 import 'models/tournament_list_page.dart';
 import 'models/tournament_preset_dto.dart';
 import 'models/tournament_registration_dto.dart';

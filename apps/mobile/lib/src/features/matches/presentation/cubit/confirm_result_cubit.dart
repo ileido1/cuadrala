@@ -23,13 +23,26 @@ class ConfirmResultCubit extends Cubit<ConfirmResultState> {
       }
 
       //? 2. Obtener el borrador de resultado (si existe)
-      final draft = await matchesRepository.getMatchResultDraft(matchId);
-      if (draft == null) {
+      final raw = await matchesRepository.getMatchResultDraft(matchId);
+      if (raw == null) {
         emit(const ConfirmResultStateNotFound());
         return;
       }
 
-      emit(ConfirmResultStateLoaded(draft: draft));
+      emit(
+        ConfirmResultStateLoaded(
+          draft: MatchResultDraftModel(
+            id: raw['id'] as String,
+            matchId: raw['matchId'] as String,
+            proposedByUserId: raw['proposedByUserId'] as String,
+            proposedByName: raw['proposedByName'] as String?,
+            teamASetWins: raw['teamASetWins'] as int?,
+            teamBSetWins: raw['teamBSetWins'] as int?,
+            teamAPoints: raw['teamAPoints'] as int?,
+            teamBPoints: raw['teamBPoints'] as int?,
+          ),
+        ),
+      );
     } catch (e) {
       emit(ConfirmResultStateFailure(e.toString()));
     }

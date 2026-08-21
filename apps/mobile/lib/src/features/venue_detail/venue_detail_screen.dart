@@ -121,7 +121,7 @@ class _Content extends StatelessWidget {
           leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
           flexibleSpace: FlexibleSpaceBar(
             background: imageUrl != null
-                ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _ImagePlaceholder())
+                ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => const _ImagePlaceholder())
                 : const _ImagePlaceholder(),
           ),
         ),

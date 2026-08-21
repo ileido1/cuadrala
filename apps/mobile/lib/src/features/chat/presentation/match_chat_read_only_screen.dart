@@ -63,7 +63,7 @@ class _MatchChatReadOnlyViewState extends State<_MatchChatReadOnlyView> {
             curr is MatchChatLoaded &&
             curr.items.isNotEmpty &&
             prev is MatchChatLoading,
-        listener: (_, __) {
+        listener: (_, _) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             scrollChatToBottom(_scroll);
           });
@@ -107,7 +107,7 @@ class _MatchChatReadOnlyViewState extends State<_MatchChatReadOnlyView> {
               controller: _scroll,
               padding: const EdgeInsets.all(16),
               itemCount: loaded.items.length + (loaded.isLoadingMore ? 1 : 0),
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 if (loaded.isLoadingMore && index == 0) {
                   return const Padding(

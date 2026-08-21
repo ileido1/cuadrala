@@ -96,7 +96,7 @@ class _TournamentChatReadOnlyViewState extends State<_TournamentChatReadOnlyView
               controller: _scroll,
               padding: const EdgeInsets.all(16),
               itemCount: loaded.items.length + (loaded.isLoadingMore ? 1 : 0),
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 if (index >= loaded.items.length) {
                   return const Padding(

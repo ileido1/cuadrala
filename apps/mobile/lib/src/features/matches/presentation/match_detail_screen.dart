@@ -317,6 +317,12 @@ final class _Banner extends StatelessWidget {
         'Ya estás anotado',
         'Tu pago está confirmado',
       ),
+      _Phase.inProgress => (
+        AppIcons.play,
+        scheme.primary,
+        'Partida en curso',
+        'Seguí el resultado en vivo',
+      ),
       _Phase.played => (
         AppIcons.target,
         scheme.primary,

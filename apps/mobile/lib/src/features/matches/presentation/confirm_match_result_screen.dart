@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_icons.dart';
-import '../../../router/routes.dart';
 import '../data/matches_repository.dart';
 import 'cubit/confirm_result_cubit.dart';
 import 'cubit/confirm_result_state.dart';

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/match_detail_dto.dart';
 import '../../data/matches_repository.dart';
 import 'match_live_state.dart';
 

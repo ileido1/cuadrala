@@ -47,24 +47,6 @@ OpenMatchDto _makeOpenMatch({
   );
 }
 
-/// Creates a match that starts within 30 minutes from `now`.
-OpenMatchDto _makeLiveMatch({String id = 'live-1', String status = 'SCHEDULED'}) {
-  return _makeOpenMatch(
-    id: id,
-    status: status,
-    scheduledAt: DateTime.now().add(const Duration(minutes: 10)),
-  );
-}
-
-/// Creates a match scheduled far in the future (not live).
-OpenMatchDto _makeFutureMatch({String id = 'future-1'}) {
-  return _makeOpenMatch(
-    id: id,
-    status: 'SCHEDULED',
-    scheduledAt: DateTime.now().add(const Duration(hours: 3)),
-  );
-}
-
 HomeLoaded _loadedState({
   List<OpenMatchDto> openMatches = const [],
   List<OpenMatchDto> myMatches = const [],

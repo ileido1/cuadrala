@@ -196,7 +196,7 @@ void main() {
           ),
           GoRoute(
             path: '/matches/:matchId/pay/upload-receipt',
-            builder: (_, __) => const Scaffold(
+            builder: (_, _) => const Scaffold(
               key: Key('pay.upload.stub'),
             ),
           ),
@@ -304,7 +304,7 @@ void main() {
           routes: [
             GoRoute(
               path: '/',
-              builder: (_, __) => const SizedBox(key: Key('home.stub')),
+              builder: (_, _) => const SizedBox(key: Key('home.stub')),
             ),
             GoRoute(
               path: '/matches/:matchId/pay/waiting',

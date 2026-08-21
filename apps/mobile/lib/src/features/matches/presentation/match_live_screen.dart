@@ -80,7 +80,6 @@ final class _MatchLiveView extends StatelessWidget {
             }
 
             final loaded = state as MatchLiveStateLoaded;
-            final m = loaded.match;
             final hours = loaded.elapsedSeconds ~/ 3600;
             final minutes = (loaded.elapsedSeconds % 3600) ~/ 60;
             final seconds = loaded.elapsedSeconds % 60;

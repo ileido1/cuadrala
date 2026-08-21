@@ -91,16 +91,6 @@ class _MapView extends StatelessWidget {
 
   final VenueMapState state;
 
-  Future<void> _showSaveZoneDialog(BuildContext context, VenueMapCubit cubit) async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => _SaveZoneDialog(),
-    );
-    if (name != null && name.isNotEmpty) {
-      await cubit.saveCurrentLocationAsZone(name: name, radiusKm: 25);
-    }
-  }
-
   Future<void> _showZonesSheet(BuildContext context, VenueMapCubit cubit, List<SavedZone> zones) async {
     await showModalBottomSheet<void>(
       context: context,

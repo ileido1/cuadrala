@@ -110,7 +110,7 @@ final class TournamentDetailBody extends StatelessWidget {
                           Image.network(
                             tournament!.imageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _TournamentHeaderBg(tournament: tournament),
+                            errorBuilder: (_, _, _) => _TournamentHeaderBg(tournament: tournament),
                           ),
                           Container(
                             decoration: BoxDecoration(
