@@ -29,4 +29,18 @@ export class PrismaMatchStatusRepository implements MatchStatusRepository {
 
     return { updatedCount: UPDATED.count };
   }
+
+  async transitionStatusIfCurrentSV(_params: {
+    matchId: string;
+    fromStatus: string;
+    toStatus: string;
+  }): Promise<boolean> {
+    //? Compare-and-swap: solo actualiza si el estado actual coincide con fromStatus
+    const RESULT = await PRISMA.match.updateMany({
+      where: { id: _params.matchId, status: _params.fromStatus as never },
+      data: { status: _params.toStatus as never },
+    });
+
+    return RESULT.count > 0;
+  }
 }

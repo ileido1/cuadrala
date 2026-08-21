@@ -42,7 +42,18 @@ export class InviteGuestTournamentParticipantUseCase {
       );
     }
 
-    //? 4. Crear la inscripción GUEST en estado PENDING
+    //? 4. Los torneos competitivos con costo de inscripción no admiten invitados:
+    //?    el gate de Elo y el cierre de resultados de partido no soportan invitados
+    //?    en ese escenario (ver hallazgos de verificación de la Fase 5).
+    if (TOURNAMENT.isCompetitive && (TOURNAMENT.inscriptionPrice ?? 0) > 0) {
+      throw new AppError(
+        'TORNEO_RESTRINGIDO',
+        'Los huéspedes no pueden inscribirse en torneos competitivos con costo de inscripción.',
+        403,
+      );
+    }
+
+    //? 5. Crear la inscripción GUEST en estado PENDING
     return this._registrationRepository.createGuestSV({
       tournamentId: _input.tournamentId,
       guestName: _input.guestName,

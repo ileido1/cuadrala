@@ -139,6 +139,31 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
         expect(RES.status).toBe(409);
       });
+
+      it('responds 403 TORNEO_RESTRINGIDO when the tournament is competitive and paid', async () => {
+        const TOURNAMENT = await PRISMA.tournament.create({
+          data: {
+            name: `Torneo Guest Competitivo Pago ${Date.now()}`,
+            categoryId,
+            sportId,
+            formatPresetId: presetAmericanoId,
+            organizerUserId,
+            status: 'DRAFT',
+            isCompetitive: true,
+            inscriptionPrice: 10,
+          },
+        });
+
+        const RES = await inviteGuestSV(TOURNAMENT.id, organizerToken);
+
+        expect(RES.status).toBe(403);
+        expect(RES.body.code).toBe('TORNEO_RESTRINGIDO');
+
+        const REGISTRATIONS = await PRISMA.tournamentRegistration.count({
+          where: { tournamentId: TOURNAMENT.id },
+        });
+        expect(REGISTRATIONS).toBe(0);
+      });
     });
 
     describe('PATCH /tournaments/:id/registrations/:registrationId', () => {

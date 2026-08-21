@@ -19,6 +19,8 @@ export interface TournamentRepository {
     startsAt: Date | null;
     organizerUserId: string | null;
     venueId: string | null;
+    isCompetitive: boolean;
+    inscriptionPrice: number | null;
     createdAt: Date;
     updatedAt: Date;
   } | null>;
