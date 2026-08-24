@@ -93,7 +93,15 @@ final class TournamentDetailBody extends StatelessWidget {
               pinned: true,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => context.pop(),
+                onPressed: () {
+                  //? Si entramos vía context.go (p. ej. tras crear el torneo)
+                  //? no hay historial que hacer pop; caemos al home de torneos.
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(Routes.tournaments);
+                  }
+                },
               ),
               actions: [
                 IconButton(
