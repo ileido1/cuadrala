@@ -20,30 +20,42 @@ final class TournamentListItemTile extends StatelessWidget {
     final dateFormat = DateFormat('dd MMM · HH:mm', 'es_ES');
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.1),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push(Routes.tournamentDetail(tournament.id), extra: tournament),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Status icon
+              // Status icon with better visual
               Container(
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: _statusColor(tournament.status)
-                      .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      _statusColor(tournament.status).withValues(alpha: 0.2),
+                      _statusColor(tournament.status).withValues(alpha: 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _statusColor(tournament.status).withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Icon(
                   AppIcons.trophy,
                   color: _statusColor(tournament.status),
-                  size: 22,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               // Info
               Expanded(
                 child: Column(
@@ -53,47 +65,80 @@ final class TournamentListItemTile extends StatelessWidget {
                       tournament.name,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
+                        fontSize: 15,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       '${tournament.sportName} · ${tournament.categoryName}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 12,
                       ),
                     ),
                     if (tournament.startsAt != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        dateFormat.format(tournament.startsAt!),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 10,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            dateFormat.format(tournament.startsAt!),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
                 ),
               ),
-              // Registration count + arrow
+              // Registration count + status
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   _StatusChip(status: tournament.status),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${tournament.registrationCount} ins.',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          size: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${tournament.registrationCount}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
               Icon(
                 Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 size: 20,
               ),
             ],
@@ -133,17 +178,29 @@ final class _StatusChip extends StatelessWidget {
     final color = _chipColor(status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(4),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Text(
         _label(status),
         style: TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: color,
+          letterSpacing: 0.3,
         ),
       ),
     );

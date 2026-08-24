@@ -41,10 +41,16 @@ final class _TournamentsHomeView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Torneos'),
         actions: [
-          IconButton(
-            tooltip: 'Crear torneo',
-            onPressed: () => context.push(Routes.createTournament),
-            icon: const Icon(Icons.add),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilledButton.icon(
+              onPressed: () => context.push(Routes.createTournament),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Crear'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
           ),
         ],
       ),
@@ -144,32 +150,55 @@ final class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.emoji_events_outlined,
-            size: 56,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            hasFilters
-                ? 'No hay torneos con esos filtros'
-                : 'No hay torneos disponibles',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.emoji_events_outlined,
+                size: 40,
+                color: theme.colorScheme.primary,
+              ),
             ),
-          ),
-          if (hasFilters) ...[
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () =>
-                  context.read<TournamentsListCubit>().clearFilters(),
-              child: const Text('Limpiar filtros'),
+            const SizedBox(height: 20),
+            Text(
+              hasFilters
+                  ? 'No hay torneos con esos filtros'
+                  : 'No hay torneos disponibles',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 8),
+            Text(
+              hasFilters
+                  ? 'Probá cambiar los filtros para ver más resultados'
+                  : 'Creá tu primer torneo para comenzar',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (hasFilters) ...[
+              const SizedBox(height: 20),
+              FilledButton.tonal(
+                onPressed: () =>
+                    context.read<TournamentsListCubit>().clearFilters(),
+                child: const Text('Limpiar filtros'),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
