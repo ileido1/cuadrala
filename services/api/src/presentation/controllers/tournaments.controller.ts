@@ -6,6 +6,7 @@ import {
   LIST_TOURNAMENTS_UC,
   LIST_TOURNAMENTS_BY_VENUE_UC,
   UPDATE_TOURNAMENT_STATUS_UC,
+  UPDATE_TOURNAMENT_VISIBILITY_UC,
 } from '../composition/tournaments.composition.js';
 import {
   LIST_TOURNAMENTS_QUERY_SCHEMA,
@@ -13,6 +14,7 @@ import {
   VENUE_ID_PARAM_SCHEMA,
   LIST_TOURNAMENTS_BY_VENUE_QUERY_SCHEMA,
   UPDATE_TOURNAMENT_STATUS_BODY_SCHEMA,
+  UPDATE_TOURNAMENT_VISIBILITY_BODY_SCHEMA,
 } from '../validation/tournaments.validation.js';
 
 export async function getListTournamentsCON(_req: Request, _res: Response): Promise<void> {
@@ -86,6 +88,28 @@ export async function patchTournamentStatusCON(_req: Request, _res: Response): P
   _res.status(200).json({
     success: true,
     message: 'Estado del torneo actualizado correctamente.',
+    data: UPDATED,
+  });
+}
+
+export async function patchTournamentVisibilityCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = TOURNAMENT_ID_PARAM_SCHEMA.parse(_req.params);
+  const BODY = UPDATE_TOURNAMENT_VISIBILITY_BODY_SCHEMA.parse(_req.body);
+
+  const UPDATED = await UPDATE_TOURNAMENT_VISIBILITY_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    visibility: BODY.visibility,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Visibilidad del torneo actualizada correctamente.',
     data: UPDATED,
   });
 }

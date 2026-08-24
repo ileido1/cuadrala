@@ -57,3 +57,9 @@ export const UPDATE_TOURNAMENT_STATUS_BODY_SCHEMA = z
     status: z.enum(['DRAFT', 'OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
   })
   .strict();
+
+export const UPDATE_TOURNAMENT_VISIBILITY_BODY_SCHEMA = z
+  .object({
+    visibility: z.enum(['PUBLIC', 'PRIVATE']),
+  })
+  .strict();

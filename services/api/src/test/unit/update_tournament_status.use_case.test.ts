@@ -6,6 +6,7 @@ const mockTournamentRepository = {
   findByIdSV: vi.fn(),
   createTournamentSV: vi.fn(),
   updateStatusSV: vi.fn(),
+  updateVisibilitySV: vi.fn(),
 };
 
 const mockAssertTournamentOrganizerAccess = {

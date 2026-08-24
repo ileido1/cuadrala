@@ -172,6 +172,16 @@ class TournamentsRepository {
     );
   }
 
+  Future<void> updateTournamentVisibility({
+    required String tournamentId,
+    required String visibility,
+  }) async {
+    await _tournamentsApi.updateTournamentVisibilityEnvelope(
+      tournamentId: tournamentId,
+      body: {'visibility': visibility},
+    );
+  }
+
   Future<List<TournamentInvitationDto>> listInvitations({
     required String tournamentId,
   }) async {

@@ -96,5 +96,21 @@ export class PrismaTournamentRepository implements TournamentRepository {
       select: { id: true, name: true, status: true },
     });
   }
+
+  async updateVisibilitySV(_id: string, _visibility: TournamentVisibility) {
+    const EXISTS = await PRISMA.tournament.findUnique({
+      where: { id: _id },
+      select: { id: true },
+    });
+    if (EXISTS === null) {
+      return null;
+    }
+
+    return PRISMA.tournament.update({
+      where: { id: _id },
+      data: { visibility: _visibility },
+      select: { id: true, name: true, visibility: true },
+    });
+  }
 }
 

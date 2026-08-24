@@ -44,5 +44,10 @@ export interface TournamentRepository {
     _id: string,
     _status: string,
   ): Promise<{ id: string; name: string; status: string } | null>;
+
+  updateVisibilitySV(
+    _id: string,
+    _visibility: TournamentVisibility,
+  ): Promise<{ id: string; name: string; visibility: TournamentVisibility } | null>;
 }
 

@@ -216,6 +216,19 @@ final class TournamentDetailBody extends StatelessWidget {
                 ),
               ),
 
+            // Organizer-only visibility control (PUBLIC/PRIVATE)
+            if (tournament?.organizerUserId != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: _VisibilityControl(
+                    tournamentId: tournamentId,
+                    organizerUserId: tournament!.organizerUserId!,
+                    currentVisibility: tournament?.visibility ?? 'PUBLIC',
+                  ),
+                ),
+              ),
+
             // Tab bar
             SliverPersistentHeader(
               pinned: true,
@@ -556,6 +569,113 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
   }
 }
 
+/// Organizer-only visibility toggle (PUBLIC/PRIVATE). Like
+/// [OrganizerStatusControl], only rendered for the tournament organizer.
+final class _VisibilityControl extends StatefulWidget {
+  const _VisibilityControl({
+    required this.tournamentId,
+    required this.organizerUserId,
+    required this.currentVisibility,
+  });
+
+  final String tournamentId;
+  final String organizerUserId;
+  final String currentVisibility;
+
+  @override
+  State<_VisibilityControl> createState() => _VisibilityControlState();
+}
+
+final class _VisibilityControlState extends State<_VisibilityControl> {
+  bool _submitting = false;
+  String? _error;
+
+  Future<void> _updateSV(String visibility) async {
+    if (visibility == widget.currentVisibility) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await getIt<TournamentsRepository>().updateTournamentVisibility(
+        tournamentId: widget.tournamentId,
+        visibility: visibility,
+      );
+      if (!mounted) return;
+      setState(() => _submitting = false);
+    } on AppFailure catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = 'No se pudo cambiar la visibilidad del torneo.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+      builder: (context, state) {
+        final cubit = context.read<TournamentRegistrationsCubit>();
+        if (cubit.currentUserId == null || cubit.currentUserId != widget.organizerUserId) {
+          return const SizedBox.shrink();
+        }
+
+        final scheme = Theme.of(context).colorScheme;
+        return Column(
+          key: const Key('tournament.visibilityControl'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_error != null) ...[
+              Text(
+                _error!,
+                style: TextStyle(color: scheme.error, fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+            ],
+            Row(
+              children: [
+                Text(
+                  'Visibilidad',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const Spacer(),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'PUBLIC',
+                      label: Text('Público'),
+                      icon: Icon(Icons.public, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: 'PRIVATE',
+                      label: Text('Privado'),
+                      icon: Icon(Icons.lock_outline, size: 16),
+                    ),
+                  ],
+                  selected: {widget.currentVisibility},
+                  onSelectionChanged: _submitting
+                      ? null
+                      : (selection) => _updateSV(selection.first),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 final class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   _TabBarDelegate(this._tabBar);
   final TabBar _tabBar;
@@ -600,8 +720,20 @@ final class _ScheduleTab extends StatelessWidget {
             TournamentScheduleUnsupported() => const _InfoBox(
                 message: 'Este torneo no soporta generación automática de fixture.',
               ),
-            TournamentScheduleConflict() => const _InfoBox(
-                message: 'Ya existe un fixture generado. Refresca para verlo.',
+            TournamentScheduleConflict() => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _InfoBox(message: 'Ya existe un fixture generado.'),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    //? Ancho acotado (el theme global no aplica en Column stretch).
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                    onPressed: () =>
+                        context.read<TournamentScheduleCubit>().load(),
+                    icon: const Icon(Icons.calendar_view_week_outlined),
+                    label: const Text('Ver fixture'),
+                  ),
+                ],
               ),
             TournamentScheduleEmpty() => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -733,8 +865,7 @@ final class _RegistrationsTab extends StatelessWidget {
               tournamentStatus == null || _kOrganizerManageableStatuses.contains(tournamentStatus);
           final canManageGuests = isOrganizer && guestActionsAllowed;
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          return ListView(
             children: [
               Row(
                 children: [
@@ -797,40 +928,36 @@ final class _RegistrationsTab extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              Expanded(
-                child: activeItems.isEmpty
-                    ? const _InfoBox(
-                        message:
-                            'Todavía no hay inscritos. Compartí el torneo para sumar jugadores.',
-                      )
-                    : ListView(
-                        children: [
-                          for (final reg in authenticatedItems)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: _RegistrationTile(
-                                registration: reg,
-                                canManage: false,
-                                busy: false,
-                              ),
-                            ),
-                          if (guestItems.isNotEmpty) ...[
-                            if (authenticatedItems.isNotEmpty) const SizedBox(height: 4),
-                            const _RegistrationsGroupHeader(label: 'Invitados (sin ranking)'),
-                            const SizedBox(height: 6),
-                            for (final reg in guestItems)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: _RegistrationTile(
-                                  registration: reg,
-                                  canManage: canManageGuests,
-                                  busy: loaded.busyRegistrationId == reg.id,
-                                ),
-                              ),
-                          ],
-                        ],
+              if (activeItems.isEmpty)
+                const _InfoBox(
+                  message:
+                      'Todavía no hay inscritos. Compartí el torneo para sumar jugadores.',
+                )
+              else ...[
+                for (final reg in authenticatedItems)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _RegistrationTile(
+                      registration: reg,
+                      canManage: false,
+                      busy: false,
+                    ),
+                  ),
+                if (guestItems.isNotEmpty) ...[
+                  if (authenticatedItems.isNotEmpty) const SizedBox(height: 4),
+                  const _RegistrationsGroupHeader(label: 'Invitados (sin ranking)'),
+                  const SizedBox(height: 6),
+                  for (final reg in guestItems)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _RegistrationTile(
+                        registration: reg,
+                        canManage: canManageGuests,
+                        busy: loaded.busyRegistrationId == reg.id,
                       ),
-              ),
+                    ),
+                ],
+              ],
             ],
           );
         },

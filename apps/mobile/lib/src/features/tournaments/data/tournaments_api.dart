@@ -73,6 +73,11 @@ abstract interface class TournamentsApi {
     required Map<String, Object?> body,
   });
 
+  Future<Map<String, Object?>> updateTournamentVisibilityEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  });
+
   Future<Map<String, Object?>> listTournamentInvitationsEnvelope({
     required String tournamentId,
   });
@@ -232,6 +237,17 @@ final class DioTournamentsApi implements TournamentsApi {
   }) {
     return _apiClient.patchJson(
       '/api/v1/tournaments/$tournamentId/status',
+      body: body,
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> updateTournamentVisibilityEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  }) {
+    return _apiClient.patchJson(
+      '/api/v1/tournaments/$tournamentId/visibility',
       body: body,
     );
   }
