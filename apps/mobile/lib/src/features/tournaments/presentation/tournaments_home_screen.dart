@@ -41,16 +41,11 @@ final class _TournamentsHomeView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Torneos'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilledButton.icon(
-              onPressed: () => context.push(Routes.createTournament),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Crear'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-            ),
+          IconButton(
+            tooltip: 'Crear torneo',
+            onPressed: () => context.push(Routes.createTournament),
+            icon: const Icon(Icons.add_circle, size: 28),
+            color: Theme.of(context).colorScheme.primary,
           ),
         ],
       ),
