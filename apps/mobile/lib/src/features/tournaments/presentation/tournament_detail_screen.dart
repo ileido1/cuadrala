@@ -283,6 +283,11 @@ final class TournamentDetailBody extends StatelessWidget {
                     tournamentId: tournamentId,
                     organizerUserId: tournament!.organizerUserId!,
                     currentVisibility: tournament?.visibility ?? 'PUBLIC',
+                    onVisibilityChanged: () {
+                      // Recargar el torneo para actualizar la UI
+                      context.read<TournamentScheduleCubit>().load();
+                      context.read<TournamentRegistrationsCubit>().load();
+                    },
                   ),
                 ),
               ),
@@ -627,6 +632,9 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
                   children: [
                     for (final next in nextStatuses)
                       FilledButton.tonal(
+                        //? Ancho acotado: el theme global (Size.fromHeight) no
+                        //? puede usarse dentro de un Row.
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                         onPressed: _submitting ? null : () => _submitSV(next),
                         child: Text(_statusActionLabel(next)),
                       ),
@@ -648,11 +656,13 @@ final class _VisibilityControl extends StatefulWidget {
     required this.tournamentId,
     required this.organizerUserId,
     required this.currentVisibility,
+    required this.onVisibilityChanged,
   });
 
   final String tournamentId;
   final String organizerUserId;
   final String currentVisibility;
+  final VoidCallback onVisibilityChanged;
 
   @override
   State<_VisibilityControl> createState() => _VisibilityControlState();
@@ -675,6 +685,8 @@ final class _VisibilityControlState extends State<_VisibilityControl> {
       );
       if (!mounted) return;
       setState(() => _submitting = false);
+      // Notificar al padre para que actualice el estado del torneo
+      widget.onVisibilityChanged();
     } on AppFailure catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1054,14 +1066,15 @@ final class _RegistrationsGroupHeader extends StatelessWidget {
   }
 }
 
-/// Translates a GUEST registration's status for display. Authenticated
-/// rows keep the raw backend status (unchanged pre-existing behavior).
-String _guestStatusLabel(String status) {
+/// Translates registration status for display in Spanish.
+String _registrationStatusLabel(String status) {
   switch (status) {
     case 'PENDING':
-      return 'Pendiente confirmación';
+      return 'Pendiente';
     case 'CONFIRMED':
       return 'Confirmado';
+    case 'WITHDRAWN':
+      return 'Retirado';
     default:
       return status;
   }
@@ -1108,8 +1121,7 @@ final class _RegistrationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = registration.displayName;
-    final statusLabel =
-        registration.isGuest ? _guestStatusLabel(registration.status) : registration.status;
+        final statusLabel = _registrationStatusLabel(registration.status);
     final avatarLabel = label.substring(0, label.length >= 2 ? 2 : label.length).toUpperCase();
 
     return Container(

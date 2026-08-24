@@ -29,6 +29,7 @@ export class RegisterTournamentParticipantUseCase {
     const RESULT = await this._registrationRepository.upsertSV({
       tournamentId: _input.tournamentId,
       userId: _input.userId,
+      status: 'CONFIRMED',
     });
 
     //? Autoinscripción siempre es AUTHENTICATED (upsertSV escribe `_input.userId`, nunca una fila
