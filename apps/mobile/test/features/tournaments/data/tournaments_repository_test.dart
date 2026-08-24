@@ -22,6 +22,59 @@ void main() {
       expect(res.rounds, isEmpty);
     });
 
+    test('getTournamentSchedule (404 con código del backend) devuelve empty', () async {
+      final api = _MockTournamentsApi();
+      final repo = TournamentsRepository(tournamentsApi: api);
+
+      when(() => api.getTournamentScheduleEnvelope(tournamentId: any(named: 'tournamentId')))
+          .thenThrow(
+        const AppFailure(code: 'SCHEDULE_NO_ENCONTRADO', message: 'El calendario aún no ha sido generado.'),
+      );
+
+      final res = await repo.getTournamentSchedule(tournamentId: 't-1');
+      expect(res.rounds, isEmpty);
+    });
+
+    test('registerParticipant parsea la inscripción devuelta por la API', () async {
+      final api = _MockTournamentsApi();
+      final repo = TournamentsRepository(tournamentsApi: api);
+
+      //? La implementación Dio decodifica el envelope {success,data} antes de
+      //? devolver; el mock reemplaza la implementación completa, así que
+      //? devuelve el `data` ya decodificado (mismo contrato que el repositorio
+      //? consume en producción).
+      when(
+        () => api.createRegistrationEnvelope(
+          tournamentId: any(named: 'tournamentId'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer(
+        (_) async => {
+          'id': 'reg-1',
+          'tournamentId': 't-1',
+          'userId': 'user-1',
+          'status': 'PENDING',
+          'createdAt': '2024-01-01T00:00:00.000Z',
+          'registrationType': 'AUTHENTICATED',
+        },
+      );
+
+      final result = await repo.registerParticipant(
+        tournamentId: 't-1',
+        userId: 'user-1',
+      );
+
+      expect(result.id, 'reg-1');
+      expect(result.userId, 'user-1');
+      expect(result.status, 'PENDING');
+      verify(
+        () => api.createRegistrationEnvelope(
+          tournamentId: 't-1',
+          body: {'userId': 'user-1'},
+        ),
+      ).called(1);
+    });
+
     test('generateTournamentSchedule (501) lanza unsupported', () async {
       final api = _MockTournamentsApi();
       final repo = TournamentsRepository(tournamentsApi: api);

@@ -73,7 +73,12 @@ class TournamentsRepository {
       );
       return TournamentScheduleDto.fromJson(data);
     } on AppFailure catch (e) {
-      if (e.code == 'HTTP_404') {
+      //? 404 = aún no hay calendario → estado vacío. El backend responde con
+      //? códigos propios (`SCHEDULE_NO_ENCONTRADO`, `TORNEO_NO_ENCONTRADO`),
+      //? no `HTTP_404`, así que hay que contemplarlos todos.
+      if (e.code == 'HTTP_404' ||
+          e.code == 'SCHEDULE_NO_ENCONTRADO' ||
+          e.code == 'TORNEO_NO_ENCONTRADO') {
         return TournamentScheduleDto.empty();
       }
       rethrow;
