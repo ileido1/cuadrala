@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
@@ -93,7 +94,10 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
       emit(current.copyWith(items: refreshed, total: refreshed.length, registering: false));
     } on AppFailure catch (e) {
       emit(current.copyWith(registering: false, registerError: e.message));
-    } catch (_) {
+    } catch (e) {
+      //? Diag: la causa real queda en la consola del navegador (caché del
+      //? service worker, shape de respuesta, etc.).
+      debugPrint('registerParticipant falló: $e');
       emit(current.copyWith(
         registering: false,
         registerError: 'No se pudo completar la inscripción.',

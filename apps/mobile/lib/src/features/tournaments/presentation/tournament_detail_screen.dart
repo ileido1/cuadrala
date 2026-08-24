@@ -149,7 +149,7 @@ final class TournamentDetailBody extends StatelessWidget {
                   if (context.canPop()) {
                     context.pop();
                   } else {
-                    context.go(Routes.tournaments);
+                    context.go(Routes.torneosHome);
                   }
                 },
               ),

@@ -25,6 +25,8 @@ final class Routes {
   static String matchChatReadOnly(String matchId) => '/matches/$matchId/chat/readonly';
   static String matchSuggestions(String matchId) => '/matches/$matchId/suggestions';
   static const tournaments = '/tournaments';
+  /// Home del tab de torneos (branch del shell). Usado como fallback del back.
+  static const torneosHome = '/torneos';
   static const createTournament = '/tournaments/create';
   static String tournamentChat(String tournamentId) => '/tournaments/$tournamentId/chat';
   static String tournamentChatReadOnly(String tournamentId) => '/tournaments/$tournamentId/chat/readonly';
