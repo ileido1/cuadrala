@@ -207,11 +207,12 @@ final class DioTournamentsApi implements TournamentsApi {
   Future<Map<String, Object?>> createRegistrationEnvelope({
     required String tournamentId,
     required Map<String, Object?> body,
-  }) {
-    return _apiClient.postJson(
+  }) async {
+    final json = await _apiClient.postJson(
       '/api/v1/tournaments/$tournamentId/registrations',
       body: body,
     );
+    return decodeEnvelopeDataMap(json);
   }
 
   @override

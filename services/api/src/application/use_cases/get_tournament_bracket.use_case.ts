@@ -70,7 +70,11 @@ export class GetTournamentBracketUseCase {
 
     // Ordenar por createdAt para tener orden determinista (seed por posición)
     const SORTED_CONFIRMED = [...CONFIRMED].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    const PARTICIPANT_IDS = SORTED_CONFIRMED.map((r) => r.userId);
+    //? Solo los jugadores autenticados entran al bracket (los GUEST no tienen
+    //? `userId` y no participan en brackets con ELO).
+    const PARTICIPANT_IDS = SORTED_CONFIRMED.map((r) => r.userId).filter(
+      (_id): _id is string => _id !== null,
+    );
 
     // Generar bracket usando la función del dominio
     const SCHEDULE = generateSingleEliminationScheduleSV({ participantUserIds: PARTICIPANT_IDS });

@@ -30,3 +30,25 @@ export function requireAuth(_req: Request, _res: Response, _next: NextFunction):
     _next(_error);
   }
 }
+
+/**
+ * Autenticación opcional: si hay un Bearer token válido, lo resuelve y setea
+ * `_req.authUser`; si no hay token (o es inválido/expirado), continúa sin
+ * usuario. Nunca rechaza la request. Útil para endpoints que asignan el actor
+ * (p. ej. `organizerUserId` al crear un torneo) sin exigir sesión obligatoria.
+ */
+export function optionalAuth(_req: Request, _res: Response, _next: NextFunction): void {
+  const HEADER = _req.headers.authorization;
+  if (HEADER === undefined || !HEADER.startsWith('Bearer ')) {
+    _next();
+    return;
+  }
+  try {
+    const TOKEN = HEADER.slice(7);
+    const PAYLOAD = AUTH_TOKEN_SERVICE.verifyAccessTokenSV(TOKEN);
+    _req.authUser = { id: PAYLOAD.sub, email: PAYLOAD.email };
+  } catch {
+    // Token inválido o expirado: se ignora y la request continúa sin usuario.
+  }
+  _next();
+}

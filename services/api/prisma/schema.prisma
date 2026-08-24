@@ -232,6 +232,13 @@ enum Visibility {
   PRIVATE
 }
 
+/// Visibilidad de un torneo: `PUBLIC` aparece en el catálogo público;
+/// `PRIVATE` solo es accesible por link directo / invitación (nunca listado).
+enum TournamentVisibility {
+  PUBLIC
+  PRIVATE
+}
+
 enum ReservationStatus {
   CONFIRMED
   CANCELLED
@@ -641,6 +648,8 @@ model Tournament {
   /// Copia de schemaVersion del preset al crear el torneo (inmutabilidad lógica).
   presetSchemaVersion Int                    @default(1)
   status              TournamentStatus       @default(DRAFT)
+  /// `PUBLIC` se lista en el catálogo; `PRIVATE` solo por link directo.
+  visibility          TournamentVisibility   @default(PUBLIC)
   startsAt            DateTime?
   /// Usuario organizador del torneo (nullable para compatibilidad hacia atrás). Habilita los guards R1.
   organizerUserId     String?
@@ -667,6 +676,7 @@ model Tournament {
   @@index([formatPresetId])
   @@index([organizerUserId])
   @@index([venueId])
+  @@index([visibility])
 }
 
 /// Schedule genérico por torneo (MVP: reutiliza payload JSON).

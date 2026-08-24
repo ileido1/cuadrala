@@ -20,6 +20,20 @@ extension on Iterable<TournamentPresetDto> {
   TournamentPresetDto? get firstOrNull => isEmpty ? null : first;
 }
 
+/// Descripción amigable de un preset de formato (para el usuario final).
+String _presetDescription(String code) {
+  switch (code) {
+    case 'ROUND_ROBIN':
+      return 'Todos contra todos';
+    case 'AMERICANO':
+      return 'Rotación por rondas en varias canchas';
+    case 'SINGLE_ELIMINATION':
+      return 'Eliminación directa por llaves';
+    default:
+      return 'Formato de torneo';
+  }
+}
+
 final class CreateTournamentScreen extends StatefulWidget {
   const CreateTournamentScreen({super.key});
 
@@ -42,10 +56,16 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   int _americanoRounds = 3;
   int _americanoCourts = 1;
   bool _thirdPlaceMatch = false;
+  String _visibility = 'PUBLIC';
 
   bool _isLoadingSports = false;
   String? _sportsError;
   String? _submitError;
+
+  /// Categorías del deporte actualmente seleccionado (cada categoría
+  /// pertenece a un único deporte según `sportId`).
+  List<CategoryDto> get _categoriesForSport =>
+      _categories.where((c) => c.sportId == _selectedSportId).toList();
 
   @override
   void initState() {
@@ -76,7 +96,11 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
           _sports = sports;
           _selectedSportId = sports.isEmpty ? null : sports.first.id;
           _categories = categories;
-          _selectedCategoryId = categories.isEmpty ? null : categories.first.id;
+          //? Solo se ofrecen las categorías del deporte seleccionado (evita
+          //? duplicados al mezclar categorías de todos los deportes).
+          _selectedCategoryId = _categoriesForSport.isEmpty
+              ? null
+              : _categoriesForSport.first.id;
         });
         final sportId = _selectedSportId;
         if (sportId != null) {
@@ -104,6 +128,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       _americanoCourts = 1;
       _thirdPlaceMatch = false;
       _submitError = null;
+      //? Al cambiar de deporte se resetea la categoría a la primera del nuevo
+      //? deporte (la anterior puede no pertenecerle).
+      _selectedCategoryId = _categoriesForSport.isEmpty ? null : _categoriesForSport.first.id;
     });
     _tournamentPresetsCubit.load(sportId: sportId);
   }
@@ -142,6 +169,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
             name: _nameController.text,
             formatPresetId: preset.id,
             formatParameters: params,
+            visibility: _visibility,
           ),
         );
   }
@@ -220,13 +248,13 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     ),
               ),
               const SizedBox(height: 8),
-              if (_categories.isEmpty)
-                _EmptyBox(message: 'No hay categorías disponibles.')
+              if (_categoriesForSport.isEmpty)
+                _EmptyBox(message: 'No hay categorías disponibles para este deporte.')
               else
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
-                  children: _categories
+                  children: _categoriesForSport
                       .map(
                         (c) => ChoiceChip(
                           selected: _selectedCategoryId == c.id,
@@ -291,7 +319,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                                         style: const TextStyle(fontWeight: FontWeight.w900),
                                       ),
                                       subtitle: Text(
-                                        '${p.code} · v${p.version}',
+                                        _presetDescription(p.code),
                                         style: TextStyle(
                                           color: scheme.onSurfaceVariant,
                                           fontWeight: FontWeight.w600,
@@ -320,6 +348,41 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       ),
                   };
                 },
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Visibilidad',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'PUBLIC',
+                    label: Text('Público'),
+                    icon: Icon(Icons.public),
+                  ),
+                  ButtonSegment(
+                    value: 'PRIVATE',
+                    label: Text('Privado'),
+                    icon: Icon(Icons.lock_outline),
+                  ),
+                ],
+                selected: {_visibility},
+                onSelectionChanged: (selection) =>
+                    setState(() => _visibility = selection.first),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _visibility == 'PUBLIC'
+                    ? 'Visible en el catálogo para todos los jugadores.'
+                    : 'Oculto del catálogo: solo accesible por link o invitación.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 14),
               BlocBuilder<CreateTournamentCubit, CreateTournamentState>(

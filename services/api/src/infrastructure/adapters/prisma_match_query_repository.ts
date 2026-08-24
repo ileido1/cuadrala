@@ -187,7 +187,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
       tournamentId: ROW.tournamentId,
       participants: ROW.participants.map((_p) => ({
         userId: _p.userId,
-        displayName: _p.user.name,
+        displayName: _p.user?.name ?? null,
         joinedAt: _p.createdAt,
       })),
       createdAt: ROW.createdAt,

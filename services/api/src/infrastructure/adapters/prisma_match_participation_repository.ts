@@ -83,7 +83,9 @@ export class PrismaMatchParticipationRepository implements MatchParticipationRep
       where: { matchId: _matchId },
       select: { userId: true },
     });
-    return ROWS.map((_r) => _r.userId);
+    //? Los invitados (GUEST) no tienen `userId`; solo los jugadores autenticados
+    //? entran a la lista de IDs.
+    return ROWS.map((_r) => _r.userId).filter((_id): _id is string => _id !== null);
   }
 }
 

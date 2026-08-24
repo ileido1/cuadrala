@@ -1,6 +1,7 @@
 import type {
   TournamentCreatedDTO,
   TournamentRepository,
+  TournamentVisibility,
 } from '../../domain/ports/tournament_repository.js';
 
 import { PRISMA } from '../prisma_client.js';
@@ -15,6 +16,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
     presetSchemaVersion: number;
     formatParameters: unknown | null;
     status: string;
+    visibility: TournamentVisibility | null;
     startsAt: Date | null;
     organizerUserId: string | null;
     venueId: string | null;
@@ -34,6 +36,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
       presetSchemaVersion: ROW.presetSchemaVersion,
       formatParameters: (ROW.formatParameters as unknown) ?? null,
       status: ROW.status,
+      visibility: ROW.visibility,
       startsAt: ROW.startsAt,
       organizerUserId: ROW.organizerUserId,
       venueId: ROW.venueId,
@@ -52,6 +55,8 @@ export class PrismaTournamentRepository implements TournamentRepository {
     formatParameters?: unknown;
     presetSchemaVersion: number;
     startsAt?: Date;
+    organizerUserId?: string;
+    visibility?: TournamentVisibility;
   }): Promise<TournamentCreatedDTO> {
     const CREATED = await PRISMA.tournament.create({
       data: {
@@ -60,6 +65,8 @@ export class PrismaTournamentRepository implements TournamentRepository {
         sportId: _data.sportId,
         formatPresetId: _data.formatPresetId,
         presetSchemaVersion: _data.presetSchemaVersion,
+        ...(_data.organizerUserId !== undefined ? { organizerUserId: _data.organizerUserId } : {}),
+        ...(_data.visibility !== undefined ? { visibility: _data.visibility } : {}),
         ...(_data.formatParameters !== undefined ? { formatParameters: _data.formatParameters as never } : {}),
         ...(_data.startsAt !== undefined ? { startsAt: _data.startsAt } : {}),
       },

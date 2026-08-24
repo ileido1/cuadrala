@@ -13,6 +13,7 @@ function toListItemDTO(_row: {
   id: string;
   name: string;
   status: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  visibility: 'PUBLIC' | 'PRIVATE';
   sportId: string;
   sport: { name: string };
   categoryId: string;
@@ -24,6 +25,7 @@ function toListItemDTO(_row: {
     id: _row.id,
     name: _row.name,
     status: _row.status,
+    visibility: _row.visibility,
     sportId: _row.sportId,
     sportName: _row.sport.name,
     categoryId: _row.categoryId,
@@ -40,11 +42,14 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
   ): Promise<{ items: TournamentListItemDTO[]; total: number }> {
     const WHERE: {
       status?: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+      visibility?: 'PUBLIC' | 'PRIVATE';
       sportId?: string;
       categoryId?: string;
       startsAt?: { gte?: Date; lte?: Date };
       matches?: { some: { court: { venueId: string } } };
     } = {
+      //? Catálogo público: solo torneos PUBLIC (los PRIVATE solo por link directo).
+      visibility: 'PUBLIC',
       ...(_filters.status !== undefined ? { status: _filters.status } : {}),
       ...(_filters.sportId !== undefined ? { sportId: _filters.sportId } : {}),
       ...(_filters.categoryId !== undefined ? { categoryId: _filters.categoryId } : {}),
@@ -79,6 +84,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           id: true,
           name: true,
           status: true,
+          visibility: true,
           sportId: true,
           sport: { select: { name: true } },
           categoryId: true,
@@ -99,6 +105,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
         id: true,
         name: true,
         status: true,
+        visibility: true,
         sportId: true,
         sport: { select: { name: true } },
         categoryId: true,
@@ -144,7 +151,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
     return ROWS.map((_r) => ({
       id: _r.id,
       userId: _r.userId,
-      userName: _r.user.name,
+      userName: _r.user?.name ?? null,
       status: _r.status,
       createdAt: _r.createdAt.toISOString(),
     }));
@@ -187,6 +194,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           id: true,
           name: true,
           status: true,
+          visibility: true,
           sportId: true,
           sport: { select: { name: true } },
           categoryId: true,

@@ -6,6 +6,8 @@ export type TournamentCreatedDTO = {
   status: string;
 };
 
+export type TournamentVisibility = 'PUBLIC' | 'PRIVATE';
+
 export interface TournamentRepository {
   findByIdSV(_id: string): Promise<{
     id: string;
@@ -16,6 +18,7 @@ export interface TournamentRepository {
     presetSchemaVersion: number;
     formatParameters: unknown | null;
     status: string;
+    visibility: TournamentVisibility | null;
     startsAt: Date | null;
     organizerUserId: string | null;
     venueId: string | null;
@@ -33,6 +36,8 @@ export interface TournamentRepository {
     formatParameters?: unknown;
     presetSchemaVersion: number;
     startsAt?: Date;
+    organizerUserId?: string;
+    visibility?: TournamentVisibility;
   }): Promise<TournamentCreatedDTO>;
 
   updateStatusSV(

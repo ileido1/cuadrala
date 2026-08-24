@@ -19,7 +19,7 @@ export function computeOpenMatchDTOSV(_row: {
   gender?: 'MALE' | 'FEMALE' | 'MIXED' | null;
   _count: { participants: number };
   category: { name: string } | null;
-  participants: { userId: string; user: { name: string } }[];
+  participants: { userId: string | null; user: { name: string } | null }[];
   court: null | {
     name: string;
     venue: {
@@ -64,7 +64,7 @@ export function computeOpenMatchDTOSV(_row: {
     displayCurrency: _row.court?.venue.displayCurrency,
     participantPreview: _row.participants.map((_p) => ({
       userId: _p.userId,
-      displayName: _p.user.name,
+      displayName: _p.user?.name ?? null,
     })),
     affectsElo: _row.affectsElo,
     ...(_row.court?.venue.imageUrl != null ? { venueImageUrl: _row.court.venue.imageUrl } : {}),

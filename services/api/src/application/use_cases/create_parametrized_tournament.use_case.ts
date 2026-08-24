@@ -13,6 +13,9 @@ export type CreateParametrizedTournamentInput = {
   formatPresetCode?: string;
   formatParameters?: unknown;
   startsAt?: Date;
+  organizerUserId?: string;
+  /** `PUBLIC` (default) se lista en el catálogo; `PRIVATE` solo por link. */
+  visibility?: 'PUBLIC' | 'PRIVATE';
 };
 
 export class CreateParametrizedTournamentUseCase {
@@ -91,6 +94,10 @@ export class CreateParametrizedTournamentUseCase {
       sportId: _input.sportId,
       formatPresetId: PRESET.id,
       presetSchemaVersion: PRESET.schemaVersion,
+      ...(_input.organizerUserId !== undefined
+        ? { organizerUserId: _input.organizerUserId }
+        : {}),
+      ...(_input.visibility !== undefined ? { visibility: _input.visibility } : {}),
       ...(NORMALIZED_FORMAT_PARAMETERS !== undefined
         ? { formatParameters: NORMALIZED_FORMAT_PARAMETERS }
         : {}),

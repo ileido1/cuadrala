@@ -11,6 +11,11 @@ export async function postParametrizedTournamentCON(_req: Request, _res: Respons
     categoryId: BODY.categoryId,
     sportId: BODY.sportId,
   };
+  //? Si el llamador está autenticado (token válido), se registra como
+  //? organizador del torneo. Sin sesión, el torneo queda sin organizador.
+  if (_req.authUser !== undefined) {
+    INPUT.organizerUserId = _req.authUser.id;
+  }
   if (BODY.formatPresetId !== undefined) {
     INPUT.formatPresetId = BODY.formatPresetId;
   }
@@ -22,6 +27,9 @@ export async function postParametrizedTournamentCON(_req: Request, _res: Respons
   }
   if (BODY.startsAt !== undefined) {
     INPUT.startsAt = new Date(BODY.startsAt);
+  }
+  if (BODY.visibility !== undefined) {
+    INPUT.visibility = BODY.visibility;
   }
 
   const RESULT = await CREATE_PARAMETRIZED_TOURNAMENT_UC.executeSV(INPUT);

@@ -8,6 +8,7 @@ final class CreateTournamentRequest extends Equatable {
     required this.formatPresetId,
     this.formatParameters,
     this.startsAt,
+    this.visibility = 'PUBLIC',
   });
 
   final String sportId;
@@ -17,16 +18,28 @@ final class CreateTournamentRequest extends Equatable {
   final Map<String, Object?>? formatParameters;
   final DateTime? startsAt;
 
+  /// `PUBLIC` (aparece en el catálogo) o `PRIVATE` (solo por link).
+  final String visibility;
+
   Map<String, Object?> toJson() => {
         'sportId': sportId,
         'categoryId': categoryId,
         'name': name,
         'formatPresetId': formatPresetId,
+        'visibility': visibility,
         if (formatParameters != null) 'formatParameters': formatParameters,
         if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
       };
 
   @override
-  List<Object?> get props => [sportId, categoryId, name, formatPresetId, formatParameters, startsAt];
+  List<Object?> get props => [
+        sportId,
+        categoryId,
+        name,
+        formatPresetId,
+        formatParameters,
+        startsAt,
+        visibility,
+      ];
 }
 

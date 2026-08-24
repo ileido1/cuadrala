@@ -14,6 +14,7 @@ export const CREATE_PARAMETRIZED_TOURNAMENT_BODY_SCHEMA = z
       .optional(),
     formatParameters: z.record(z.string(), z.unknown()).optional(),
     startsAt: z.string().datetime({ offset: true }).optional(),
+    visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
   })
   .strict()
   .superRefine((_value, _ctx) => {

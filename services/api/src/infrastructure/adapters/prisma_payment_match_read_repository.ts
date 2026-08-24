@@ -45,9 +45,12 @@ export class PrismaPaymentMatchReadRepository implements PaymentMatchReadReposit
     return {
       id: MATCH.id,
       venueId: MATCH.court?.venueId ?? null,
-      participants: MATCH.participants.map((_participant) => ({
-        userId: _participant.userId,
-      })),
+      participants: MATCH.participants
+        //? Los invitados (GUEST) no tienen `userId`: solo los jugadores
+        //? autenticados son relevantes para el cobro por participante.
+        .map((_participant) => _participant.userId)
+        .filter((_id): _id is string => _id !== null)
+        .map((userId) => ({ userId })),
     };
   }
 }

@@ -164,6 +164,26 @@ final class TournamentDetailBody extends StatelessWidget {
                 child: Row(
                   children: [
                     _StatusBadge(status: tournament?.status ?? ''),
+                    if (tournament?.visibility == 'PRIVATE') ...[
+                      const SizedBox(width: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.lock_outline,
+                              size: 13,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Privado',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(width: 12),
                     if (tournament?.startsAt != null) ...[
                       Icon(Icons.calendar_today, size: 14,
@@ -359,6 +379,10 @@ final class _EnrollButton extends StatelessWidget {
                 ),
               ),
             FilledButton.icon(
+              //? El theme global usa Size.fromHeight(48) (ancho mínimo = ∞),
+              //? que revienta dentro de un Row (ancho sin límite). Acá se
+              //? acota para que el botón se ajuste a su contenido.
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
               onPressed: isLoading
                   ? null
                   : () {
@@ -493,6 +517,21 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
           key: const Key('tournament.organizerStatusControl'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            //? Aclaración de estado para el organizador: deja claro que un
+            //? torneo en DRAFT no es visible para el público hasta publicarlo.
+            if (widget.currentStatus == 'DRAFT')
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Tu torneo está en borrador: todavía no es visible para los jugadores. '
+                  'Publicalo cuando esté listo.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             if (_error != null) ...[
               Text(
                 _error!,
@@ -567,7 +606,10 @@ final class _ScheduleTab extends StatelessWidget {
             TournamentScheduleEmpty() => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const _InfoBox(message: 'Aún no hay fixture para este torneo.'),
+                  const _InfoBox(
+                    message:
+                        'Todavía no hay calendario. Sumá al menos 2 inscritos y tocá «Generar fixture».',
+                  ),
                   const SizedBox(height: 12),
                   BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
                     builder: (context, regState) {
@@ -582,6 +624,7 @@ final class _ScheduleTab extends StatelessWidget {
                       // no userId (Slice 1: tournament-guest-registration).
                       final participantUserIds =
                           registrations.where((r) => r.userId != null).map((r) => r.userId!).toList();
+                      final missing = 2 - registrations.length;
                       final enoughParticipants = registrations.length >= 2;
                       return FilledButton.icon(
                         onPressed: enoughParticipants
@@ -593,7 +636,7 @@ final class _ScheduleTab extends StatelessWidget {
                         label: Text(
                           enoughParticipants
                               ? 'Generar fixture'
-                              : 'Se necesitan al menos 2 inscritos',
+                              : 'Faltan $missing inscrito${missing == 1 ? '' : 's'} para generar',
                         ),
                       );
                     },
@@ -706,6 +749,9 @@ final class _RegistrationsTab extends StatelessWidget {
                   if (canManageGuests)
                     FilledButton.icon(
                       key: const Key('tournament.inviteGuestButton'),
+                      //? Ancho acotado: el theme global (Size.fromHeight) no
+                      //? puede usarse dentro de un Row.
+                      style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                       onPressed: () => showInviteGuestSheet(context),
                       icon: const Icon(Icons.person_add_alt_1),
                       label: const Text('Invitar huésped'),
@@ -753,7 +799,10 @@ final class _RegistrationsTab extends StatelessWidget {
               const SizedBox(height: 12),
               Expanded(
                 child: activeItems.isEmpty
-                    ? const _InfoBox(message: 'Aún no hay inscritos en este torneo.')
+                    ? const _InfoBox(
+                        message:
+                            'Todavía no hay inscritos. Compartí el torneo para sumar jugadores.',
+                      )
                     : ListView(
                         children: [
                           for (final reg in authenticatedItems)
@@ -972,11 +1021,15 @@ final class _PendingInviteBanner extends StatelessWidget {
           Row(
             children: [
               FilledButton(
+                //? Ancho acotado (dentro de un Row).
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                 onPressed: responding ? null : onAccept,
                 child: const Text('Aceptar'),
               ),
               const SizedBox(width: 8),
               OutlinedButton(
+                //? Ancho acotado (dentro de un Row).
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
                 onPressed: responding ? null : onReject,
                 child: const Text('Rechazar'),
               ),
@@ -1057,6 +1110,8 @@ final class _OrganizerInvitationsSectionState extends State<_OrganizerInvitation
               ),
               const SizedBox(width: 8),
               FilledButton(
+                //? Ancho acotado (dentro de un Row).
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                 onPressed: widget.busy
                     ? null
                     : () {

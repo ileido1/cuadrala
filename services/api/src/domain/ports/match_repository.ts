@@ -34,7 +34,7 @@ export type OpenMatchDTO = {
   locationLabel?: string | undefined;
   pricingCurrency?: string | undefined;
   displayCurrency?: string | undefined;
-  participantPreview?: { userId: string; displayName: string }[];
+  participantPreview?: { userId: string | null; displayName: string | null }[];
   affectsElo: boolean;
   venueImageUrl?: string;
   gender?: 'MALE' | 'FEMALE' | 'MIXED';

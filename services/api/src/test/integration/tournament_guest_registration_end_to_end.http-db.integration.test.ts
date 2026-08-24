@@ -472,7 +472,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
               rounds: [
                 {
                   roundNumber: 1,
-                  courts: [{ courtNumber: 1, teamA: [USER_IDS[0], USER_IDS[1]], teamB: [USER_IDS[2], USER_IDS[3]] }],
+                  courts: [{ courtNumber: 1, teamA: [USER_IDS[0]!, USER_IDS[1]!], teamB: [USER_IDS[2]!, USER_IDS[3]!] }],
                 },
               ],
             },

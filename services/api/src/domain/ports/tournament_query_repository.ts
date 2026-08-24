@@ -3,12 +3,15 @@
 
 export type TournamentStatus = 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
+export type TournamentVisibility = 'PUBLIC' | 'PRIVATE';
+
 export type RegistrationStatus = 'PENDING' | 'CONFIRMED' | 'WITHDRAWN';
 
 export type TournamentListItemDTO = {
   id: string;
   name: string;
   status: TournamentStatus;
+  visibility: TournamentVisibility;
   sportId: string;
   sportName: string;
   categoryId: string;
@@ -28,8 +31,8 @@ export type TournamentDetailDTO = TournamentListItemDTO & {
 
 export type RegistrationDTO = {
   id: string;
-  userId: string;
-  userName: string;
+  userId: string | null;
+  userName: string | null;
   status: RegistrationStatus;
   createdAt: string;
 };

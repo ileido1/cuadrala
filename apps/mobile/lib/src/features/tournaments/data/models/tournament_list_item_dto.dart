@@ -12,6 +12,7 @@ final class TournamentListItemDto extends Equatable {
     required this.registrationCount,
     this.imageUrl,
     this.organizerUserId,
+    this.visibility = 'PUBLIC',
   });
 
   final String id;
@@ -22,6 +23,9 @@ final class TournamentListItemDto extends Equatable {
   final DateTime? startsAt;
   final int registrationCount;
   final String? imageUrl;
+
+  /// `PUBLIC` (listado en catálogo) o `PRIVATE` (solo por link directo).
+  final String visibility;
 
   /// Owner of the tournament (drives organizer-only UI controls).
   ///
@@ -52,6 +56,8 @@ final class TournamentListItemDto extends Equatable {
       imageUrl: json['imageUrl'] as String? ?? json['image_url'] as String?,
       organizerUserId:
           json['organizerUserId'] as String? ?? json['organizer_user_id'] as String?,
+      visibility:
+          (json['visibility'] as String?) ?? 'PUBLIC',
     );
   }
 
@@ -60,6 +66,7 @@ final class TournamentListItemDto extends Equatable {
         id,
         name,
         status,
+        visibility,
         sportName,
         categoryName,
         startsAt,

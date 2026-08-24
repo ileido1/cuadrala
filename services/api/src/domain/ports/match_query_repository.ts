@@ -48,8 +48,8 @@ export type MatchListItemDTO = {
 };
 
 export type MatchParticipantDTO = {
-  userId: string;
-  displayName?: string;
+  userId: string | null;
+  displayName?: string | null;
   joinedAt: Date;
 };
 
