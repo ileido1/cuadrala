@@ -1,5 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
-import type { TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
+import type { TournamentRegistrationDTO, TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 
 export class RegisterTournamentParticipantUseCase {
@@ -11,7 +11,7 @@ export class RegisterTournamentParticipantUseCase {
   async executeSV(_input: {
     tournamentId: string;
     userId: string;
-  }): Promise<{ created: boolean; registration: { id: string; tournamentId: string; userId: string; status: string } }> {
+  }): Promise<{ created: boolean; registration: TournamentRegistrationDTO }> {
     const TOURNAMENT = await this._tournamentRepository.findByIdSV(_input.tournamentId);
     if (TOURNAMENT === null) {
       throw new AppError('TORNEO_NO_ENCONTRADO', 'El torneo indicado no existe.', 404);
@@ -33,15 +33,13 @@ export class RegisterTournamentParticipantUseCase {
 
     //? Autoinscripción siempre es AUTHENTICATED (upsertSV escribe `_input.userId`, nunca una fila
     //? GUEST); `userId` no puede ser nulo aquí aunque el DTO lo tipe nullable (Slice 1: guests).
-    const REGISTRATION_USER_ID = RESULT.registration.userId ?? _input.userId;
-
+    //? Se devuelve el DTO completo (con `createdAt`, `registrationType`, etc.) porque el cliente
+    //? mobile lo parsea con `TournamentRegistrationDto.fromJson`, que exige esos campos.
     return {
       created: RESULT.created,
       registration: {
-        id: RESULT.registration.id,
-        tournamentId: RESULT.registration.tournamentId,
-        userId: REGISTRATION_USER_ID,
-        status: RESULT.registration.status,
+        ...RESULT.registration,
+        userId: RESULT.registration.userId ?? _input.userId,
       },
     };
   }

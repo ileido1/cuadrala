@@ -3,6 +3,7 @@ import '../../../core/network/api_json.dart';
 import 'models/create_tournament_request.dart';
 import 'models/create_tournament_response.dart';
 import 'models/tournament_invitation_dto.dart';
+import 'models/tournament_list_item_dto.dart';
 import 'models/tournament_list_page.dart';
 import 'models/tournament_preset_dto.dart';
 import 'models/tournament_registration_dto.dart';
@@ -15,6 +16,17 @@ class TournamentsRepository {
       : _tournamentsApi = tournamentsApi;
 
   final TournamentsApi _tournamentsApi;
+
+  /// Detalle del torneo por ID (usado cuando se navega sin `extra`, p. ej.
+  /// justo después de crear el torneo).
+  Future<TournamentListItemDto> getTournamentById({
+    required String tournamentId,
+  }) async {
+    final data = await _tournamentsApi.getTournamentByIdEnvelope(
+      tournamentId: tournamentId,
+    );
+    return TournamentListItemDto.fromJson(data);
+  }
 
   Future<TournamentListPage> listTournaments({
     required int page,

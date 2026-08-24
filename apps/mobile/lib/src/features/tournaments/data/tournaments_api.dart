@@ -27,6 +27,10 @@ final class TournamentListFilters extends Equatable {
 }
 
 abstract interface class TournamentsApi {
+  Future<Map<String, Object?>> getTournamentByIdEnvelope({
+    required String tournamentId,
+  });
+
   Future<Map<String, Object?>> listTournamentsEnvelope({
     required int page,
     required int limit,
@@ -123,6 +127,15 @@ final class DioTournamentsApi implements TournamentsApi {
   DioTournamentsApi({required ApiClient apiClient}) : _apiClient = apiClient;
 
   final ApiClient _apiClient;
+
+  @override
+  Future<Map<String, Object?>> getTournamentByIdEnvelope({
+    required String tournamentId,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/tournaments/$tournamentId',
+    );
+  }
 
   @override
   Future<Map<String, Object?>> listTournamentsEnvelope({

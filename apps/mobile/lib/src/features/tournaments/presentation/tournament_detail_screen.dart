@@ -27,7 +27,7 @@ import 'widgets/invite_guest_sheet.dart';
 /// registration guards.
 const _kOrganizerManageableStatuses = {'DRAFT', 'OPEN'};
 
-final class TournamentDetailScreen extends StatelessWidget {
+final class TournamentDetailScreen extends StatefulWidget {
   const TournamentDetailScreen({
     super.key,
     required this.tournamentId,
@@ -37,23 +37,73 @@ final class TournamentDetailScreen extends StatelessWidget {
   final String tournamentId;
   final Object? extra;
 
-  TournamentListItemDto? get tournament => extra as TournamentListItemDto?;
+  @override
+  State<TournamentDetailScreen> createState() => _TournamentDetailScreenState();
+}
+
+final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
+  late final TournamentScheduleCubit _scheduleCubit;
+  late final TournamentScoreboardCubit _scoreboardCubit;
+  late final TournamentRegistrationsCubit _registrationsCubit;
+
+  TournamentListItemDto? _tournament;
+  bool _loadingTournament = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleCubit = getIt<TournamentScheduleCubit>(param1: widget.tournamentId)..load();
+    _scoreboardCubit = getIt<TournamentScoreboardCubit>(param1: widget.tournamentId)..load();
+    _registrationsCubit = getIt<TournamentRegistrationsCubit>(param1: widget.tournamentId)..load();
+
+    _tournament = widget.extra as TournamentListItemDto?;
+    //? Si llegamos sin `extra` (p. ej. justo después de crear el torneo vía
+    //? context.go), traemos el detalle por ID para que los controles de
+    //? organizador (invitar huésped, estado, visibilidad) se muestren.
+    if (_tournament == null) {
+      _loadingTournament = true;
+      _fetchTournament();
+    }
+  }
+
+  Future<void> _fetchTournament() async {
+    try {
+      final t = await getIt<TournamentsRepository>().getTournamentById(
+        tournamentId: widget.tournamentId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _tournament = t;
+        _loadingTournament = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingTournament = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scheduleCubit.close();
+    _scoreboardCubit.close();
+    _registrationsCubit.close();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => getIt<TournamentScheduleCubit>(param1: tournamentId)..load(),
-        ),
-        BlocProvider(
-          create: (_) => getIt<TournamentScoreboardCubit>(param1: tournamentId)..load(),
-        ),
-        BlocProvider(
-          create: (_) => getIt<TournamentRegistrationsCubit>(param1: tournamentId)..load(),
-        ),
+        BlocProvider.value(value: _scheduleCubit),
+        BlocProvider.value(value: _scoreboardCubit),
+        BlocProvider.value(value: _registrationsCubit),
       ],
-      child: TournamentDetailBody(tournamentId: tournamentId, tournament: tournament),
+      child: _loadingTournament
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : TournamentDetailBody(
+              tournamentId: widget.tournamentId,
+              tournament: _tournament,
+            ),
     );
   }
 }

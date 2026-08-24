@@ -12,6 +12,7 @@ export type TournamentListItemDTO = {
   name: string;
   status: TournamentStatus;
   visibility: TournamentVisibility;
+  organizerUserId: string | null;
   sportId: string;
   sportName: string;
   categoryId: string;
