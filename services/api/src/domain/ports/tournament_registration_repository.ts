@@ -3,6 +3,8 @@ export type TournamentRegistrationDTO = {
   tournamentId: string;
   /** Nulo para inscripciones GUEST (Slice 1: tournament-guest-registration). */
   userId: string | null;
+  /** Nombre del usuario autenticado (null para GUEST). */
+  userName: string | null;
   status: string;
   /** AUTHENTICATED ⇒ tiene `userId`. GUEST ⇒ `userId` nulo, campos de invitado presentes. */
   registrationType: 'AUTHENTICATED' | 'GUEST';

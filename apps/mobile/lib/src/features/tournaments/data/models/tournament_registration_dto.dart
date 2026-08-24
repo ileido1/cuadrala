@@ -3,6 +3,7 @@ final class TournamentRegistrationDto {
     required this.id,
     required this.tournamentId,
     this.userId,
+    this.userName,
     required this.status,
     required this.createdAt,
     this.registrationType = 'AUTHENTICATED',
@@ -18,6 +19,10 @@ final class TournamentRegistrationDto {
   /// Owner of an AUTHENTICATED registration. `null` for GUEST registrations
   /// (Slice 1: tournament-guest-registration — guests have no `User` row).
   final String? userId;
+
+  /// Display name of the authenticated user (null for GUEST).
+  final String? userName;
+
   final String status;
   final DateTime createdAt;
 
@@ -35,15 +40,16 @@ final class TournamentRegistrationDto {
 
   bool get isGuest => registrationType == 'GUEST';
 
-  /// Display label for UI lists: the guest's name for GUEST rows, or
-  /// `userId` for AUTHENTICATED rows (no user-profile lookup happens here).
-  String get displayName => guestName ?? userId ?? '?';
+  /// Display label for UI lists: user name for AUTHENTICATED, guest name for
+  /// GUEST, or userId as last resort.
+  String get displayName => userName ?? guestName ?? userId ?? '?';
 
   static TournamentRegistrationDto fromJson(Map<String, Object?> json) {
     return TournamentRegistrationDto(
       id: json['id'] as String,
       tournamentId: json['tournamentId'] as String,
       userId: json['userId'] as String?,
+      userName: json['userName'] as String?,
       status: json['status'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       registrationType: json['registrationType'] as String? ?? 'AUTHENTICATED',

@@ -9,6 +9,7 @@ function mapRowSV(_row: {
   id: string;
   tournamentId: string;
   userId: string | null;
+  user?: { name: string } | null;
   status: string;
   registrationType: string;
   guestName: string | null;
@@ -21,6 +22,7 @@ function mapRowSV(_row: {
     id: _row.id,
     tournamentId: _row.tournamentId,
     userId: _row.userId,
+    userName: _row.user?.name ?? null,
     status: _row.status,
     registrationType: _row.registrationType as 'AUTHENTICATED' | 'GUEST',
     guestName: _row.guestName,
@@ -84,6 +86,7 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
   async listByTournamentIdSV(_tournamentId: string): Promise<TournamentRegistrationDTO[]> {
     const ROWS = await PRISMA.tournamentRegistration.findMany({
       where: { tournamentId: _tournamentId },
+      include: { user: { select: { name: true } } },
       orderBy: { createdAt: 'asc' },
     });
     return ROWS.map(mapRowSV);
@@ -95,6 +98,7 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
   ): Promise<TournamentRegistrationDTO[]> {
     const ROWS = await PRISMA.tournamentRegistration.findMany({
       where: { tournamentId: _tournamentId, status: _status as never },
+      include: { user: { select: { name: true } } },
       orderBy: { createdAt: 'asc' },
     });
     return ROWS.map(mapRowSV);
