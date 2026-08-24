@@ -584,6 +584,8 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
           return const SizedBox.shrink();
         }
 
+        final scheme = Theme.of(context).colorScheme;
+
         return Column(
           key: const Key('tournament.organizerStatusControl'),
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,7 +599,7 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
                   'Tu torneo está en borrador: todavía no es visible para los jugadores. '
                   'Publicalo cuando esté listo.',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: scheme.onSurfaceVariant,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -606,18 +608,30 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
             if (_error != null) ...[
               Text(
                 _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                style: TextStyle(color: scheme.error, fontSize: 12),
               ),
               const SizedBox(height: 4),
             ],
-            Wrap(
-              spacing: 8,
+            Row(
               children: [
-                for (final next in nextStatuses)
-                  OutlinedButton(
-                    onPressed: _submitting ? null : () => _submitSV(next),
-                    child: Text(_statusActionLabel(next)),
-                  ),
+                Text(
+                  'Acciones',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const Spacer(),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final next in nextStatuses)
+                      FilledButton.tonal(
+                        onPressed: _submitting ? null : () => _submitSV(next),
+                        child: Text(_statusActionLabel(next)),
+                      ),
+                  ],
+                ),
               ],
             ),
           ],
@@ -816,14 +830,13 @@ final class _ScheduleTab extends StatelessWidget {
                           registrations.where((r) => r.userId != null).map((r) => r.userId!).toList();
                       final missing = 2 - registrations.length;
                       final enoughParticipants = registrations.length >= 2;
-                      return FilledButton.icon(
+                      return FilledButton(
                         onPressed: enoughParticipants
                             ? () => context.read<TournamentScheduleCubit>().generate(
                                   participantUserIds: participantUserIds,
                                 )
                             : null,
-                        icon: const Icon(AppIcons.sparkle),
-                        label: Text(
+                        child: Text(
                           enoughParticipants
                               ? 'Generar fixture'
                               : 'Faltan $missing inscrito${missing == 1 ? '' : 's'} para generar',
