@@ -270,6 +270,11 @@ final class TournamentDetailBody extends StatelessWidget {
                     tournamentId: tournamentId,
                     organizerUserId: tournament!.organizerUserId!,
                     currentStatus: tournament!.status,
+                    onStatusChanged: () {
+                      // Recargar el torneo para actualizar la UI
+                      context.read<TournamentScheduleCubit>().load();
+                      context.read<TournamentRegistrationsCubit>().load();
+                    },
                   ),
                 ),
               ),
@@ -475,7 +480,7 @@ final class _EnrollButton extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Icon(isRegistered ? Icons.person_remove : Icons.person_add),
-              label: Text(isRegistered ? 'Desinscribirse' : 'Inscribirse'),
+              label: Text(isRegistered ? 'Cancelar inscripción' : 'Inscribirse'),
             ),
           ],
         );
@@ -530,11 +535,13 @@ final class OrganizerStatusControl extends StatefulWidget {
     required this.tournamentId,
     required this.organizerUserId,
     required this.currentStatus,
+    this.onStatusChanged,
   });
 
   final String tournamentId;
   final String organizerUserId;
   final String currentStatus;
+  final VoidCallback? onStatusChanged;
 
   @override
   State<OrganizerStatusControl> createState() => _OrganizerStatusControlState();
@@ -556,10 +563,8 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
       );
       if (!mounted) return;
       setState(() => _submitting = false);
-      if (context.mounted) {
-        context.read<TournamentScheduleCubit>().load();
-        context.read<TournamentRegistrationsCubit>().load();
-      }
+      // Notificar al padre para que actualice el estado del torneo
+      widget.onStatusChanged?.call();
     } on AppFailure catch (e) {
       if (!mounted) return;
       setState(() {
