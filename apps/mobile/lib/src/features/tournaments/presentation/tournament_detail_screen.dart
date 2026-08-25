@@ -27,6 +27,15 @@ import 'widgets/invite_guest_sheet.dart';
 /// registration guards.
 const _kOrganizerManageableStatuses = {'DRAFT', 'OPEN'};
 
+/// Helper para verificar si un usuario es el organizador del torneo.
+/// Evita duplicar la lógica `organizerUserId != null && currentUserId == organizerUserId`
+/// en múltiples widgets.
+bool _isOrganizer(String? organizerUserId, String? currentUserId) {
+  return organizerUserId != null &&
+      currentUserId != null &&
+      organizerUserId == currentUserId;
+}
+
 final class TournamentDetailScreen extends StatefulWidget {
   const TournamentDetailScreen({
     super.key,
@@ -957,7 +966,7 @@ final class _RegistrationsTab extends StatelessWidget {
           // Organizer-only affordance; the backend enforces the real guard
           // independently (see `assertTournamentOrganizerAccess` on every
           // guest-management use case).
-          final isOrganizer = organizerUserId != null && currentUserId == organizerUserId;
+          final isOrganizer = _isOrganizer(organizerUserId, currentUserId);
           // Mirrors the backend's DRAFT/OPEN guard on invite-guest, PATCH
           // confirm, and DELETE (Slice 1: tournament-guest-registration).
           // Defaults to allowed when the tournament's status isn't known

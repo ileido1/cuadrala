@@ -29,7 +29,7 @@ class TournamentScoreboardCubit extends Cubit<TournamentScoreboardState> {
       }
       emit(TournamentScoreboardSuccess(scoreboard: scoreboard));
     } catch (e) {
-      final message = e is AppFailure ? e.message : 'No se pudo cargar la tabla.';
+      final message = e is AppFailure ? e.message : 'No se pudo cargar la clasificación.';
       emit(TournamentScoreboardError(message: message));
     }
   }

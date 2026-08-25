@@ -157,8 +157,8 @@ void main() {
       ));
       await tester.pump();
 
-      // Switch to the "Inscripciones" tab.
-      await tester.tap(find.text('Inscripciones'));
+      // Switch to the "Inscriptos" tab.
+      await tester.tap(find.text('Inscriptos'));
       await tester.pumpAndSettle();
 
       expect(find.text('Aceptar'), findsOneWidget);
@@ -179,7 +179,7 @@ void main() {
       ));
       await tester.pump();
 
-      await tester.tap(find.text('Inscripciones'));
+      await tester.tap(find.text('Inscriptos'));
       await tester.pumpAndSettle();
 
       expect(find.text('Aceptar'), findsNothing);
@@ -320,7 +320,7 @@ void main() {
         tournament: tournament,
       ));
       await tester.pump();
-      await tester.tap(find.text('Inscripciones'));
+      await tester.tap(find.text('Inscriptos'));
       await tester.pumpAndSettle();
     }
 

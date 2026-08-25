@@ -136,6 +136,11 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   }
 
   void _onSubmit() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _submitError = 'Ingresá un nombre para el torneo.');
+      return;
+    }
     final sportId = _selectedSportId;
     final categoryId = _selectedCategoryId;
     final preset = _selectedPreset;
@@ -148,7 +153,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       return;
     }
     if (preset == null || preset.id.isEmpty) {
-      setState(() => _submitError = 'Selecciona un preset.');
+      setState(() => _submitError = 'Selecciona un formato de torneo.');
       return;
     }
     setState(() => _submitError = null);
@@ -166,7 +171,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
           CreateTournamentRequest(
             sportId: sportId,
             categoryId: categoryId,
-            name: _nameController.text,
+            name: name,
             formatPresetId: preset.id,
             formatParameters: params,
             visibility: _visibility,

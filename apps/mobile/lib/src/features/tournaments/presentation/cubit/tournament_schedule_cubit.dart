@@ -31,7 +31,7 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
     } on AppFailure catch (e) {
       emit(TournamentScheduleError(message: e.message));
     } catch (_) {
-      emit(const TournamentScheduleError(message: 'No se pudo cargar el fixture.'));
+      emit(const TournamentScheduleError(message: 'No se pudo cargar el calendario.'));
     }
   }
 
@@ -58,7 +58,7 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
       }
       emit(TournamentScheduleError(message: e.message));
     } catch (_) {
-      emit(const TournamentScheduleError(message: 'No se pudo generar el fixture.'));
+      emit(const TournamentScheduleError(message: 'No se pudo generar el calendario.'));
     }
   }
 }
