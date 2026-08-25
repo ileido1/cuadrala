@@ -91,7 +91,6 @@ void main() {
       expect(
         () => repo.generateTournamentSchedule(
           tournamentId: 't-1',
-          participantUserIds: const [],
         ),
         throwsA(
           predicate(
@@ -117,7 +116,6 @@ void main() {
       expect(
         () => repo.generateTournamentSchedule(
           tournamentId: 't-1',
-          participantUserIds: const [],
         ),
         throwsA(
           predicate(

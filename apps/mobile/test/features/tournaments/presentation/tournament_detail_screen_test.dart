@@ -342,8 +342,8 @@ void main() {
       await pumpAndOpenRegistrationsTab(tester, tournament: _tournament());
 
       expect(find.text('Invitados (sin ranking)'), findsOneWidget);
-      expect(find.text('Pendiente confirmación'), findsOneWidget);
-      expect(find.text('Confirmado'), findsOneWidget);
+      expect(find.text('Pendiente'), findsOneWidget);
+      expect(find.text('Confirmado', skipOffstage: false), findsNWidgets(2));
     });
 
     testWidgets('organizer sees "Invitar huésped" and non-organizer does not', (tester) async {

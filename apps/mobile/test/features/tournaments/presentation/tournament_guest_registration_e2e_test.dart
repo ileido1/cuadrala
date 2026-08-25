@@ -194,7 +194,7 @@ void main() {
         //? `tester.allWidgets` during triage).
         expect(find.text('Invitados (sin ranking)', skipOffstage: false), findsOneWidget);
         expect(find.text('Alice', skipOffstage: false), findsOneWidget);
-        expect(find.text('Pendiente confirmación', skipOffstage: false), findsOneWidget);
+        expect(find.text('Pendiente', skipOffstage: false), findsOneWidget);
 
         //? --- Confirm Alice ----------------------------------------------------
         final aliceConfirmed = _guestRegistration(id: 'reg-alice', name: 'Alice', status: 'CONFIRMED');
@@ -223,8 +223,8 @@ void main() {
             registrationId: 'reg-alice',
           ),
         ).called(1);
-        expect(find.text('Confirmado', skipOffstage: false), findsOneWidget);
-        expect(find.text('Pendiente confirmación'), findsNothing);
+        expect(find.text('Confirmado', skipOffstage: false), findsNWidgets(2));
+        expect(find.text('Pendiente'), findsNothing);
 
         //? --- Remove Alice (behind the AlertDialog confirm) ---------------------
         when(

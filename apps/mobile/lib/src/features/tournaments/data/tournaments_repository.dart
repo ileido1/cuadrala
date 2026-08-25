@@ -99,13 +99,11 @@ class TournamentsRepository {
 
   Future<TournamentScheduleDto> generateTournamentSchedule({
     required String tournamentId,
-    required List<String> participantUserIds,
     bool? doubleRound,
     bool? thirdPlaceMatch,
   }) async {
     try {
       final body = <String, Object?>{
-        'participantUserIds': participantUserIds,
         'doubleRound': ?doubleRound,
         'thirdPlaceMatch': ?thirdPlaceMatch,
       };

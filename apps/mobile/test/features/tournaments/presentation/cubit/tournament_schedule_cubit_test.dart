@@ -79,7 +79,6 @@ void main() {
         when(
           () => tournamentsRepository.generateTournamentSchedule(
             tournamentId: tournamentId,
-            participantUserIds: any(named: 'participantUserIds'),
           ),
         ).thenThrow(
           const AppFailure(code: 'HTTP_501', message: 'No soportado.'),
@@ -89,7 +88,7 @@ void main() {
           tournamentId: tournamentId,
         );
       },
-      act: (cubit) => cubit.generate(participantUserIds: const []),
+      act: (cubit) => cubit.generate(),
       expect: () => [
         const TournamentScheduleGenerating(),
         const TournamentScheduleUnsupported(),
@@ -102,7 +101,6 @@ void main() {
         when(
           () => tournamentsRepository.generateTournamentSchedule(
             tournamentId: tournamentId,
-            participantUserIds: any(named: 'participantUserIds'),
           ),
         ).thenThrow(
           const AppFailure(code: 'HTTP_409', message: 'Conflicto.'),
@@ -112,7 +110,7 @@ void main() {
           tournamentId: tournamentId,
         );
       },
-      act: (cubit) => cubit.generate(participantUserIds: const []),
+      act: (cubit) => cubit.generate(),
       expect: () => [
         const TournamentScheduleGenerating(),
         const TournamentScheduleConflict(),

@@ -837,21 +837,11 @@ final class _ScheduleTab extends StatelessWidget {
                       final registrations = regState is TournamentRegistrationsLoaded
                           ? regState.items
                           : const <TournamentRegistrationDto>[];
-                      // The backend derives the actual participant list from
-                      // CONFIRMED registrations and ignores this field
-                      // (see generate_tournament_schedule.use_case.ts) — it
-                      // exists mainly for the request shape. We still send
-                      // authenticated userIds where available; guests have
-                      // no userId (Slice 1: tournament-guest-registration).
-                      final participantUserIds =
-                          registrations.where((r) => r.userId != null).map((r) => r.userId!).toList();
                       final missing = 2 - registrations.length;
                       final enoughParticipants = registrations.length >= 2;
                       return FilledButton(
                         onPressed: enoughParticipants
-                            ? () => context.read<TournamentScheduleCubit>().generate(
-                                  participantUserIds: participantUserIds,
-                                )
+                            ? () => context.read<TournamentScheduleCubit>().generate()
                             : null,
                         child: Text(
                           enoughParticipants

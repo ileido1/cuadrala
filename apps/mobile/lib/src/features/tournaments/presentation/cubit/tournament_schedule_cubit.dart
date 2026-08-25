@@ -36,7 +36,6 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
   }
 
   Future<void> generate({
-    required List<String> participantUserIds,
     bool? doubleRound,
     bool? thirdPlaceMatch,
   }) async {
@@ -44,7 +43,6 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
     try {
       final schedule = await _tournamentsRepository.generateTournamentSchedule(
         tournamentId: _tournamentId,
-        participantUserIds: participantUserIds,
         doubleRound: doubleRound,
         thirdPlaceMatch: thirdPlaceMatch,
       );
