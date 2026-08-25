@@ -58,9 +58,9 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
 
     _tournament = widget.extra as TournamentListItemDto?;
     //? Si llegamos sin `extra` (p. ej. justo después de crear el torneo vía
-    //? context.go), traemos el detalle por ID para que los controles de
-    //? organizador (invitar huésped, estado, visibilidad) se muestren.
-    if (_tournament == null) {
+    //? context.go) o sin organizerUserId (el listado no lo incluye), traemos
+    //? el detalle por ID para que los controles de organizador se muestren.
+    if (_tournament == null || _tournament?.organizerUserId == null) {
       _loadingTournament = true;
       _fetchTournament();
     }
@@ -836,7 +836,7 @@ final class _ScheduleTab extends StatelessWidget {
                 children: [
                   const _InfoBox(
                     message:
-                        'El calendario se genera automáticamente cuando haya al menos 2 participantes.',
+                        'El organizador debe generar el calendario cuando haya al menos 2 participantes.',
                   ),
                   const SizedBox(height: 12),
                   BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
