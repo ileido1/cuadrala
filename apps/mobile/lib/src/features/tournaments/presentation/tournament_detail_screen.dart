@@ -306,9 +306,9 @@ final class TournamentDetailBody extends StatelessWidget {
                   unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
                   indicatorColor: Theme.of(context).colorScheme.primary,
                   tabs: const [
-                    Tab(text: 'Fixture'),
-                    Tab(text: 'Tabla'),
-                    Tab(text: 'Inscripciones'),
+                    Tab(text: 'Calendario'),
+                    Tab(text: 'Clasificación'),
+                    Tab(text: 'Inscriptos'),
                   ],
                 ),
               ),
@@ -814,12 +814,12 @@ final class _ScheduleTab extends StatelessWidget {
             TournamentScheduleLoading() => const Center(child: CircularProgressIndicator()),
             TournamentScheduleGenerating() => const Center(child: CircularProgressIndicator()),
             TournamentScheduleUnsupported() => const _InfoBox(
-                message: 'Este torneo no soporta generación automática de fixture.',
+                message: 'Este formato de torneo no permite generar el calendario automáticamente.',
               ),
             TournamentScheduleConflict() => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const _InfoBox(message: 'Ya existe un fixture generado.'),
+                  const _InfoBox(message: 'Ya se generó el calendario del torneo.'),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     //? Ancho acotado (el theme global no aplica en Column stretch).
@@ -827,7 +827,7 @@ final class _ScheduleTab extends StatelessWidget {
                     onPressed: () =>
                         context.read<TournamentScheduleCubit>().load(),
                     icon: const Icon(Icons.calendar_view_week_outlined),
-                    label: const Text('Ver fixture'),
+                    label: const Text('Ver calendario'),
                   ),
                 ],
               ),
@@ -836,7 +836,7 @@ final class _ScheduleTab extends StatelessWidget {
                 children: [
                   const _InfoBox(
                     message:
-                        'Todavía no hay calendario. Sumá al menos 2 inscritos y tocá «Generar fixture».',
+                        'El calendario se genera automáticamente cuando haya al menos 2 participantes.',
                   ),
                   const SizedBox(height: 12),
                   BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
@@ -850,10 +850,10 @@ final class _ScheduleTab extends StatelessWidget {
                       final isOrganizer = organizerUserId != null &&
                           cubit.currentUserId == organizerUserId;
 
-                      // Solo el organizador puede generar el fixture
+                      // Solo el organizador puede generar el calendario
                       if (!isOrganizer) {
                         return const _InfoBox(
-                          message: 'Solo el organizador puede generar el fixture.',
+                          message: 'Solo el organizador puede generar el calendario.',
                         );
                       }
 
@@ -863,8 +863,8 @@ final class _ScheduleTab extends StatelessWidget {
                             : null,
                         child: Text(
                           enoughParticipants
-                              ? 'Generar fixture'
-                              : 'Faltan $missing inscrito${missing == 1 ? '' : 's'} para generar',
+                              ? 'Generar calendario'
+                              : 'Faltan $missing participante${missing == 1 ? '' : 's'}',
                         ),
                       );
                     },
@@ -898,7 +898,7 @@ final class _ScoreboardTab extends StatelessWidget {
             TournamentScoreboardInitial() => const Center(child: CircularProgressIndicator()),
             TournamentScoreboardLoading() => const Center(child: CircularProgressIndicator()),
             TournamentScoreboardEmpty() => const _InfoBox(
-                message: 'Aún no hay tabla para este torneo.',
+                message: 'La clasificación estará disponible cuando comience el torneo.',
               ),
             TournamentScoreboardError(:final message) => _ErrorBox(
                 message: message,
@@ -981,7 +981,7 @@ final class _RegistrationsTab extends StatelessWidget {
                       style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                       onPressed: () => showInviteGuestSheet(context),
                       icon: const Icon(Icons.person_add_alt_1),
-                      label: const Text('Invitar huésped'),
+                      label: const Text('Invitar jugador'),
                     ),
                 ],
               ),
@@ -1027,7 +1027,7 @@ final class _RegistrationsTab extends StatelessWidget {
               if (activeItems.isEmpty)
                 const _InfoBox(
                   message:
-                      'Todavía no hay inscritos. Compartí el torneo para sumar jugadores.',
+                      'Aún no hay participantes. ¡Compartí el torneo para que más jugadores se inscriban!',
                 )
               else ...[
                 for (final reg in authenticatedItems)
@@ -1041,7 +1041,7 @@ final class _RegistrationsTab extends StatelessWidget {
                   ),
                 if (guestItems.isNotEmpty) ...[
                   if (authenticatedItems.isNotEmpty) const SizedBox(height: 4),
-                  const _RegistrationsGroupHeader(label: 'Invitados (sin ranking)'),
+                  const _RegistrationsGroupHeader(label: 'Invitados'),
                   const SizedBox(height: 6),
                   for (final reg in guestItems)
                     Padding(
@@ -1112,8 +1112,8 @@ final class _RegistrationTile extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Eliminar invitado'),
-        content: Text('¿Eliminar a ${registration.displayName} del torneo?'),
+        title: const Text('Eliminar jugador'),
+        content: Text('¿Estás seguro que querés eliminar a ${registration.displayName} del torneo?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -1237,7 +1237,7 @@ final class _PendingInviteBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tienes una invitación pendiente para este torneo.',
+            'Tenés una invitación pendiente para este torneo.',
             style: TextStyle(fontWeight: FontWeight.w800, color: scheme.onPrimaryContainer),
           ),
           const SizedBox(height: 10),
@@ -1326,7 +1326,7 @@ final class _OrganizerInvitationsSectionState extends State<_OrganizerInvitation
                 child: TextField(
                   controller: _userIdController,
                   decoration: const InputDecoration(
-                    hintText: 'ID de usuario a invitar',
+                    hintText: 'Nombre o ID del jugador',
                     isDense: true,
                   ),
                 ),
@@ -1350,7 +1350,7 @@ final class _OrganizerInvitationsSectionState extends State<_OrganizerInvitation
           if (widget.invitations.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              'Invitaciones pendientes',
+              'Invitaciones enviadas',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                     fontWeight: FontWeight.w700,
