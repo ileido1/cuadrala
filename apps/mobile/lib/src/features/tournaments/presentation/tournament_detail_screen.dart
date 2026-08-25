@@ -846,16 +846,6 @@ final class _ScheduleTab extends StatelessWidget {
                           : const <TournamentRegistrationDto>[];
                       final missing = 2 - registrations.length;
                       final enoughParticipants = registrations.length >= 2;
-                      final cubit = context.read<TournamentRegistrationsCubit>();
-                      final isOrganizer = organizerUserId != null &&
-                          cubit.currentUserId == organizerUserId;
-
-                      // Solo el organizador puede generar el calendario
-                      if (!isOrganizer) {
-                        return const _InfoBox(
-                          message: 'Solo el organizador puede generar el calendario.',
-                        );
-                      }
 
                       return FilledButton(
                         onPressed: enoughParticipants
