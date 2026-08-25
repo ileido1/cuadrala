@@ -317,7 +317,10 @@ final class TournamentDetailBody extends StatelessWidget {
         },
         body: TabBarView(
           children: [
-            _ScheduleTab(tournamentId: tournamentId),
+            _ScheduleTab(
+              tournamentId: tournamentId,
+              organizerUserId: tournament?.organizerUserId,
+            ),
             _ScoreboardTab(tournamentId: tournamentId),
             _RegistrationsTab(
               tournamentId: tournamentId,
@@ -792,9 +795,13 @@ final class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 // ---------------------------------------------------------------------------
 
 final class _ScheduleTab extends StatelessWidget {
-  const _ScheduleTab({required this.tournamentId});
+  const _ScheduleTab({
+    required this.tournamentId,
+    required this.organizerUserId,
+  });
 
   final String tournamentId;
+  final String? organizerUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -839,6 +846,17 @@ final class _ScheduleTab extends StatelessWidget {
                           : const <TournamentRegistrationDto>[];
                       final missing = 2 - registrations.length;
                       final enoughParticipants = registrations.length >= 2;
+                      final cubit = context.read<TournamentRegistrationsCubit>();
+                      final isOrganizer = organizerUserId != null &&
+                          cubit.currentUserId == organizerUserId;
+
+                      // Solo el organizador puede generar el fixture
+                      if (!isOrganizer) {
+                        return const _InfoBox(
+                          message: 'Solo el organizador puede generar el fixture.',
+                        );
+                      }
+
                       return FilledButton(
                         onPressed: enoughParticipants
                             ? () => context.read<TournamentScheduleCubit>().generate()
