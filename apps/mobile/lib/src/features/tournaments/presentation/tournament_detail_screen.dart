@@ -61,9 +61,12 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _scheduleCubit = getIt<TournamentScheduleCubit>(param1: widget.tournamentId)..load();
-    _scoreboardCubit = getIt<TournamentScoreboardCubit>(param1: widget.tournamentId)..load();
+    //? Lazy-load cubits only when tabs are accessed (not in initState)
+    //? This prevents unnecessary 404s and loading states
+    _scheduleCubit = getIt<TournamentScheduleCubit>(param1: widget.tournamentId);
+    _scoreboardCubit = getIt<TournamentScoreboardCubit>(param1: widget.tournamentId);
     _registrationsCubit = getIt<TournamentRegistrationsCubit>(param1: widget.tournamentId)..load();
+    //? Only load registrations eagerly; others load on tab switch
 
     //? Validar tipo antes de asignar (evita silent null cuando extra es tipo incorrecto)
     _tournament = widget.extra is TournamentListItemDto ? widget.extra as TournamentListItemDto : null;
@@ -77,6 +80,29 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
       //? Fetch para asegurar que se carga
       _loadingTournament = true;
       _fetchTournament();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    //? Load schedule and scoreboard only when tabs are accessed
+    final tabController = DefaultTabController.maybeOf(context);
+    tabController?.animation?.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    final tabController = DefaultTabController.maybeOf(context);
+    if (tabController == null) return;
+
+    final index = tabController.index;
+    //? Load schedule on tab 0 (Calendario)
+    if (index == 0 && _scheduleCubit.state is TournamentScheduleInitial) {
+      _scheduleCubit.load();
+    }
+    //? Load scoreboard on tab 1 (Clasificación)
+    if (index == 1 && _scoreboardCubit.state is TournamentScoreboardInitial) {
+      _scoreboardCubit.load();
     }
   }
 
