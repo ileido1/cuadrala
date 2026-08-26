@@ -28,13 +28,7 @@ final class TournamentListItemDto extends Equatable {
   final String visibility;
 
   /// Owner of the tournament (drives organizer-only UI controls).
-  ///
-  /// NOTE: as of this change, `GET /tournaments` and `GET /tournaments/:id`
-  /// do not yet serialize `organizerUserId` in their responses (backend gap
-  /// tracked in the SDD apply-progress backlog for
-  /// `tournament-player-management-scheduling`). This field is parsed
-  /// forward-compatibly and will always be `null` until that endpoint is
-  /// extended; organizer-only controls stay hidden for everyone until then.
+  /// Used to avoid fetching tournament detail just to check organizer status.
   final String? organizerUserId;
 
   factory TournamentListItemDto.fromJson(Map<String, Object?> json) {

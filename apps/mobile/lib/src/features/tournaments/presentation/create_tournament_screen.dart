@@ -193,6 +193,14 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     _createTournamentCubit.submit(request!);
   }
 
+  //? Helper: validar mínimo requerido para habilitar submit
+  bool get _canSubmit {
+    return _nameController.text.trim().isNotEmpty &&
+        _selectedSportId != null &&
+        _selectedCategoryId != null &&
+        _selectedPreset != null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -213,6 +221,23 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
             children: [
+              //? Error banner sticky en top si hay error
+              if (_submitError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: scheme.errorContainer.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: scheme.error.withValues(alpha: 0.35)),
+                    ),
+                    child: Text(
+                      _submitError!,
+                      style: TextStyle(color: scheme.error, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
               Text(
                 'Nombre',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -223,9 +248,15 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               TextField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
+                onChanged: (_) => setState(() {}), //? Rebuild para update _canSubmit
+                decoration: InputDecoration(
                   hintText: 'Ej: Torneo de Otoño',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: _nameController.text.isEmpty ? scheme.error : scheme.outline,
+                    ),
+                  ),
+                  errorText: _nameController.text.isEmpty ? 'Requerido' : null,
                 ),
               ),
               const SizedBox(height: 14),
@@ -411,7 +442,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       FilledButton.icon(
-                        onPressed: isSubmitting ? null : _onSubmit,
+                        //? Disable si no se cumplen requerimientos O si está submitting
+                        onPressed: (_canSubmit && !isSubmitting) ? _onSubmit : null,
                         icon: isSubmitting
                             ? const SizedBox(
                                 width: 18,
@@ -421,19 +453,19 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             : const Icon(AppIcons.check),
                         label: Text(isSubmitting ? 'Creando...' : 'Crear torneo'),
                       ),
-                      const SizedBox(height: 12),
-                      if (_submitError != null)
-                        SelectableText.rich(
-                          TextSpan(
-                            text: _submitError!,
-                            style: TextStyle(
-                              color: scheme.error,
-                              fontWeight: FontWeight.w800,
-                            ),
+                      if (!_canSubmit) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '⚠️ Se necesitan: nombre + deporte + categoría + formato',
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
+                      ],
                       if (state is CreateTournamentError) ...[
-                        if (_submitError != null) const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         SelectableText.rich(
                           TextSpan(
                             text: state.message,

@@ -67,10 +67,14 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
 
     //? Validar tipo antes de asignar (evita silent null cuando extra es tipo incorrecto)
     _tournament = widget.extra is TournamentListItemDto ? widget.extra as TournamentListItemDto : null;
-    //? Si llegamos sin `extra` (p. ej. justo después de crear el torneo vía
-    //? context.go) o sin organizerUserId (el listado no lo incluye), traemos
-    //? el detalle por ID para que los controles de organizador se muestren.
-    if (_tournament == null || _tournament?.organizerUserId == null) {
+    //? Solo fetch si: 1) no tenemos extra, O 2) extra existe pero sin organizerUserId
+    //? Con organizerUserId en el listado DTO, evitamos spinner en 90% de los casos.
+    if (_tournament == null) {
+      _loadingTournament = true;
+      _fetchTournament();
+    } else if (_tournament!.organizerUserId == null) {
+      //? Raro pero posible: tournament viene sin organizerUserId (API old version?)
+      //? Fetch para asegurar que se carga
       _loadingTournament = true;
       _fetchTournament();
     }
@@ -831,13 +835,28 @@ final class _ScheduleTab extends StatelessWidget {
                 children: [
                   const _InfoBox(message: 'Ya se generó el calendario del torneo.'),
                   const SizedBox(height: 12),
-                  FilledButton.icon(
-                    //? Ancho acotado (el theme global no aplica en Column stretch).
-                    style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
-                    onPressed: () =>
-                        context.read<TournamentScheduleCubit>().load(),
-                    icon: const Icon(Icons.calendar_view_week_outlined),
-                    label: const Text('Ver calendario'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                          onPressed: () =>
+                              context.read<TournamentScheduleCubit>().load(),
+                          icon: const Icon(Icons.calendar_view_week_outlined),
+                          label: const Text('Ver calendario'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.tonal(
+                          style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                          onPressed: () =>
+                              context.read<TournamentScheduleCubit>().generate(),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Regenerar'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -872,15 +891,36 @@ final class _ScheduleTab extends StatelessWidget {
                         );
                       }
 
-                      return FilledButton(
-                        onPressed: enoughParticipants
-                            ? () => context.read<TournamentScheduleCubit>().generate()
-                            : null,
-                        child: Text(
-                          enoughParticipants
-                              ? 'Generar calendario'
-                              : 'Faltan $missing participante${missing == 1 ? '' : 's'}',
-                        ),
+                      //? Mostrar contador y CTA clara
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Participantes: ${registrations.length}/2',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          FilledButton(
+                            onPressed: enoughParticipants
+                                ? () => context.read<TournamentScheduleCubit>().generate()
+                                : null,
+                            child: const Text('Generar calendario'),
+                          ),
+                          if (!enoughParticipants) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Se necesitan $missing participante${missing == 1 ? '' : 's'} más.',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
                       );
                     },
                   ),
@@ -912,15 +952,43 @@ final class _ScoreboardTab extends StatelessWidget {
           return switch (state) {
             TournamentScoreboardInitial() => const Center(child: CircularProgressIndicator()),
             TournamentScoreboardLoading() => const Center(child: CircularProgressIndicator()),
-            TournamentScoreboardEmpty() => const _InfoBox(
-                message: 'La clasificación estará disponible cuando comience el torneo.',
+            TournamentScoreboardEmpty() => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _InfoBox(
+                    message: 'La clasificación estará disponible cuando comience el torneo.',
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '💡 Para registrar resultados, ve a la pestaña "Calendario" y toca el partido.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
               ),
             TournamentScoreboardError(:final message) => _ErrorBox(
                 message: message,
                 onRetry: () => context.read<TournamentScoreboardCubit>().load(),
               ),
             TournamentScoreboardSuccess(:final scoreboard) =>
-              _ScoreboardTable(scoreboard: scoreboard),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _ScoreboardTable(scoreboard: scoreboard),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () {
+                      //? Tab 0=Calendario, 1=Clasificación, 2=Inscriptos; queremos ir a Calendario
+                      final controller = DefaultTabController.of(context);
+                      controller.animateTo(0);
+                    },
+                    icon: const Icon(Icons.calendar_today),
+                    label: const Text('Ir a Calendario para registrar resultados'),
+                  ),
+                ],
+              ),
           };
         },
       ),
@@ -978,6 +1046,42 @@ final class _RegistrationsTab extends StatelessWidget {
 
           return ListView(
             children: [
+              //? Error messages centralizadas arriba
+              if (loaded.registerError != null || loaded.invitationError != null || loaded.registrationActionError != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.35)),
+                  ),
+                  child: Text(
+                    loaded.registerError ?? loaded.invitationError ?? loaded.registrationActionError!,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              //? Pending invite banner si existe
+              if (myPendingInvite != null) ...[
+                _PendingInviteBanner(
+                  invitation: myPendingInvite,
+                  responding: loaded.responding,
+                  onAccept: () => cubit.acceptInvitation(myPendingInvite.id),
+                  onReject: () => cubit.rejectInvitation(myPendingInvite.id),
+                ),
+                const SizedBox(height: 12),
+              ],
+              //? Invitaciones organizador al TOP (antes de lista de participantes)
+              if (loaded.canManageInvitations) ...[
+                _OrganizerInvitationsSection(
+                  tournamentId: tournamentId,
+                  invitations: loaded.invitations.where((i) => i.isPending).toList(),
+                  busy: loaded.inviting,
+                ),
+                const SizedBox(height: 12),
+              ],
+              //? Header de participantes
               Row(
                 children: [
                   Expanded(
@@ -991,8 +1095,6 @@ final class _RegistrationsTab extends StatelessWidget {
                   if (canManageGuests)
                     FilledButton.icon(
                       key: const Key('tournament.inviteGuestButton'),
-                      //? Ancho acotado: el theme global (Size.fromHeight) no
-                      //? puede usarse dentro de un Row.
                       style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                       onPressed: () => showInviteGuestSheet(context),
                       icon: const Icon(Icons.person_add_alt_1),
@@ -1000,44 +1102,6 @@ final class _RegistrationsTab extends StatelessWidget {
                     ),
                 ],
               ),
-              if (loaded.registerError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  loaded.registerError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-              if (loaded.invitationError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  loaded.invitationError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-              if (loaded.registrationActionError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  loaded.registrationActionError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-              if (myPendingInvite != null) ...[
-                const SizedBox(height: 12),
-                _PendingInviteBanner(
-                  invitation: myPendingInvite,
-                  responding: loaded.responding,
-                  onAccept: () => cubit.acceptInvitation(myPendingInvite.id),
-                  onReject: () => cubit.rejectInvitation(myPendingInvite.id),
-                ),
-              ],
-              if (loaded.canManageInvitations) ...[
-                const SizedBox(height: 12),
-                _OrganizerInvitationsSection(
-                  tournamentId: tournamentId,
-                  invitations: loaded.invitations.where((i) => i.isPending).toList(),
-                  busy: loaded.inviting,
-                ),
-              ],
               const SizedBox(height: 12),
               if (activeItems.isEmpty)
                 const _InfoBox(
@@ -1149,24 +1213,45 @@ final class _RegistrationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = registration.displayName;
-        final statusLabel = _registrationStatusLabel(registration.status);
+    final statusLabel = _registrationStatusLabel(registration.status);
     final avatarLabel = label.substring(0, label.length >= 2 ? 2 : label.length).toUpperCase();
+
+    //? Color del badge según status
+    Color _statusColor(String status) {
+      switch (status) {
+        case 'PENDING':
+          return Colors.orange;
+        case 'CONFIRMED':
+          return Colors.green;
+        default:
+          return Colors.grey;
+      }
+    }
+
+    //? Highlight si es invitado pendiente
+    final isPendingGuest = registration.isGuest && registration.status == 'PENDING';
+    final scheme = Theme.of(context).colorScheme;
 
     return Container(
       key: Key('tournament.registrationTile.${registration.id}'),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: isPendingGuest
+            ? scheme.primaryContainer.withValues(alpha: 0.15)
+            : scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
+        border: isPendingGuest
+            ? Border.all(color: scheme.primary.withValues(alpha: 0.3))
+            : null,
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            backgroundColor: registration.isGuest ? Colors.amber.withValues(alpha: 0.3) : scheme.primaryContainer,
             child: Text(
               avatarLabel,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                color: registration.isGuest ? Colors.amber[700] : scheme.onPrimaryContainer,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
@@ -1177,13 +1262,50 @@ final class _RegistrationTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text(
-                  statusLabel,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                    //? Status badge con color
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _statusColor(registration.status).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
                       ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _statusColor(registration.status),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                if (isPendingGuest) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '⚠️ Requiere confirmación',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ] else
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      registration.isGuest ? 'Invitado' : 'Participante',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                  ),
               ],
             ),
           ),
