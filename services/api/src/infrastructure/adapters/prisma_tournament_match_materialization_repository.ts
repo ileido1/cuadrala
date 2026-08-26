@@ -30,16 +30,21 @@ export class PrismaTournamentMatchMaterializationRepository
         },
       });
 
-      //? 2. La transición de estado siempre se aplica, incluso si la materialización es un no-op
+      //? Si ya existen matches (no-op), retorna sin cambiar estado
+      if (EXISTING_COUNT > 0) {
+        const TOURNAMENT = await _tx.tournament.findUniqueOrThrow({
+          where: { id: _input.tournamentId },
+          select: { id: true, name: true, status: true },
+        });
+        return { created: false, matchCount: EXISTING_COUNT, tournament: TOURNAMENT };
+      }
+
+      //? 2. Solo actualiza estado si va a crear nuevos matches
       const UPDATED_TOURNAMENT = await _tx.tournament.update({
         where: { id: _input.tournamentId },
         data: { status: _input.toStatus as never },
         select: { id: true, name: true, status: true },
       });
-
-      if (EXISTING_COUNT > 0) {
-        return { created: false, matchCount: EXISTING_COUNT, tournament: UPDATED_TOURNAMENT };
-      }
 
       //? 3. Crear un Match + sus MatchParticipant por cada plan, dentro de la misma transacción
       for (const PLAN of _input.matches) {

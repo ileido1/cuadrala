@@ -39,33 +39,39 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
     userId: string;
     status?: string;
   }): Promise<{ created: boolean; registration: TournamentRegistrationDTO }> {
-    const EXISTING = await PRISMA.tournamentRegistration.findUnique({
-      where: {
-        tournamentId_userId: {
+    return PRISMA.$transaction(async (_tx) => {
+      //? 1. Intentar actualizar existente (si count = 0, no existe)
+      const UPDATED = await _tx.tournamentRegistration.updateMany({
+        where: {
           tournamentId: _input.tournamentId,
           userId: _input.userId,
         },
-      },
-    });
+        data: { status: (_input.status ?? 'PENDING') as never },
+      });
 
-    if (EXISTING !== null) {
-      const UPDATED = await PRISMA.tournamentRegistration.update({
-        where: { id: EXISTING.id },
+      if (UPDATED.count > 0) {
+        //? Actualización exitosa: obtener el registro actualizado
+        const REGISTRATION = await _tx.tournamentRegistration.findUniqueOrThrow({
+          where: {
+            tournamentId_userId: {
+              tournamentId: _input.tournamentId,
+              userId: _input.userId,
+            },
+          },
+        });
+        return { created: false, registration: mapRowSV(REGISTRATION) };
+      }
+
+      //? 2. No existe: crear nuevo registro
+      const CREATED = await _tx.tournamentRegistration.create({
         data: {
+          tournamentId: _input.tournamentId,
+          userId: _input.userId,
           status: (_input.status ?? 'PENDING') as never,
         },
       });
-      return { created: false, registration: mapRowSV(UPDATED) };
-    }
-
-    const CREATED = await PRISMA.tournamentRegistration.create({
-      data: {
-        tournamentId: _input.tournamentId,
-        userId: _input.userId,
-        status: (_input.status ?? 'PENDING') as never,
-      },
+      return { created: true, registration: mapRowSV(CREATED) };
     });
-    return { created: true, registration: mapRowSV(CREATED) };
   }
 
   async findByTournamentAndUserSV(
@@ -111,21 +117,15 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
   }
 
   async disableByTournamentAndUserSV(_tournamentId: string, _userId: string): Promise<boolean> {
-    const EXISTING = await PRISMA.tournamentRegistration.findUnique({
+    //? Una sola query: updateMany retorna count, sin N+1.
+    const RESULT = await PRISMA.tournamentRegistration.updateMany({
       where: {
-        tournamentId_userId: {
-          tournamentId: _tournamentId,
-          userId: _userId,
-        },
+        tournamentId: _tournamentId,
+        userId: _userId,
       },
-    });
-    if (EXISTING === null) return false;
-
-    await PRISMA.tournamentRegistration.update({
-      where: { id: EXISTING.id },
       data: { status: 'WITHDRAWN' as never },
     });
-    return true;
+    return RESULT.count > 0;
   }
 
   async findByIdSV(_id: string): Promise<TournamentRegistrationDTO | null> {
@@ -149,21 +149,28 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
   }
 
   async updateStatusByIdSV(_id: string, _status: string): Promise<TournamentRegistrationDTO | null> {
-    const EXISTING = await PRISMA.tournamentRegistration.findUnique({ where: { id: _id } });
-    if (EXISTING === null) return null;
-
-    const UPDATED = await PRISMA.tournamentRegistration.update({
-      where: { id: _id },
-      data: { status: _status as never },
-    });
-    return mapRowSV(UPDATED);
+    //? Una sola query: update retorna el registro o lanza error. Capturar NotFoundError para retornar null.
+    try {
+      const UPDATED = await PRISMA.tournamentRegistration.update({
+        where: { id: _id },
+        data: { status: _status as never },
+      });
+      return mapRowSV(UPDATED);
+    } catch (error) {
+      //? Prisma lanza P2025 (NotFoundError) si el registro no existe.
+      if ((error as any).code === 'P2025') return null;
+      throw error;
+    }
   }
 
   async deleteByIdSV(_id: string): Promise<boolean> {
-    const EXISTING = await PRISMA.tournamentRegistration.findUnique({ where: { id: _id } });
-    if (EXISTING === null) return false;
-
-    await PRISMA.tournamentRegistration.delete({ where: { id: _id } });
-    return true;
+    //? Una sola query: delete lanza P2025 si no existe. Capturar para retornar false.
+    try {
+      await PRISMA.tournamentRegistration.delete({ where: { id: _id } });
+      return true;
+    } catch (error) {
+      if ((error as any).code === 'P2025') return false;
+      throw error;
+    }
   }
 }
