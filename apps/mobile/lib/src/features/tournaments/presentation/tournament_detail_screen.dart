@@ -850,7 +850,9 @@ final class _ScheduleTab extends StatelessWidget {
       child: BlocBuilder<TournamentScheduleCubit, TournamentScheduleState>(
         builder: (context, state) {
           return switch (state) {
-            TournamentScheduleInitial() => const Center(child: CircularProgressIndicator()),
+            TournamentScheduleInitial() => const _InfoBox(
+                message: 'No hay calendario disponible todavía. El organizador debe generarlo cuando haya suficientes participantes.',
+              ),
             TournamentScheduleLoading() => const Center(child: CircularProgressIndicator()),
             TournamentScheduleGenerating() => const Center(child: CircularProgressIndicator()),
             TournamentScheduleUnsupported() => const _InfoBox(
