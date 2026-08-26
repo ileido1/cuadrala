@@ -65,7 +65,8 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     _scoreboardCubit = getIt<TournamentScoreboardCubit>(param1: widget.tournamentId)..load();
     _registrationsCubit = getIt<TournamentRegistrationsCubit>(param1: widget.tournamentId)..load();
 
-    _tournament = widget.extra as TournamentListItemDto?;
+    //? Validar tipo antes de asignar (evita silent null cuando extra es tipo incorrecto)
+    _tournament = widget.extra is TournamentListItemDto ? widget.extra as TournamentListItemDto : null;
     //? Si llegamos sin `extra` (p. ej. justo después de crear el torneo vía
     //? context.go) o sin organizerUserId (el listado no lo incluye), traemos
     //? el detalle por ID para que los controles de organizador se muestren.

@@ -57,8 +57,9 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
         return;
       }
       emit(TournamentScheduleError(message: e.message));
-    } catch (_) {
-      emit(const TournamentScheduleError(message: 'No se pudo generar el calendario.'));
+    } catch (e) {
+      //? Re-throw programming errors para logs/debugging
+      rethrow;
     }
   }
 }
