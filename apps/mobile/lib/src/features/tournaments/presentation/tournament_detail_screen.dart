@@ -1396,6 +1396,8 @@ final class _OrganizerInvitationsSectionState extends State<_OrganizerInvitation
 final class _ScheduleList extends StatelessWidget {
   const _ScheduleList({required this.schedule});
 
+  static final _dateFormat = DateFormat('dd MMM HH:mm', 'es_ES');
+
   final TournamentScheduleDto schedule;
 
   @override
@@ -1421,67 +1423,76 @@ final class _ScheduleList extends StatelessWidget {
             )
           else
             ...round.matches.map(
-              (m) {
-                final canNavigateToLive = m.matchId != null;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: canNavigateToLive
-                        ? () => context.push(Routes.matchLive(m.matchId!))
-                        : null,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: scheme.outlineVariant),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  m.label.isEmpty ? 'Partido' : m.label,
-                                  style: const TextStyle(fontWeight: FontWeight.w900),
-                                ),
-                                if (m.scheduledAt != null || m.courtName != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    [
-                                      if (m.scheduledAt != null)
-                                        DateFormat('dd MMM HH:mm', 'es_ES').format(m.scheduledAt!),
-                                      if (m.courtName != null) m.courtName!,
-                                    ].join(' · '),
-                                    style: TextStyle(
-                                      color: scheme.onSurfaceVariant,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          Text(
-                            m.status,
-                            style: TextStyle(
-                              color: scheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
+              (m) => _MatchTile(match: m, dateFormat: _dateFormat),
             ),
           const SizedBox(height: 16),
         ],
       ],
+    );
+  }
+}
+
+final class _MatchTile extends StatelessWidget {
+  const _MatchTile({required this.match, required this.dateFormat});
+
+  final TournamentScheduleMatchDto match;
+  final DateFormat dateFormat;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final canNavigateToLive = match.matchId != null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: canNavigateToLive ? () => context.push(Routes.matchLive(match.matchId!)) : null,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      match.label.isEmpty ? 'Partido' : match.label,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    if (match.scheduledAt != null || match.courtName != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        [
+                          if (match.scheduledAt != null) dateFormat.format(match.scheduledAt!),
+                          if (match.courtName != null) match.courtName!,
+                        ].join(' · '),
+                        style: TextStyle(
+                          color: scheme.onSurfaceVariant,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Text(
+                match.status,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
