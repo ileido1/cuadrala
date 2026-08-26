@@ -848,8 +848,8 @@ final class _ScheduleTab extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: FilledButton.tonal.icon(
-                          style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
                           onPressed: () =>
                               context.read<TournamentScheduleCubit>().generate(),
                           icon: const Icon(Icons.refresh),
