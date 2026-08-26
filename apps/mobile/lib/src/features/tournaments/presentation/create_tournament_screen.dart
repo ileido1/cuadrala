@@ -135,29 +135,31 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     _tournamentPresetsCubit.load(sportId: sportId);
   }
 
-  void _onSubmit() {
+  //? Validación y construcción de request. Retorna (request, error).
+  //? Extraído para ser testeable y reutilizable.
+  ({CreateTournamentRequest? request, String? error}) _buildCreateRequest() {
+    //? 1. Validar nombre
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      setState(() => _submitError = 'Ingresá un nombre para el torneo.');
-      return;
+      return (request: null, error: 'Ingresá un nombre para el torneo.');
     }
+
+    //? 2. Validar deporte, categoría, preset
     final sportId = _selectedSportId;
     final categoryId = _selectedCategoryId;
     final preset = _selectedPreset;
+
     if (sportId == null || sportId.isEmpty) {
-      setState(() => _submitError = 'Selecciona un deporte.');
-      return;
+      return (request: null, error: 'Selecciona un deporte.');
     }
     if (categoryId == null || categoryId.isEmpty) {
-      setState(() => _submitError = 'Selecciona una categoría.');
-      return;
+      return (request: null, error: 'Selecciona una categoría.');
     }
     if (preset == null || preset.id.isEmpty) {
-      setState(() => _submitError = 'Selecciona un formato de torneo.');
-      return;
+      return (request: null, error: 'Selecciona un formato de torneo.');
     }
-    setState(() => _submitError = null);
 
+    //? 3. Construir parámetros según preset
     Map<String, Object?>? params;
     if (preset.code == 'ROUND_ROBIN') {
       params = {'doubleRound': _doubleRound};
@@ -167,16 +169,28 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       params = {'thirdPlaceMatch': _thirdPlaceMatch};
     }
 
-    _createTournamentCubit.submit(
-          CreateTournamentRequest(
-            sportId: sportId,
-            categoryId: categoryId,
-            name: name,
-            formatPresetId: preset.id,
-            formatParameters: params,
-            visibility: _visibility,
-          ),
-        );
+    //? 4. Retornar request válido
+    return (
+      request: CreateTournamentRequest(
+        sportId: sportId,
+        categoryId: categoryId,
+        name: name,
+        formatPresetId: preset.id,
+        formatParameters: params,
+        visibility: _visibility,
+      ),
+      error: null,
+    );
+  }
+
+  void _onSubmit() {
+    final (:request, :error) = _buildCreateRequest();
+    if (error != null) {
+      setState(() => _submitError = error);
+      return;
+    }
+    setState(() => _submitError = null);
+    _createTournamentCubit.submit(request!);
   }
 
   @override
