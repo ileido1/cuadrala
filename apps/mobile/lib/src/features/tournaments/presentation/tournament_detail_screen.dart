@@ -348,7 +348,7 @@ final class TournamentDetailBody extends StatelessWidget {
                   tabs: const [
                     Tab(text: 'Calendario'),
                     Tab(text: 'Clasificación'),
-                    Tab(text: 'Inscriptos'),
+                    Tab(text: 'Registrados'),
                   ],
                 ),
               ),
@@ -1006,7 +1006,7 @@ final class _ScoreboardTab extends StatelessWidget {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: () {
-                      //? Tab 0=Calendario, 1=Clasificación, 2=Inscriptos; queremos ir a Calendario
+                      //? Tab 0=Calendario, 1=Clasificación, 2=Registrados; queremos ir a Calendario
                       final controller = DefaultTabController.of(context);
                       controller.animateTo(0);
                     },
