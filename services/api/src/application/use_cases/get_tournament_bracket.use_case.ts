@@ -77,7 +77,7 @@ export class GetTournamentBracketUseCase {
     );
 
     // Generar bracket usando la función del dominio
-    const SCHEDULE = generateSingleEliminationScheduleSV({ participantUserIds: PARTICIPANT_IDS });
+    const SCHEDULE = generateSingleEliminationScheduleSV({ participantRegistrationIds: PARTICIPANT_IDS });
 
     // Construir DTO con mapeo de jugadores
     const ROUNDS: BracketRoundDTO[] = SCHEDULE.rounds.map((_round) => ({

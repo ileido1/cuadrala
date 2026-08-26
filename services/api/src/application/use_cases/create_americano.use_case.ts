@@ -13,7 +13,7 @@ export type CreateAmericanoInput = {
   courtId?: string;
   tournamentId?: string;
   scheduledAt?: Date;
-  participantUserIds: string[];
+  participantRegistrationIds: string[];
 };
 
 type ResolvedFormat = {
@@ -53,13 +53,13 @@ export class CreateAmericanoUseCase {
       }
     }
 
-    const UNIQUE_IDS = new Set(_input.participantUserIds);
-    if (UNIQUE_IDS.size !== _input.participantUserIds.length) {
+    const UNIQUE_IDS = new Set(_input.participantRegistrationIds);
+    if (UNIQUE_IDS.size !== _input.participantRegistrationIds.length) {
       throw new AppError('PARTICIPANTES_DUPLICADOS', 'No se permiten participantes duplicados.', 400);
     }
 
-    const FOUND = await this._userRepository.countByIdsSV(_input.participantUserIds);
-    if (FOUND !== _input.participantUserIds.length) {
+    const FOUND = await this._userRepository.countByIdsSV(_input.participantRegistrationIds);
+    if (FOUND !== _input.participantRegistrationIds.length) {
       throw new AppError('USUARIOS_INVALIDOS', 'Uno o más participantes no existen.', 400);
     }
 
@@ -71,7 +71,7 @@ export class CreateAmericanoUseCase {
       categoryId: _input.categoryId,
       sportId: FORMAT.sportId,
       formatPresetId: FORMAT.formatPresetId,
-      participantUserIds: _input.participantUserIds,
+      participantRegistrationIds: _input.participantRegistrationIds,
     };
     if (FORMAT.formatParameters !== undefined) {
       CREATE_PAYLOAD.formatParameters = FORMAT.formatParameters;

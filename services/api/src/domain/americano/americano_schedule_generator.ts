@@ -1,5 +1,5 @@
 export type AmericanoScheduleInputDTO = {
-  participantUserIds: string[];
+  participantRegistrationIds: string[];
 };
 
 export type AmericanoScheduleDTO = {
@@ -13,37 +13,37 @@ export type AmericanoScheduleDTO = {
   }>;
 };
 
-function normalizeParticipantIdsSV(_participantUserIds: string[]): string[] {
-  const UNIQUE = Array.from(new Set(_participantUserIds));
+function normalizeParticipantIdsSV(_participantRegistrationIds: string[]): string[] {
+  const UNIQUE = Array.from(new Set(_participantRegistrationIds));
   UNIQUE.sort();
   return UNIQUE;
 }
 
-function assertParticipantRulesSV(_participantUserIds: string[]): void {
-  if (!Array.isArray(_participantUserIds)) {
-    throw new Error('participantUserIds debe ser una lista.');
+function assertParticipantRulesSV(_participantRegistrationIds: string[]): void {
+  if (!Array.isArray(_participantRegistrationIds)) {
+    throw new Error('participantRegistrationIds debe ser una lista.');
   }
-  if (_participantUserIds.length < 4) {
+  if (_participantRegistrationIds.length < 4) {
     throw new Error('Se requieren al menos 4 participantes.');
   }
-  const UNIQUE = new Set(_participantUserIds);
-  if (UNIQUE.size !== _participantUserIds.length) {
-    throw new Error('participantUserIds no permite IDs duplicados.');
+  const UNIQUE = new Set(_participantRegistrationIds);
+  if (UNIQUE.size !== _participantRegistrationIds.length) {
+    throw new Error('participantRegistrationIds no permite IDs duplicados.');
   }
-  if (_participantUserIds.length % 4 !== 0) {
+  if (_participantRegistrationIds.length % 4 !== 0) {
     throw new Error('La cantidad de participantes debe ser múltiplo de 4.');
   }
 }
 
 export function createAmericanoScheduleKeySV(_input: AmericanoScheduleInputDTO): string {
-  assertParticipantRulesSV(_input.participantUserIds);
-  const IDS = normalizeParticipantIdsSV(_input.participantUserIds);
+  assertParticipantRulesSV(_input.participantRegistrationIds);
+  const IDS = normalizeParticipantIdsSV(_input.participantRegistrationIds);
   return `americano:v1:${IDS.join(',')}`;
 }
 
 // Back-compat (usado por use case actual)
-export function buildAmericanoScheduleKeySV(_participantUserIds: string[]): string {
-  return createAmericanoScheduleKeySV({ participantUserIds: _participantUserIds });
+export function buildAmericanoScheduleKeySV(_participantRegistrationIds: string[]): string {
+  return createAmericanoScheduleKeySV({ participantRegistrationIds: _participantRegistrationIds });
 }
 
 /**
@@ -55,7 +55,7 @@ export function buildAmericanoScheduleKeySV(_participantUserIds: string[]): stri
  * - Orden estable basado en IDs normalizados
  */
 export function generateAmericanoScheduleSV(_input: AmericanoScheduleInputDTO | string[]): AmericanoScheduleDTO {
-  const IDS_RAW = Array.isArray(_input) ? _input : _input.participantUserIds;
+  const IDS_RAW = Array.isArray(_input) ? _input : _input.participantRegistrationIds;
   assertParticipantRulesSV(IDS_RAW);
 
   // Canonical: orden estable por ID para garantizar determinismo.

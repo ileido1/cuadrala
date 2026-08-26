@@ -67,8 +67,8 @@ export class GenerateTournamentScheduleUseCase {
     const FORMAT_CODE = PRESET.code;
 
     if (FORMAT_CODE === 'AMERICANO') {
-      const SCHEDULE_KEY = createAmericanoScheduleKeySV({ participantUserIds: PARTICIPANT_REGISTRATION_IDS });
-      const PAYLOAD = generateAmericanoScheduleSV({ participantUserIds: PARTICIPANT_REGISTRATION_IDS });
+      const SCHEDULE_KEY = createAmericanoScheduleKeySV({ participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS });
+      const PAYLOAD = generateAmericanoScheduleSV({ participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS });
       const RES = await this._tournamentScheduleRepository.createOrValidateIdempotencySV({
         tournamentId: TOURNAMENT.id,
         formatCode: FORMAT_CODE,
@@ -87,8 +87,8 @@ export class GenerateTournamentScheduleUseCase {
     }
 
     if (FORMAT_CODE === 'ROUND_ROBIN') {
-      const RR_INPUT: { participantUserIds: string[]; doubleRound?: boolean } = {
-        participantUserIds: PARTICIPANT_REGISTRATION_IDS,
+      const RR_INPUT: { participantRegistrationIds: string[]; doubleRound?: boolean } = {
+        participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS,
       };
       if (_input.doubleRound !== undefined) {
         RR_INPUT.doubleRound = _input.doubleRound;
@@ -113,8 +113,8 @@ export class GenerateTournamentScheduleUseCase {
     }
 
     if (FORMAT_CODE === 'SINGLE_ELIMINATION') {
-      const SE_INPUT: { participantUserIds: string[]; thirdPlaceMatch?: boolean } = {
-        participantUserIds: PARTICIPANT_REGISTRATION_IDS,
+      const SE_INPUT: { participantRegistrationIds: string[]; thirdPlaceMatch?: boolean } = {
+        participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS,
       };
       if (_input.thirdPlaceMatch !== undefined) {
         SE_INPUT.thirdPlaceMatch = _input.thirdPlaceMatch;

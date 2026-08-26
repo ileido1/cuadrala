@@ -1,5 +1,5 @@
 export type RoundRobinScheduleInputDTO = {
-  participantUserIds: string[];
+  participantRegistrationIds: string[];
   doubleRound?: boolean;
 };
 
@@ -33,14 +33,14 @@ function normalizeParticipantIdsSV(_ids: string[]): string[] {
  */
 function assertParticipantRulesSV(_ids: string[]): void {
   if (!Array.isArray(_ids)) {
-    throw new Error('participantUserIds debe ser una lista.');
+    throw new Error('participantRegistrationIds debe ser una lista.');
   }
   if (_ids.length < 2) {
     throw new Error('Se requieren al menos 2 participantes para ROUND_ROBIN.');
   }
   const UNIQUE = new Set(_ids);
   if (UNIQUE.size !== _ids.length) {
-    throw new Error('participantUserIds no permite IDs duplicados.');
+    throw new Error('participantRegistrationIds no permite IDs duplicados.');
   }
 }
 
@@ -48,8 +48,8 @@ function assertParticipantRulesSV(_ids: string[]): void {
  * Genera la clave determinista para idempotencia.
  */
 export function createRoundRobinScheduleKeySV(_input: RoundRobinScheduleInputDTO): string {
-  assertParticipantRulesSV(_input.participantUserIds);
-  const IDS = normalizeParticipantIdsSV(_input.participantUserIds);
+  assertParticipantRulesSV(_input.participantRegistrationIds);
+  const IDS = normalizeParticipantIdsSV(_input.participantRegistrationIds);
   const SUFFIX = _input.doubleRound ? ':double' : ':single';
   return `round_robin:v1:${IDS.join(',')}${SUFFIX}`;
 }
@@ -71,9 +71,9 @@ export function createRoundRobinScheduleKeySV(_input: RoundRobinScheduleInputDTO
  * - Todos contra todos exactamente una vez (o dos si doubleRound)
  */
 export function generateRoundRobinScheduleSV(_input: RoundRobinScheduleInputDTO): RoundRobinScheduleDTO {
-  assertParticipantRulesSV(_input.participantUserIds);
+  assertParticipantRulesSV(_input.participantRegistrationIds);
 
-  const IDS = normalizeParticipantIdsSV(_input.participantUserIds);
+  const IDS = normalizeParticipantIdsSV(_input.participantRegistrationIds);
   const N = IDS.length;
 
   // Si N es impar, agregar un bye placeholder

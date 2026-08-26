@@ -10,9 +10,9 @@ export class GenerateTournamentAmericanoScheduleUseCase {
 
   async executeSV(_input: {
     tournamentId: string;
-    participantUserIds: string[];
+    participantRegistrationIds: string[];
   }): Promise<{ tournamentId: string; scheduleKey: string; schedule: unknown }> {
-    const KEY = buildAmericanoScheduleKeySV(_input.participantUserIds);
+    const KEY = buildAmericanoScheduleKeySV(_input.participantRegistrationIds);
 
     const EXISTING = await this._scheduleRepository.findByTournamentIdSV(_input.tournamentId);
     if (EXISTING !== null) {
@@ -32,7 +32,7 @@ export class GenerateTournamentAmericanoScheduleUseCase {
 
     let SCHEDULE;
     try {
-      SCHEDULE = generateAmericanoScheduleSV(_input.participantUserIds);
+      SCHEDULE = generateAmericanoScheduleSV(_input.participantRegistrationIds);
     } catch (_error) {
       if (_error instanceof Error && /al menos 4/i.test(_error.message)) {
         throw new AppError('PARTICIPANTES_INSUFICIENTES', 'Se requieren al menos 4 participantes.', 400);

@@ -1,5 +1,5 @@
 export type SingleEliminationScheduleInputDTO = {
-  participantUserIds: string[];
+  participantRegistrationIds: string[];
   thirdPlaceMatch?: boolean;
 };
 
@@ -39,14 +39,14 @@ function normalizeParticipantIdsSV(_ids: string[]): string[] {
  */
 function assertParticipantRulesSV(_ids: string[]): void {
   if (!Array.isArray(_ids)) {
-    throw new Error('participantUserIds debe ser una lista.');
+    throw new Error('participantRegistrationIds debe ser una lista.');
   }
   if (_ids.length < 2) {
     throw new Error('Se requieren al menos 2 participantes para SINGLE_ELIMINATION.');
   }
   const UNIQUE = new Set(_ids);
   if (UNIQUE.size !== _ids.length) {
-    throw new Error('participantUserIds no permite IDs duplicados.');
+    throw new Error('participantRegistrationIds no permite IDs duplicados.');
   }
 }
 
@@ -76,8 +76,8 @@ function roundNameSV(_roundNumber: number, _totalRounds: number): string {
  * Genera la clave determinista para idempotencia.
  */
 export function createSingleEliminationScheduleKeySV(_input: SingleEliminationScheduleInputDTO): string {
-  assertParticipantRulesSV(_input.participantUserIds);
-  const IDS = normalizeParticipantIdsSV(_input.participantUserIds);
+  assertParticipantRulesSV(_input.participantRegistrationIds);
+  const IDS = normalizeParticipantIdsSV(_input.participantRegistrationIds);
   const TP = _input.thirdPlaceMatch ? ':tp' : '';
   return `single_elimination:v1:${IDS.join(',')}${TP}`;
 }
@@ -100,9 +100,9 @@ export function createSingleEliminationScheduleKeySV(_input: SingleEliminationSc
 export function generateSingleEliminationScheduleSV(
   _input: SingleEliminationScheduleInputDTO,
 ): SingleEliminationScheduleDTO {
-  assertParticipantRulesSV(_input.participantUserIds);
+  assertParticipantRulesSV(_input.participantRegistrationIds);
 
-  const IDS = normalizeParticipantIdsSV(_input.participantUserIds);
+  const IDS = normalizeParticipantIdsSV(_input.participantRegistrationIds);
   const N = IDS.length;
   const BRACKET_SIZE = nextPowerOfTwoSV(N);
   const TOTAL_ROUNDS = Math.log2(BRACKET_SIZE);

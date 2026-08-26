@@ -6,7 +6,7 @@ export type CreateAmericanoMatchInput = {
   courtId?: string;
   tournamentId?: string;
   scheduledAt?: Date;
-  participantUserIds: string[];
+  participantRegistrationIds: string[];
 };
 
 export type CreatedAmericanoMatchDTO = {
