@@ -16,9 +16,9 @@ const OPENAPI_CONST = {
     { name: 'Health' },
     { name: 'Auth' },
     { name: 'Profile' },
+    { name: 'Onboarding' },
     { name: 'Catalog' },
     { name: 'Tournaments' },
-    { name: 'Americanos' },
     { name: 'Matches' },
     { name: 'Matchmaking' },
     { name: 'Ranking' },
@@ -26,6 +26,7 @@ const OPENAPI_CONST = {
     { name: 'Notifications' },
     { name: 'Venues' },
     { name: 'Geo' },
+    { name: 'Chat' },
     { name: 'Admin' },
   ],
   components: {
@@ -219,21 +220,14 @@ const OPENAPI_CONST = {
         parameters: [
           { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
         ],
+        description:
+          'Los participantes se derivan de las inscripciones CONFIRMED del torneo. No se envía roster en el body.',
+        security: [{ bearerAuth: [] }],
         requestBody: {
-          required: true,
+          required: false,
           content: {
             'application/json': {
-              schema: {
-                type: 'object',
-                required: ['participantUserIds'],
-                properties: {
-                  participantUserIds: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                    minItems: 2,
-                  },
-                },
-              },
+              schema: { type: 'object', properties: {} },
             },
           },
         },
@@ -241,7 +235,10 @@ const OPENAPI_CONST = {
           '201': { description: 'Creado' },
           '400': { description: 'Validación fallida' },
           '404': { description: 'Torneo no encontrado' },
-          '409': { description: 'Calendario ya generado con inputs distintos' },
+          '409': {
+            description:
+              'Calendario ya generado con inputs distintos, torneo en un estado que no admite generación, o roster incompatible con el formato (AMERICANO exige múltiplo de 4)',
+          },
           '501': { description: 'Formato no soportado aún' },
         },
       },
@@ -250,52 +247,6 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Tournaments'],
         summary: 'Consultar calendario generado (genérico)',
-        parameters: [
-          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-        ],
-        responses: {
-          '200': { description: 'OK' },
-          '400': { description: 'Validación fallida' },
-          '404': { description: 'Calendario no encontrado' },
-        },
-      },
-    },
-    '/api/v1/tournaments/{tournamentId}/americano-schedule:generate': {
-      post: {
-        tags: ['Tournaments'],
-        summary: 'Generar calendario Americano (determinista)',
-        parameters: [
-          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-        ],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['participantUserIds'],
-                properties: {
-                  participantUserIds: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                    minItems: 4,
-                  },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          '200': { description: 'OK' },
-          '400': { description: 'Validación fallida' },
-          '409': { description: 'Calendario ya generado con inputs distintos' },
-        },
-      },
-    },
-    '/api/v1/tournaments/{tournamentId}/americano-schedule': {
-      get: {
-        tags: ['Tournaments'],
-        summary: 'Consultar calendario Americano generado',
         parameters: [
           { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
         ],
@@ -317,37 +268,6 @@ const OPENAPI_CONST = {
           '200': { description: 'OK' },
           '400': { description: 'Validación fallida' },
           '404': { description: 'Torneo no encontrado' },
-        },
-      },
-    },
-    '/api/v1/americanos': {
-      post: {
-        tags: ['Americanos'],
-        summary: 'Crear partido (preset Americano)',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['categoryId', 'participantUserIds'],
-                properties: {
-                  categoryId: { type: 'string', format: 'uuid' },
-                  sportId: { type: 'string', format: 'uuid' },
-                  tournamentId: { type: 'string', format: 'uuid' },
-                  participantUserIds: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                    minItems: 2,
-                  },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          '201': { description: 'Creado' },
-          '400': { description: 'Validación fallida' },
         },
       },
     },
@@ -478,8 +398,8 @@ const OPENAPI_CONST = {
               schema: {
                 type: 'object',
                 properties: {
-                  scheduledAt: { type: ['string', 'null'], format: 'date-time' },
-                  courtId: { type: ['string', 'null'], format: 'uuid' },
+                  scheduledAt: { type: 'string', nullable: true, format: 'date-time' },
+                  courtId: { type: 'string', nullable: true, format: 'uuid' },
                   venueId: { type: 'string', format: 'uuid' },
                   durationMinutes: { type: 'integer', minimum: 1, maximum: 1440 },
                   pricePerPlayerCents: { type: 'integer', minimum: 0, maximum: 100000000 },
@@ -730,6 +650,7 @@ const OPENAPI_CONST = {
       post: {
         tags: ['Ranking'],
         summary: 'Recalcular ranking por categoría',
+        description: 'Operación de mantenimiento: requiere el secreto de admin.',
         parameters: [
           {
             name: 'categoryId',
@@ -737,10 +658,17 @@ const OPENAPI_CONST = {
             required: true,
             schema: { type: 'string', format: 'uuid' },
           },
+          {
+            name: 'x-admin-secret',
+            in: 'header',
+            required: true,
+            schema: { type: 'string' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
           '400': { description: 'Validación fallida' },
+          '401': { description: 'Secret de admin inválido o ausente' },
         },
       },
     },
@@ -974,10 +902,10 @@ const OPENAPI_CONST = {
                 properties: {
                   dominantHand: { type: 'string', enum: ['RIGHT', 'LEFT', 'AMBIDEXTROUS'] },
                   sidePreference: { type: 'string', enum: ['RIGHT', 'LEFT', 'ANY'] },
-                  birthYear: { type: ['integer', 'null'], minimum: 1900 },
-                  phone: { type: ['string', 'null'], description: 'E.164 (8-15 dígitos, + opcional).' },
-                  avatarUrl: { type: ['string', 'null'], format: 'uri' },
-                  city: { type: ['string', 'null'], maxLength: 120 },
+                  birthYear: { type: 'integer', nullable: true, minimum: 1900 },
+                  phone: { type: 'string', nullable: true, description: 'E.164 (8-15 dígitos, + opcional).' },
+                  avatarUrl: { type: 'string', nullable: true, format: 'uri' },
+                  city: { type: 'string', nullable: true, maxLength: 120 },
                 },
               },
             },
@@ -1022,7 +950,7 @@ const OPENAPI_CONST = {
                           },
                         },
                         isComplete: { type: 'boolean' },
-                        completedAt: { type: ['string', 'null'], format: 'date-time' },
+                        completedAt: { type: 'string', nullable: true, format: 'date-time' },
                       },
                     },
                   },
@@ -1152,7 +1080,7 @@ const OPENAPI_CONST = {
                 type: 'object',
                 required: ['latitude', 'longitude', 'radiusKm'],
                 properties: {
-                  label: { type: ['string', 'null'], maxLength: 200 },
+                  label: { type: 'string', nullable: true, maxLength: 200 },
                   latitude: { type: 'number', minimum: -90, maximum: 90 },
                   longitude: { type: 'number', minimum: -180, maximum: 180 },
                   radiusKm: { type: 'integer', minimum: 1, maximum: 100 },

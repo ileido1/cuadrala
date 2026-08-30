@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
 import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { seedAmericanoMatchSV } from '../helpers/americano-match.seed.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -49,16 +50,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración receipts (upload + down
     });
     userB = U2.id;
 
-    const CREATE = await request(APP)
-      .post('/api/v1/americanos')
-      .send({
-        categoryId,
-        participantUserIds: [userA.id, userB],
-      })
-      .set('Content-Type', 'application/json');
-
-    expect(CREATE.status).toBe(201);
-    matchId = CREATE.body.data.matchId as string;
+    const CREATED_MATCH = await seedAmericanoMatchSV({
+      categoryId,
+      participantUserIds: [userA.id, userB],
+    });
+    matchId = CREATED_MATCH.matchId;
 
     // Setup: Venue + Court + VenueStaff para que el aviso de pago pendiente a staff dispare (US-E8-05).
     const VENUE = await PRISMA.venue.create({ data: { name: 'Sede Test Receipts' } });

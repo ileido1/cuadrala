@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { seedAmericanoMatchSV } from '../helpers/americano-match.seed.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -44,39 +45,14 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración HTTP + PostgreSQL (TEST
     await PRISMA.$disconnect();
   });
 
-  it('POST /api/v1/americanos crea partido y devuelve 201', async () => {
-    const RES = await request(APP)
-      .post('/api/v1/americanos')
-      .send({
-        categoryId,
-        participantUserIds: [userA, userB],
-      })
-      .set('Content-Type', 'application/json');
-
-    expect(RES.status).toBe(201);
-    expect(RES.body.success).toBe(true);
-    expect(RES.body.data).toMatchObject({
-      status: 'SCHEDULED',
-      type: 'AMERICANO',
-      participantCount: 2,
-      sportId: sportPadelId,
-    });
-    expect(typeof RES.body.data.matchId).toBe('string');
-  });
-
   it('GET /api/v1/matchmaking/:matchId/suggestions devuelve sugerencias', async () => {
-    const CREATE = await request(APP)
-      .post('/api/v1/americanos')
-      .send({
-        categoryId,
-        participantUserIds: [userA, userB],
-      })
-      .set('Content-Type', 'application/json');
-
-    const MATCH_ID: string = CREATE.body.data.matchId as string;
+    const CREATED_MATCH = await seedAmericanoMatchSV({
+      categoryId,
+      participantUserIds: [userA, userB],
+    });
 
     const RES = await request(APP).get(
-      `/api/v1/matchmaking/${MATCH_ID}/suggestions?limit=5`,
+      `/api/v1/matchmaking/${CREATED_MATCH.matchId}/suggestions?limit=5`,
     );
 
     expect(RES.status).toBe(200);

@@ -143,16 +143,6 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     expect(RES.body.code).toBe('NO_AUTORIZADO');
   });
 
-  it('POST /api/v1/tournaments/:tournamentId/americano-schedule:generate responde 400 si tournamentId no es UUID', async () => {
-    const RES = await request(APP)
-      .post('/api/v1/tournaments/no-uuid/americano-schedule:generate')
-      .send({ participantUserIds: ['550e8400-e29b-41d4-a716-446655440001'] })
-      .set('Content-Type', 'application/json');
-
-    expect(RES.status).toBe(400);
-    expect(RES.body.code).toBe('VALIDACION_FALLIDA');
-  });
-
   it('GET /api/v1/tournaments/:tournamentId/scoreboard responde 400 si tournamentId no es UUID', async () => {
     const RES = await request(APP).get('/api/v1/tournaments/no-uuid/scoreboard');
 
@@ -326,23 +316,6 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     expect(RES.body.code).toBe('VALIDACION_FALLIDA');
   });
 
-  it('POST /api/v1/americanos responde 400 si categoryId no es UUID', async () => {
-    const RES = await request(APP)
-      .post('/api/v1/americanos')
-      .send({
-        categoryId: 'no-uuid',
-        participantUserIds: [
-          '550e8400-e29b-41d4-a716-446655440001',
-          '550e8400-e29b-41d4-a716-446655440002',
-        ],
-      })
-      .set('Content-Type', 'application/json');
-
-    expect(RES.status).toBe(400);
-    expect(RES.body.success).toBe(false);
-    expect(RES.body.code).toBe('VALIDACION_FALLIDA');
-  });
-
   it('GET /api/v1/matchmaking/:matchId/suggestions responde 400 si matchId no es UUID', async () => {
     const RES = await request(APP).get('/api/v1/matchmaking/not-uuid/suggestions');
 
@@ -350,8 +323,17 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     expect(RES.body.code).toBe('VALIDACION_FALLIDA');
   });
 
-  it('POST /api/v1/ranking/recalculate/:categoryId responde 400 si categoryId no es UUID', async () => {
+  it('POST /api/v1/ranking/recalculate/:categoryId responde 401 sin secret de admin', async () => {
     const RES = await request(APP).post('/api/v1/ranking/recalculate/bad-id');
+
+    expect(RES.status).toBe(401);
+    expect(RES.body.code).toBe('NO_AUTORIZADO');
+  });
+
+  it('POST /api/v1/ranking/recalculate/:categoryId responde 400 si categoryId no es UUID', async () => {
+    const RES = await request(APP)
+      .post('/api/v1/ranking/recalculate/bad-id')
+      .set('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET);
 
     expect(RES.status).toBe(400);
     expect(RES.body.code).toBe('VALIDACION_FALLIDA');

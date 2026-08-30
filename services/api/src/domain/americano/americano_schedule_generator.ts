@@ -1,3 +1,5 @@
+import { AppError } from '../errors/app_error.js';
+
 export type AmericanoScheduleInputDTO = {
   participantRegistrationIds: string[];
 };
@@ -13,55 +15,93 @@ export type AmericanoScheduleDTO = {
   }>;
 };
 
+/**
+ * @name    :normalizeParticipantIdsSV
+ * @version :2.0.0
+ * @description :Ordena los IDs para que el calendario sea determinista: la
+ * misma entrada en distinto orden produce exactamente la misma salida. No
+ * deduplica, porque `assertParticipantRulesSV` ya rechazó los duplicados antes
+ * de llegar acá.
+ * @param {string[]} _participantRegistrationIds - IDs ya validados
+ * @return {string[]} Copia ordenada, sin mutar la entrada
+ */
 function normalizeParticipantIdsSV(_participantRegistrationIds: string[]): string[] {
-  const UNIQUE = Array.from(new Set(_participantRegistrationIds));
-  UNIQUE.sort();
-  return UNIQUE;
+  return [..._participantRegistrationIds].sort();
 }
 
+/**
+ * @name    :assertParticipantRulesSV
+ * @version :2.0.0
+ * @description :Valida las reglas de participantes del formato AMERICANO.
+ * Lanza `AppError` y no `Error` a secas: el roster sale de las inscripciones
+ * CONFIRMED, así que "6 inscriptos" es un estado de negocio esperado y debe
+ * responder 409, no un 500 con el mensaje tragado.
+ * @param {string[]} _participantRegistrationIds - IDs de inscripción del roster
+ * @return {void}
+ */
 function assertParticipantRulesSV(_participantRegistrationIds: string[]): void {
-  if (!Array.isArray(_participantRegistrationIds)) {
-    throw new Error('participantRegistrationIds debe ser una lista.');
-  }
   if (_participantRegistrationIds.length < 4) {
-    throw new Error('Se requieren al menos 4 participantes.');
+    throw new AppError(
+      'PARTICIPANTES_INSUFICIENTES',
+      'Se requieren al menos 4 participantes.',
+      409,
+    );
   }
   const UNIQUE = new Set(_participantRegistrationIds);
   if (UNIQUE.size !== _participantRegistrationIds.length) {
-    throw new Error('participantRegistrationIds no permite IDs duplicados.');
+    throw new AppError(
+      'PARTICIPANTES_DUPLICADOS',
+      'No se permiten participantes duplicados.',
+      409,
+    );
   }
   if (_participantRegistrationIds.length % 4 !== 0) {
-    throw new Error('La cantidad de participantes debe ser múltiplo de 4.');
+    throw new AppError(
+      'PARTICIPANTES_INVALIDOS',
+      'La cantidad de participantes debe ser múltiplo de 4.',
+      409,
+    );
   }
 }
 
+/**
+ * @name    :createAmericanoScheduleKeySV
+ * @version :1.0.0
+ * @description :Deriva la key determinista del calendario. Es invariante al
+ * orden de entrada, y por eso sirve para detectar que un calendario ya fue
+ * generado con el mismo conjunto de participantes (idempotencia).
+ * @param {AmericanoScheduleInputDTO} _input - Roster de inscripciones
+ * @return {string} Key con formato `americano:v1:<ids ordenados>`
+ */
 export function createAmericanoScheduleKeySV(_input: AmericanoScheduleInputDTO): string {
   assertParticipantRulesSV(_input.participantRegistrationIds);
   const IDS = normalizeParticipantIdsSV(_input.participantRegistrationIds);
   return `americano:v1:${IDS.join(',')}`;
 }
 
-// Back-compat (usado por use case actual)
-export function buildAmericanoScheduleKeySV(_participantRegistrationIds: string[]): string {
-  return createAmericanoScheduleKeySV({ participantRegistrationIds: _participantRegistrationIds });
-}
-
 /**
- * Genera rondas AMERICANO deterministas.
+ * @name    :generateAmericanoScheduleSV
+ * @version :1.0.0
+ * @description :Genera rondas AMERICANO deterministas.
  *
  * Reglas MVP:
  * - Participantes únicos
  * - Cantidad múltiplo de 4 (para armar partidos 2v2)
- * - Orden estable basado en IDs normalizados
+ * - Orden estable basado en IDs normalizados, así que la misma entrada en
+ *   distinto orden produce exactamente el mismo calendario
+ * @param {AmericanoScheduleInputDTO} _input - Roster de inscripciones
+ * @return {AmericanoScheduleDTO} Rondas con sus canchas y equipos A/B
  */
-export function generateAmericanoScheduleSV(_input: AmericanoScheduleInputDTO | string[]): AmericanoScheduleDTO {
-  const IDS_RAW = Array.isArray(_input) ? _input : _input.participantRegistrationIds;
-  assertParticipantRulesSV(IDS_RAW);
+export function generateAmericanoScheduleSV(_input: AmericanoScheduleInputDTO): AmericanoScheduleDTO {
+  assertParticipantRulesSV(_input.participantRegistrationIds);
 
   // Canonical: orden estable por ID para garantizar determinismo.
-  const IDS = normalizeParticipantIdsSV(IDS_RAW);
+  const IDS = normalizeParticipantIdsSV(_input.participantRegistrationIds);
 
   // Por cada bloque de 4 participantes generamos 3 rondas (rotación MVP).
+  //? Invariante: `assertParticipantRulesSV` ya garantizó que la cantidad es
+  //? múltiplo de 4, así que todo bloque tiene exactamente 4 IDs. De ahí que más
+  //? abajo el acceso por índice pueda afirmarse como `[string, string]`.
   const BLOCKS: string[][] = [];
   for (let i = 0; i < IDS.length; i += 4) {
     BLOCKS.push(IDS.slice(i, i + 4));

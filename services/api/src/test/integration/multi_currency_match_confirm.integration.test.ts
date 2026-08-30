@@ -2,6 +2,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { seedAmericanoMatchSV } from '../helpers/americano-match.seed.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -74,16 +75,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         data: { venueId, userId: staffUserId, role: 'STAFF' },
       });
 
-      const CREATE = await request(app)
-        .post('/api/v1/americanos')
-        .send({
-          categoryId,
-          participantUserIds: [staffUserId, payerUserId],
-        })
-        .set('Content-Type', 'application/json');
-
-      expect(CREATE.status).toBe(201);
-      matchId = CREATE.body.data.matchId as string;
+      const CREATED_MATCH = await seedAmericanoMatchSV({
+        categoryId,
+        participantUserIds: [staffUserId, payerUserId],
+      });
+      matchId = CREATED_MATCH.matchId;
 
       await PRISMA.match.update({
         where: { id: matchId },

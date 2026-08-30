@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
+import { seedAmericanoMatchSV } from '../helpers/americano-match.seed.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -99,16 +100,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         },
       });
 
-      const CREATE = await request(APP)
-        .post('/api/v1/americanos')
-        .send({
-          categoryId,
-          participantUserIds: [staffUserId, payerUserId],
-        })
-        .set('Content-Type', 'application/json');
-
-      expect(CREATE.status).toBe(201);
-      matchId = CREATE.body.data.matchId as string;
+      const CREATED_MATCH = await seedAmericanoMatchSV({
+        categoryId,
+        participantUserIds: [staffUserId, payerUserId],
+      });
+      matchId = CREATED_MATCH.matchId;
 
       await PRISMA.match.update({
         where: { id: matchId },
