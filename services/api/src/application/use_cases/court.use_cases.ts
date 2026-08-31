@@ -8,17 +8,17 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { ICourtRepository } from '../../domain/ports/court_repository.js';
 import type { VenueRepository } from '../../domain/ports/venue_repository.js';
-import type { Court, CourtStatus, CreateCourtInput, UpdateCourtInput } from '../../domain/entities/booking/court.entity.js';
-import { CourtStatus as CourtStatusEnum, SportType } from '../../domain/entities/booking/court.entity.js';
+import type { Court, CreateCourtInput, UpdateCourtInput } from '../../domain/entities/booking/court.entity.js';
+import { CourtStatus, courtStatusFromStringSV, SportType, sportTypeFromStringSV } from '../../domain/entities/booking/court.entity.js';
 
-// ---------------------------------------------------------------------------
-// CreateCourtSV
-// ---------------------------------------------------------------------------
+//? ---------------------------------------------------------------------------
+//? CreateCourtSV
+//? ---------------------------------------------------------------------------
 
 export interface CreateCourtInputDTO {
   venueId: string;
   name: string;
-  sportType?: 'PADEL' | 'TENNIS';
+  sportType?: `${SportType}`;
   indoor?: boolean;
   lighting?: boolean;
   surfaceType?: string | null;
@@ -37,13 +37,20 @@ export class CreateCourtUseCase {
     private readonly _venueRepository: VenueRepository,
   ) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Crea una cancha en una sede.
+   * @param {CreateCourtInputDTO} _input - Datos de entrada del caso de uso
+   * @return {Promise<CreateCourtOutputDTO>}
+   */
   async executeSV(_input: CreateCourtInputDTO): Promise<CreateCourtOutputDTO> {
     const VENUE = await this._venueRepository.findByIdSV(_input.venueId);
     if (VENUE === null) {
       throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
     }
 
-    // Validar name no vacío
+    //? Validar name no vacío
     if (!_input.name || _input.name.trim().length === 0) {
       throw new AppError('VALIDACION_FALLIDA', 'El nombre de la cancha es requerido.', 400);
     }
@@ -54,7 +61,7 @@ export class CreateCourtUseCase {
     const INPUT: CreateCourtInput = {
       venueId: _input.venueId,
       name: _input.name.trim(),
-      ...(_input.sportType !== undefined ? { sportType: _input.sportType === 'TENNIS' ? SportType.TENNIS : SportType.PADEL } : {}),
+      ...(_input.sportType !== undefined ? { sportType: sportTypeFromStringSV(_input.sportType) } : {}),
       ...(_input.indoor !== undefined ? { indoor: _input.indoor } : {}),
       ...(_input.lighting !== undefined ? { lighting: _input.lighting } : {}),
       ...(_input.surfaceType !== undefined ? { surfaceType: _input.surfaceType } : {}),
@@ -63,18 +70,18 @@ export class CreateCourtUseCase {
       ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
     };
 
-    const court = await this._courtRepository.create(INPUT);
-    return { court };
+    const COURT = await this._courtRepository.create(INPUT);
+    return { court: COURT };
   }
 }
 
-// ---------------------------------------------------------------------------
-// ListCourtsSV
-// ---------------------------------------------------------------------------
+//? ---------------------------------------------------------------------------
+//? ListCourtsSV
+//? ---------------------------------------------------------------------------
 
 export interface ListCourtsInputDTO {
   venueId: string;
-  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+  status?: `${CourtStatus}`;
 }
 
 export interface ListCourtsOutputDTO {
@@ -87,41 +94,42 @@ export class ListCourtsUseCase {
     private readonly _venueRepository: VenueRepository,
   ) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Lista las canchas de una sede, con filtro opcional por estado.
+   * @param {ListCourtsInputDTO} _input - Datos de entrada del caso de uso
+   * @return {Promise<ListCourtsOutputDTO>}
+   */
   async executeSV(_input: ListCourtsInputDTO): Promise<ListCourtsOutputDTO> {
     const VENUE = await this._venueRepository.findByIdSV(_input.venueId);
     if (VENUE === null) {
       throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
     }
 
-    let status: CourtStatus | undefined;
-    if (_input.status === 'INACTIVE') {
-      status = CourtStatusEnum.INACTIVE;
-    } else if (_input.status === 'ACTIVE') {
-      status = CourtStatusEnum.ACTIVE;
-    } else if (_input.status === 'MAINTENANCE') {
-      status = CourtStatusEnum.MAINTENANCE;
-    }
+    const STATUS =
+      _input.status !== undefined ? courtStatusFromStringSV(_input.status) : undefined;
 
-    const courts = await this._courtRepository.findByVenue(_input.venueId, status);
-    return { courts };
+    const COURTS = await this._courtRepository.findByVenue(_input.venueId, STATUS);
+    return { courts: COURTS };
   }
 }
 
-// ---------------------------------------------------------------------------
-// UpdateCourtSV
-// ---------------------------------------------------------------------------
+//? ---------------------------------------------------------------------------
+//? UpdateCourtSV
+//? ---------------------------------------------------------------------------
 
 export interface UpdateCourtInputDTO {
   courtId: string;
   name?: string;
-  sportType?: 'PADEL' | 'TENNIS';
+  sportType?: `${SportType}`;
   indoor?: boolean;
   lighting?: boolean;
   surfaceType?: string | null;
   pricePerHourCents?: number | null;
   capacity?: string | null;
   durationMinutes?: number;
-  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+  status?: `${CourtStatus}`;
 }
 
 export interface UpdateCourtOutputDTO {
@@ -131,8 +139,15 @@ export interface UpdateCourtOutputDTO {
 export class UpdateCourtUseCase {
   constructor(private readonly _courtRepository: ICourtRepository) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Actualiza los datos de una cancha existente.
+   * @param {UpdateCourtInputDTO} _input - Datos de entrada del caso de uso
+   * @return {Promise<UpdateCourtOutputDTO>}
+   */
   async executeSV(_input: UpdateCourtInputDTO): Promise<UpdateCourtOutputDTO> {
-    // Validar name si viene presente
+    //? Validar name si viene presente
     if (_input.name !== undefined) {
       if (_input.name.trim().length === 0) {
         throw new AppError('VALIDACION_FALLIDA', 'El nombre de la cancha es requerido.', 400);
@@ -142,38 +157,32 @@ export class UpdateCourtUseCase {
       }
     }
 
-    // Verificar existencia
-    const existing = await this._courtRepository.findById(_input.courtId);
-    if (existing === null) {
+    //? Verificar existencia
+    const EXISTING = await this._courtRepository.findById(_input.courtId);
+    if (EXISTING === null) {
       throw new AppError('CANCHA_NO_ENCONTRADA', 'La cancha indicada no existe.', 404);
     }
 
     const INPUT: UpdateCourtInput = {
       ...(_input.name !== undefined ? { name: _input.name.trim() } : {}),
-      ...(_input.sportType !== undefined ? { sportType: _input.sportType === 'TENNIS' ? SportType.TENNIS : SportType.PADEL } : {}),
+      ...(_input.sportType !== undefined ? { sportType: sportTypeFromStringSV(_input.sportType) } : {}),
       ...(_input.indoor !== undefined ? { indoor: _input.indoor } : {}),
       ...(_input.lighting !== undefined ? { lighting: _input.lighting } : {}),
       ...(_input.surfaceType !== undefined ? { surfaceType: _input.surfaceType } : {}),
       ...(_input.pricePerHourCents !== undefined ? { pricePerHourCents: _input.pricePerHourCents } : {}),
       ...(_input.capacity !== undefined ? { capacity: _input.capacity } : {}),
       ...(_input.durationMinutes !== undefined ? { durationMinutes: _input.durationMinutes } : {}),
-      ...(_input.status === 'INACTIVE'
-        ? { status: CourtStatusEnum.INACTIVE }
-        : _input.status === 'MAINTENANCE'
-          ? { status: CourtStatusEnum.MAINTENANCE }
-          : _input.status === 'ACTIVE'
-            ? { status: CourtStatusEnum.ACTIVE }
-            : {}),
+      ...(_input.status !== undefined ? { status: courtStatusFromStringSV(_input.status) } : {}),
     };
 
-    const updated = await this._courtRepository.update(_input.courtId, INPUT);
-    return { court: updated };
+    const UPDATED = await this._courtRepository.update(_input.courtId, INPUT);
+    return { court: UPDATED };
   }
 }
 
-// ---------------------------------------------------------------------------
-// CancelCourtSV
-// ---------------------------------------------------------------------------
+//? ---------------------------------------------------------------------------
+//? CancelCourtSV
+//? ---------------------------------------------------------------------------
 
 export interface CancelCourtInputDTO {
   courtId: string;
@@ -186,15 +195,22 @@ export interface CancelCourtOutputDTO {
 export class CancelCourtUseCase {
   constructor(private readonly _courtRepository: ICourtRepository) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Da de baja una cancha. Idempotente: si ya está cancelada devuelve la misma entidad.
+   * @param {CancelCourtInputDTO} _input - Datos de entrada del caso de uso
+   * @return {Promise<CancelCourtOutputDTO>}
+   */
   async executeSV(_input: CancelCourtInputDTO): Promise<CancelCourtOutputDTO> {
-    // Verificar existencia
-    const existing = await this._courtRepository.findById(_input.courtId);
-    if (existing === null) {
+    //? Verificar existencia
+    const EXISTING = await this._courtRepository.findById(_input.courtId);
+    if (EXISTING === null) {
       throw new AppError('CANCHA_NO_ENCONTRADA', 'La cancha indicada no existe.', 404);
     }
 
-    // Idempotente: si ya está cancelada, retornar la misma entidad
-    const court = await this._courtRepository.cancel(_input.courtId);
-    return { court };
+    //? Idempotente: si ya está cancelada, retornar la misma entidad
+    const COURT = await this._courtRepository.cancel(_input.courtId);
+    return { court: COURT };
   }
 }

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   CourtStatus,
+  SPORT_TYPE_CODES,
   SportType,
+  sportTypeFromStringSV,
   type Court,
   type CreateCourtInput,
   type UpdateCourtInput,
@@ -35,9 +37,11 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
   });
 
   describe('SportType enum', () => {
-    it('tiene PADEL y TENNIS como valores literales', () => {
+    it('should expose every supported racket sport as a literal', () => {
       expect(SportType.PADEL).toBe('PADEL');
       expect(SportType.TENNIS).toBe('TENNIS');
+      expect(SportType.PICKLEBALL).toBe('PICKLEBALL');
+      expect(SportType.BEACH_TENNIS).toBe('BEACH_TENNIS');
     });
 
     it('es asignable a una propiedad sportType de Court', () => {
@@ -112,7 +116,7 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
       expect(input.name).toBeDefined();
     });
 
-    it('permite спорt_type, indoor, lighting opcionales con defaults implícitos', () => {
+    it('permite sport_type, indoor, lighting opcionales con defaults implícitos', () => {
       const input: CreateCourtInput = {
         venueId: '123e4567-e89b-12d3-a456-426614174001',
         name: 'Cancha Exterior',
@@ -151,5 +155,21 @@ describe('US-W1-05 — Dominio Court: entity types', () => {
       expect(input.lighting).toBe(true);
       expect(input.sportType).toBeUndefined();
     });
+  });
+});
+
+describe('sportTypeFromStringSV', () => {
+  it('should return the enum member when the code is supported', () => {
+    for (const CODE of SPORT_TYPE_CODES) {
+      expect(sportTypeFromStringSV(CODE)).toBe(CODE);
+    }
+  });
+
+  //? Antes devolvía PADEL en silencio, que convertía una cancha de otro
+  //? deporte en una de pádel sin dejar rastro.
+  it('should throw a 400 AppError when the code is unknown', () => {
+    expect(() => sportTypeFromStringSV('SQUASH')).toThrowError(
+      expect.objectContaining({ code: 'DEPORTE_INVALIDO', statusCode: 400 }),
+    );
   });
 });

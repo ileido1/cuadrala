@@ -247,6 +247,8 @@ enum ReservationStatus {
 enum SportType {
   PADEL
   TENNIS
+  PICKLEBALL
+  BEACH_TENNIS
 }
 
 // --- Catálogo multi-deporte (E0) ---
@@ -668,7 +670,6 @@ model Tournament {
   registrations     TournamentRegistration[]
   invitations       TournamentInvitation[]
   matches           Match[]
-  americanoSchedule TournamentAmericanoSchedule?
   schedule          TournamentSchedule?
   chatThread        ChatThread?
 
@@ -699,18 +700,6 @@ model TournamentSchedule {
 }
 
 /// Schedule generado para formato AMERICANO a nivel torneo (idempotente por tournamentId).
-model TournamentAmericanoSchedule {
-  id           String     @id @default(uuid())
-  tournamentId String     @unique
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  /// Key determinista derivada de inputs (participantes, parámetros, etc.). Evita duplicar schedules.
-  scheduleKey  String
-  /// JSON con rondas/partidos (estructura definida por dominio; estable para API).
-  schedule     Json
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-}
-
 model TournamentRegistration {
   id           String             @id @default(uuid())
   tournamentId String

@@ -9,7 +9,7 @@
     "start": "node dist/main.js",
     "worker:notifications": "tsx src/notifications_worker_main.ts",
     "start:worker:notifications": "node dist/notifications_worker_main.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "lint": "eslint . -f json",
     "pretest": "node ./scripts/pretest.mjs",
     "test": "vitest run",

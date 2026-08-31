@@ -7,7 +7,7 @@ import type {
 } from '../../domain/entities/booking/court.entity.js';
 
 import { PRISMA } from '../prisma_client.js';
-import { prismaToCourtEntity } from './prisma_court_mapper.js';
+import { prismaToCourtEntitySV } from './prisma_court_mapper.js';
 
 export class PrismaCourtRepository implements ICourtRepository {
   async findById(_id: string): Promise<Court | null> {
@@ -15,7 +15,7 @@ export class PrismaCourtRepository implements ICourtRepository {
       where: { id: _id },
       include: { pricingTiers: true },
     });
-    return prismaToCourtEntity(MODEL);
+    return prismaToCourtEntitySV(MODEL);
   }
 
   async findByVenue(_venueId: string, _status?: CourtStatus): Promise<Court[]> {
@@ -30,7 +30,7 @@ export class PrismaCourtRepository implements ICourtRepository {
       orderBy: { name: 'asc' },
       include: { pricingTiers: true },
     });
-    return MODELS.map(prismaToCourtEntity).filter((_court): _court is Court => _court !== null);
+    return MODELS.map(prismaToCourtEntitySV).filter((_court): _court is Court => _court !== null);
   }
 
   async create(_data: CreateCourtInput): Promise<Court> {
@@ -47,8 +47,11 @@ export class PrismaCourtRepository implements ICourtRepository {
         capacity: _data.capacity ?? null,
         durationMinutes: _data.durationMinutes ?? 60,
       },
+      //? Sin el include, la respuesta vuelve con pricingTiers vacío y un cliente
+      //? que refresque su estado desde acá borra las tarifas de pantalla.
+      include: { pricingTiers: true },
     });
-    return prismaToCourtEntity(MODEL)!;
+    return prismaToCourtEntitySV(MODEL)!;
   }
 
   async update(_id: string, _data: UpdateCourtInput): Promise<Court> {
@@ -66,15 +69,17 @@ export class PrismaCourtRepository implements ICourtRepository {
     const MODEL = await PRISMA.court.update({
       where: { id: _id },
       data: DATA,
+      include: { pricingTiers: true },
     });
-    return prismaToCourtEntity(MODEL)!;
+    return prismaToCourtEntitySV(MODEL)!;
   }
 
   async cancel(_id: string): Promise<Court> {
     const MODEL = await PRISMA.court.update({
       where: { id: _id },
       data: { status: 'INACTIVE' },
+      include: { pricingTiers: true },
     });
-    return prismaToCourtEntity(MODEL)!;
+    return prismaToCourtEntitySV(MODEL)!;
   }
 }

@@ -42,6 +42,7 @@ const _sportIconsByCode = <String, IconData>{
   'PADEL': AppIcons.racquetSport,
   'TENNIS': AppIcons.racquetSport,
   'PICKLEBALL': AppIcons.racquetSport,
+  'BEACH_TENNIS': AppIcons.racquetSport,
   'FOOTBALL5': AppIcons.soccerBall,
   'BASKETBALL3X3': AppIcons.basketball,
   'VOLLEY_BEACH': AppIcons.volleyball,

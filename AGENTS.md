@@ -23,7 +23,7 @@ Dev environment: **Ubuntu**.
 | `npm run test:watch` | Vitest watch mode |
 | `npm run prisma:generate` | Regenerate Prisma client |
 | `npm run prisma:validate` | Validate Prisma schema without DB |
-| `npm run seed` | Seed DB: PADEL sport, AMERICANO/ROUND_ROBIN presets, default FeeRule (idempotent) |
+| `npm run seed` | Seed DB (idempotent): 4 racket sports with presets and ordinal categories, default FeeRule, 3 venues with courts, 8 test users with profiles, payment methods, exchange rates and 3 sample matches |
 | `npx prisma migrate dev` | Apply migrations (requires `DATABASE_URL`) |
 
 **Required order for verification:** `typecheck` → `lint` → `test`

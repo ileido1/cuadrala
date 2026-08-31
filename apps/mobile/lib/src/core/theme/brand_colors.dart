@@ -104,6 +104,7 @@ abstract final class BrandColors {
   static const sportPadel = Color(0xFF2E7D32);
   static const sportTennis = Color(0xFF607D8B);
   static const sportPickleball = Color(0xFF00897B);
+  static const sportBeachTennis = Color(0xFFEF6C00);
   static const sportFootball5 = Color(0xFF455A64);
   static const sportBasketball3x3 = Color(0xFFE65100);
   static const sportVolleyBeach = Color(0xFFFFB300);
@@ -113,6 +114,7 @@ abstract final class BrandColors {
         'PADEL' => sportPadel,
         'TENNIS' => sportTennis,
         'PICKLEBALL' => sportPickleball,
+        'BEACH_TENNIS' => sportBeachTennis,
         'FOOTBALL5' => sportFootball5,
         'BASKETBALL3X3' => sportBasketball3x3,
         'VOLLEY_BEACH' => sportVolleyBeach,

@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  COURT_STATUS_CODES,
+  SPORT_TYPE_CODES,
+} from '../../domain/entities/booking/court.entity.js';
 
 export const LIST_VENUES_QUERY_SCHEMA = z
   .object({
@@ -9,7 +13,7 @@ export const LIST_VENUES_QUERY_SCHEMA = z
     radiusKm: z.coerce.number().positive().max(200).default(10),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     page: z.coerce.number().int().min(1).default(1),
-    sportType: z.enum(['PADEL', 'TENNIS']).optional(),
+    sportType: z.enum(SPORT_TYPE_CODES).optional(),
   })
   .strict();
 
@@ -24,19 +28,19 @@ export const CREATE_VENUE_BODY_SCHEMA = z
     paymentCvu: z.string().min(1).max(200).optional(),
     paymentAlias: z.string().min(1).max(200).optional(),
     paymentNotes: z.string().min(1).max(500).optional(),
-    ownerUserId: z.string().uuid('ownerUserId debe ser un UUID valido.').optional(),
+    ownerUserId: z.string().uuid('ownerUserId debe ser un UUID válido.').optional(),
   })
   .strict();
 
 export const VENUE_ID_PARAM_SCHEMA = z
   .object({
-    venueId: z.string().uuid('venueId debe ser un UUID valido.'),
+    venueId: z.string().uuid('venueId debe ser un UUID válido.'),
   });
 
 export const CREATE_COURT_BODY_SCHEMA = z
   .object({
     name: z.string().min(1).max(120),
-    sportType: z.enum(['PADEL', 'TENNIS']).optional(),
+    sportType: z.enum(SPORT_TYPE_CODES).optional(),
     indoor: z.boolean().optional(),
     lighting: z.boolean().optional(),
     surfaceType: z.string().max(60).nullable().optional(),
@@ -49,14 +53,14 @@ export const CREATE_COURT_BODY_SCHEMA = z
 export const UPDATE_COURT_BODY_SCHEMA = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    sportType: z.enum(['PADEL', 'TENNIS']).optional(),
+    sportType: z.enum(SPORT_TYPE_CODES).optional(),
     indoor: z.boolean().optional(),
     lighting: z.boolean().optional(),
     surfaceType: z.string().max(60).nullable().optional(),
     pricePerHourCents: z.number().int().nonnegative().nullable().optional(),
     capacity: z.string().max(20).nullable().optional(),
     durationMinutes: z.number().int().positive().optional(),
-    status: z.enum(['ACTIVE', 'INACTIVE', 'MAINTENANCE']).optional(),
+    status: z.enum(COURT_STATUS_CODES).optional(),
   })
   .strict();
 
@@ -67,7 +71,7 @@ export const COURT_ID_PARAM_SCHEMA = z
 
 export const LIST_COURTS_QUERY_SCHEMA = z
   .object({
-    status: z.enum(['ACTIVE', 'INACTIVE', 'MAINTENANCE']).optional(),
+    status: z.enum(COURT_STATUS_CODES).optional(),
   })
   .strict();
 
