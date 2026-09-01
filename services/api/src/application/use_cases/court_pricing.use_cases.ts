@@ -1,37 +1,13 @@
-import { AppError } from '../../domain/errors/app_error.js';
 import type { CourtPricingTier } from '../../domain/entities/booking/court.entity.js';
 import type { ICourtRepository } from '../../domain/ports/court_repository.js';
 import type { CourtPricingTierRepository } from '../../domain/ports/court_pricing_tier_repository.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 import { assertValidPricingTimeRangeSV } from '../../domain/services/booking/pricing.service.js';
-
-type VenueCourtContext = {
-  venueId: string;
-  courtId: string;
-  actorUserId: string;
-};
-
-async function assertVenueStaffAndCourtSV(
-  _ctx: VenueCourtContext,
-  _venueStaffRepository: VenueStaffRepository,
-  _courtRepository: ICourtRepository,
-): Promise<void> {
-  const IS_STAFF = await _venueStaffRepository.isUserStaffOfVenueSV(
-    _ctx.actorUserId,
-    _ctx.venueId,
-  );
-  if (!IS_STAFF) {
-    throw new AppError('NO_AUTORIZADO', 'No tienes acceso a esta sede.', 403);
-  }
-
-  const COURT = await _courtRepository.findById(_ctx.courtId);
-  if (COURT === null) {
-    throw new AppError('CANCHA_NO_ENCONTRADA', 'La cancha indicada no existe.', 404);
-  }
-  if (COURT.venueId !== _ctx.venueId) {
-    throw new AppError('CANCHA_NO_PERTENECE_A_SEDE', 'La cancha no pertenece a esta sede.', 400);
-  }
-}
+import type { VenueCourtContext } from '../helpers/assert_venue_court_access.js';
+import {
+  assertTierBelongsToCourtSV,
+  assertVenueStaffAndCourtSV,
+} from '../helpers/assert_venue_court_access.js';
 
 export class ListCourtPricingTiersUseCase {
   constructor(
@@ -40,6 +16,13 @@ export class ListCourtPricingTiersUseCase {
     private readonly _courtRepository: ICourtRepository,
   ) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Lista las tarifas de una cancha. Solo staff de la sede.
+   * @param {VenueCourtContext} _ctx - Actor, sede y cancha
+   * @return {Promise<{items: CourtPricingTier[]}>}
+   */
   async executeSV(_ctx: VenueCourtContext): Promise<{ items: CourtPricingTier[] }> {
     await assertVenueStaffAndCourtSV(_ctx, this._venueStaffRepository, this._courtRepository);
     const ITEMS = await this._pricingTierRepository.listByCourtIdSV(_ctx.courtId);
@@ -54,6 +37,14 @@ export class CreateCourtPricingTierUseCase {
     private readonly _courtRepository: ICourtRepository,
   ) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Crea una franja horaria con precio para una cancha.
+   * @param {VenueCourtContext} _ctx - Actor, sede y cancha
+   * @param {Object} _input - Etiqueta, rango horario y precio por hora
+   * @return {Promise<CourtPricingTier>}
+   */
   async executeSV(
     _ctx: VenueCourtContext,
     _input: {
@@ -83,6 +74,15 @@ export class UpdateCourtPricingTierUseCase {
     private readonly _courtRepository: ICourtRepository,
   ) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Actualiza una franja horaria. El rango se revalida contra los
+   * valores que quedarian tras el patch, no solo contra los que vienen.
+   * @param {VenueCourtContext & {tierId: string}} _ctx - Actor, sede, cancha y tarifa
+   * @param {Object} _patch - Campos a modificar
+   * @return {Promise<CourtPricingTier>}
+   */
   async executeSV(
     _ctx: VenueCourtContext & { tierId: string },
     _patch: {
@@ -94,13 +94,11 @@ export class UpdateCourtPricingTierUseCase {
   ): Promise<CourtPricingTier> {
     await assertVenueStaffAndCourtSV(_ctx, this._venueStaffRepository, this._courtRepository);
 
-    const TIER = await this._pricingTierRepository.findByIdSV(_ctx.tierId);
-    if (TIER === null) {
-      throw new AppError('TARIFA_NO_ENCONTRADA', 'La tarifa indicada no existe.', 404);
-    }
-    if (TIER.courtId !== _ctx.courtId) {
-      throw new AppError('TARIFA_NO_PERTENECE_A_CANCHA', 'La tarifa no pertenece a esta cancha.', 400);
-    }
+    const TIER = await assertTierBelongsToCourtSV(
+      _ctx.tierId,
+      _ctx.courtId,
+      this._pricingTierRepository,
+    );
 
     const START = _patch.startTime ?? TIER.startTime;
     const END = _patch.endTime ?? TIER.endTime;
@@ -117,16 +115,17 @@ export class DeleteCourtPricingTierUseCase {
     private readonly _courtRepository: ICourtRepository,
   ) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Borra una franja horaria de una cancha.
+   * @param {VenueCourtContext & {tierId: string}} _ctx - Actor, sede, cancha y tarifa
+   * @return {Promise<void>}
+   */
   async executeSV(_ctx: VenueCourtContext & { tierId: string }): Promise<void> {
     await assertVenueStaffAndCourtSV(_ctx, this._venueStaffRepository, this._courtRepository);
 
-    const TIER = await this._pricingTierRepository.findByIdSV(_ctx.tierId);
-    if (TIER === null) {
-      throw new AppError('TARIFA_NO_ENCONTRADA', 'La tarifa indicada no existe.', 404);
-    }
-    if (TIER.courtId !== _ctx.courtId) {
-      throw new AppError('TARIFA_NO_PERTENECE_A_CANCHA', 'La tarifa no pertenece a esta cancha.', 400);
-    }
+    await assertTierBelongsToCourtSV(_ctx.tierId, _ctx.courtId, this._pricingTierRepository);
 
     await this._pricingTierRepository.deleteSV(_ctx.tierId);
   }

@@ -7,11 +7,7 @@
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AppError } from '../../domain/errors/app_error.js';
-import {
-  CourtStatus,
-  SportType,
-  type Court,
-} from '../../domain/entities/booking/court.entity.js';
+import { CourtStatus, SportType, type Court } from '../../domain/entities/booking/court.entity.js';
 import {
   CreateCourtUseCase,
   type CreateCourtInputDTO,
@@ -52,6 +48,21 @@ function createMockVenueRepository() {
   };
 }
 
+/** Mock factory para VenueStaffRepository. Por defecto el actor SI es staff. */
+function createMockVenueStaffRepository(_isStaff = true) {
+  return {
+    isUserStaffOfVenueSV: vi.fn().mockResolvedValue(_isStaff),
+    upsertSV: vi.fn(),
+    findByVenueAndUserSV: vi.fn(),
+    listByVenueIdSV: vi.fn(),
+    listByUserIdSV: vi.fn(),
+    removeByVenueAndUserSV: vi.fn(),
+  };
+}
+
+/** Actor usado en todos los casos felices: staff de venue-1. */
+const ACTOR_USER_ID = 'user-staff-1';
+
 /** Fixture Court activa. */
 function activeCourt(overrides: Partial<Court> = {}): Court {
   return {
@@ -78,22 +89,29 @@ function activeCourt(overrides: Partial<Court> = {}): Court {
 
 describe('CreateCourtUseCase', () => {
   let repo: ReturnType<typeof createMockRepository>;
+  let staffRepo: ReturnType<typeof createMockVenueStaffRepository>;
   let venueRepo: ReturnType<typeof createMockVenueRepository>;
   let useCase: CreateCourtUseCase;
 
   beforeEach(() => {
     repo = createMockRepository();
     venueRepo = createMockVenueRepository();
-    useCase = new CreateCourtUseCase(repo, venueRepo);
+    staffRepo = createMockVenueStaffRepository();
+    useCase = new CreateCourtUseCase(repo, venueRepo, staffRepo);
   });
 
   it('should create court with defaults (sportType=PADEL, indoor=false, lighting=false, status=ACTIVE) when only name provided', async () => {
-    const input: CreateCourtInputDTO = { venueId: 'venue-1', name: 'Nueva Cancha' };
+    const input: CreateCourtInputDTO = {
+      venueId: 'venue-1',
+      actorUserId: ACTOR_USER_ID,
+      name: 'Nueva Cancha',
+    };
     const expected = activeCourt({ name: 'Nueva Cancha' });
     repo.create.mockResolvedValue(expected);
 
     const result = await useCase.executeSV(input);
 
+    //? `actorUserId` es solo para autorizar: no viaja al repositorio.
     expect(repo.create).toHaveBeenCalledWith({
       venueId: 'venue-1',
       name: 'Nueva Cancha',
@@ -109,6 +127,7 @@ describe('CreateCourtUseCase', () => {
   it('should create court with all provided fields', async () => {
     const input: CreateCourtInputDTO = {
       venueId: 'venue-1',
+      actorUserId: ACTOR_USER_ID,
       name: 'Cancha Techada',
       sportType: 'TENNIS',
       indoor: true,
@@ -133,17 +152,27 @@ describe('CreateCourtUseCase', () => {
   });
 
   it('should throw VALIDACION_FALLIDA when name is empty', async () => {
-    const input: CreateCourtInputDTO = { venueId: 'venue-1', name: '   ' };
+    const input: CreateCourtInputDTO = {
+      venueId: 'venue-1',
+      actorUserId: ACTOR_USER_ID,
+      name: '   ',
+    };
 
     await expect(useCase.executeSV(input)).rejects.toThrow(AppError);
     await expect(useCase.executeSV(input)).rejects.toThrow('El nombre de la cancha es requerido.');
   });
 
   it('should throw VALIDACION_FALLIDA when name exceeds 120 characters', async () => {
-    const input: CreateCourtInputDTO = { venueId: 'venue-1', name: 'A'.repeat(121) };
+    const input: CreateCourtInputDTO = {
+      venueId: 'venue-1',
+      actorUserId: ACTOR_USER_ID,
+      name: 'A'.repeat(121),
+    };
 
     await expect(useCase.executeSV(input)).rejects.toThrow(AppError);
-    await expect(useCase.executeSV(input)).rejects.toThrow('El nombre no puede superar los 120 caracteres.');
+    await expect(useCase.executeSV(input)).rejects.toThrow(
+      'El nombre no puede superar los 120 caracteres.',
+    );
   });
 });
 
@@ -195,15 +224,22 @@ describe('ListCourtsUseCase', () => {
 
 describe('UpdateCourtUseCase', () => {
   let repo: ReturnType<typeof createMockRepository>;
+  let staffRepo: ReturnType<typeof createMockVenueStaffRepository>;
   let useCase: UpdateCourtUseCase;
 
   beforeEach(() => {
     repo = createMockRepository();
-    useCase = new UpdateCourtUseCase(repo);
+    staffRepo = createMockVenueStaffRepository();
+    useCase = new UpdateCourtUseCase(repo, staffRepo);
   });
 
   it('should update court name', async () => {
-    const input: UpdateCourtInputDTO = { courtId: 'court-1', name: 'Cancha Renombrada' };
+    const input: UpdateCourtInputDTO = {
+      venueId: 'venue-1',
+      courtId: 'court-1',
+      actorUserId: ACTOR_USER_ID,
+      name: 'Cancha Renombrada',
+    };
     const updated = activeCourt({ name: 'Cancha Renombrada' });
     repo.findById.mockResolvedValue(activeCourt());
     repo.update.mockResolvedValue(updated);
@@ -216,7 +252,9 @@ describe('UpdateCourtUseCase', () => {
 
   it('should update multiple fields at once', async () => {
     const input: UpdateCourtInputDTO = {
+      venueId: 'venue-1',
       courtId: 'court-1',
+      actorUserId: ACTOR_USER_ID,
       name: 'Cancha Mixta',
       sportType: 'TENNIS',
       indoor: true,
@@ -241,7 +279,12 @@ describe('UpdateCourtUseCase', () => {
   });
 
   it('should throw CANCHA_NO_ENCONTRADA when court does not exist', async () => {
-    const input: UpdateCourtInputDTO = { courtId: 'unknown', name: 'Test' };
+    const input: UpdateCourtInputDTO = {
+      venueId: 'venue-1',
+      courtId: 'unknown',
+      actorUserId: ACTOR_USER_ID,
+      name: 'Test',
+    };
     repo.findById.mockResolvedValue(null);
 
     await expect(useCase.executeSV(input)).rejects.toThrow(AppError);
@@ -249,7 +292,13 @@ describe('UpdateCourtUseCase', () => {
   });
 
   it('should throw VALIDACION_FALLIDA when name is empty string', async () => {
-    const input: UpdateCourtInputDTO = { courtId: 'court-1', name: '' };
+    const input: UpdateCourtInputDTO = {
+      venueId: 'venue-1',
+      courtId: 'court-1',
+      actorUserId: ACTOR_USER_ID,
+      name: '',
+    };
+    repo.findById.mockResolvedValue(activeCourt());
 
     await expect(useCase.executeSV(input)).rejects.toThrow(AppError);
     await expect(useCase.executeSV(input)).rejects.toThrow('El nombre de la cancha es requerido.');
@@ -262,15 +311,21 @@ describe('UpdateCourtUseCase', () => {
 
 describe('CancelCourtUseCase', () => {
   let repo: ReturnType<typeof createMockRepository>;
+  let staffRepo: ReturnType<typeof createMockVenueStaffRepository>;
   let useCase: CancelCourtUseCase;
 
   beforeEach(() => {
     repo = createMockRepository();
-    useCase = new CancelCourtUseCase(repo);
+    staffRepo = createMockVenueStaffRepository();
+    useCase = new CancelCourtUseCase(repo, staffRepo);
   });
 
   it('should cancel an active court (soft-delete)', async () => {
-    const input: CancelCourtInputDTO = { courtId: 'court-1' };
+    const input: CancelCourtInputDTO = {
+      venueId: 'venue-1',
+      courtId: 'court-1',
+      actorUserId: ACTOR_USER_ID,
+    };
     const cancelled = activeCourt({ status: CourtStatus.INACTIVE });
     repo.findById.mockResolvedValue(activeCourt());
     repo.cancel.mockResolvedValue(cancelled);
@@ -282,7 +337,11 @@ describe('CancelCourtUseCase', () => {
   });
 
   it('should be idempotent: cancelling already INACTIVE court returns 200', async () => {
-    const input: CancelCourtInputDTO = { courtId: 'court-1' };
+    const input: CancelCourtInputDTO = {
+      venueId: 'venue-1',
+      courtId: 'court-1',
+      actorUserId: ACTOR_USER_ID,
+    };
     const alreadyInactive = activeCourt({ status: CourtStatus.INACTIVE });
     repo.findById.mockResolvedValue(alreadyInactive);
     repo.cancel.mockResolvedValue(alreadyInactive);
@@ -295,10 +354,89 @@ describe('CancelCourtUseCase', () => {
   });
 
   it('should throw CANCHA_NO_ENCONTRADA when court does not exist', async () => {
-    const input: CancelCourtInputDTO = { courtId: 'unknown' };
+    const input: CancelCourtInputDTO = {
+      venueId: 'venue-1',
+      courtId: 'unknown',
+      actorUserId: ACTOR_USER_ID,
+    };
     repo.findById.mockResolvedValue(null);
 
     await expect(useCase.executeSV(input)).rejects.toThrow(AppError);
     await expect(useCase.executeSV(input)).rejects.toThrow('La cancha indicada no existe.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Autorización — solo staff de la sede, y solo sobre canchas de esa sede
+// ---------------------------------------------------------------------------
+
+describe('Court write authorization', () => {
+  let repo: ReturnType<typeof createMockRepository>;
+  let venueRepo: ReturnType<typeof createMockVenueRepository>;
+
+  beforeEach(() => {
+    repo = createMockRepository();
+    venueRepo = createMockVenueRepository();
+  });
+
+  it('should throw 403 when creating a court on a venue the actor is not staff of', async () => {
+    const useCase = new CreateCourtUseCase(repo, venueRepo, createMockVenueStaffRepository(false));
+
+    await expect(
+      useCase.executeSV({ venueId: 'venue-1', actorUserId: 'intruso', name: 'Cancha' }),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'NO_AUTORIZADO' });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it('should throw 403 when updating a court of a venue the actor is not staff of', async () => {
+    const useCase = new UpdateCourtUseCase(repo, createMockVenueStaffRepository(false));
+    repo.findById.mockResolvedValue(activeCourt());
+
+    await expect(
+      useCase.executeSV({
+        venueId: 'venue-1',
+        courtId: 'court-1',
+        actorUserId: 'intruso',
+        name: 'Robada',
+      }),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'NO_AUTORIZADO' });
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it('should throw 403 when cancelling a court of a venue the actor is not staff of', async () => {
+    const useCase = new CancelCourtUseCase(repo, createMockVenueStaffRepository(false));
+    repo.findById.mockResolvedValue(activeCourt());
+
+    await expect(
+      useCase.executeSV({ venueId: 'venue-1', courtId: 'court-1', actorUserId: 'intruso' }),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'NO_AUTORIZADO' });
+    expect(repo.cancel).not.toHaveBeenCalled();
+  });
+
+  //? El agujero real: staff de la sede A no puede tocar una cancha de la sede B
+  //? poniendo su propio venueId en el path.
+  it('should throw 400 when the court belongs to another venue', async () => {
+    const useCase = new UpdateCourtUseCase(repo, createMockVenueStaffRepository(true));
+    repo.findById.mockResolvedValue(activeCourt({ venueId: 'venue-ajena' }));
+
+    await expect(
+      useCase.executeSV({
+        venueId: 'venue-1',
+        courtId: 'court-1',
+        actorUserId: ACTOR_USER_ID,
+        name: 'Cruzada',
+      }),
+    ).rejects.toMatchObject({ statusCode: 400, code: 'CANCHA_NO_PERTENECE_A_SEDE' });
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it('should throw 400 when cancelling a court that belongs to another venue', async () => {
+    const useCase = new CancelCourtUseCase(repo, createMockVenueStaffRepository(true));
+    repo.findById.mockResolvedValue(activeCourt({ venueId: 'venue-ajena' }));
+
+    await expect(
+      useCase.executeSV({ venueId: 'venue-1', courtId: 'court-1', actorUserId: ACTOR_USER_ID }),
+    ).rejects.toMatchObject({ statusCode: 400, code: 'CANCHA_NO_PERTENECE_A_SEDE' });
+    expect(repo.cancel).not.toHaveBeenCalled();
   });
 });

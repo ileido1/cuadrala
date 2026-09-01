@@ -21,12 +21,24 @@ import {
   UPDATE_COURT_BODY_SCHEMA,
   VENUE_ID_PARAM_SCHEMA,
 } from '../validation/venues.validation.js';
-import type {
-  CancelCourtInputDTO,
-  CreateCourtInputDTO,
-  ListCourtsInputDTO,
-  UpdateCourtInputDTO,
-} from '../../application/use_cases/court.use_cases.js';
+import type { CreateCourtInputDTO } from '../../application/use_cases/court.use_cases.js';
+
+/**
+ * @name    :requireActorUserIdSV
+ * @version :1.0.0
+ * @description :Devuelve el id del usuario autenticado. `requireAuth` ya corrio
+ * en el router, asi que faltar aca seria un error de cableado, no del cliente.
+ * @param {Request} _req - Request de Express
+ * @return {string} Id del usuario que hace la request
+ * @throws {AppError} 401 si no hay sesion en la request
+ */
+function requireActorUserIdSV(_req: Request): string {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+  return ACTOR_USER_ID;
+}
 
 export async function getVenuesCON(_req: Request, _res: Response): Promise<void> {
   const QUERY = LIST_VENUES_QUERY_SCHEMA.parse(_req.query);
@@ -41,17 +53,15 @@ export async function getVenuesCON(_req: Request, _res: Response): Promise<void>
   _res.status(200).json({
     success: true,
     message: 'Sedes obtenidas correctamente.',
-    data: { items: RESULT.items, pageInfo: { page: QUERY.page, limit: QUERY.limit, total: RESULT.total } },
+    data: {
+      items: RESULT.items,
+      pageInfo: { page: QUERY.page, limit: QUERY.limit, total: RESULT.total },
+    },
   });
 }
 
 export async function getMyVenuesCON(_req: Request, _res: Response): Promise<void> {
-  const USER_ID = _req.authUser?.id;
-  if (USER_ID === undefined) {
-    throw new AppError('NO_AUTENTICADO', 'Se requiere autenticación.', 401);
-  }
-
-  const RESULT = await LIST_MY_VENUES_UC.executeSV(USER_ID);
+  const RESULT = await LIST_MY_VENUES_UC.executeSV(requireActorUserIdSV(_req));
 
   _res.status(200).json({
     success: true,
@@ -83,11 +93,13 @@ export async function postVenueCON(_req: Request, _res: Response): Promise<void>
 }
 
 export async function postCourtCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = CREATE_COURT_BODY_SCHEMA.parse(_req.body);
 
   const INPUT: CreateCourtInputDTO = {
     venueId: PARAMS.venueId,
+    actorUserId: ACTOR_USER_ID,
     name: BODY.name,
     ...(BODY.sportType !== undefined ? { sportType: BODY.sportType } : {}),
     ...(BODY.indoor !== undefined ? { indoor: BODY.indoor } : {}),
@@ -114,7 +126,7 @@ export async function getVenueCourtsCON(_req: Request, _res: Response): Promise<
   const RESULT = await LIST_COURTS_UC.executeSV({
     venueId: PARAMS.venueId,
     ...(QUERY.status !== undefined ? { status: QUERY.status } : {}),
-  } as ListCourtsInputDTO);
+  });
 
   _res.status(200).json({
     success: true,
@@ -124,10 +136,7 @@ export async function getVenueCourtsCON(_req: Request, _res: Response): Promise<
 }
 
 export async function getVenuePaymentInfoCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = _req.authUser?.id;
-  if (ACTOR_USER_ID === undefined) {
-    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
-  }
+  requireActorUserIdSV(_req);
 
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const VENUE = await GET_VENUE_PAYMENT_INFO_UC.executeSV(PARAMS.venueId);
@@ -140,6 +149,7 @@ export async function getVenuePaymentInfoCON(_req: Request, _res: Response): Pro
 }
 
 export async function putCourtCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = {
     ...VENUE_ID_PARAM_SCHEMA.parse(_req.params),
     ...COURT_ID_PARAM_SCHEMA.parse(_req.params),
@@ -147,9 +157,11 @@ export async function putCourtCON(_req: Request, _res: Response): Promise<void> 
   const BODY = UPDATE_COURT_BODY_SCHEMA.parse(_req.body);
 
   const RESULT = await UPDATE_COURT_UC.executeSV({
+    venueId: PARAMS.venueId,
     courtId: PARAMS.courtId,
+    actorUserId: ACTOR_USER_ID,
     ...BODY,
-  } as UpdateCourtInputDTO);
+  });
 
   _res.status(200).json({
     success: true,
@@ -159,14 +171,17 @@ export async function putCourtCON(_req: Request, _res: Response): Promise<void> 
 }
 
 export async function deleteCourtCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = {
     venueId: VENUE_ID_PARAM_SCHEMA.parse(_req.params).venueId,
     courtId: COURT_ID_PARAM_SCHEMA.parse(_req.params).courtId,
   };
 
   const RESULT = await CANCEL_COURT_UC.executeSV({
+    venueId: PARAMS.venueId,
     courtId: PARAMS.courtId,
-  } as CancelCourtInputDTO);
+    actorUserId: ACTOR_USER_ID,
+  });
 
   _res.status(200).json({
     success: true,
@@ -176,10 +191,7 @@ export async function deleteCourtCON(_req: Request, _res: Response): Promise<voi
 }
 
 export async function getVenueCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = _req.authUser?.id;
-  if (ACTOR_USER_ID === undefined) {
-    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
-  }
+  requireActorUserIdSV(_req);
 
   const PARAMS = VENUE_ID_PARAM_SCHEMA.parse(_req.params);
   const VENUE = await GET_VENUE_DETAIL_UC.executeSV(PARAMS.venueId);
