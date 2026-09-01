@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
+import { ENV_CONST } from '../../config/env.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { seedAmericanoMatchSV } from '../helpers/americano-match.seed.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
@@ -65,7 +66,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Integración HTTP + PostgreSQL (TEST
   });
 
   it('POST /api/v1/ranking/recalculate/:categoryId recalcula (puede ser 0 entradas)', async () => {
-    const RES = await request(APP).post(`/api/v1/ranking/recalculate/${categoryId}`);
+    const RES = await request(APP)
+      .post(`/api/v1/ranking/recalculate/${categoryId}`)
+      .set('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET);
 
     expect(RES.status).toBe(200);
     expect(RES.body.success).toBe(true);

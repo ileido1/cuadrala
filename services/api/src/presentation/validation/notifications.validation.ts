@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const DISPATCH_NOTIFICATIONS_BODY_SCHEMA = z
   .object({
-    limitEvents: z.coerce.number().int().positive().max(500).default(100).optional(),
-    limitDeliveries: z.coerce.number().int().positive().max(10_000).default(1000).optional(),
+    limitEvents: z.coerce.number().int().positive().max(500).default(100),
+    limitDeliveries: z.coerce.number().int().positive().max(10_000).default(1000),
     limitTokens: z.coerce.number().int().positive().max(100_000).optional(),
   })
   .strict();
@@ -17,7 +17,8 @@ export const CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_BODY_SCHEMA = z
   })
   .strict();
 
-export const CREATE_PAYMENT_PENDING_NOTIFICATION_EVENT_BODY_SCHEMA = CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_BODY_SCHEMA;
+export const CREATE_PAYMENT_PENDING_NOTIFICATION_EVENT_BODY_SCHEMA =
+  CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_BODY_SCHEMA;
 
-export const CREATE_CHAT_MESSAGE_NOTIFICATION_EVENT_BODY_SCHEMA = CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_BODY_SCHEMA;
-
+export const CREATE_CHAT_MESSAGE_NOTIFICATION_EVENT_BODY_SCHEMA =
+  CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_BODY_SCHEMA;

@@ -5,6 +5,19 @@ import type {
 } from '../../domain/ports/tournament_registration_repository.js';
 import { PRISMA } from '../prisma_client.js';
 
+/**
+ * @name    :isPrismaErrorCodeSV
+ * @version :1.0.0
+ * @description :Indica si el error viene de Prisma con el codigo dado, sin
+ * castear a `any`: el error de un catch es `unknown` y hay que estrecharlo.
+ * @param {unknown} _error - Error capturado
+ * @param {string} _code - Codigo de Prisma esperado (p. ej. `P2025`)
+ * @return {boolean}
+ */
+function isPrismaErrorCodeSV(_error: unknown, _code: string): boolean {
+  return typeof _error === 'object' && _error !== null && 'code' in _error && _error.code === _code;
+}
+
 function mapRowSV(_row: {
   id: string;
   tournamentId: string;
@@ -133,7 +146,9 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
     return ROW === null ? null : mapRowSV(ROW);
   }
 
-  async createGuestSV(_input: CreateGuestTournamentRegistrationDTO): Promise<TournamentRegistrationDTO> {
+  async createGuestSV(
+    _input: CreateGuestTournamentRegistrationDTO,
+  ): Promise<TournamentRegistrationDTO> {
     const CREATED = await PRISMA.tournamentRegistration.create({
       data: {
         tournamentId: _input.tournamentId,
@@ -148,7 +163,10 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
     return mapRowSV(CREATED);
   }
 
-  async updateStatusByIdSV(_id: string, _status: string): Promise<TournamentRegistrationDTO | null> {
+  async updateStatusByIdSV(
+    _id: string,
+    _status: string,
+  ): Promise<TournamentRegistrationDTO | null> {
     //? Una sola query: update retorna el registro o lanza error. Capturar NotFoundError para retornar null.
     try {
       const UPDATED = await PRISMA.tournamentRegistration.update({
@@ -156,10 +174,10 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
         data: { status: _status as never },
       });
       return mapRowSV(UPDATED);
-    } catch (error) {
+    } catch (_error) {
       //? Prisma lanza P2025 (NotFoundError) si el registro no existe.
-      if ((error as any).code === 'P2025') return null;
-      throw error;
+      if (isPrismaErrorCodeSV(_error, 'P2025')) return null;
+      throw _error;
     }
   }
 
@@ -168,9 +186,9 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
     try {
       await PRISMA.tournamentRegistration.delete({ where: { id: _id } });
       return true;
-    } catch (error) {
-      if ((error as any).code === 'P2025') return false;
-      throw error;
+    } catch (_error) {
+      if (isPrismaErrorCodeSV(_error, 'P2025')) return false;
+      throw _error;
     }
   }
 }

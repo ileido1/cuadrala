@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
+import { ENV_CONST } from '../../config/env.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -57,7 +58,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       });
       expect(RESULT.scores).toHaveLength(2);
 
-      const RUN_1 = await request(APP).post(`/api/v1/ranking/recalculate/${CATEGORY.id}`);
+      const RUN_1 = await request(APP)
+        .post(`/api/v1/ranking/recalculate/${CATEGORY.id}`)
+        .set('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET);
       expect(RUN_1.status).toBe(200);
       expect(RUN_1.body.success).toBe(true);
       expect(RUN_1.body.data).toMatchObject({
@@ -71,7 +74,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         select: { categoryId: true, userId: true, points: true, gamesPlayed: true },
       });
 
-      const RUN_2 = await request(APP).post(`/api/v1/ranking/recalculate/${CATEGORY.id}`);
+      const RUN_2 = await request(APP)
+        .post(`/api/v1/ranking/recalculate/${CATEGORY.id}`)
+        .set('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET);
       expect(RUN_2.status).toBe(200);
       expect(RUN_2.body.success).toBe(true);
       expect(RUN_2.body.data).toMatchObject({

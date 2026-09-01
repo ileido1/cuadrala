@@ -95,6 +95,10 @@ lib/src/
 - Copy `.env.example` to `.env` in `services/api/`.
 - **Required:** `DATABASE_URL` (PostgreSQL connection string).
 - **Required for auth:** `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` (>= 32 chars in production).
+- **Required for operations endpoints:** `ADMIN_DISPATCH_SECRET` (`x-admin-secret`),
+  `GEO_DISPATCH_SECRET` (`x-geo-secret`), `NOTIFICATIONS_DISPATCH_SECRET` (`x-dispatch-secret`).
+  All five secrets ship with dev-only defaults so local runs need no setup; the API refuses
+  to boot with `NODE_ENV=production` while any of them still holds its default.
 - **Optional for integration tests:** `TEST_DATABASE_URL`.
 - Node **20.19+** required.
 

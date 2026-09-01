@@ -20,8 +20,16 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('E20 — Integración HTTP+DB: Venue 
   });
 
   it('POST /api/v1/venues/:venueId/geocode persiste placeId y dirección normalizada', async () => {
+    const REG = await request(APP)
+      .post('/api/v1/auth/register')
+      .send({ email: `e20-${Date.now()}@test.local`, password: 'password123', name: 'Owner E20' })
+      .set('Content-Type', 'application/json');
+    expect(REG.status).toBe(201);
+    const TOKEN = REG.body.data.accessToken as string;
+
     const CREATED = await request(APP)
       .post('/api/v1/venues')
+      .set('Authorization', `Bearer ${TOKEN}`)
       .send({ name: 'Sede Test' })
       .set('Content-Type', 'application/json');
     expect(CREATED.status).toBe(201);

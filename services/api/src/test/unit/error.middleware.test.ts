@@ -19,7 +19,10 @@ function buildResSV(_headersSent = false) {
       return this;
     },
   };
-  return RES as unknown as Response & { statusCode: number; body: any };
+  return RES as unknown as Response & {
+    statusCode: number;
+    body: { code?: string; message?: string; details?: unknown };
+  };
 }
 
 const REQ = { method: 'GET', path: '/api/v1/test' } as unknown as Request;

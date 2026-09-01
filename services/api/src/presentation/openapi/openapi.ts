@@ -133,7 +133,12 @@ const OPENAPI_CONST = {
         tags: ['Catalog'],
         summary: 'Publicar nueva versión de preset (MVP)',
         parameters: [
-          { name: 'sportId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'sportId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
           { name: 'code', in: 'path', required: true, schema: { type: 'string' } },
         ],
         requestBody: {
@@ -176,7 +181,10 @@ const OPENAPI_CONST = {
                   categoryId: { type: 'string', format: 'uuid' },
                   sportId: { type: 'string', format: 'uuid' },
                   formatPresetId: { type: 'string', format: 'uuid' },
-                  formatPresetCode: { type: 'string', description: 'Código del preset (ej. AMERICANO).' },
+                  formatPresetCode: {
+                    type: 'string',
+                    description: 'Código del preset (ej. AMERICANO).',
+                  },
                   formatParameters: {
                     description:
                       'Parámetros específicos del formato (schemaVersion=1). El backend rechaza keys extra (additionalProperties=false).',
@@ -218,7 +226,12 @@ const OPENAPI_CONST = {
         tags: ['Tournaments'],
         summary: 'Generar calendario de torneo (según formato)',
         parameters: [
-          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         description:
           'Los participantes se derivan de las inscripciones CONFIRMED del torneo. No se envía roster en el body.',
@@ -248,7 +261,12 @@ const OPENAPI_CONST = {
         tags: ['Tournaments'],
         summary: 'Consultar calendario generado (genérico)',
         parameters: [
-          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -262,7 +280,12 @@ const OPENAPI_CONST = {
         tags: ['Tournaments'],
         summary: 'Consultar scoreboard de un torneo',
         parameters: [
-          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -276,14 +299,54 @@ const OPENAPI_CONST = {
         tags: ['Matches'],
         summary: 'Listar partidas abiertas con cupos vacíos',
         parameters: [
-          { name: 'sportId', in: 'query', required: true, schema: { type: 'string', format: 'uuid' } },
-          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
-          { name: 'near', in: 'query', required: false, schema: { type: 'string', example: '-34.6,-58.4' } },
-          { name: 'radiusKm', in: 'query', required: false, schema: { type: 'number', minimum: 0.1, maximum: 200 } },
-          { name: 'minPricePerPlayerCents', in: 'query', required: false, schema: { type: 'integer', minimum: 0 } },
-          { name: 'maxPricePerPlayerCents', in: 'query', required: false, schema: { type: 'integer', minimum: 0 } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+          {
+            name: 'sportId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'near',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', example: '-34.6,-58.4' },
+          },
+          {
+            name: 'radiusKm',
+            in: 'query',
+            required: false,
+            schema: { type: 'number', minimum: 0.1, maximum: 200 },
+          },
+          {
+            name: 'minPricePerPlayerCents',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 0 },
+          },
+          {
+            name: 'maxPricePerPlayerCents',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 0 },
+          },
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
           {
             name: 'scheduledFrom',
             in: 'query',
@@ -308,16 +371,36 @@ const OPENAPI_CONST = {
         tags: ['Matches'],
         summary: 'Listar partidos',
         parameters: [
-          { name: 'sportId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
-          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'sportId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
           {
             name: 'status',
             in: 'query',
             required: false,
             schema: { type: 'string', enum: ['SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'] },
           },
-          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
           {
             name: 'scheduledFrom',
             in: 'query',
@@ -376,7 +459,12 @@ const OPENAPI_CONST = {
         tags: ['Matches'],
         summary: 'Obtener partido por id',
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -389,7 +477,12 @@ const OPENAPI_CONST = {
         summary: 'Actualizar partido',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         requestBody: {
           required: true,
@@ -425,7 +518,12 @@ const OPENAPI_CONST = {
         summary: 'Cancelar partido',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -443,7 +541,12 @@ const OPENAPI_CONST = {
         summary: 'Unirse a un partido (validación de cupo y categoría)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -460,7 +563,12 @@ const OPENAPI_CONST = {
         summary: 'Salir de un partido (idempotente mientras esté SCHEDULED)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '204': { description: 'Sin contenido' },
@@ -476,7 +584,12 @@ const OPENAPI_CONST = {
         summary: 'Iniciar un partido (SCHEDULED -> IN_PROGRESS)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '204': { description: 'Sin contenido' },
@@ -493,7 +606,12 @@ const OPENAPI_CONST = {
         summary: 'Finalizar un partido (IN_PROGRESS -> FINISHED, requiere 4 participantes)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '204': { description: 'Sin contenido' },
@@ -510,7 +628,12 @@ const OPENAPI_CONST = {
         summary: 'Guardar borrador de resultado (requiere partido FINISHED y 4 participantes)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         requestBody: {
           required: true,
@@ -555,7 +678,12 @@ const OPENAPI_CONST = {
         summary: 'Confirmar/rechazar borrador de resultado (al 4/4 CONFIRMED finaliza)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         requestBody: {
           required: true,
@@ -585,10 +713,16 @@ const OPENAPI_CONST = {
     '/api/v1/matches/{matchId}/result-draft/reproposal': {
       post: {
         tags: ['Matches'],
-        summary: 'Crear re-propuesta de resultado tras REJECTED (versiona y resetea confirmaciones)',
+        summary:
+          'Crear re-propuesta de resultado tras REJECTED (versiona y resetea confirmaciones)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         requestBody: {
           required: true,
@@ -637,8 +771,18 @@ const OPENAPI_CONST = {
             required: true,
             schema: { type: 'string', format: 'uuid' },
           },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 50 } },
-          { name: 'radiusKm', in: 'query', required: false, schema: { type: 'number', minimum: 0.1, maximum: 200 } },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 50 },
+          },
+          {
+            name: 'radiusKm',
+            in: 'query',
+            required: false,
+            schema: { type: 'number', minimum: 0.1, maximum: 200 },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -903,7 +1047,11 @@ const OPENAPI_CONST = {
                   dominantHand: { type: 'string', enum: ['RIGHT', 'LEFT', 'AMBIDEXTROUS'] },
                   sidePreference: { type: 'string', enum: ['RIGHT', 'LEFT', 'ANY'] },
                   birthYear: { type: 'integer', nullable: true, minimum: 1900 },
-                  phone: { type: 'string', nullable: true, description: 'E.164 (8-15 dígitos, + opcional).' },
+                  phone: {
+                    type: 'string',
+                    nullable: true,
+                    description: 'E.164 (8-15 dígitos, + opcional).',
+                  },
                   avatarUrl: { type: 'string', nullable: true, format: 'uri' },
                   city: { type: 'string', nullable: true, maxLength: 120 },
                 },
@@ -939,14 +1087,26 @@ const OPENAPI_CONST = {
                           type: 'array',
                           items: {
                             type: 'string',
-                            enum: ['identity', 'sports', 'sport_profiles', 'location', 'availability'],
+                            enum: [
+                              'identity',
+                              'sports',
+                              'sport_profiles',
+                              'location',
+                              'availability',
+                            ],
                           },
                         },
                         pendingSteps: {
                           type: 'array',
                           items: {
                             type: 'string',
-                            enum: ['identity', 'sports', 'sport_profiles', 'location', 'availability'],
+                            enum: [
+                              'identity',
+                              'sports',
+                              'sport_profiles',
+                              'location',
+                              'availability',
+                            ],
                           },
                         },
                         isComplete: { type: 'boolean' },
@@ -1040,7 +1200,15 @@ const OPENAPI_CONST = {
                       properties: {
                         dayOfWeek: {
                           type: 'string',
-                          enum: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'],
+                          enum: [
+                            'MONDAY',
+                            'TUESDAY',
+                            'WEDNESDAY',
+                            'THURSDAY',
+                            'FRIDAY',
+                            'SATURDAY',
+                            'SUNDAY',
+                          ],
                         },
                         slot: { type: 'string', enum: ['MORNING', 'AFTERNOON', 'EVENING'] },
                       },
@@ -1101,7 +1269,12 @@ const OPENAPI_CONST = {
         tags: ['Profile'],
         summary: 'Consultar estadísticas públicas de un usuario',
         parameters: [
-          { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'userId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1115,8 +1288,18 @@ const OPENAPI_CONST = {
         tags: ['Profile'],
         summary: 'Consultar ratings Elo de un usuario',
         parameters: [
-          { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'userId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': {
@@ -1162,9 +1345,24 @@ const OPENAPI_CONST = {
         tags: ['Profile'],
         summary: 'Consultar historial de rating Elo de un usuario',
         parameters: [
-          { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
+          {
+            name: 'userId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
           {
             name: 'limit',
             in: 'query',
@@ -1499,8 +1697,7 @@ const OPENAPI_CONST = {
                   enabled: { type: 'boolean' },
                   enabledTypes: {
                     type: 'object',
-                    description:
-                      'Preferencias por tipo. Si falta una key, se asume habilitado.',
+                    description: 'Preferencias por tipo. Si falta una key, se asume habilitado.',
                     properties: {
                       MATCH_SLOT_OPENED: { type: 'boolean' },
                       MATCH_CANCELLED: { type: 'boolean' },
@@ -1527,9 +1724,24 @@ const OPENAPI_CONST = {
         summary: 'Listar notificaciones in-app del usuario actual',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['unread', 'all'], default: 'unread' } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['unread', 'all'], default: 'unread' },
+          },
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1544,7 +1756,12 @@ const OPENAPI_CONST = {
         summary: 'Marcar una notificación in-app como leída',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'deliveryId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'deliveryId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1684,7 +1901,11 @@ const OPENAPI_CONST = {
                 properties: {
                   matchId: { type: 'string', format: 'uuid' },
                   categoryId: { type: 'string', format: 'uuid' },
-                  userIds: { type: 'array', minItems: 1, items: { type: 'string', format: 'uuid' } },
+                  userIds: {
+                    type: 'array',
+                    minItems: 1,
+                    items: { type: 'string', format: 'uuid' },
+                  },
                   payload: { type: 'object', additionalProperties: true },
                 },
                 additionalProperties: false,
@@ -1716,7 +1937,11 @@ const OPENAPI_CONST = {
                 properties: {
                   matchId: { type: 'string', format: 'uuid' },
                   categoryId: { type: 'string', format: 'uuid' },
-                  userIds: { type: 'array', minItems: 1, items: { type: 'string', format: 'uuid' } },
+                  userIds: {
+                    type: 'array',
+                    minItems: 1,
+                    items: { type: 'string', format: 'uuid' },
+                  },
                   payload: { type: 'object', additionalProperties: true },
                 },
                 additionalProperties: false,
@@ -1748,7 +1973,11 @@ const OPENAPI_CONST = {
                 properties: {
                   matchId: { type: 'string', format: 'uuid' },
                   categoryId: { type: 'string', format: 'uuid' },
-                  userIds: { type: 'array', minItems: 1, items: { type: 'string', format: 'uuid' } },
+                  userIds: {
+                    type: 'array',
+                    minItems: 1,
+                    items: { type: 'string', format: 'uuid' },
+                  },
                   payload: { type: 'object', additionalProperties: true },
                 },
                 additionalProperties: false,
@@ -1786,8 +2015,18 @@ const OPENAPI_CONST = {
         tags: ['Ranking'],
         summary: 'Leaderboard Elo por categoría',
         parameters: [
-          { name: 'categoryId', in: 'query', required: true, schema: { type: 'string', format: 'uuid' } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 } },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1802,8 +2041,18 @@ const OPENAPI_CONST = {
         parameters: [
           { name: 'x-geo-secret', in: 'header', required: true, schema: { type: 'string' } },
           { name: 'q', in: 'query', required: true, schema: { type: 'string' } },
-          { name: 'near', in: 'query', required: false, schema: { type: 'string', example: '10.1,-70.2' } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 10 } },
+          {
+            name: 'near',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', example: '10.1,-70.2' },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 10 },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1835,10 +2084,30 @@ const OPENAPI_CONST = {
         tags: ['Venues'],
         summary: 'Listar sedes',
         parameters: [
-          { name: 'near', in: 'query', required: false, schema: { type: 'string', example: '10.1,-70.2' } },
-          { name: 'radiusKm', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 10 } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+          {
+            name: 'near',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', example: '10.1,-70.2' },
+          },
+          {
+            name: 'radiusKm',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 200, default: 10 },
+          },
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1851,7 +2120,12 @@ const OPENAPI_CONST = {
         tags: ['Venues'],
         summary: 'Listar canchas por sede',
         parameters: [
-          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'venueId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1864,14 +2138,54 @@ const OPENAPI_CONST = {
         tags: ['Venues'],
         summary: 'Consultar slots disponibles por sede/cancha',
         parameters: [
-          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-          { name: 'courtId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
-          { name: 'from', in: 'query', required: true, schema: { type: 'string', format: 'date-time' } },
-          { name: 'to', in: 'query', required: true, schema: { type: 'string', format: 'date-time' } },
-          { name: 'durationMinutes', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 1440, default: 90 } },
-          { name: 'stepMinutes', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 1440, default: 30 } },
-          { name: 'sportId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
-          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'venueId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'courtId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'from',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', format: 'date-time' },
+          },
+          {
+            name: 'to',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', format: 'date-time' },
+          },
+          {
+            name: 'durationMinutes',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 1440, default: 90 },
+          },
+          {
+            name: 'stepMinutes',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 1440, default: 30 },
+          },
+          {
+            name: 'sportId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': {
@@ -1885,7 +2199,14 @@ const OPENAPI_CONST = {
                     message: { type: 'string' },
                     data: {
                       type: 'object',
-                      required: ['venueId', 'from', 'to', 'durationMinutes', 'stepMinutes', 'courts'],
+                      required: [
+                        'venueId',
+                        'from',
+                        'to',
+                        'durationMinutes',
+                        'stepMinutes',
+                        'courts',
+                      ],
                       properties: {
                         venueId: { type: 'string', format: 'uuid' },
                         from: { type: 'string', format: 'date-time' },
@@ -1952,7 +2273,12 @@ const OPENAPI_CONST = {
         summary: 'Obtener información de pago de una sede',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'venueId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1967,7 +2293,12 @@ const OPENAPI_CONST = {
         tags: ['Venues'],
         summary: 'Listar staff de una sede',
         parameters: [
-          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'venueId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -1979,7 +2310,12 @@ const OPENAPI_CONST = {
         summary: 'Agregar o actualizar miembro del staff de una sede',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'venueId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         requestBody: {
           required: true,
@@ -2010,10 +2346,30 @@ const OPENAPI_CONST = {
         summary: 'Listar transacciones pendientes de una sede',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-          { name: 'from', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
-          { name: 'to', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
-          { name: 'matchId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'venueId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'from',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'date-time' },
+          },
+          {
+            name: 'to',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'date-time' },
+          },
+          {
+            name: 'matchId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -2029,7 +2385,12 @@ const OPENAPI_CONST = {
         summary: 'Obtener información de pago de un partido (solo participantes)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -2046,7 +2407,12 @@ const OPENAPI_CONST = {
         summary: 'Geocodificar una sede (endpoint interno)',
         parameters: [
           { name: 'x-geo-secret', in: 'header', required: true, schema: { type: 'string' } },
-          { name: 'venueId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'venueId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         requestBody: {
           required: true,
@@ -2070,83 +2436,18 @@ const OPENAPI_CONST = {
         },
       },
     },
-    '/api/v1/vacant-hours/publish': {
-      post: {
-        tags: ['Admin'],
-        summary: 'Publicar una vacante (endpoint interno)',
-        parameters: [{ name: 'x-admin-secret', in: 'header', required: true, schema: { type: 'string' } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['venueId', 'courtId', 'sportId', 'categoryId', 'scheduledAt'],
-                properties: {
-                  venueId: { type: 'string', format: 'uuid' },
-                  courtId: { type: 'string', format: 'uuid' },
-                  sportId: { type: 'string', format: 'uuid' },
-                  categoryId: { type: 'string', format: 'uuid' },
-                  scheduledAt: { type: 'string', format: 'date-time' },
-                  durationMinutes: { type: 'integer', minimum: 1 },
-                  pricePerPlayerCents: { type: 'integer', minimum: 0, maximum: 100000000 },
-                  maxParticipants: { type: 'integer', minimum: 2, maximum: 100, default: 4 },
-                },
-                additionalProperties: false,
-              },
-            },
-          },
-        },
-        responses: {
-          '201': { description: 'Creado' },
-          '400': { description: 'Validación fallida' },
-          '401': { description: 'No autorizado' },
-          '409': { description: 'Conflicto' },
-        },
-      },
-    },
-    '/api/v1/vacant-hours': {
-      get: {
-        tags: ['Admin'],
-        summary: 'Listar vacantes (endpoint interno)',
-        parameters: [
-          { name: 'x-admin-secret', in: 'header', required: true, schema: { type: 'string' } },
-          { name: 'venueId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
-          { name: 'courtId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
-          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['PUBLISHED', 'CANCELLED'] } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
-        ],
-        responses: {
-          '200': { description: 'OK' },
-          '400': { description: 'Validación fallida' },
-          '401': { description: 'No autorizado' },
-        },
-      },
-    },
-    '/api/v1/vacant-hours/{id}/cancel': {
-      patch: {
-        tags: ['Admin'],
-        summary: 'Cancelar una vacante (endpoint interno)',
-        parameters: [
-          { name: 'x-admin-secret', in: 'header', required: true, schema: { type: 'string' } },
-          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-        ],
-        responses: {
-          '200': { description: 'OK' },
-          '400': { description: 'Validación fallida' },
-          '401': { description: 'No autorizado' },
-          '404': { description: 'No encontrado' },
-        },
-      },
-    },
     '/api/v1/admin/matches/{matchId}/cancel': {
       patch: {
         tags: ['Admin'],
         summary: 'Cancelar un partido (override, endpoint interno)',
         parameters: [
           { name: 'x-admin-secret', in: 'header', required: true, schema: { type: 'string' } },
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -2163,9 +2464,24 @@ const OPENAPI_CONST = {
         summary: 'Listar mensajes del chat de un match (MVP)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 } },
-          { name: 'cursorCreatedAt', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+          },
+          {
+            name: 'cursorCreatedAt',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'date-time' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -2179,7 +2495,12 @@ const OPENAPI_CONST = {
         summary: 'Enviar un mensaje al chat de un match (MVP)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'matchId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'matchId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         requestBody: {
           required: true,
@@ -2208,9 +2529,24 @@ const OPENAPI_CONST = {
         summary: 'Listar mensajes del chat de un torneo (MVP)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 } },
-          { name: 'cursorCreatedAt', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+          },
+          {
+            name: 'cursorCreatedAt',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'date-time' },
+          },
         ],
         responses: {
           '200': { description: 'OK' },
@@ -2224,7 +2560,12 @@ const OPENAPI_CONST = {
         summary: 'Enviar un mensaje al chat de un torneo (MVP)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
         ],
         requestBody: {
           required: true,
@@ -2251,4 +2592,3 @@ const OPENAPI_CONST = {
 };
 
 export { OPENAPI_CONST };
-

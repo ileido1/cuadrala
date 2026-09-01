@@ -3,6 +3,7 @@ import { JoinMatchUseCase } from '../../application/use_cases/join_match.use_cas
 import { LeaveMatchUseCase } from '../../application/use_cases/leave_match.use_case.js';
 import { StartMatchUseCase } from '../../application/use_cases/start_match.use_case.js';
 import { FinishMatchUseCase } from '../../application/use_cases/finish_match.use_case.js';
+import { AdminCancelMatchUseCase } from '../../application/use_cases/admin_cancel_match.use_case.js';
 import { CancelMatchUseCase } from '../../application/use_cases/cancel_match.use_case.js';
 import { CreateMatchUseCase } from '../../application/use_cases/create_match.use_case.js';
 import { GetMatchUseCase } from '../../application/use_cases/get_match.use_case.js';
@@ -34,7 +35,8 @@ const MATCH_ORGANIZER_REPOSITORY = new PrismaMatchOrganizerRepository();
 const MATCH_PARTICIPATION_REPOSITORY = new PrismaMatchParticipationRepository();
 const MATCH_STATUS_REPOSITORY = new PrismaMatchStatusRepository();
 const USER_CATEGORY_REPOSITORY = new PrismaUserCategoryRepository();
-const MATCH_NOTIFICATION_CONTEXT_READ_REPOSITORY = new PrismaMatchNotificationContextReadRepository();
+const MATCH_NOTIFICATION_CONTEXT_READ_REPOSITORY =
+  new PrismaMatchNotificationContextReadRepository();
 const NOTIFICATION_EVENT_REPOSITORY = new PrismaNotificationEventRepository();
 const VENUE_REPOSITORY = new PrismaVenueRepository(PRISMA);
 
@@ -84,9 +86,15 @@ export const CANCEL_MATCH_UC = new CancelMatchUseCase(
   MATCH_CRUD_REPOSITORY,
 );
 
+//? Misma transición que CANCEL_MATCH_UC, pero sin dueño que verificar: la ruta
+//? de admin se autentica con un secreto de operación, no con sesión.
+export const ADMIN_CANCEL_MATCH_UC = new AdminCancelMatchUseCase(
+  MATCH_QUERY_REPOSITORY,
+  MATCH_CRUD_REPOSITORY,
+);
+
 export const GET_MATCH_PAYMENT_INFO_UC = new GetMatchPaymentInfoUseCase(
   MATCH_QUERY_REPOSITORY,
   MATCH_PARTICIPATION_REPOSITORY,
   VENUE_REPOSITORY,
 );
-
