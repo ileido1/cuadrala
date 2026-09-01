@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 
-import { AppError } from '../../domain/errors/app_error.js';
+import { requireActorUserIdSV } from '../helpers/require_actor_user_id.js';
 import {
   INVITE_GUEST_TOURNAMENT_PARTICIPANT_UC,
   LIST_TOURNAMENT_REGISTRATIONS_UC,
@@ -18,19 +18,13 @@ import {
   WITHDRAW_TOURNAMENT_REGISTRATION_PARAMS_SCHEMA,
 } from '../validation/tournament_registration.validation.js';
 
-function requireAuthUserIdSV(_req: Request): string {
-  const USER_ID = _req.authUser?.id;
-  if (USER_ID === undefined) {
-    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
-  }
-  return USER_ID;
-}
-
-export async function postRegisterTournamentParticipantCON(_req: Request, _res: Response): Promise<void> {
-  const USER_ID = _req.authUser?.id;
-  if (USER_ID === undefined) {
-    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
-  }
+export async function postRegisterTournamentParticipantCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  //? TODO: el actor se autentica pero no se usa — el userId sale del body, asi
+  //? que cualquier autenticado puede inscribir a otro. Falta definir criterio.
+  requireActorUserIdSV(_req);
 
   const PARAMS = TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
   const BODY = CREATE_TOURNAMENT_REGISTRATION_BODY_SCHEMA.parse(_req.body);
@@ -42,7 +36,9 @@ export async function postRegisterTournamentParticipantCON(_req: Request, _res: 
 
   _res.status(RESULT.created ? 201 : 200).json({
     success: true,
-    message: RESULT.created ? 'Inscripción registrada correctamente.' : 'Inscripción actualizada correctamente.',
+    message: RESULT.created
+      ? 'Inscripción registrada correctamente.'
+      : 'Inscripción actualizada correctamente.',
     data: RESULT.registration,
   });
 }
@@ -61,11 +57,13 @@ export async function getTournamentRegistrationsCON(_req: Request, _res: Respons
   });
 }
 
-export async function withdrawTournamentRegistrationCON(_req: Request, _res: Response): Promise<void> {
-  const USER_ID = _req.authUser?.id;
-  if (USER_ID === undefined) {
-    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
-  }
+export async function withdrawTournamentRegistrationCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  //? TODO: el actor se autentica pero no se usa — el userId sale del path, asi
+  //? que cualquier autenticado puede dar de baja a otro. Falta definir criterio.
+  requireActorUserIdSV(_req);
 
   const PARAMS = WITHDRAW_TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
 
@@ -77,8 +75,11 @@ export async function withdrawTournamentRegistrationCON(_req: Request, _res: Res
   _res.status(204).send();
 }
 
-export async function postInviteGuestTournamentParticipantCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+export async function postInviteGuestTournamentParticipantCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
   const BODY = INVITE_GUEST_TOURNAMENT_PARTICIPANT_BODY_SCHEMA.parse(_req.body);
 
@@ -97,8 +98,11 @@ export async function postInviteGuestTournamentParticipantCON(_req: Request, _re
   });
 }
 
-export async function patchTournamentRegistrationStatusCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+export async function patchTournamentRegistrationStatusCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = TOURNAMENT_REGISTRATION_ID_PARAMS_SCHEMA.parse(_req.params);
   const BODY = UPDATE_TOURNAMENT_REGISTRATION_STATUS_BODY_SCHEMA.parse(_req.body);
 
@@ -116,8 +120,11 @@ export async function patchTournamentRegistrationStatusCON(_req: Request, _res: 
   });
 }
 
-export async function deleteTournamentRegistrationCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+export async function deleteTournamentRegistrationCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = TOURNAMENT_REGISTRATION_ID_PARAMS_SCHEMA.parse(_req.params);
 
   await REMOVE_TOURNAMENT_REGISTRATION_UC.executeSV({

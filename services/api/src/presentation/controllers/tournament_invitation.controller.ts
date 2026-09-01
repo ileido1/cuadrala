@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 
-import { AppError } from '../../domain/errors/app_error.js';
+import { requireActorUserIdSV } from '../helpers/require_actor_user_id.js';
 import {
   CANCEL_TOURNAMENT_INVITATION_UC,
   INVITE_TOURNAMENT_PARTICIPANT_UC,
@@ -14,16 +14,11 @@ import {
   TOURNAMENT_INVITATION_PARAMS_SCHEMA,
 } from '../validation/tournament_invitation.validation.js';
 
-function requireAuthUserIdSV(_req: Request): string {
-  const USER_ID = _req.authUser?.id;
-  if (USER_ID === undefined) {
-    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
-  }
-  return USER_ID;
-}
-
-export async function postInviteTournamentParticipantCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+export async function postInviteTournamentParticipantCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = TOURNAMENT_INVITATION_PARAMS_SCHEMA.parse(_req.params);
   const BODY = CREATE_TOURNAMENT_INVITATION_BODY_SCHEMA.parse(_req.body);
 
@@ -41,7 +36,7 @@ export async function postInviteTournamentParticipantCON(_req: Request, _res: Re
 }
 
 export async function getTournamentInvitationsCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = TOURNAMENT_INVITATION_PARAMS_SCHEMA.parse(_req.params);
 
   const RESULT = await LIST_TOURNAMENT_INVITATIONS_UC.executeSV({
@@ -56,8 +51,11 @@ export async function getTournamentInvitationsCON(_req: Request, _res: Response)
   });
 }
 
-export async function postRespondTournamentInvitationCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+export async function postRespondTournamentInvitationCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = TOURNAMENT_INVITATION_ID_PARAMS_SCHEMA.parse(_req.params);
   const BODY = RESPOND_TOURNAMENT_INVITATION_BODY_SCHEMA.parse(_req.body);
 
@@ -69,13 +67,16 @@ export async function postRespondTournamentInvitationCON(_req: Request, _res: Re
 
   _res.status(200).json({
     success: true,
-    message: BODY.action === 'ACCEPT' ? 'Invitación aceptada correctamente.' : 'Invitación rechazada correctamente.',
+    message:
+      BODY.action === 'ACCEPT'
+        ? 'Invitación aceptada correctamente.'
+        : 'Invitación rechazada correctamente.',
     data: RESULT,
   });
 }
 
 export async function deleteTournamentInvitationCON(_req: Request, _res: Response): Promise<void> {
-  const ACTOR_USER_ID = requireAuthUserIdSV(_req);
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = TOURNAMENT_INVITATION_ID_PARAMS_SCHEMA.parse(_req.params);
 
   await CANCEL_TOURNAMENT_INVITATION_UC.executeSV({

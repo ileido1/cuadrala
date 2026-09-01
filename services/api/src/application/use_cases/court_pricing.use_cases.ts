@@ -12,8 +12,8 @@ import {
 export class ListCourtPricingTiersUseCase {
   constructor(
     private readonly _pricingTierRepository: CourtPricingTierRepository,
-    private readonly _venueStaffRepository: VenueStaffRepository,
     private readonly _courtRepository: ICourtRepository,
+    private readonly _venueStaffRepository: VenueStaffRepository,
   ) {}
 
   /**
@@ -33,8 +33,8 @@ export class ListCourtPricingTiersUseCase {
 export class CreateCourtPricingTierUseCase {
   constructor(
     private readonly _pricingTierRepository: CourtPricingTierRepository,
-    private readonly _venueStaffRepository: VenueStaffRepository,
     private readonly _courtRepository: ICourtRepository,
+    private readonly _venueStaffRepository: VenueStaffRepository,
   ) {}
 
   /**
@@ -70,8 +70,8 @@ export class CreateCourtPricingTierUseCase {
 export class UpdateCourtPricingTierUseCase {
   constructor(
     private readonly _pricingTierRepository: CourtPricingTierRepository,
-    private readonly _venueStaffRepository: VenueStaffRepository,
     private readonly _courtRepository: ICourtRepository,
+    private readonly _venueStaffRepository: VenueStaffRepository,
   ) {}
 
   /**
@@ -111,8 +111,8 @@ export class UpdateCourtPricingTierUseCase {
 export class DeleteCourtPricingTierUseCase {
   constructor(
     private readonly _pricingTierRepository: CourtPricingTierRepository,
-    private readonly _venueStaffRepository: VenueStaffRepository,
     private readonly _courtRepository: ICourtRepository,
+    private readonly _venueStaffRepository: VenueStaffRepository,
   ) {}
 
   /**

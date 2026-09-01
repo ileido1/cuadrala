@@ -59,16 +59,17 @@ export class CreateCourtUseCase {
    * @description :Crea una cancha en una sede. Solo el staff de esa sede.
    * @param {CreateCourtInputDTO} _input - Datos de entrada del caso de uso
    * @return {Promise<CreateCourtOutputDTO>}
-   * @throws {AppError} 404 si la sede no existe, 403 si el actor no es staff
+   * @throws {AppError} 403 si el actor no es staff, 404 si la sede no existe
    */
   async executeSV(_input: CreateCourtInputDTO): Promise<CreateCourtOutputDTO> {
+    //? Autorizacion antes que la lectura: si el 404 saliera primero, el codigo
+    //? de respuesta le diria a un no-staff que sedes existen y cuales no.
+    await assertVenueStaffSV(_input.actorUserId, _input.venueId, this._venueStaffRepository);
+
     const VENUE = await this._venueRepository.findByIdSV(_input.venueId);
     if (VENUE === null) {
       throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
     }
-
-    //? Autorizacion: agregar una cancha es escritura sobre la sede.
-    await assertVenueStaffSV(_input.actorUserId, _input.venueId, this._venueStaffRepository);
 
     //? Validar name no vacío
     if (!_input.name || _input.name.trim().length === 0) {

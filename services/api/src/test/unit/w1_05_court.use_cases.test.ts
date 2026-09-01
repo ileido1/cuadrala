@@ -388,6 +388,18 @@ describe('Court write authorization', () => {
     expect(repo.create).not.toHaveBeenCalled();
   });
 
+  it('should throw 403 (not 404) when the venue does not exist and the actor is not staff', async () => {
+    //? Si el 404 saliera primero, el codigo de respuesta revelaria que sedes
+    //? existen a alguien que no tiene acceso a ninguna.
+    venueRepo.findByIdSV.mockResolvedValue(null);
+    const useCase = new CreateCourtUseCase(repo, venueRepo, createMockVenueStaffRepository(false));
+
+    await expect(
+      useCase.executeSV({ venueId: 'venue-inexistente', actorUserId: 'intruso', name: 'Cancha' }),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'NO_AUTORIZADO' });
+    expect(venueRepo.findByIdSV).not.toHaveBeenCalled();
+  });
+
   it('should throw 403 when updating a court of a venue the actor is not staff of', async () => {
     const useCase = new UpdateCourtUseCase(repo, createMockVenueStaffRepository(false));
     repo.findById.mockResolvedValue(activeCourt());

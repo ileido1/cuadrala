@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 
-import { AppError } from '../../domain/errors/app_error.js';
+import { requireActorUserIdSV } from '../helpers/require_actor_user_id.js';
 import {
   CANCEL_COURT_UC,
   CREATE_COURT_UC,
@@ -22,23 +22,6 @@ import {
   VENUE_ID_PARAM_SCHEMA,
 } from '../validation/venues.validation.js';
 import type { CreateCourtInputDTO } from '../../application/use_cases/court.use_cases.js';
-
-/**
- * @name    :requireActorUserIdSV
- * @version :1.0.0
- * @description :Devuelve el id del usuario autenticado. `requireAuth` ya corrio
- * en el router, asi que faltar aca seria un error de cableado, no del cliente.
- * @param {Request} _req - Request de Express
- * @return {string} Id del usuario que hace la request
- * @throws {AppError} 401 si no hay sesion en la request
- */
-function requireActorUserIdSV(_req: Request): string {
-  const ACTOR_USER_ID = _req.authUser?.id;
-  if (ACTOR_USER_ID === undefined) {
-    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
-  }
-  return ACTOR_USER_ID;
-}
 
 export async function getVenuesCON(_req: Request, _res: Response): Promise<void> {
   const QUERY = LIST_VENUES_QUERY_SCHEMA.parse(_req.query);
@@ -71,6 +54,9 @@ export async function getMyVenuesCON(_req: Request, _res: Response): Promise<voi
 }
 
 export async function postVenueCON(_req: Request, _res: Response): Promise<void> {
+  //? TODO: unica escritura del archivo que no resuelve el actor — el ownerUserId
+  //? sale del body, asi que cualquier autenticado crea una sede a nombre de
+  //? quien quiera. Falta definir criterio.
   const BODY = CREATE_VENUE_BODY_SCHEMA.parse(_req.body);
   const CREATED = await CREATE_VENUE_UC.executeSV({
     name: BODY.name,
