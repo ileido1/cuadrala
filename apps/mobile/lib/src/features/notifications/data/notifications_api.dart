@@ -68,7 +68,7 @@ final class DioNotificationsApi implements NotificationsApi {
 
   @override
   Future<void> disableSubscription({required String subscriptionId}) async {
-    await _apiClient.postNoContent('/api/v1/users/me/notification-subscriptions/$subscriptionId');
+    await _apiClient.deleteNoContent('/api/v1/users/me/notification-subscriptions/$subscriptionId');
   }
 
   @override
@@ -85,7 +85,7 @@ final class DioNotificationsApi implements NotificationsApi {
 
   @override
   Future<void> disableDevicePushToken({required String tokenId}) async {
-    await _apiClient.postNoContent('/api/v1/users/me/device-push-tokens/$tokenId');
+    await _apiClient.deleteNoContent('/api/v1/users/me/device-push-tokens/$tokenId');
   }
 }
 
