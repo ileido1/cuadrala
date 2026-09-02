@@ -3,7 +3,6 @@ import type { Request, Response } from 'express';
 import { AppError } from '../../domain/errors/app_error.js';
 import {
   LIST_VENUE_PENDING_TRANSACTIONS_UC,
-  LIST_VENUE_STAFF_UC,
   UPSERT_VENUE_STAFF_UC,
 } from '../composition/venue_staff.composition.js';
 import {
@@ -32,20 +31,6 @@ export async function postUpsertVenueStaffCON(_req: Request, _res: Response): Pr
     success: true,
     message: RESULT.created ? 'Staff registrado correctamente.' : 'Staff actualizado correctamente.',
     data: RESULT.staff,
-  });
-}
-
-export async function getVenueStaffCON(_req: Request, _res: Response): Promise<void> {
-  const PARAMS = VENUE_ID_PARAMS_SCHEMA.parse(_req.params);
-
-  const RESULT = await LIST_VENUE_STAFF_UC.executeSV({
-    venueId: PARAMS.venueId,
-  });
-
-  _res.status(200).json({
-    success: true,
-    message: 'Staff obtenido correctamente.',
-    data: RESULT,
   });
 }
 

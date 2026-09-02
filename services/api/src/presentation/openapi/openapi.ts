@@ -2289,22 +2289,6 @@ const OPENAPI_CONST = {
       },
     },
     '/api/v1/venues/{venueId}/staff': {
-      get: {
-        tags: ['Venues'],
-        summary: 'Listar staff de una sede',
-        parameters: [
-          {
-            name: 'venueId',
-            in: 'path',
-            required: true,
-            schema: { type: 'string', format: 'uuid' },
-          },
-        ],
-        responses: {
-          '200': { description: 'OK' },
-          '400': { description: 'Validación fallida' },
-        },
-      },
       post: {
         tags: ['Venues'],
         summary: 'Agregar o actualizar miembro del staff de una sede',

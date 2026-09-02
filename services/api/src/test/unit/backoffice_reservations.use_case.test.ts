@@ -39,7 +39,6 @@ function createMockVenueStaffRepository() {
     listByVenueSV: vi.fn(),
     upsertSV: vi.fn(),
     findByVenueAndUserSV: vi.fn(),
-    listByVenueIdSV: vi.fn(),
     listByUserIdSV: vi.fn(),
     removeByVenueAndUserSV: vi.fn(),
   };

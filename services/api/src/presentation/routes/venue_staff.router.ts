@@ -2,7 +2,6 @@ import { Router } from 'express';
 
 import {
   getVenuePendingTransactionsCON,
-  getVenueStaffCON,
   postUpsertVenueStaffCON,
 } from '../controllers/venue_staff.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
@@ -14,11 +13,6 @@ VENUE_STAFF_ROUTER.post(
   '/venues/:venueId/staff',
   requireAuth,
   asyncHandler(postUpsertVenueStaffCON),
-);
-
-VENUE_STAFF_ROUTER.get(
-  '/venues/:venueId/staff',
-  asyncHandler(getVenueStaffCON),
 );
 
 VENUE_STAFF_ROUTER.get(

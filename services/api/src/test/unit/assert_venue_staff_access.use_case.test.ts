@@ -12,8 +12,7 @@ describe('AssertVenueStaffAccessUseCase', () => {
       isUserStaffOfVenueSV: vi.fn().mockResolvedValue(true),
       upsertSV: vi.fn(),
       findByVenueAndUserSV: vi.fn(),
-      listByVenueIdSV: vi.fn(),
-      listByUserIdSV: vi.fn(),
+        listByUserIdSV: vi.fn(),
       removeByVenueAndUserSV: vi.fn(),
     };
     const UC = new AssertVenueStaffAccessUseCase(VENUE_STAFF_REPO);
@@ -34,8 +33,7 @@ describe('AssertVenueStaffAccessUseCase', () => {
       isUserStaffOfVenueSV: vi.fn().mockResolvedValue(false),
       upsertSV: vi.fn(),
       findByVenueAndUserSV: vi.fn(),
-      listByVenueIdSV: vi.fn(),
-      listByUserIdSV: vi.fn(),
+        listByUserIdSV: vi.fn(),
       removeByVenueAndUserSV: vi.fn(),
     };
     const UC = new AssertVenueStaffAccessUseCase(VENUE_STAFF_REPO);
@@ -55,8 +53,7 @@ describe('AssertVenueStaffAccessUseCase', () => {
       isUserStaffOfVenueSV: vi.fn().mockResolvedValue(false),
       upsertSV: vi.fn(),
       findByVenueAndUserSV: vi.fn(),
-      listByVenueIdSV: vi.fn(),
-      listByUserIdSV: vi.fn(),
+        listByUserIdSV: vi.fn(),
       removeByVenueAndUserSV: vi.fn(),
     };
     const UC = new AssertVenueStaffAccessUseCase(VENUE_STAFF_REPO);

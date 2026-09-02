@@ -60,14 +60,6 @@ export class PrismaVenueStaffRepository implements VenueStaffRepository {
     return ROW === null ? null : mapRowSV(ROW);
   }
 
-  async listByVenueIdSV(_venueId: string): Promise<VenueStaffDTO[]> {
-    const ROWS = await this._prisma.venueStaff.findMany({
-      where: { venueId: _venueId },
-      orderBy: { createdAt: 'asc' },
-    });
-    return ROWS.map(mapRowSV);
-  }
-
   async listByUserIdSV(_userId: string): Promise<VenueStaffDTO[]> {
     const ROWS = await this._prisma.venueStaff.findMany({
       where: { userId: _userId },

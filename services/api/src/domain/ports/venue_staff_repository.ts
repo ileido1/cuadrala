@@ -17,7 +17,6 @@ export interface VenueStaffRepository {
 
   findByVenueAndUserSV(_venueId: string, _userId: string): Promise<VenueStaffDTO | null>;
 
-  listByVenueIdSV(_venueId: string): Promise<VenueStaffDTO[]>;
 
   listByUserIdSV(_userId: string): Promise<VenueStaffDTO[]>;
 
