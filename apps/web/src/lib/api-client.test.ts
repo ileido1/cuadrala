@@ -35,7 +35,7 @@ describe('ApiClient Profile Namespace', () => {
   });
 
   describe('getMe', () => {
-    it('should call GET /profile/me and return user data', async () => {
+    it('resolves user data from the profile namespace', async () => {
       const mockUser = {
         id: 'user-1',
         name: 'Juan Pérez',
@@ -54,7 +54,7 @@ describe('ApiClient Profile Namespace', () => {
   });
 
   describe('getPlayerProfile', () => {
-    it('should call GET /profile/me/profile and return player profile', async () => {
+    it('resolves the player profile from the profile namespace', async () => {
       const mockProfile = {
         id: 'profile-1',
         userId: 'user-1',
@@ -73,7 +73,7 @@ describe('ApiClient Profile Namespace', () => {
   });
 
   describe('getStats', () => {
-    it('should call GET /profile/{userId}/stats', async () => {
+    it('resolves user stats from the profile namespace', async () => {
       const mockStats = {
         userId: 'user-1',
         matchesPlayed: 42,
@@ -93,7 +93,7 @@ describe('ApiClient Profile Namespace', () => {
   });
 
   describe('getRatings', () => {
-    it('should call GET /profile/{userId}/ratings', async () => {
+    it('resolves user ratings from the profile namespace', async () => {
       const mockRatings = [
         { categoryId: 'cat-1', categoryName: '2da Masculino', rating: 1250 },
       ];

@@ -248,10 +248,10 @@ class ApiClient {
   };
 
   readonly profile = {
-    getMe: () => this.client.get('/profile/me'),
-    getPlayerProfile: () => this.client.get('/profile/me/profile'),
-    getStats: (userId: string) => this.client.get(`/profile/${userId}/stats`),
-    getRatings: (userId: string) => this.client.get(`/profile/${userId}/ratings`),
+    getMe: () => this.client.get('/users/me'),
+    getPlayerProfile: () => this.client.get('/users/me/profile'),
+    getStats: (userId: string) => this.client.get(`/users/${userId}/stats`),
+    getRatings: (userId: string) => this.client.get(`/users/${userId}/ratings`),
     searchByDocument: (documentNumber: string) =>
       this.client.get('/users/search/by-document', { params: { documentNumber } }),
   };
