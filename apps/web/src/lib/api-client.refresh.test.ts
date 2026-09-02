@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 describe('401 handling', () => {
-  it('refreshes once for concurrent 401s', async () => {
+  it('should refresh once when concurrent requests get 401', async () => {
     // Refresh tokens rotate: a second call would spend a token the first one
     // already consumed and log the user out of a recoverable session.
     post.mockImplementation(
@@ -79,7 +79,7 @@ describe('401 handling', () => {
     expect(store.get('accessToken')).toBe('a1');
   });
 
-  it('rejects instead of storing a missing access token', async () => {
+  it('should reject when the refresh response has no access token', async () => {
     // Storing undefined writes the string "undefined" and every later request
     // carries `Bearer undefined` — an endless 401 loop, not a clean logout.
     post.mockResolvedValue({ data: { data: { refreshToken: 'r1' } } });
@@ -90,7 +90,7 @@ describe('401 handling', () => {
     expect(store.has('refreshToken')).toBe(false);
   });
 
-  it('does not touch localStorage on the server', async () => {
+  it('should not touch localStorage when running on the server', async () => {
     vi.stubGlobal('window', undefined);
     const boom = new Error('localStorage is not defined');
     vi.stubGlobal('localStorage', {

@@ -43,14 +43,14 @@ describe('ApiClient profile paths', () => {
     ['getPlayerProfile', () => apiClient.profile.getPlayerProfile(), '/users/me/profile'],
     ['getStats', () => apiClient.profile.getStats('u1'), '/users/u1/stats'],
     ['getRatings', () => apiClient.profile.getRatings('u1'), '/users/u1/ratings'],
-  ])('%s requests the path the API actually serves', async (_name, call, expected) => {
+  ])('should request the path the API serves when calling %s', async (_name, call, expected) => {
     await call();
 
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual({ method: 'GET', url: expected });
   });
 
-  it('never requests anything under /profile', async () => {
+  it('should never request anything under /profile', async () => {
     await Promise.all([
       apiClient.profile.getMe(),
       apiClient.profile.getPlayerProfile(),
