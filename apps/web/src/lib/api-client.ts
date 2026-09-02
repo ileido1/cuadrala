@@ -8,6 +8,11 @@ const API_BASE_PATH = process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/api/v1/';
 class ApiClient {
   private client: AxiosInstance;
 
+  // Concurrent 401s share one refresh. Refresh tokens rotate, so a second
+  // POST /auth/refresh spends a token the first call already consumed: the
+  // loser gets rejected and the user is logged out of a recoverable session.
+  private refreshInFlight: Promise<string> | null = null;
+
   constructor() {
     this.client = axios.create({
       baseURL: `${API_URL}${API_BASE_PATH}`,
@@ -34,23 +39,19 @@ class ApiClient {
       async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // localStorage only exists in the browser. The request interceptor
+        // already guards for this; without the same guard here a 401 on the
+        // server replaces the real error with a ReferenceError.
+        const canRetry =
+          typeof window !== 'undefined' &&
+          error.response?.status === 401 &&
+          !originalRequest._retry;
+
+        if (canRetry) {
           originalRequest._retry = true;
 
           try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (!refreshToken) {
-              throw new Error('No refresh token available');
-            }
-
-            const response = await axios.post(
-              `${API_URL}${API_BASE_PATH}auth/refresh`,
-              { refreshToken }
-            );
-
-            const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-            localStorage.setItem('accessToken', accessToken);
-            localStorage.setItem('refreshToken', newRefreshToken);
+            const accessToken = await this.refreshAccessToken();
 
             if (originalRequest.headers) {
               originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -59,10 +60,7 @@ class ApiClient {
           } catch (refreshError) {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
-
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login';
-            }
+            window.location.href = '/login';
             return Promise.reject(refreshError);
           }
         }
@@ -70,6 +68,40 @@ class ApiClient {
         return Promise.reject(error);
       }
     );
+  }
+
+  private refreshAccessToken(): Promise<string> {
+    this.refreshInFlight ??= this.performRefresh().finally(() => {
+      this.refreshInFlight = null;
+    });
+    return this.refreshInFlight;
+  }
+
+  private async performRefresh(): Promise<string> {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await axios.post(`${API_URL}${API_BASE_PATH}auth/refresh`, {
+      refreshToken,
+    });
+
+    const { accessToken, refreshToken: newRefreshToken } = response.data?.data ?? {};
+
+    // Storing an undefined here writes the string "undefined", and every later
+    // request carries `Authorization: Bearer undefined` — an endless 401 loop
+    // against a poisoned store rather than a clean logout.
+    if (!accessToken || typeof accessToken !== 'string') {
+      throw new Error('Refresh response did not carry an access token');
+    }
+    if (!newRefreshToken || typeof newRefreshToken !== 'string') {
+      throw new Error('Refresh response did not carry a refresh token');
+    }
+
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', newRefreshToken);
+    return accessToken;
   }
 
   readonly auth = {
