@@ -161,14 +161,16 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(RES.status).toBe(200);
       expect(RES.body.success).toBe(true);
 
-      // Según spec, data debe ser un array (o vacío si no hay resultados).
-      expect(Array.isArray(RES.body.data)).toBe(true);
+      //? El envelope es `data: { rows: [...] }`, no un array suelto: el
+      //? `decodeEnvelopeDataMap` de mobile solo acepta objetos, y su
+      //? TournamentScoreboardDto.fromJson lee `json['rows']`.
+      expect(Array.isArray(RES.body.data.rows)).toBe(true);
 
       // Esperados por tournamentId (sin contar OTHER_TOURNAMENT):
       // Alice: 4+3+3 = 10, gamesPlayed=3, rank=1
       // Bob:   2+5   = 7,  gamesPlayed=2, rank=2
       // Carol: 3+4   = 7,  gamesPlayed=2, rank=2  (dense)
-      const SCOREBOARD = RES.body.data as Array<{
+      const SCOREBOARD = RES.body.data.rows as Array<{
         userId: string;
         name: string;
         points: number;
@@ -231,8 +233,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       expect(RES.status).toBe(200);
       expect(RES.body.success).toBe(true);
-      expect(Array.isArray(RES.body.data)).toBe(true);
-      expect(RES.body.data).toEqual([]);
+      expect(Array.isArray(RES.body.data.rows)).toBe(true);
+      expect(RES.body.data.rows).toEqual([]);
     });
   },
 );

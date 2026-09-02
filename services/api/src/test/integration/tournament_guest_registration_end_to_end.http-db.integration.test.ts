@@ -424,16 +424,15 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           .set('Content-Type', 'application/json');
 
         //? DISCOVERED GAP (not fixed in this batch — see design's open question #2 and the
-        //? apply-progress "Issues Found" section): `UpsertMatchResultDraftUseCase` requires
-        //? `scores` to cover exactly the match's participant *userIds*, and a guest contributes a
-        //? `null` userId to that set. There is no way to submit a spec-correct
-        //? auth-only-partial-scores draft for a match that includes a guest — the use case
-        //? rejects it before any MatchResultScore row is ever created. This assertion documents
-        //? the CURRENT behaviour (400) rather than asserting the spec's aspirational one, so this
-        //? test stays green while making the gap visible in the suite output; the finding is
-        //? repeated in the apply-progress artifact so it is not silently lost.
-        expect(DRAFT_RES.status).toBe(400);
-        expect(DRAFT_RES.body.code).toBe('VALIDACION_FALLIDA');
+        //? apply-progress "Issues Found" section): a guest contributes a `null` userId, so
+        //? `listParticipantUserIdsSV` devuelve 3 y `UpsertMatchResultDraftUseCase` corta con
+        //? PARTICIPANTES_INVALIDOS antes de mirar los `scores`. No hay forma de mandar el
+        //? borrador spec-correcto de scores auth-only para un partido con guest: se rechaza
+        //? antes de crear ninguna fila de MatchResultScore.
+        //? Esta assertion documenta el comportamiento ACTUAL, no el aspiracional, para que el
+        //? test siga verde y el gap siga visible en la salida de la suite.
+        expect(DRAFT_RES.status).toBe(409);
+        expect(DRAFT_RES.body.code).toBe('PARTICIPANTES_INVALIDOS');
 
         const SCORE_ROWS = await PRISMA.matchResultScore.findMany({ where: { result: { matchId: MATCH_ID } } });
         expect(SCORE_ROWS).toHaveLength(0);

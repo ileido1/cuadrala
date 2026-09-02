@@ -26,10 +26,13 @@ export class RegisterTournamentParticipantUseCase {
       );
     }
 
+    //? La autoinscripcion entra PENDING y la confirma el organizador con
+    //? PATCH /tournaments/:id/registrations/:registrationId. Escribir CONFIRMED
+    //? aca saltea esa aprobacion, y contradice el @default(PENDING) del schema.
     const RESULT = await this._registrationRepository.upsertSV({
       tournamentId: _input.tournamentId,
       userId: _input.userId,
-      status: 'CONFIRMED',
+      status: 'PENDING',
     });
 
     //? Autoinscripción siempre es AUTHENTICATED (upsertSV escribe `_input.userId`, nunca una fila
