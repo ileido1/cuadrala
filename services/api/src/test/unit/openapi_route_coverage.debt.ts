@@ -1,12 +1,14 @@
 /**
- * Rutas que existen pero todavia no estan en `openapi.ts`.
+ * Rutas que existen pero todavía no están en `openapi.ts`.
  *
  * Es una lista de deuda, no una lista de excepciones permanentes: el test de
- * cobertura falla si una ruta nueva no aparece aca ni en el spec, y tambien si
- * una entrada de aca ya se documento o dejo de existir. Vaciarla es el objetivo.
+ * cobertura falla si una ruta nueva no aparece acá ni en el spec, y también si
+ * una entrada de acá ya se documentó o dejó de existir. Vaciarla es el objetivo.
  *
- * Al 2026-09-01: 59 rutas de 142. `/docs` y `/openapi.json` sirven el spec y no
- * hace falta documentarlas, asi que el numero accionable es 57.
+ * Levantada el 2026-09-01. El conteo vive en la lista, no acá: un número en un
+ * comentario se pudre sin que nada falle.
+ *
+ * `/docs` y `/openapi.json` sirven el spec y no hace falta documentarlas.
  */
 export const UNDOCUMENTED_ROUTES: readonly string[] = [
   //? bookings — 5 de 5
