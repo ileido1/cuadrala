@@ -24,7 +24,10 @@ import { PrismaMatchStatusRepository } from '../../infrastructure/adapters/prism
 import { PrismaNotificationEventRepository } from '../../infrastructure/adapters/prisma_notification_event_repository.js';
 import { PrismaUserCategoryRepository } from '../../infrastructure/adapters/prisma_user_category_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
-import { CREATE_MATCH_PLAYER_JOINED_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
+import {
+  CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_UC,
+  CREATE_MATCH_PLAYER_JOINED_NOTIFICATION_EVENT_UC,
+} from './notifications.composition.js';
 
 const MATCH_REPOSITORY = new PrismaMatchRepository();
 const MATCH_READ_REPOSITORY = new PrismaMatchReadRepository();
@@ -84,6 +87,8 @@ export const CANCEL_MATCH_UC = new CancelMatchUseCase(
   MATCH_QUERY_REPOSITORY,
   MATCH_ORGANIZER_REPOSITORY,
   MATCH_CRUD_REPOSITORY,
+  MATCH_PARTICIPATION_REPOSITORY,
+  CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_UC,
 );
 
 //? Misma transición que CANCEL_MATCH_UC, pero sin dueño que verificar: la ruta
@@ -91,6 +96,8 @@ export const CANCEL_MATCH_UC = new CancelMatchUseCase(
 export const ADMIN_CANCEL_MATCH_UC = new AdminCancelMatchUseCase(
   MATCH_QUERY_REPOSITORY,
   MATCH_CRUD_REPOSITORY,
+  MATCH_PARTICIPATION_REPOSITORY,
+  CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_UC,
 );
 
 export const GET_MATCH_PAYMENT_INFO_UC = new GetMatchPaymentInfoUseCase(

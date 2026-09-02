@@ -13,10 +13,15 @@ import type { MatchQueryRepository } from '../../domain/ports/match_query_reposi
  * operación— así que no se verifica que quien cancela sea el organizador.
  * La transición de estado sí es la misma.
  */
+import type { MatchParticipationRepository } from '../../domain/ports/match_participation_repository.js';
+import type { CreateMatchCancelledNotificationEventUseCase } from './create_match_cancelled_notification_event.use_case.js';
+
 export class AdminCancelMatchUseCase {
   constructor(
     private readonly _matchQueryRepository: MatchQueryRepository,
     private readonly _matchCrudRepository: MatchCrudRepository,
+    private readonly _matchParticipationRepository: MatchParticipationRepository | null = null,
+    private readonly _createMatchCancelledNotificationEvent: CreateMatchCancelledNotificationEventUseCase | null = null,
   ) {}
 
   /**
@@ -44,6 +49,47 @@ export class AdminCancelMatchUseCase {
     }
 
     //? 3. Transición de estado.
-    return this._matchCrudRepository.cancelMatchSV(_matchId);
+    const CANCELLED = await this._matchCrudRepository.cancelMatchSV(_matchId);
+
+    //? 4. Avisar. Acá cancela una operación, no una persona: se notifica a todos.
+    await this._notifyParticipantsSV(_matchId, MATCH.categoryId);
+
+    return CANCELLED;
+  }
+
+  /**
+   * @name    :_notifyParticipantsSV
+   * @version :1.0.0
+   * @description :Avisa a los participantes que el partido se canceló. Es
+   * best-effort: la cancelación ya se escribió, así que un fallo del canal de
+   * notificaciones no puede tumbar la operación.
+   * @param {string} _matchId - Identificador del partido
+   * @param {string} _categoryId - Categoría del partido
+   * @return {Promise<void>}
+   */
+  private async _notifyParticipantsSV(_matchId: string, _categoryId: string): Promise<void> {
+    if (
+      this._matchParticipationRepository === null ||
+      this._createMatchCancelledNotificationEvent === null
+    ) {
+      return;
+    }
+
+    try {
+      const RECIPIENTS =
+        await this._matchParticipationRepository.listParticipantUserIdsSV(_matchId);
+      if (RECIPIENTS.length === 0) {
+        return;
+      }
+
+      await this._createMatchCancelledNotificationEvent.executeSV({
+        matchId: _matchId,
+        categoryId: _categoryId,
+        userIds: RECIPIENTS,
+        payload: { kind: 'MATCH_CANCELLED', matchId: _matchId, cancelledByUserId: null },
+      });
+    } catch {
+      //? Silencio deliberado: ver el JSDoc.
+    }
   }
 }
