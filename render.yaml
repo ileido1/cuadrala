@@ -1,0 +1,41 @@
+# Render Blueprint — API de Cuadrala.
+# Levanta el servicio web + una Postgres, y cablea DATABASE_URL entre los dos.
+# Los cinco secretos se generan solos: en produccion `assertProductionSecretsSV`
+# (services/api/src/config/env.ts) tira el arranque abajo si alguno quedo con su
+# valor de desarrollo, que esta publicado en el repo.
+
+databases:
+  - name: cuadrala-db
+    databaseName: cuadrala
+    plan: free
+
+services:
+  - type: web
+    name: cuadrala-api
+    runtime: node
+    rootDir: services/api
+    plan: free
+    # `postinstall` ya corre `prisma generate`; migrate deploy aplica las
+    # migraciones pendientes antes de compilar.
+    buildCommand: npm ci && npx prisma migrate deploy && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cuadrala-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: NOTIFICATIONS_DISPATCH_SECRET
+        generateValue: true
+      - key: GEO_DISPATCH_SECRET
+        generateValue: true
+      - key: ADMIN_DISPATCH_SECRET
+        generateValue: true
