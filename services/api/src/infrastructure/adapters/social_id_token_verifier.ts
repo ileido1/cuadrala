@@ -1,4 +1,10 @@
-import { OAuth2Client } from 'google-auth-library';
+//? Mismo caso que jsonwebtoken: paquete CommonJS sin named exports bajo ESM.
+//? El destructuring da el valor; el tipo hay que traerlo con `import type`,
+//? que se borra al compilar y no pasa por el interop de CommonJS.
+import type { OAuth2Client as OAuth2ClientType } from 'google-auth-library';
+import googleAuthLibrary from 'google-auth-library';
+
+const { OAuth2Client } = googleAuthLibrary;
 import appleSigninAuth from 'apple-signin-auth';
 
 import { AppError } from '../../domain/errors/app_error.js';
@@ -32,7 +38,7 @@ function normalizeEmailSV(_email: unknown): string {
 }
 
 export class DefaultSocialIdTokenVerifier implements SocialIdTokenVerifier {
-  private readonly _googleClient: OAuth2Client;
+  private readonly _googleClient: OAuth2ClientType;
 
   public constructor() {
     this._googleClient = new OAuth2Client();

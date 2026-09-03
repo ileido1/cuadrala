@@ -1,7 +1,11 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 import type { NextFunction, Request, Response } from 'express';
-import { JsonWebTokenError } from 'jsonwebtoken';
+//? `jsonwebtoken` es CommonJS: bajo ESM sus named exports no se resuelven
+//? estaticamente. Import por default + destructuring es la forma que si anda.
+import jsonwebtoken from 'jsonwebtoken';
+
+const { JsonWebTokenError } = jsonwebtoken;
 
 import { AppError } from '../../domain/errors/app_error.js';
 import { AUTH_TOKEN_SERVICE } from '../composition/auth.composition.js';

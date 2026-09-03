@@ -1,4 +1,8 @@
-import { JsonWebTokenError } from 'jsonwebtoken';
+//? `jsonwebtoken` es CommonJS: bajo ESM sus named exports no se resuelven
+//? estaticamente. Import por default + destructuring es la forma que si anda.
+import jsonwebtoken from 'jsonwebtoken';
+
+const { JsonWebTokenError } = jsonwebtoken;
 
 import type {
   AccessTokenPayloadDTO,
