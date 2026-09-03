@@ -15,9 +15,13 @@ services:
     runtime: node
     rootDir: services/api
     plan: free
+    # `--include=dev` es obligatorio: con NODE_ENV=production, `npm ci` omite
+    # devDependencies, y ahi viven todos los @types/*. Sin el flag, `tsc` corre
+    # igual (typescript entra como transitiva) y falla con TS7016 en cada
+    # import de express.
     # `postinstall` ya corre `prisma generate`; migrate deploy aplica las
     # migraciones pendientes antes de compilar.
-    buildCommand: npm ci && npx prisma migrate deploy && npm run build
+    buildCommand: npm ci --include=dev && npx prisma migrate deploy && npm run build
     startCommand: npm start
     healthCheckPath: /api/v1/health
     envVars:
