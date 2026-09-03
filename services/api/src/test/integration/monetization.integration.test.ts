@@ -3,6 +3,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
+import { ENV_CONST } from '../../config/env.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { seedAmericanoMatchSV } from '../helpers/americano-match.seed.js';
@@ -160,6 +161,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     it('PATCH subscription actualiza a PRO', async () => {
       const RES = await request(APP)
         .patch(`/api/v1/users/${userB}/subscription`)
+        .set('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET)
         .send({ subscriptionType: 'PRO' })
         .set('Content-Type', 'application/json');
 

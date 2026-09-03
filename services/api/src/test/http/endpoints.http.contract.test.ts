@@ -392,6 +392,7 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
   it('PATCH /api/v1/users/:userId/subscription responde 400 si userId no es UUID', async () => {
     const RES = await request(APP)
       .patch('/api/v1/users/no-uuid/subscription')
+      .set('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET)
       .send({ subscriptionType: 'PRO' })
       .set('Content-Type', 'application/json');
 

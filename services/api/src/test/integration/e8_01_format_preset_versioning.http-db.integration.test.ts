@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
+import { ENV_CONST } from '../../config/env.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
@@ -44,6 +45,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 8 — E0-03: Publish preset v
 
     const PUB = await request(APP)
       .post(`/api/v1/sports/${sportPadelId}/tournament-format-presets/ROUND_ROBIN/versions`)
+      .set('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET)
       .send({
         name: 'Todos contra todos (v2)',
         schemaVersion: 2,

@@ -18,7 +18,8 @@ import {
 } from '../controllers/transaction_receipts.controller.js';
 import { AppError } from '../../domain/errors/app_error.js';
 import { asyncHandler } from '../middleware/async_handler.js';
-import { requireAuth } from '../middleware/auth.middleware.js';
+import { requireAuth, requireSecret } from '../middleware/auth.middleware.js';
+import { ENV_CONST } from '../../config/env.js';
 
 const RECEIPT_UPLOAD = multer({
   storage: multer.memoryStorage(),
@@ -65,7 +66,13 @@ MONETIZATION_ROUTER.get(
   asyncHandler(getTransactionReceiptCON),
 );
 MONETIZATION_ROUTER.get('/users/:userId/transactions', asyncHandler(getUserTransactionsCON));
-MONETIZATION_ROUTER.patch('/users/:userId/subscription', asyncHandler(patchUserSubscriptionCON));
+//? Cambia el plan de CUALQUIER usuario por su id. No hay pantalla de
+//? autoservicio que lo llame, asi que queda como superficie de ops.
+MONETIZATION_ROUTER.patch(
+  '/users/:userId/subscription',
+  requireSecret('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET),
+  asyncHandler(patchUserSubscriptionCON),
+);
 
 // Reservation payment obligations
 MONETIZATION_ROUTER.post(
