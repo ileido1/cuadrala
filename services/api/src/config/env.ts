@@ -75,6 +75,17 @@ const ENV_SCHEMA = z.object({
     .default(true),
   MATCH_STATUS_WORKER_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
   MATCH_STATUS_WORKER_TICK_TIMEOUT_MS: z.coerce.number().int().positive().default(55_000),
+  EXCHANGE_RATES_WORKER_ENABLED: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((_v) => _v === 'true')
+    .default(true),
+  //? dolarapi publica una cotización por día (fechaActualizacion cae a las
+  //? 00:00). Cada 6 h alcanza de sobra y deja margen si una publicación llega
+  //? tarde; poner esto en minutos sería pegarle al proveedor al pedo.
+  EXCHANGE_RATES_WORKER_INTERVAL_MS: z.coerce.number().int().positive().default(21_600_000),
+  EXCHANGE_RATES_WORKER_TICK_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  EXCHANGE_RATES_WORKER_COUNTRY_CODE: z.string().min(2).max(2).default('VE'),
   FCM_SERVICE_ACCOUNT_JSON_BASE64: z.string().optional(),
   FCM_DRY_RUN: z
     .enum(['true', 'false'])

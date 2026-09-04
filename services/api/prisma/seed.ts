@@ -432,10 +432,14 @@ async function seedPaymentMethodsForAllVenuesSV(): Promise<void> {
 }
 
 async function seedExchangeRatesSV(): Promise<void> {
-  //? 1. Crear tasas de cambio
+  //? 1. Valores de arranque, NO cotizaciones reales.
+  //? El `source` dice 'seed' a propósito: antes decía 'dolarapi.com' sobre
+  //? cifras inventadas, y desde afuera no había forma de distinguir una tasa
+  //? real de una de relleno. El worker de tasas las pisa con las de verdad en
+  //? su primer tick.
   const EXCHANGE_RATES = [
-    { countryCode: 'VE', currency: 'USD', rateToBs: 50.0000, source: 'dolarapi.com' },
-    { countryCode: 'VE', currency: 'EUR', rateToBs: 55.0000, source: 'dolarapi.com' },
+    { countryCode: 'VE', currency: 'USD', rateToBs: 50.0000, source: 'seed' },
+    { countryCode: 'VE', currency: 'EUR', rateToBs: 55.0000, source: 'seed' },
   ];
 
   const EFFECTIVE_DATE = new Date(
@@ -473,7 +477,10 @@ async function seedExchangeRatesSV(): Promise<void> {
     ),
   );
 
-  console.log('[seed] Tasas de cambio creadas: VE/USD @ 50 BS, VE/EUR @ 55 BS');
+  console.log(
+    '[seed] Tasas de arranque creadas (source=seed): VE/USD @ 50 BS, VE/EUR @ 55 BS. '
+    + 'El worker de tasas las reemplaza por las reales al arrancar la API.',
+  );
 }
 
 async function seedSportCategoriesSV(): Promise<void> {
