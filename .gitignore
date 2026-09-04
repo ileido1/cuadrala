@@ -36,3 +36,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Credenciales OAuth de Google: nunca versionadas.
+client_secret_*.json
