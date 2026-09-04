@@ -19,6 +19,7 @@ import '../data/monetization_repository.dart';
 import '../data/models/match_payment_info_dto.dart';
 import '../data/models/transaction_dto.dart';
 import '../data/models/venue_payment_method_dto.dart';
+import '../domain/payment_selection_ref.dart';
 import 'upload_receipt_screen.dart';
 import 'waiting_confirmation_screen.dart';
 
@@ -310,11 +311,6 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     });
   }
 
-  static final RegExp _uuidRe = RegExp(
-    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-    caseSensitive: false,
-  );
-
   Future<void> _continue() async {
     final txId = _transactionId;
     if (txId == null || txId.isEmpty) return;
@@ -345,17 +341,12 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           ?? widget.pricingCurrency
           ?? 'BS';
 
-      if (methodId != null && _uuidRe.hasMatch(methodId)) {
+      final selectionRef = resolvePaymentSelectionRefSV(methodId);
+      if (selectionRef != null) {
         await repo.recordPlayerPaymentSelection(
           transactionId: txId,
-          venuePaymentMethodId: methodId,
-          reportedSettlementMinor: reportedMinor,
-          reportedSettlementCurrency: reportedCurrency,
-        );
-      } else if (methodId != null && methodId.isNotEmpty) {
-        await repo.recordPlayerPaymentSelection(
-          transactionId: txId,
-          paymentMethodType: methodId,
+          venuePaymentMethodId: selectionRef.venuePaymentMethodId,
+          paymentMethodType: selectionRef.paymentMethodType,
           reportedSettlementMinor: reportedMinor,
           reportedSettlementCurrency: reportedCurrency,
         );
@@ -390,6 +381,19 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           matchTitle: widget.matchTitle,
           pricingCurrency: currencyForUpload,
           venueId: widget.venueId,
+        ),
+      );
+    } catch (e) {
+      //? Sin este catch la excepción subía sin que nadie la mostrara: el
+      //? spinner se apagaba y la pantalla quedaba igual. La API manda el
+      //? detalle del campo que falló, así que se muestra su mensaje.
+      if (!mounted) return;
+      final msg = e is AppFailure ? e.message : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            msg.isNotEmpty ? msg : 'No se pudo registrar el medio de pago.',
+          ),
         ),
       );
     } finally {
