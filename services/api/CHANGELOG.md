@@ -5,6 +5,23 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.2.1] - 2026-09-04
+
+### Seguridad
+
+- **`GET /users/search/by-document` exige autenticación.** Estaba registrado sin
+  guard y respondía a peticiones anónimas contra producción, devolviendo `id`,
+  `name`, `email` y `documentNumber` de quien coincidiera. Cualquiera podía
+  consultar datos personales por número de documento. Cierra
+  [#48](https://github.com/ileido1/cuadrala/issues/48).
+
+  El payload no cambia: el único consumidor es `ReservationModal` del backoffice
+  web, que ya viaja autenticado.
+
+  Con `requireAuth` cualquier usuario autenticado puede seguir consultando.
+  Restringirlo a `VenueStaff` quedó anotado como seguimiento en el issue: hoy el
+  endpoint no recibe contexto de sede, así que necesita una decisión de producto.
+
 ## [1.2.0] - 2026-09-04
 
 ### Agregado

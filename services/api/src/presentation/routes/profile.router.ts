@@ -89,4 +89,7 @@ PROFILE_ROUTER.get('/:userId/stats', asyncHandler(getUserStatsCON));
 PROFILE_ROUTER.get('/:userId/ratings', asyncHandler(getUserRatingsCON));
 PROFILE_ROUTER.get('/:userId/ratings/history', asyncHandler(getUserRatingHistoryCON));
 
-PROFILE_ROUTER.get('/search/by-document', asyncHandler(searchUsersByDocumentCON));
+//? Devuelve nombre, email y documento de quien coincida. Sin guard, cualquiera
+//? consulta datos personales por número de documento. El único consumidor es el
+//? backoffice (ReservationModal), que ya viaja autenticado.
+PROFILE_ROUTER.get('/search/by-document', requireAuth, asyncHandler(searchUsersByDocumentCON));
