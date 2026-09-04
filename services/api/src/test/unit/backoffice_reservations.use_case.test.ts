@@ -48,6 +48,7 @@ function createMockVenueRepository() {
   return {
     findByIdSV: vi.fn(),
     getOpeningHoursSV: vi.fn().mockResolvedValue(null),
+    getVenueTimezoneSV: vi.fn().mockResolvedValue(null),
     updateSV: vi.fn(),
     getPaymentInfoSV: vi.fn(),
     listVenuesSV: vi.fn(),

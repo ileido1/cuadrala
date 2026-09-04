@@ -102,6 +102,53 @@ export function getWallClockMinutesFromDateSV(_date: Date): number {
   return _date.getUTCHours() * 60 + _date.getUTCMinutes();
 }
 
+/** Zona por defecto cuando la sede no la configuró (misma que el schema). */
+export const DEFAULT_VENUE_TIMEZONE = 'America/Caracas';
+
+/**
+ * Traduce un instante real a la hora de pared de la sede, expresada con
+ * componentes UTC.
+ *
+ * Todo el sistema usa la convención wall-clock-as-UTC: `openingHours` y los
+ * slots se comparan por sus componentes UTC, que representan la hora local de
+ * la sede. Para saber si un slot ya pasó hace falta "qué hora es en la sede",
+ * y eso es exactamente lo que devuelve esta función.
+ *
+ * Ante una zona inválida cae en la de por defecto en vez de lanzar: una
+ * timezone mal cargada no debe tumbar la consulta de disponibilidad.
+ */
+export function venueWallClockNowSV(_at: Date, _timezone: string): Date {
+  const PARTS = formatInTimezoneSV(_at, _timezone)
+    ?? formatInTimezoneSV(_at, DEFAULT_VENUE_TIMEZONE);
+  if (PARTS === null) {
+    return _at;
+  }
+  return new Date(PARTS);
+}
+
+/** Devuelve el instante como ISO wall-clock, o null si la zona no existe. */
+function formatInTimezoneSV(_at: Date, _timezone: string): string | null {
+  try {
+    const PARTS = new Intl.DateTimeFormat('en-CA', {
+      timeZone: _timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(_at);
+
+    const PICK = (_type: string): string =>
+      PARTS.find((_p) => _p.type === _type)?.value ?? '00';
+
+    return `${PICK('year')}-${PICK('month')}-${PICK('day')}T${PICK('hour')}:${PICK('minute')}:${PICK('second')}.000Z`;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Predicado puro y no-lanzante: indica si la franja [scheduledAt, +duration]
  * cae dentro del horario de atención de la sede para ese día.

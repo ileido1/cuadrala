@@ -11,6 +11,7 @@ function buildRepo(): VenueRepository {
   return {
     findByIdSV: vi.fn(),
     getOpeningHoursSV: vi.fn(),
+    getVenueTimezoneSV: vi.fn().mockResolvedValue(null),
     updateSV: vi.fn(),
     getPaymentInfoSV: vi.fn(),
     listVenuesSV: vi.fn().mockResolvedValue({ items: [], total: 0 }),

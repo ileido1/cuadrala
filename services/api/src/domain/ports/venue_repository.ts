@@ -113,6 +113,8 @@ export interface VenueRepository {
   getOpeningHoursSV(
     _venueId: string,
   ): Promise<Record<string, { open: string; close: string }> | null>;
+  /** IANA tz de la sede; `null` si no configuró `monetizationSettings`. */
+  getVenueTimezoneSV(_venueId: string): Promise<string | null>;
   updateSV(_venueId: string, _data: UpdateVenueDataDTO): Promise<VenueSettingsDTO>;
   getPaymentInfoSV(_venueId: string): Promise<VenuePaymentInfoDTO | null>;
   listVenuesSV(

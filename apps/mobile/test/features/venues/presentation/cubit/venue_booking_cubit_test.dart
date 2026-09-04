@@ -1066,19 +1066,13 @@ void main() {
     ],
   );
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // selectCourt() — "ya pasó" lo decide el backend, no el reloj del dispositivo
+  // ──────────────────────────────────────────────────────────────────────────
+
   blocTest<VenueBookingCubit, VenueBookingState>(
-    'should hide past slots and keep future ones when selected date is today',
+    'should hide the slots the API marked PAST',
     build: () {
-      final now = DateTime.now();
-      DateTime wall(Duration offset) {
-        final base = DateTime.utc(now.year, now.month, now.day, now.hour, now.minute)
-            .add(offset);
-        return base;
-      }
-
-      final pastIso = wall(const Duration(hours: -2)).toIso8601String();
-      final futureIso = wall(const Duration(hours: 2)).toIso8601String();
-
       when(() => venuesRepo.getVenueAvailability(
             venueId: any(named: 'venueId'),
             from: any(named: 'from'),
@@ -1090,7 +1084,65 @@ void main() {
             categoryId: any(named: 'categoryId'),
           )).thenAnswer(
         (_) async => _availabilityEnvelope(
-          slots: [_slot(pastIso), _slot(futureIso)],
+          slots: [
+            _slot('2024-06-01T10:00:00.000Z', isAvailable: false, reason: 'PAST'),
+            _slot('2024-06-01T18:00:00.000Z'),
+          ],
+        ),
+      );
+
+      return VenueBookingCubit(
+        venue: _venue(),
+        venuesRepository: venuesRepo,
+        matchesRepository: matchesRepo,
+        onboardingRepository: onboardingRepo,
+      );
+    },
+    seed: () => VenueBookingState(
+      venue: _venue(),
+      selectedDate: DateTime(2024, 6, 1),
+      courts: [_court()],
+      sportId: 'sport-1',
+      selectedCategoryId: 'cat-1',
+    ),
+    act: (cubit) => cubit.selectCourt('court-1'),
+    expect: () => [
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading court', 'court-1'),
+      isA<VenueBookingState>()
+          .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
+          .having(
+            (s) => s.slotsByCourtId['court-1']!.length,
+            'only the non-PAST slot kept',
+            1,
+          )
+          .having(
+            (s) => s.slotsByCourtId['court-1']!.single.scheduledAt,
+            'the future one',
+            '2024-06-01T18:00:00.000Z',
+          ),
+    ],
+  );
+
+  blocTest<VenueBookingCubit, VenueBookingState>(
+    'should not consult the device clock: keeps a slot the API did not mark PAST '
+    'even if it is in the past for this device',
+    build: () {
+      // Instante muy anterior al reloj de cualquier dispositivo que corra esto,
+      // pero que el backend NO marcó como pasado. El cliente debe respetarlo:
+      // el único que sabe en qué huso vive la sede es el servidor.
+      when(() => venuesRepo.getVenueAvailability(
+            venueId: any(named: 'venueId'),
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            courtId: any(named: 'courtId'),
+            durationMinutes: any(named: 'durationMinutes'),
+            stepMinutes: any(named: 'stepMinutes'),
+            sportId: any(named: 'sportId'),
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer(
+        (_) async => _availabilityEnvelope(
+          slots: [_slot('2020-01-01T10:00:00.000Z')],
         ),
       );
 
@@ -1105,6 +1157,7 @@ void main() {
       final now = DateTime.now();
       return VenueBookingState(
         venue: _venue(),
+        // Hoy: es el caso en el que el filtro viejo se activaba.
         selectedDate: DateTime(now.year, now.month, now.day),
         courts: [_court()],
         sportId: 'sport-1',
@@ -1119,7 +1172,7 @@ void main() {
           .having((s) => s.slotsLoadingCourtId, 'loading done', isNull)
           .having(
             (s) => s.slotsByCourtId['court-1']!.length,
-            'only future slot kept',
+            'slot kept: the device clock has no say',
             1,
           ),
     ],

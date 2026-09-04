@@ -2244,7 +2244,10 @@ const OPENAPI_CONST = {
                                         'INCOMPATIBLE_VACANT_HOUR',
                                         'OUT_OF_RANGE',
                                         'OUT_OF_OPENING_HOURS',
+                                        'PAST',
                                       ],
+                                      description:
+                                        'PAST: el horario ya pasó según el reloj de la sede (su timezone), no el del cliente.',
                                     },
                                   },
                                   additionalProperties: false,

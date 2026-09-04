@@ -2,7 +2,9 @@ import { AppError } from '../../domain/errors/app_error.js';
 import type { MatchCourtAvailabilityRepository } from '../../domain/ports/match_court_availability_repository.js';
 import type { VenueRepository } from '../../domain/ports/venue_repository.js';
 import {
+  DEFAULT_VENUE_TIMEZONE,
   isWithinOpeningHoursSV,
+  venueWallClockNowSV,
   type OpeningHoursMap,
 } from '../../domain/services/venue/venue_opening_hours.service.js';
 
@@ -11,7 +13,8 @@ export type CourtAvailabilityReasonDTO =
   | 'OCCUPIED_RESERVATION'
   | 'INCOMPATIBLE_VACANT_HOUR'
   | 'OUT_OF_RANGE'
-  | 'OUT_OF_OPENING_HOURS';
+  | 'OUT_OF_OPENING_HOURS'
+  | 'PAST';
 
 export type CourtAvailabilitySlotDTO = {
   scheduledAt: string;
@@ -52,6 +55,9 @@ export class GetCourtAvailabilityUseCase {
   constructor(
     private readonly _repo: MatchCourtAvailabilityRepository,
     private readonly _venueRepository: VenueRepository,
+    //? Inyectable para que los tests fijen "ahora" en vez de depender del
+    //? reloj de la máquina, que haría que pasen hoy y fallen el mes que viene.
+    private readonly _nowSV: () => Date = () => new Date(),
   ) {}
 
   async executeSV(_input: GetCourtAvailabilityUseCaseInput): Promise<GetCourtAvailabilityUseCaseOutput> {
@@ -85,6 +91,13 @@ export class GetCourtAvailabilityUseCase {
     // Horario de la sede: se carga UNA sola vez por request (no por slot/court).
     const OPENING_HOURS = await this._venueRepository.getOpeningHoursSV(_input.venueId);
 
+    //? "Ya pasó" se decide acá y no en el cliente: la sede es la única que
+    //? sabe en qué huso vive. El cliente solo conoce el reloj del dispositivo,
+    //? que acierta por casualidad cuando el usuario está en la misma zona.
+    const TIMEZONE =
+      (await this._venueRepository.getVenueTimezoneSV(_input.venueId)) ?? DEFAULT_VENUE_TIMEZONE;
+    const NOW_WALL_CLOCK = venueWallClockNowSV(this._nowSV(), TIMEZONE);
+
     const RESULT_COURTS: CourtAvailabilityCourtDTO[] = [];
     for (const C of COURTS) {
       const SLOTS: CourtAvailabilitySlotDTO[] = [];
@@ -95,6 +108,17 @@ export class GetCourtAvailabilityUseCase {
             scheduledAt: t.toISOString(),
             isAvailable: false,
             reason: 'OUT_OF_RANGE',
+          });
+          continue;
+        }
+
+        //? Antes que cualquier otro motivo: un slot que ya arrancó no se
+        //? reserva, y saberlo le sirve más al usuario que "estaba ocupado".
+        if (t.getTime() < NOW_WALL_CLOCK.getTime()) {
+          SLOTS.push({
+            scheduledAt: t.toISOString(),
+            isAvailable: false,
+            reason: 'PAST',
           });
           continue;
         }

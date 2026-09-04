@@ -5,6 +5,17 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.0.2] - 2026-09-04
+
+### Cambiado
+
+- **Los horarios pasados los decide ahora el servidor.** El cubit de reserva
+  ocultaba los horarios de hoy comparándolos contra el reloj del dispositivo
+  reetiquetado como UTC. Eso acierta solo si el usuario está en el mismo huso
+  que la cancha: alguien en Madrid mirando una sede de Caracas veía como
+  reservables horarios que ya habían pasado hacía medio día. El cliente ahora
+  solo oculta los horarios que la API marcó con `reason: 'PAST'`.
+
 ## [1.0.1] - 2026-09-04
 
 ### Corregido

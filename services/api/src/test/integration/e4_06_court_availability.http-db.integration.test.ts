@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
@@ -80,6 +80,19 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
     afterAll(async () => {
       await PRISMA.$disconnect();
+    });
+
+    //? Los casos usan fechas fijas de junio 2026. La API ahora marca PAST los
+    //? slots anteriores a "ahora", así que sin congelar el reloj estos tests
+    //? se vuelven rojos con el paso del tiempo. Se falsea solo `Date`: los
+    //? timers reales quedan intactos para no colgar las llamadas a la DB.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
     });
 
     it('devuelve slots disponibles sin partidos', async () => {

@@ -186,21 +186,6 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
             orElse: () => <String, Object?>{},
           );
 
-      // Cuando el día seleccionado es hoy, ocultamos los horarios ya pasados.
-      // "Ahora" se expresa en la misma convención wall-clock-as-UTC: los
-      // componentes locales del reloj del dispositivo tratados como hora de sede.
-      final now = DateTime.now();
-      final isToday =
-          date.year == now.year && date.month == now.month && date.day == now.day;
-      final nowWallClock = DateTime.utc(
-        now.year,
-        now.month,
-        now.day,
-        now.hour,
-        now.minute,
-        now.second,
-      );
-
       final slotsRaw = courtEntry['slots'];
       final slots = <SlotInfo>[];
       if (slotsRaw is List) {
@@ -208,13 +193,14 @@ class VenueBookingCubit extends Cubit<VenueBookingState> {
           if (s is! Map) continue;
           final scheduledAt = s['scheduledAt'];
           if (scheduledAt is! String) continue;
-          if (isToday) {
-            final dt = DateTime.tryParse(scheduledAt);
-            if (dt != null && dt.isBefore(nowWallClock)) continue;
-          }
-          // Se conservan TODOS los slots (no solo isAvailable==true) para que
-          // la UI pueda renderizar los ocupados como chips deshabilitados con
-          // su motivo (REQ-MCP-003). Los pasados se ocultan igual para todos.
+          // Los horarios ya pasados los marca el backend con reason 'PAST':
+          // es el único que conoce la zona horaria de la sede. El reloj del
+          // dispositivo no participa — acertaba solo cuando el usuario estaba
+          // en el mismo huso que la cancha.
+          if (s['reason'] == 'PAST') continue;
+          // Se conservan TODOS los slots restantes (no solo isAvailable==true)
+          // para que la UI pueda renderizar los ocupados como chips
+          // deshabilitados con su motivo (REQ-MCP-003).
           slots.add(SlotInfo(
             scheduledAt: scheduledAt,
             isAvailable: s['isAvailable'] == true,

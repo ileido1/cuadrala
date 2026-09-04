@@ -253,6 +253,19 @@ async function seedVenuesSV(): Promise<void> {
     ),
   );
 
+  //? 2b. Configuración monetaria: sin esta fila el `timezone` de la sede viaja
+  //? como null y la API no puede decidir si un horario ya pasó. El default del
+  //? schema no alcanza — un default solo aplica cuando la fila existe.
+  await Promise.all(
+    SEEDED_VENUES.map((_seeded) =>
+      PRISMA.venueMonetizationSettings.upsert({
+        where: { venueId: _seeded.id },
+        create: { venueId: _seeded.id, timezone: 'America/Caracas' },
+        update: { timezone: 'America/Caracas' },
+      }),
+    ),
+  );
+
   //? 3. Crear courts para cada venue
   await Promise.all(
     SEEDED_VENUES.map(async (_seeded, _idx) => {

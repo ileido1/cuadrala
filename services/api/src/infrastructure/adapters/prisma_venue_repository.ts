@@ -174,6 +174,14 @@ export class PrismaVenueRepository implements VenueRepository {
     return ROW.openingHours as Record<string, { open: string; close: string }> | null;
   }
 
+  async getVenueTimezoneSV(_venueId: string): Promise<string | null> {
+    const ROW = await this._prisma.venue.findUnique({
+      where: { id: _venueId },
+      select: { monetizationSettings: { select: { timezone: true } } },
+    });
+    return ROW?.monetizationSettings?.timezone ?? null;
+  }
+
   async updateSV(_venueId: string, _data: UpdateVenueDataDTO): Promise<VenueSettingsDTO> {
     const UPDATED = await this._prisma.venue.update({
       where: { id: _venueId },
