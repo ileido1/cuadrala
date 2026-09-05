@@ -24,14 +24,16 @@ class SegmentedControl<T> extends StatelessWidget {
   });
 
   final List<SegmentedOption<T>> options;
-  final T value;
+
+  /// Valor activo. Si no coincide con ninguna opción (o es `null`) el control
+  /// se dibuja sin indicador: nada está elegido todavía.
+  final T? value;
   final ValueChanged<T> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final selectedIndex = options.indexWhere((o) => o.value == value);
-    final index = selectedIndex < 0 ? 0 : selectedIndex;
+    final index = options.indexWhere((o) => o.value == value);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -49,27 +51,28 @@ class SegmentedControl<T> extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeInOutCubic,
-                left: segmentWidth * index,
-                top: 0,
-                bottom: 0,
-                width: segmentWidth,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(9),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x2E000000),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
+              if (index >= 0)
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOutCubic,
+                  left: segmentWidth * index,
+                  top: 0,
+                  bottom: 0,
+                  width: segmentWidth,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(9),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x2E000000),
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               Row(
                 children: [
                   for (var i = 0; i < options.length; i++)
