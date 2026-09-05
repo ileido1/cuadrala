@@ -5,6 +5,33 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.0.3] - 2026-09-04
+
+### Corregido
+
+- **Onboarding: "drive" aparecía elegido pero al continuar pedía elegirlo.**
+  `SegmentedControl` caía al índice 0 cuando el valor activo no era ninguna de
+  sus opciones, así que pintaba la primera como seleccionada. El lado de cancha
+  arranca en `ANY`, que ese control no ofrece: la UI mostraba "Drive" marcado
+  mientras la validación —y la API, que rechaza `ANY` en deportes de raqueta—
+  seguían viendo que no había elección. Ahora el control no dibuja indicador
+  cuando nada coincide, y el usuario ve lo que realmente tiene.
+- **Beach tennis no se podía guardar.** `racketSportCodes` de la app listaba
+  tres deportes y `RACKET_SPORT_CODES` de la API cuatro. Por esa diferencia la
+  app nunca preguntaba el lado preferido para beach tennis y enviaba `ANY`, que
+  la API rechaza con 400 para deportes de raqueta. Las dos listas vuelven a
+  coincidir.
+
+### Añadido
+
+- **"Mis deportes" en Perfil.** El onboarding era de un solo tiro: quien elegía
+  solo pádel no tenía forma de declarar su categoría de tenis después, y la API
+  lo frenaba con `CATEGORIA_NO_COMPATIBLE` al crear o unirse a un partido de
+  otro deporte. La nueva pantalla reusa la misma página del onboarding y
+  precarga los perfiles guardados —obligatorio, porque el `PUT` reemplaza la
+  lista completa de perfiles y categorías— junto con la mano dominante, que
+  también se re-envía en cada guardado.
+
 ## [1.0.2] - 2026-09-04
 
 ### Cambiado

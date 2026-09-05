@@ -1,5 +1,11 @@
 /// Deportes con categorías ordinales 8va–1ra.
-const racketSportCodes = {'PADEL', 'TENNIS', 'PICKLEBALL'};
+///
+/// Debe coincidir con `RACKET_SPORT_CODES` de la API
+/// (`domain/services/category/sport_classification_catalog.ts`): allí se exige
+/// lado preferido (drive/revés) para estos códigos y se rechaza `ANY` con 400.
+/// Faltaba `BEACH_TENNIS`, así que la app nunca preguntaba el lado para ese
+/// deporte y el guardado fallaba.
+const racketSportCodes = {'PADEL', 'TENNIS', 'PICKLEBALL', 'BEACH_TENNIS'};
 
 /// Deportes con 3 niveles: Recreativo / Intermedio / Competitivo.
 const teamSportCodes = {'FOOTBALL5', 'BASKETBALL3X3', 'VOLLEY_BEACH'};

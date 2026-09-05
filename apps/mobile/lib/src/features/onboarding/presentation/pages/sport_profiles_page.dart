@@ -11,12 +11,21 @@ import '../../../../shared/widgets/selectable_chip.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../../catalog/data/models/category_dto.dart';
 import '../../../catalog/data/models/sport_dto.dart';
+import '../../../profile/data/profile_repository.dart';
 import '../../data/models/onboarding_status_dto.dart';
 import '../../data/models/player_sport_profile_dto.dart';
+import '../../data/onboarding_repository.dart';
 import '../cubit/onboarding_cubit.dart';
 import '../cubit/onboarding_state.dart';
 
 enum _DominantHandChoice { right, left, ambidextrous }
+
+_DominantHandChoice _dominantHandFromWire(String? raw) =>
+    switch (raw?.toUpperCase()) {
+      'LEFT' => _DominantHandChoice.left,
+      'AMBIDEXTROUS' => _DominantHandChoice.ambidextrous,
+      _ => _DominantHandChoice.right,
+    };
 
 extension on _DominantHandChoice {
   String get wire => switch (this) {
@@ -89,13 +98,51 @@ class _OnboardingSportProfilesPageState extends State<OnboardingSportProfilesPag
     try {
       final list = await getIt<CatalogRepository>().listSports();
       if (!mounted) return;
-      setState(() {
-        _sports = list;
-        _loading = false;
-      });
+      setState(() => _sports = list);
+      await _hydrateExistingProfiles(list);
     } catch (_) {
+      // Catálogo o perfiles caídos: se sigue con la pantalla vacía.
+    }
+    if (!mounted) return;
+    setState(() => _loading = false);
+  }
+
+  /// Precarga los perfiles ya guardados.
+  ///
+  /// `PUT /users/me/sport-profiles` REEMPLAZA la lista completa (y las
+  /// categorías del usuario). Entrar acá a agregar un deporte sin traer lo
+  /// existente borraría los perfiles anteriores, así que la precarga es
+  /// obligatoria, no una comodidad.
+  Future<void> _hydrateExistingProfiles(List<SportDto> sports) async {
+    final existing = await getIt<OnboardingRepository>().listSportProfiles();
+    if (!mounted || existing.isEmpty) return;
+
+    final knownSportIds = sports.map((s) => s.id).toSet();
+    for (final profile in existing) {
+      if (!knownSportIds.contains(profile.sportId)) continue;
+      await _loadCategoriesForSport(profile.sportId);
       if (!mounted) return;
-      setState(() => _loading = false);
+
+      final categories = _categoriesBySportId[profile.sportId] ?? const [];
+      final category =
+          categories.where((c) => c.id == profile.categoryId).firstOrNull;
+      setState(() {
+        _selected.add(profile.sportId);
+        _configFor(profile.sportId)
+          ..band = skillBandFromApi(category?.skillBand)
+          ..categoryId = category?.id
+          ..courtSide = profile.sidePreference;
+      });
+    }
+
+    //? La mano dominante se re-envía en cada guardado: sin precargarla, un
+    //? zurdo que vuelva a esta pantalla se guardaría como diestro.
+    try {
+      final player = await getIt<ProfileRepository>().getPlayerProfile();
+      if (!mounted) return;
+      setState(() => _dominantHand = _dominantHandFromWire(player.dominantHand));
+    } catch (_) {
+      // Sin perfil de jugador se mantiene el valor por defecto.
     }
   }
 

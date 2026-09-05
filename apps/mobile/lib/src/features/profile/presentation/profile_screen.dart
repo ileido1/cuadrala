@@ -258,6 +258,11 @@ final class _SettingsMenu extends StatelessWidget {
         onTap: () => context.push(Routes.onboarding),
       ),
       _SettingsItem(
+        icon: AppIcons.racquetSport,
+        label: 'Mis deportes',
+        onTap: () => context.push(Routes.mySports),
+      ),
+      _SettingsItem(
         icon: AppIcons.target,
         label: 'Historial de ELO',
         onTap: () => showProfileEloSheet(context, vm),

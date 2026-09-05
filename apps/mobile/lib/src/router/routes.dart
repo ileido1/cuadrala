@@ -33,6 +33,9 @@ final class Routes {
   static const notifications = '/notifications';
   static const notificationPrefs = '/notifications/prefs';
   static const availability = '/availability';
+  /// Fuera del branch `/perfil` a propósito: es un overlay de nivel superior,
+  /// como `/availability`, y así no compite con las rutas del shell.
+  static const mySports = '/mis-deportes';
   static String venueCreateMatch(String venueId) =>
       '/venues/$venueId/create-match';
 
