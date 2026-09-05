@@ -40,7 +40,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await PRISMA.$disconnect();
     });
 
-    it('responds 409 when self-registering on a tournament that is not DRAFT', async () => {
+    //? La ventana de inscripción son DRAFT y OPEN. Antes OPEN daba 409: el
+    //? estado que se llama "abierto" era justo donde el jugador no podía
+    //? anotarse, mientras el organizador sí podía invitarlo.
+    it('responds 201 when self-registering on an OPEN tournament', async () => {
       const TOURNAMENT = await PRISMA.tournament.create({
         data: {
           name: `Torneo Reg Guard OPEN ${Date.now()}`,
@@ -50,10 +53,39 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           status: 'OPEN',
         },
       });
+      const TS = Date.now();
+      const PLAYER = await PRISMA.user.create({
+        data: { email: `reg-guard-open-${TS}@test.local`, name: 'Reg Guard Open' },
+      });
 
       const RES = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`)
-        .send({ userId: '550e8400-e29b-41d4-a716-446655440099' })
+        .send({ userId: PLAYER.id })
+        .set('Authorization', `Bearer ${playerToken}`)
+        .set('Content-Type', 'application/json');
+
+      expect(RES.status).toBe(201);
+      expect(RES.body.data.status).toBe('PENDING');
+    });
+
+    it('responds 409 when self-registering on a tournament already IN_PROGRESS', async () => {
+      const TOURNAMENT = await PRISMA.tournament.create({
+        data: {
+          name: `Torneo Reg Guard IN_PROGRESS ${Date.now()}`,
+          categoryId,
+          sportId,
+          formatPresetId: presetAmericanoId,
+          status: 'IN_PROGRESS',
+        },
+      });
+      const TS = Date.now();
+      const PLAYER = await PRISMA.user.create({
+        data: { email: `reg-guard-inprogress-${TS}@test.local`, name: 'Reg Guard In Progress' },
+      });
+
+      const RES = await request(APP)
+        .post(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`)
+        .send({ userId: PLAYER.id })
         .set('Authorization', `Bearer ${playerToken}`)
         .set('Content-Type', 'application/json');
 

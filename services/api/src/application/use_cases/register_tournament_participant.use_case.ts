@@ -1,4 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import { isTournamentRosterOpenSV } from '../../domain/tournament/tournament_registration_window.js';
 import type { TournamentRegistrationDTO, TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 
@@ -17,8 +18,8 @@ export class RegisterTournamentParticipantUseCase {
       throw new AppError('TORNEO_NO_ENCONTRADO', 'El torneo indicado no existe.', 404);
     }
 
-    //? Autoinscripción solo permitida mientras el torneo está en DRAFT (MVP).
-    if (TOURNAMENT.status !== 'DRAFT') {
+    //? Misma ventana que la baja y las invitaciones: DRAFT y OPEN.
+    if (!isTournamentRosterOpenSV(TOURNAMENT.status)) {
       throw new AppError(
         'TORNEO_CERRADO',
         'El torneo no admite nuevas inscripciones en su estado actual.',
