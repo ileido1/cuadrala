@@ -244,8 +244,13 @@ enum TournamentVisibility {
 }
 
 enum ReservationStatus {
+  /// Turno apartado pero todavia no firme: bloquea la cancha y vence solo.
+  /// Lo usa el calendario de torneo mientras los jugadores aceptan su horario.
+  HELD
   CONFIRMED
   CANCELLED
+  /// Un HELD que llego a `holdExpiresAt` sin confirmarse. Libera el turno.
+  EXPIRED
 }
 
 enum SportType {
@@ -830,6 +835,8 @@ model Reservation {
   matchStatus         MatchStatus? // solo cuando type=MATCH
 
   status            ReservationStatus @default(CONFIRMED)
+  /// Solo para `HELD`: momento en que el turno se libera si nadie lo confirma.
+  holdExpiresAt     DateTime?
   scheduledAt       DateTime
   durationMinutes   Int               @default(60)
   notes             String?
@@ -862,8 +869,12 @@ model Reservation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([courtId, scheduledAt])
+  //? La exclusividad del turno la da el indice parcial
+  //? `Reservation_court_slot_live_uniq` (ver migracion): solo aplica a HELD y
+  //? CONFIRMED. Como @@unique aca cubria todas las filas, un turno cancelado
+  //? quedaba tomado para siempre. Prisma no expresa indices parciales.
   @@index([courtId, scheduledAt])
+  @@index([status, holdExpiresAt])
   @@index([venueId])
   @@index([status])
   @@index([type])

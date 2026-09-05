@@ -24,7 +24,7 @@ function createMockReservationRepository() {
   return {
     createReservationSV: vi.fn(),
     findByIdSV: vi.fn(),
-    findByCourtAndScheduledAtSV: vi.fn(),
+    findLiveByCourtAndScheduledAtSV: vi.fn(),
     listReservationsSV: vi.fn(),
     cancelReservationSV: vi.fn(),
     updateTotalAmountCentsSV: vi.fn(),
@@ -157,7 +157,7 @@ describe('CreateReservationUseCase', () => {
       durationMinutes: 60,
     };
     const expected = createReservation();
-    repo.findByCourtAndScheduledAtSV.mockResolvedValue(null);
+    repo.findLiveByCourtAndScheduledAtSV.mockResolvedValue(null);
     repo.createReservationSV.mockResolvedValue(expected);
     venueStaffRepo.isUserStaffOfVenueSV.mockResolvedValue(true);
 
@@ -205,11 +205,32 @@ describe('CreateReservationUseCase', () => {
       scheduledAt: new Date('2026-06-01T10:00:00Z'),
     };
     const existing = createReservation();
-    repo.findByCourtAndScheduledAtSV.mockResolvedValue(existing);
+    repo.findLiveByCourtAndScheduledAtSV.mockResolvedValue(existing);
     venueStaffRepo.isUserStaffOfVenueSV.mockResolvedValue(true);
 
     await expect(useCase.executeSV(input, ACTOR_USER_ID)).rejects.toThrow(AppError);
-    await expect(useCase.executeSV(input, ACTOR_USER_ID)).rejects.toThrow('Ya existe una reserva confirmada para ese horario en esta cancha.');
+    await expect(useCase.executeSV(input, ACTOR_USER_ID)).rejects.toThrow('Ese horario ya está tomado en esta cancha.');
+  });
+
+  //? Un turno apartado (HELD) tambien ocupa la cancha. Antes el chequeo miraba
+  //? solo 'CONFIRMED', dejaba pasar la reserva y reventaba contra el indice.
+  it('should throw CONFLICTO when the slot is only held, not confirmed yet', async () => {
+    const input: CreateReservationInput = {
+      venueId: VENUE_ID,
+      courtId: COURT_ID,
+      sportId: SPORT_ID,
+      categoryId: CATEGORY_ID,
+      scheduledAt: new Date('2026-06-01T10:00:00Z'),
+    };
+    repo.findLiveByCourtAndScheduledAtSV.mockResolvedValue({
+      ...createReservation(),
+      status: 'HELD',
+    });
+    venueStaffRepo.isUserStaffOfVenueSV.mockResolvedValue(true);
+
+    await expect(useCase.executeSV(input, ACTOR_USER_ID)).rejects.toThrow(
+      'Ese horario ya está tomado en esta cancha.',
+    );
   });
 
   it('should throw HORARIO_CERRADO when venue is closed that day', async () => {
@@ -241,7 +262,7 @@ describe('CreateReservationUseCase', () => {
       scheduledAt: new Date('2026-06-01T10:00:00Z'),
     };
     const blocked = createReservation({ type: ReservationType.BLOCKED });
-    repo.findByCourtAndScheduledAtSV.mockResolvedValue(null);
+    repo.findLiveByCourtAndScheduledAtSV.mockResolvedValue(null);
     repo.createReservationSV.mockResolvedValue(blocked);
     venueStaffRepo.isUserStaffOfVenueSV.mockResolvedValue(true);
 

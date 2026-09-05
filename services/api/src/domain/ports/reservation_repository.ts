@@ -18,7 +18,17 @@ export interface ReservationRepository {
   findByIdSV(_id: string): Promise<ReservationDTO | null>;
 
   /** Verifica si ya existe una reserva para ese court+scheduledAt (excluye canceladas). */
-  findByCourtAndScheduledAtSV(_courtId: string, _scheduledAt: Date): Promise<ReservationDTO | null>;
+  /**
+   * La reserva VIVA (HELD o CONFIRMED) de esa cancha y horario, si la hay.
+   *
+   * Un mismo turno puede tener varias filas historicas: cancelar no borra, solo
+   * cambia el estado. Solo las vivas ocupan la cancha, igual que el indice
+   * parcial `Reservation_court_slot_live_uniq`.
+   */
+  findLiveByCourtAndScheduledAtSV(
+    _courtId: string,
+    _scheduledAt: Date,
+  ): Promise<ReservationDTO | null>;
 
   /** Lista reservas con filtros y paginación. */
   listReservationsSV(

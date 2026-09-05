@@ -5,6 +5,7 @@ import type {
 } from '../../domain/ports/match_court_availability_repository.js';
 
 import { PRISMA } from '../prisma_client.js';
+import { LIVE_RESERVATION_STATUSES } from '../../domain/reservation/reservation_slot.js';
 
 const DEFAULT_BLOCK_MINUTES = 90;
 
@@ -106,12 +107,16 @@ export class PrismaMatchCourtAvailabilityRepository implements MatchCourtAvailab
     _courtId: string,
     _scheduledAt: Date,
   ): Promise<boolean> {
-    const ROW = await PRISMA.reservation.findUnique({
+    //? Un turno apartado tambien ocupa la cancha: mostrarlo como disponible
+    //? llevaria al usuario a un 409 al reservar.
+    const ROW = await PRISMA.reservation.findFirst({
       where: {
-        courtId_scheduledAt: { courtId: _courtId, scheduledAt: _scheduledAt },
+        courtId: _courtId,
+        scheduledAt: _scheduledAt,
+        status: { in: [...LIVE_RESERVATION_STATUSES] as ('HELD' | 'CONFIRMED')[] },
       },
       select: { status: true },
     });
-    return ROW?.status === 'CONFIRMED';
+    return ROW !== null;
   }
 }
