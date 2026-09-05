@@ -28,6 +28,7 @@ import '../features/monetization/presentation/upload_receipt_screen.dart';
 import '../features/monetization/presentation/waiting_confirmation_screen.dart';
 import '../features/notifications/presentation/notification_detail_screen.dart';
 import '../features/notifications/presentation/notification_prefs_screen.dart';
+import '../features/onboarding/presentation/my_sports_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
 import '../features/venue_detail/venue_detail_screen.dart';
@@ -292,6 +293,10 @@ final class AppRouter {
                 child:
                     AvailabilityScreen(repository: getIt<AvailabilityRepository>()),
               ),
+            ),
+            GoRoute(
+              path: Routes.mySports,
+              builder: (context, state) => const MySportsScreen(),
             ),
             GoRoute(
               path: '/venues/:venueId/create-match',
