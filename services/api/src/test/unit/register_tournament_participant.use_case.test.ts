@@ -66,14 +66,36 @@ describe('RegisterTournamentParticipantUseCase', () => {
     expect(RESULT.registration.registrationType).toBe('AUTHENTICATED');
   });
 
-  it('should throw TORNEO_CERRADO when the tournament is not DRAFT', async () => {
+  //? La ventana de inscripción son DRAFT y OPEN, las mismas que ya usaban
+  //? `withdraw_tournament_registration` e `invite_tournament_participant`.
+  //? Antes la autoinscripción exigía DRAFT a secas, así que el estado llamado
+  //? OPEN era justo donde el jugador no podía anotarse, mientras el organizador
+  //? sí podía invitarlo: la puerta pública cerraba al publicar el torneo.
+  it.each(['DRAFT', 'OPEN'])('should accept self-registration while the tournament is %s', async (_status) => {
     mockTournamentRepository.findByIdSV.mockResolvedValue({
       ...BASE_TOURNAMENT,
-      status: 'OPEN',
+      status: _status,
     });
 
-    await expect(
-      useCase.executeSV({ tournamentId: 'tournament-1', userId: 'user-1' }),
-    ).rejects.toThrow('El torneo no admite nuevas inscripciones en su estado actual.');
+    const RESULT = await useCase.executeSV({
+      tournamentId: 'tournament-1',
+      userId: 'user-1',
+    });
+
+    expect(RESULT.registration.status).toBe('PENDING');
   });
+
+  it.each(['IN_PROGRESS', 'COMPLETED', 'CANCELLED'])(
+    'should throw TORNEO_CERRADO when the tournament is %s',
+    async (_status) => {
+      mockTournamentRepository.findByIdSV.mockResolvedValue({
+        ...BASE_TOURNAMENT,
+        status: _status,
+      });
+
+      await expect(
+        useCase.executeSV({ tournamentId: 'tournament-1', userId: 'user-1' }),
+      ).rejects.toThrow('El torneo no admite nuevas inscripciones en su estado actual.');
+    },
+  );
 });

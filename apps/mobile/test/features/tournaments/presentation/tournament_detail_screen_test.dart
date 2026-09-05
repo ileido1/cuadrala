@@ -120,6 +120,11 @@ Widget _buildTestApp({
   return MaterialApp.router(routerConfig: router);
 }
 
+/// Se resuelve desde la constante de la pantalla: la etiqueta ya se renombró
+/// dos veces y cada vez dejó esta suite en rojo.
+Finder get _registrationsTab =>
+    find.text(tournamentDetailTabLabels[tournamentRegistrationsTabIndex]);
+
 void main() {
   late _MockRegistrationsCubit registrationsCubit;
   late _MockScheduleCubit scheduleCubit;
@@ -157,8 +162,8 @@ void main() {
       ));
       await tester.pump();
 
-      // Switch to the "Inscriptos" tab.
-      await tester.tap(find.text('Inscriptos'));
+      // Switch to the registrations tab.
+      await tester.tap(_registrationsTab);
       await tester.pumpAndSettle();
 
       expect(find.text('Aceptar'), findsOneWidget);
@@ -179,7 +184,7 @@ void main() {
       ));
       await tester.pump();
 
-      await tester.tap(find.text('Inscriptos'));
+      await tester.tap(_registrationsTab);
       await tester.pumpAndSettle();
 
       expect(find.text('Aceptar'), findsNothing);
@@ -320,7 +325,7 @@ void main() {
         tournament: tournament,
       ));
       await tester.pump();
-      await tester.tap(find.text('Inscriptos'));
+      await tester.tap(_registrationsTab);
       await tester.pumpAndSettle();
     }
 
@@ -341,12 +346,12 @@ void main() {
 
       await pumpAndOpenRegistrationsTab(tester, tournament: _tournament());
 
-      expect(find.text('Invitados (sin ranking)'), findsOneWidget);
+      expect(find.text('Invitados'), findsOneWidget);
       expect(find.text('Pendiente'), findsOneWidget);
       expect(find.text('Confirmado', skipOffstage: false), findsNWidgets(2));
     });
 
-    testWidgets('organizer sees "Invitar huésped" and non-organizer does not', (tester) async {
+    testWidgets('organizer sees the invite button and non-organizer does not', (tester) async {
       when(() => registrationsCubit.state).thenReturn(
         const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
       );
@@ -358,7 +363,7 @@ void main() {
         tester,
         tournament: _tournament(organizerUserId: 'organizer-1'),
       );
-      expect(find.text('Invitar huésped'), findsNothing);
+      expect(find.byKey(const Key('tournament.inviteGuestButton')), findsNothing);
 
       // Organizer.
       when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
@@ -366,10 +371,10 @@ void main() {
         tester,
         tournament: _tournament(organizerUserId: 'organizer-1'),
       );
-      expect(find.text('Invitar huésped'), findsOneWidget);
+      expect(find.byKey(const Key('tournament.inviteGuestButton')), findsOneWidget);
     });
 
-    testWidgets('tapping "Invitar huésped" opens the invite sheet', (tester) async {
+    testWidgets('tapping the invite button opens the invite sheet', (tester) async {
       when(() => registrationsCubit.state).thenReturn(
         const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
       );
@@ -381,7 +386,7 @@ void main() {
         tournament: _tournament(organizerUserId: 'organizer-1'),
       );
 
-      await tester.tap(find.text('Invitar huésped'));
+      await tester.tap(find.byKey(const Key('tournament.inviteGuestButton')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('tournament.inviteGuestSheet.name')), findsOneWidget);
@@ -453,7 +458,7 @@ void main() {
         tournament: _tournament(organizerUserId: 'organizer-1', status: 'IN_PROGRESS'),
       );
 
-      expect(find.text('Invitar huésped'), findsNothing);
+      expect(find.byKey(const Key('tournament.inviteGuestButton')), findsNothing);
       expect(find.byKey(const Key('tournament.removeRegistration.reg-guest-1')), findsNothing);
     });
   });

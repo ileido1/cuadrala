@@ -5,6 +5,70 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.0.6] - 2026-09-05
+
+### Añadido
+
+- **El torneo ahora avisa.** Antes no emitía ninguna notificación: te anotabas y
+  quedabas pendiente sin saberlo, el organizador te confirmaba en silencio, el
+  calendario salía en silencio y el torneo arrancaba en silencio — y el
+  organizador tampoco se enteraba de que tenía una inscripción esperando. Se
+  suman cuatro avisos: inscripción recibida, inscripción confirmada, calendario
+  publicado y torneo iniciado.
+
+### Corregido
+
+- **Una partida cancelada llevaba a distinto lado según cómo llegara el aviso.**
+  Con la app abierta abría el detalle de la partida; si llegaba como
+  notificación del sistema, caía en el listado de avisos. Eran dos copias del
+  mismo código que se habían separado. Ahora la decisión es una sola.
+
+## [1.0.5] - 2026-09-05
+
+### Cambiado
+
+- **Ahora te podés anotar a un torneo publicado.** La autoinscripción solo se
+  admitía mientras el torneo estaba en "Borrador"; al publicarlo pasaba a
+  "OPEN" y el jugador recibía un error, aunque el organizador sí podía seguir
+  invitando gente. El estado que se lee como "abierto, anotate" era justo donde
+  la puerta pública estaba cerrada. La ventana de inscripción ahora es la misma
+  para las cuatro acciones sobre el plantel.
+
+### Corregido
+
+- **El botón de inscripción ofrecía una acción imposible.** No miraba el estado
+  del torneo: se mostraba siempre, y con el torneo en curso la API respondía
+  con un error que aparecía en rojo al lado del botón. Ahora aparece solo
+  cuando se puede entrar, y si no, explica por qué.
+- **Los estados del torneo se mostraban sin traducir.** La pantalla traducía
+  tres estados que ya no existen en la API, así que los reales —"OPEN",
+  "COMPLETED"— llegaban crudos al usuario.
+- **No se distinguía estar anotado de estar aceptado.** El único texto era
+  "Cancelar inscripción", así que quien esperaba la aprobación del organizador
+  no tenía forma de saberlo — y el cuadro se arma solo con los confirmados.
+
+## [1.0.4] - 2026-09-04
+
+### Corregido
+
+- **El calendario del torneo sin generar quedaba fuera de alcance.** La rama
+  vacía de la pestaña Calendario devolvía una columna sin scroll propio: en
+  pantallas bajas el contador de participantes y el botón de generar
+  calendario desbordaban y no había forma de llegar a ellos. El scroll va solo
+  en esa rama; la de éxito ya es una lista y anidarla le deja la altura sin
+  acotar.
+
+### Interno
+
+- **La suite de móvil vuelve a estar en verde (479/479).** Diez tests del flujo
+  de torneo fallaban por un solo motivo: navegaban tocando la pestaña por su
+  texto, y esa etiqueta se renombró dos veces en dos días sin que nadie
+  actualizara los tests. El tap moría antes de probar nada, así que la gestión
+  de invitados llevaba más de una semana sin cobertura real y detrás del primer
+  fallo se habían acumulado tres renombres más. Las etiquetas pasan a ser una
+  constante de la pantalla que los tests consumen, para que el próximo cambio
+  de nombre los arrastre en vez de romperlos.
+
 ## [1.0.3] - 2026-09-04
 
 ### Corregido

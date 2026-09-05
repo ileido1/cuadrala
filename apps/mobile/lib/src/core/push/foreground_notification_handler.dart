@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/notifications/data/models/notification_delivery_dto.dart';
+import 'notification_destination.dart';
 
 /// Overlay entry key for the active foreground notification.
 final _notificationKey = GlobalKey<_ForegroundNotificationState>();
@@ -97,27 +98,17 @@ class _ForegroundNotificationState extends State<ForegroundNotificationHandler> 
 
   void _navigateFromData(Map<String, dynamic> data) {
     final router = GoRouter.of(context);
-    final eventType = data['eventType'] as String? ?? '';
-    final matchId = data['matchId'] as String?;
+    final destination = notificationDestination(
+      eventType: data['eventType'] as String? ?? '',
+      matchId: data['matchId'] as String?,
+      tournamentId: data['tournamentId'] as String?,
+    );
 
-    if (matchId == null || matchId.isEmpty) {
-      router.go('/avisos');
+    if (destination.replacesStack) {
+      router.go(destination.route);
       return;
     }
-
-    final type = notificationTypeFromWire(eventType);
-    if (type == NotificationType.chatMessage) {
-      router.push('/matches/$matchId/chat');
-      return;
-    }
-    if (type == NotificationType.matchPlayerJoined ||
-        type == NotificationType.paymentConfirmed ||
-        type == NotificationType.paymentPending ||
-        type == NotificationType.matchCancelled) {
-      router.push('/matches/$matchId');
-      return;
-    }
-    router.go('/avisos');
+    router.push(destination.route);
   }
 
   String _defaultTitle(String? eventType) {
@@ -130,6 +121,10 @@ class _ForegroundNotificationState extends State<ForegroundNotificationHandler> 
       NotificationType.paymentPending => 'Pago pendiente',
       NotificationType.matchPlayerJoined => 'Nuevo jugador',
       NotificationType.paymentConfirmed => 'Pago confirmado',
+      NotificationType.tournamentRegistrationReceived => 'Nueva inscripción',
+      NotificationType.tournamentRegistrationConfirmed => 'Estás dentro',
+      NotificationType.tournamentSchedulePublished => 'Ya está el calendario',
+      NotificationType.tournamentStarted => 'Arrancó el torneo',
       NotificationType.unknown => 'Notificación',
     };
   }
@@ -148,6 +143,14 @@ class _ForegroundNotificationState extends State<ForegroundNotificationHandler> 
       NotificationType.matchPlayerJoined => 'Alguien se unió a tu partida.',
       NotificationType.paymentConfirmed =>
         'Tu pago fue confirmado por el club.',
+      NotificationType.tournamentRegistrationReceived =>
+        'Alguien se anotó a tu torneo y espera tu confirmación.',
+      NotificationType.tournamentRegistrationConfirmed =>
+        'El organizador confirmó tu inscripción al torneo.',
+      NotificationType.tournamentSchedulePublished =>
+        'Se publicó el calendario del torneo. Mirá cuándo te toca jugar.',
+      NotificationType.tournamentStarted =>
+        'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
       NotificationType.unknown => '',
     };
   }

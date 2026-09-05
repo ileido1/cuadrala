@@ -1,4 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import { isTournamentRosterOpenSV } from '../../domain/tournament/tournament_registration_window.js';
 import type {
   TournamentInvitationDTO,
   TournamentInvitationRepository,
@@ -32,7 +33,7 @@ export class InviteTournamentParticipantUseCase {
     });
 
     //? 3. El roster se bloquea desde IN_PROGRESS; invitaciones solo mientras DRAFT/OPEN
-    if (TOURNAMENT.status !== 'DRAFT' && TOURNAMENT.status !== 'OPEN') {
+    if (!isTournamentRosterOpenSV(TOURNAMENT.status)) {
       throw new AppError(
         'TORNEO_CERRADO',
         'El torneo no admite nuevas invitaciones en su estado actual.',

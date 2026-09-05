@@ -7,6 +7,7 @@ import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../data/models/notification_delivery_dto.dart';
+import '../../../core/push/notification_destination.dart';
 import 'cubit/notifications_cubit.dart';
 import 'cubit/notifications_state.dart';
 
@@ -153,17 +154,16 @@ final class _NotificationTile extends StatelessWidget {
           if (notification.isUnread) {
             context.read<NotificationsCubit>().markOneAsRead(notification.id);
           }
-          final link = notification.deepLink;
-          if (link != null && link.startsWith('/matches/')) {
-            final matchId = link.replaceFirst('/matches/', '').split('/').first;
-            if (matchId.isNotEmpty) {
-              if (notification.type == NotificationType.chatMessage) {
-                context.push(Routes.matchChat(matchId));
-              } else {
-                context.push(Routes.matchDetail(matchId));
-              }
-              return;
-            }
+          //? El destino sale de la misma función que usan los push, para que
+          //? tocar la notificación lleve al mismo lado desde la bandeja que
+          //? desde la bandeja del sistema.
+          final destination = notificationDestinationFromDeepLink(
+            notification.deepLink,
+            eventType: notification.type.wire,
+          );
+          if (destination != null && !destination.replacesStack) {
+            context.push(destination.route);
+            return;
           }
           context.push('${Routes.notifications}/${notification.id}');
         },
@@ -261,6 +261,10 @@ final class _NotificationTile extends StatelessWidget {
       NotificationType.paymentConfirmed => AppIcons.checkCircle,
       NotificationType.matchPlayerJoined => AppIcons.personAdd,
       NotificationType.matchCancelled => AppIcons.eventBusy,
+      NotificationType.tournamentRegistrationReceived => AppIcons.personAdd,
+      NotificationType.tournamentRegistrationConfirmed => AppIcons.checkCircle,
+      NotificationType.tournamentSchedulePublished => AppIcons.calendar,
+      NotificationType.tournamentStarted => AppIcons.trophy,
       NotificationType.unknown => AppIcons.bell,
     };
   }

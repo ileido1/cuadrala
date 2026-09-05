@@ -17,6 +17,7 @@ import { PrismaTournamentRegistrationRepository } from '../../infrastructure/ada
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { DefaultTournamentFormatParametersValidator } from '../../domain/services/tournament/tournament_format_parameters_validator.js';
+import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
 
 const TOURNAMENT_QUERY_REPOSITORY = new PrismaTournamentQueryRepository();
 const CATEGORY_REPOSITORY = new PrismaCategoryRepository();
@@ -51,6 +52,8 @@ export const UPDATE_TOURNAMENT_STATUS_UC = new UpdateTournamentStatusUseCase(
   TOURNAMENT_REPOSITORY,
   ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
   MATERIALIZE_TOURNAMENT_MATCHES_UC,
+  CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
+  TOURNAMENT_REGISTRATION_REPOSITORY,
 );
 export const UPDATE_TOURNAMENT_VISIBILITY_UC = new UpdateTournamentVisibilityUseCase(
   TOURNAMENT_REPOSITORY,

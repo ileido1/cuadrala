@@ -90,6 +90,11 @@ Widget _buildTestApp({
   return MaterialApp.router(routerConfig: router);
 }
 
+/// Se resuelve desde la constante de la pantalla: la etiqueta ya se renombró
+/// dos veces y cada vez dejó esta suite en rojo.
+Finder get _registrationsTab =>
+    find.text(tournamentDetailTabLabels[tournamentRegistrationsTabIndex]);
+
 void main() {
   late _MockTournamentsRepository tournamentsRepository;
   late _MockProfileRepository profileRepository;
@@ -149,7 +154,7 @@ void main() {
         await cubit.load();
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Inscripciones'));
+        await tester.tap(_registrationsTab);
         await tester.pumpAndSettle();
 
         //? Organizer-only invite button is visible (currentUserId == organizerUserId).
@@ -185,14 +190,14 @@ void main() {
           ),
         ).called(1);
 
-        //? Alice now shows in the "Invitados (sin ranking)" group as PENDING.
+        //? Alice now shows in the "Invitados" group as PENDING.
         //? `skipOffstage: false` because these tiles live inside the TabBarView's
-        //? "Inscripciones" page, whose RenderBox transform can be temporarily
+        //? registrations page, whose RenderBox transform can be temporarily
         //? unresolvable to the default onstage check right after a tab switch +
         //? bottom-sheet pop in the same pumpAndSettle cycle, even though the
         //? widgets are genuinely built with the right data (confirmed via
         //? `tester.allWidgets` during triage).
-        expect(find.text('Invitados (sin ranking)', skipOffstage: false), findsOneWidget);
+        expect(find.text('Invitados', skipOffstage: false), findsOneWidget);
         expect(find.text('Alice', skipOffstage: false), findsOneWidget);
         expect(find.text('Pendiente', skipOffstage: false), findsOneWidget);
 
@@ -242,7 +247,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(removeFinder);
         await tester.pumpAndSettle();
-        expect(find.text('Eliminar invitado'), findsOneWidget);
+        expect(find.text('Eliminar jugador'), findsOneWidget);
         await tester.tap(find.text('Eliminar').last);
         await tester.pumpAndSettle();
 
@@ -253,7 +258,7 @@ void main() {
           ),
         ).called(1);
         expect(find.text('Alice'), findsNothing);
-        expect(find.text('Invitados (sin ranking)'), findsNothing);
+        expect(find.text('Invitados'), findsNothing);
       },
     );
 
@@ -270,6 +275,14 @@ void main() {
           registrationCount: 4,
           organizerUserId: _organizerId,
         );
+
+        //? El roster es un ListView (perezoso): con la ventana por defecto el
+        //? cuarto invitado nunca se construye y `skipOffstage: false` no
+        //? alcanza, porque no está oculto sino ausente del árbol. Se agranda la
+        //? superficie para que los cuatro entren y la aserción diga lo que dice.
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
         final guests = [
           _guestRegistration(id: 'reg-g1', name: 'Guest A', status: 'CONFIRMED'),
@@ -295,7 +308,7 @@ void main() {
         await cubit.load();
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Inscripciones'));
+        await tester.tap(_registrationsTab);
         await tester.pumpAndSettle();
 
         //? All 4 guests render, none has a real userId (isGuest / displayName getters).

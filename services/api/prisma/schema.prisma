@@ -98,16 +98,16 @@ enum LedgerDirection {
 
 /// Medios de pago configurables por venue (efectivo, transferencia, pago móvil, POS, etc.)
 model VenuePaymentMethod {
-  id        String   @id @default(uuid())
-  venueId   String
-  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  type      String   // 'CASH' | 'BANK_TRANSFER' | 'PAGO_MOVIL' | 'POS' | 'OTHER'
-  name      String
-  config    Json?    // { accountNumber?, bank?, phoneNumber?, idType?, idNumber?, reference? }
+  id                 String       @id @default(uuid())
+  venueId            String
+  venue              Venue        @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  type               String // 'CASH' | 'BANK_TRANSFER' | 'PAGO_MOVIL' | 'POS' | 'OTHER'
+  name               String
+  config             Json? // { accountNumber?, bank?, phoneNumber?, idType?, idNumber?, reference? }
   /// Moneda en la que liquida este medio (Modelo C — capa liquidación).
   settlementCurrency CurrencyCode
-  isActive  Boolean  @default(true)
-  position  Int      @default(0)
+  isActive           Boolean      @default(true)
+  position           Int          @default(0)
 
   confirmedTransactions Transaction[]
 
@@ -185,6 +185,10 @@ enum NotificationEventType {
   PAYMENT_PENDING
   MATCH_PLAYER_JOINED
   PAYMENT_CONFIRMED
+  TOURNAMENT_REGISTRATION_RECEIVED
+  TOURNAMENT_REGISTRATION_CONFIRMED
+  TOURNAMENT_SCHEDULE_PUBLISHED
+  TOURNAMENT_STARTED
 }
 
 enum NotificationDeliveryStatus {
@@ -328,15 +332,15 @@ model User {
   venueStaffRoles             VenueStaff[]
   ownedVenue                  Venue?
 
-  categories           UserCategory[]
-  sportCategories      UserSportCategory[]
-  playerProfile        PlayerProfile?
-  availability         UserAvailability[]
-  location             UserLocation?
-  organizedMatches     Match[]            @relation("MatchOrganizer")
-  organizedTournaments Tournament[]       @relation("TournamentOrganizer")
-  invitationsReceived  TournamentInvitation[] @relation("TournamentInvitee")
-  invitationsCreated   TournamentInvitation[] @relation("TournamentInviter")
+  categories                UserCategory[]
+  sportCategories           UserSportCategory[]
+  playerProfile             PlayerProfile?
+  availability              UserAvailability[]
+  location                  UserLocation?
+  organizedMatches          Match[]                  @relation("MatchOrganizer")
+  organizedTournaments      Tournament[]             @relation("TournamentOrganizer")
+  invitationsReceived       TournamentInvitation[]   @relation("TournamentInvitee")
+  invitationsCreated        TournamentInvitation[]   @relation("TournamentInviter")
   /// Slice 1 (tournament-guest-registration): invitados agregados por este organizador.
   guestRegistrationsCreated TournamentRegistration[] @relation("TournamentGuestRegistrar")
 }
@@ -378,7 +382,7 @@ model PlayerProfile {
   /// E.164 (+5491145454545). Validado por backend con regex laxa.
   phone                 String?
   /// Número de documento (DNI, CI, etc.). Único por usuario.
-  documentNumber        String?                 @unique
+  documentNumber        String?        @unique
   avatarUrl             String?
   city                  String?
   /// Marca el momento en que el usuario completó todos los pasos requeridos del onboarding.
@@ -525,13 +529,13 @@ model UserRatingHistory {
 }
 
 model Venue {
-  id                String    @id @default(uuid())
+  id                String       @id @default(uuid())
   name              String
   address           String?
   latitude          Float?
   longitude         Float?
   /// placeId del proveedor (Mapbox/Google). Único cuando existe.
-  placeId           String?   @unique
+  placeId           String?      @unique
   /// Dirección normalizada (texto completo) del proveedor.
   formattedAddress  String?
   addressCountry    String?
@@ -553,8 +557,8 @@ model Venue {
   /// Moneda de obligación / pricing (Modelo C — capa comercial).
   pricingCurrency   CurrencyCode @default(BS)
   /// Usuario propietario de la sede (nullable para compatibilidad hacia atrás).
-  ownerUserId       String?   @unique
-  owner             User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  ownerUserId       String?      @unique
+  owner             User?        @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
   /// URL to venue photo/image. Nullable — populated via admin or future upload.
   imageUrl          String?
   /// Valoración media de la sede (1–5). Nullable hasta que existan reviews.
@@ -562,11 +566,11 @@ model Venue {
   phone             String?
   email             String?
   description       String?
-  openingHours      Json?     // { monday: { open: "08:00", close: "23:00" }, ... }
-  createdAt         DateTime  @default(now())
+  openingHours      Json? // { monday: { open: "08:00", close: "23:00" }, ... }
+  createdAt         DateTime     @default(now())
 
-  courts      Court[]
-  staff       VenueStaff[]
+  courts               Court[]
+  staff                VenueStaff[]
   reservations         Reservation[]
   venuePaymentMethods  VenuePaymentMethod[]
   venueFeeRules        VenueFeeRule[]
@@ -601,21 +605,21 @@ model VenueStaff {
 }
 
 model Court {
-  id              String      @id @default(uuid())
-  venueId         String
-  venue           Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  name            String
-  sportType       SportType   @default(PADEL)
-  indoor          Boolean     @default(false)
-  lighting        Boolean     @default(false)
-  surfaceType     String?
-  status          CourtStatus @default(ACTIVE)
-  pricePerHourCents Int?      // Precio por hora en centavos
-  capacity        String?     // ej. "4v4"
-  durationMinutes Int         @default(60)
-  createdAt       DateTime    @default(now())
+  id                String      @id @default(uuid())
+  venueId           String
+  venue             Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name              String
+  sportType         SportType   @default(PADEL)
+  indoor            Boolean     @default(false)
+  lighting          Boolean     @default(false)
+  surfaceType       String?
+  status            CourtStatus @default(ACTIVE)
+  pricePerHourCents Int? // Precio por hora en centavos
+  capacity          String? // ej. "4v4"
+  durationMinutes   Int         @default(60)
+  createdAt         DateTime    @default(now())
 
-  matches     Match[]
+  matches      Match[]
   reservations Reservation[]
   pricingTiers CourtPricingTier[]
 }
@@ -626,9 +630,9 @@ model CourtPricingTier {
   id                String   @id @default(uuid())
   courtId           String
   court             Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
-  label             String   // ej. "Mañana", "Tarde", "Noche"
-  startTime         String   // "08:00" (24h)
-  endTime           String   // "12:00" (24h)
+  label             String // ej. "Mañana", "Tarde", "Noche"
+  startTime         String // "08:00" (24h)
+  endTime           String // "12:00" (24h)
   pricePerHourCents Int
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -667,11 +671,12 @@ model Tournament {
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
-  registrations     TournamentRegistration[]
-  invitations       TournamentInvitation[]
-  matches           Match[]
-  schedule          TournamentSchedule?
-  chatThread        ChatThread?
+  registrations      TournamentRegistration[]
+  invitations        TournamentInvitation[]
+  matches            Match[]
+  schedule           TournamentSchedule?
+  chatThread         ChatThread?
+  notificationEvents NotificationEvent[]
 
   @@index([sportId])
   @@index([formatPresetId])
@@ -701,23 +706,23 @@ model TournamentSchedule {
 
 /// Schedule generado para formato AMERICANO a nivel torneo (idempotente por tournamentId).
 model TournamentRegistration {
-  id           String             @id @default(uuid())
-  tournamentId String
-  tournament   Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  id                 String             @id @default(uuid())
+  tournamentId       String
+  tournament         Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   /// Nulo para inscripciones GUEST (Slice 1: tournament-guest-registration).
-  userId       String?
-  user         User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status       RegistrationStatus @default(PENDING)
+  userId             String?
+  user               User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status             RegistrationStatus @default(PENDING)
   /// AUTHENTICATED ⇒ userId set, campos de invitado null. GUEST ⇒ userId null,
   /// guestName + registeredByUserId set. Ver `assertRegistrationIdentityInvariantSV`.
-  registrationType   RegistrationType @default(AUTHENTICATED)
+  registrationType   RegistrationType   @default(AUTHENTICATED)
   guestName          String?
   guestPhone         String?
   guestEmail         String?
   /// Organizador que dio de alta al invitado (requerido cuando registrationType=GUEST).
   registeredByUserId String?
-  registeredBy       User?            @relation("TournamentGuestRegistrar", fields: [registeredByUserId], references: [id], onDelete: SetNull)
-  createdAt    DateTime           @default(now())
+  registeredBy       User?              @relation("TournamentGuestRegistrar", fields: [registeredByUserId], references: [id], onDelete: SetNull)
+  createdAt          DateTime           @default(now())
 
   matchParticipants MatchParticipant[]
 
@@ -739,16 +744,16 @@ enum InvitationStatus {
 /// TournamentRegistration: PENDING de registro = autoinscripción esperando confirmación
 /// del organizador; PENDING de invitación = invitación esperando respuesta del jugador.
 model TournamentInvitation {
-  id              String            @id @default(uuid())
+  id              String           @id @default(uuid())
   tournamentId    String
-  tournament      Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournament      Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   invitedUserId   String
-  invitedUser     User              @relation("TournamentInvitee", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  invitedUser     User             @relation("TournamentInvitee", fields: [invitedUserId], references: [id], onDelete: Cascade)
   createdByUserId String
-  createdBy       User              @relation("TournamentInviter", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  status          InvitationStatus  @default(PENDING)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdBy       User             @relation("TournamentInviter", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  status          InvitationStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@unique([tournamentId, invitedUserId])
   @@index([invitedUserId, status])
@@ -791,7 +796,7 @@ model Match {
   notificationEvents NotificationEvent[]
   chatThread         ChatThread?
   // Relación 1:1 con Reservation (companion para type=MATCH)
-  reservation        Reservation? @relation("ReservationMatch")
+  reservation        Reservation?        @relation("ReservationMatch")
 
   @@index([categoryId])
   @@index([status])
@@ -803,56 +808,56 @@ model Match {
 }
 
 model Reservation {
-  id         String           @id @default(uuid())
+  id         String   @id @default(uuid())
   venueId    String
-  venue      Venue            @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  venue      Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
   courtId    String
-  court      Court            @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  court      Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
   sportId    String
-  sport      Sport            @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  sport      Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
   categoryId String
-  category   Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  type             ReservationType   @default(DIRECT)
+  type                ReservationType @default(DIRECT)
   // MATCH-specific fields (nullable for DIRECT/BLOCKED)
-  matchId            String?          @unique  // 1:1 link a Match (companion, no FK)
+  matchId             String?         @unique // 1:1 link a Match (companion, no FK)
   organizerUserId     String?
   formatPresetId      String?
-  formatParameters   Json?
+  formatParameters    Json?
   maxParticipants     Int             @default(4)
   pricePerPlayerCents Int             @default(0)
-  visibility          Visibility?     // null for DIRECT/BLOCKED
-  matchStatus         MatchStatus?    // solo cuando type=MATCH
+  visibility          Visibility? // null for DIRECT/BLOCKED
+  matchStatus         MatchStatus? // solo cuando type=MATCH
 
-  status           ReservationStatus @default(CONFIRMED)
-  scheduledAt      DateTime
-  durationMinutes  Int              @default(60)
-  notes            String?
-  createdByUserId  String
+  status            ReservationStatus @default(CONFIRMED)
+  scheduledAt       DateTime
+  durationMinutes   Int               @default(60)
+  notes             String?
+  createdByUserId   String
   /// Nombre del responsable (para reservas directas de guests o referencia).
-  responsibleName  String?
+  responsibleName   String?
   /// Teléfono del responsable (para reservas directas de guests o referencia).
-  responsiblePhone String?
+  responsiblePhone  String?
   /// Monto total de la reserva en centavos (legacy; dual-write con totalAmountMinor).
-  totalAmountCents Int?
+  totalAmountCents  Int?
   /// Suma de montos confirmados en centavos (legacy; dual-write con paidAmountMinor).
-  paidAmountCents  Int             @default(0)
+  paidAmountCents   Int               @default(0)
   /// Moneda de obligación de la reserva (copia de venue.pricingCurrency al crear).
-  pricingCurrency  CurrencyCode
+  pricingCurrency   CurrencyCode
   /// Monto total en unidades menores (centavos/céntimos según moneda).
-  totalAmountMinor BigInt?
+  totalAmountMinor  BigInt?
   /// Suma pagada en pricingCurrency (unidades menores).
-  paidAmountMinor  BigInt          @default(0)
+  paidAmountMinor   BigInt            @default(0)
   /// Suma pagada acumulada en BS (reporting platform; Fase 2).
   paidAmountBsMinor BigInt?
   /// Estado de pago: UNPAID (nada), PARTIAL (algo), PAID (cubierto o más).
-  paymentStatus     PaymentStatus   @default(UNPAID)
+  paymentStatus     PaymentStatus     @default(UNPAID)
 
-  transactions   Transaction[]
-  ledgerEntries  ReservationPaymentLedger[]
+  transactions  Transaction[]
+  ledgerEntries ReservationPaymentLedger[]
 
   // Relación 1:1 con Match (companion table para type=MATCH)
-  match       Match?     @relation("ReservationMatch", fields: [matchId], references: [id], onDelete: Cascade)
+  match Match? @relation("ReservationMatch", fields: [matchId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -899,21 +904,21 @@ model MatchResultConfirmation {
 }
 
 model MatchParticipant {
-  id      String @id @default(uuid())
-  matchId String
-  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  id                       String                  @id @default(uuid())
+  matchId                  String
+  match                    Match                   @relation(fields: [matchId], references: [id], onDelete: Cascade)
   /// Nulo para participantes GUEST (Slice 1: tournament-guest-registration).
   /// Exactamente uno de (userId, tournamentRegistrationId apuntando a una fila GUEST)
   /// identifica al participante; los lectores existentes de userId quedan intactos
   /// para participantes autenticados.
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                   String?
+  user                     User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Slice 1 (tournament-guest-registration): referencia a la inscripción de torneo
   /// (AUTHENTICATED o GUEST) que originó este participante materializado.
   tournamentRegistrationId String?
   tournamentRegistration   TournamentRegistration? @relation(fields: [tournamentRegistrationId], references: [id], onDelete: Cascade)
-  teamLabel String?
-  createdAt DateTime @default(now())
+  teamLabel                String?
+  createdAt                DateTime                @default(now())
 
   // Postgres permite múltiples NULL en un índice único ⇒ guest-safe.
   @@unique([matchId, userId])
@@ -991,16 +996,16 @@ model VenueFeeRule {
 
 /// Obligación de pago no custodial asociada a un match o reservation y usuario.
 model Transaction {
-  id            String            @id @default(uuid())
-  matchId       String?
-  match         Match?            @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  reservationId String?
-  reservation   Reservation?      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-  userId        String
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amountBase    Decimal           @db.Decimal(14, 4)
-  feeAmount     Decimal           @db.Decimal(14, 4)
-  amountTotal   Decimal           @db.Decimal(14, 4)
+  id                       String              @id @default(uuid())
+  matchId                  String?
+  match                    Match?              @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  reservationId            String?
+  reservation              Reservation?        @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  userId                   String
+  user                     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountBase               Decimal             @db.Decimal(14, 4)
+  feeAmount                Decimal             @db.Decimal(14, 4)
+  amountTotal              Decimal             @db.Decimal(14, 4)
   /// Obligación en moneda de pricing (capa comercial).
   obligationCurrency       CurrencyCode?
   obligationAmountMinor    BigInt?
@@ -1012,18 +1017,18 @@ model Transaction {
   settlementAmountMinor    BigInt?
   appliedToObligationMinor BigInt?
   /// Equivalente en BS para reporting VE (snapshot).
-  amountBsMinor              BigInt?
-  needsReview                Boolean           @default(false)
-  status        TransactionStatus @default(PENDING)
-  paymentMethod PaymentMethod     @default(MANUAL)
-  venuePaymentMethodId String?
-  venuePaymentMethod   VenuePaymentMethod? @relation(fields: [venuePaymentMethodId], references: [id])
-  referenceNumber      String?    // referencia/comprobante
-  paymentData         Json?      // copia de config del medio en el momento de confirmar
-  confirmedAt         DateTime?
-  confirmedBy         String?     // userId de quien confirmó
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  amountBsMinor            BigInt?
+  needsReview              Boolean             @default(false)
+  status                   TransactionStatus   @default(PENDING)
+  paymentMethod            PaymentMethod       @default(MANUAL)
+  venuePaymentMethodId     String?
+  venuePaymentMethod       VenuePaymentMethod? @relation(fields: [venuePaymentMethodId], references: [id])
+  referenceNumber          String? // referencia/comprobante
+  paymentData              Json? // copia de config del medio en el momento de confirmar
+  confirmedAt              DateTime?
+  confirmedBy              String? // userId de quien confirmó
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
 
   receipts                 TransactionReceipt[]
   currencyConversionRecord CurrencyConversionRecord?
@@ -1057,11 +1062,11 @@ model CurrencyConversionRecord {
 /// Comprobante (imagen) adjunto a una transacción.
 /// Libro mayor append-only por reserva (Fase 2 MCP).
 model ReservationPaymentLedger {
-  id            String           @id @default(uuid())
+  id            String          @id @default(uuid())
   reservationId String
-  reservation   Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  reservation   Reservation     @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   transactionId String?
-  transaction   Transaction?     @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  transaction   Transaction?    @relation(fields: [transactionId], references: [id], onDelete: SetNull)
   entryType     LedgerEntryType
   direction     LedgerDirection
   amountMinor   BigInt
@@ -1069,7 +1074,7 @@ model ReservationPaymentLedger {
   amountBsMinor BigInt?
   actorUserId   String
   reason        String?
-  createdAt     DateTime         @default(now())
+  createdAt     DateTime        @default(now())
 
   @@index([reservationId, createdAt])
   @@index([transactionId])
@@ -1140,19 +1145,25 @@ model ChatMessage {
 }
 
 model NotificationEvent {
-  id          String                @id @default(uuid())
-  type        NotificationEventType
-  matchId     String
-  match       Match                 @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  categoryId  String
-  category    Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  payload     Json
-  createdAt   DateTime              @default(now())
-  processedAt DateTime?
+  id           String                @id @default(uuid())
+  type         NotificationEventType
+  /// Sujeto del evento: exactamente uno de `matchId` o `tournamentId`.
+  /// Antes `matchId` era obligatorio y el sistema de notificaciones no podía
+  /// hablar de nada que no fuera un partido.
+  matchId      String?
+  match        Match?                @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  tournamentId String?
+  tournament   Tournament?           @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  payload      Json
+  createdAt    DateTime              @default(now())
+  processedAt  DateTime?
 
   deliveries NotificationDelivery[]
 
   @@index([matchId])
+  @@index([tournamentId])
   @@index([categoryId])
   @@index([processedAt, createdAt])
 }

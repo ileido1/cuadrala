@@ -1,4 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import { isTournamentRosterOpenSV } from '../../domain/tournament/tournament_registration_window.js';
 import type { TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 
@@ -18,7 +19,7 @@ export class WithdrawTournamentRegistrationUseCase {
     }
 
     //? El roster se bloquea desde IN_PROGRESS; retiros solo mientras DRAFT/OPEN
-    if (TOURNAMENT.status !== 'DRAFT' && TOURNAMENT.status !== 'OPEN') {
+    if (!isTournamentRosterOpenSV(TOURNAMENT.status)) {
       throw new AppError(
         'TORNEO_CERRADO',
         'El torneo no admite retiros de inscripción en su estado actual.',
