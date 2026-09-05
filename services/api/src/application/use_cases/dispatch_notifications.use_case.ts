@@ -79,6 +79,14 @@ export class DispatchNotificationsUseCase {
         continue;
       }
 
+      //? Llegar acá sin `matchId` significaría un evento de audiencia geo cuyo
+      //? sujeto es un torneo: no existe, pero si alguien lo crea se marca
+      //? procesado en vez de reventar el tick entero.
+      if (_event.matchId === null) {
+        await this._notificationEventRepository.markProcessedSV(_event.id, new Date());
+        continue;
+      }
+
       const MATCH_CONTEXT = await this._matchNotificationContextReadRepository.getByMatchIdSV(
         _event.matchId,
       );
@@ -196,9 +204,12 @@ export class DispatchNotificationsUseCase {
       const PUSH_RESULT = await this._pushNotificationProvider.sendToDeviceTokensSV(tokensToSend, {
         title: CONTENT.title,
         body: CONTENT.body,
+        //? El sujeto es uno de los dos; se manda solo el que corresponde para
+        //? que el cliente sepa a dónde llevar al usuario al tocar el push.
         data: {
           eventType: EVENT.type,
-          matchId: EVENT.matchId,
+          ...(EVENT.matchId !== null ? { matchId: EVENT.matchId } : {}),
+          ...(EVENT.tournamentId !== null ? { tournamentId: EVENT.tournamentId } : {}),
           categoryId: EVENT.categoryId,
         },
       });

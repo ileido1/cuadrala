@@ -1,4 +1,5 @@
 import type {
+  CreateTournamentEventDTO,
   CreateMatchCancelledEventDTO,
   CreateChatMessageEventDTO,
   CreateMatchSlotOpenedEventDTO,
@@ -50,6 +51,19 @@ export class PrismaNotificationEventRepository implements NotificationEventRepos
       data: {
         type: 'PAYMENT_PENDING',
         matchId: _dto.matchId,
+        categoryId: _dto.categoryId,
+        payload: _dto.payload as never,
+      },
+    });
+  }
+
+  async createTournamentEventSV(
+    _dto: CreateTournamentEventDTO,
+  ): Promise<NotificationEventDTO> {
+    return PRISMA.notificationEvent.create({
+      data: {
+        type: _dto.type,
+        tournamentId: _dto.tournamentId,
         categoryId: _dto.categoryId,
         payload: _dto.payload as never,
       },

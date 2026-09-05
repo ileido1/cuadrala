@@ -54,7 +54,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
         status: true,
         attemptCount: true,
         nextAttemptAt: true,
-        event: { select: { type: true, matchId: true, categoryId: true } },
+        event: { select: { type: true, matchId: true, tournamentId: true, categoryId: true } },
       },
     });
 
@@ -68,6 +68,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
       event: {
         type: _r.event.type as DueNotificationDeliveryWithEventDTO['event']['type'],
         matchId: _r.event.matchId,
+        tournamentId: _r.event.tournamentId,
         categoryId: _r.event.categoryId,
       },
     }));
@@ -160,7 +161,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
           createdAt: true,
           sentAt: true,
           readAt: true,
-          event: { select: { type: true, matchId: true, categoryId: true, payload: true } },
+          event: { select: { type: true, matchId: true, tournamentId: true, categoryId: true, payload: true } },
         },
       }),
     ]);
@@ -178,6 +179,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
         event: {
           type: _r.event.type as InAppNotificationDTO['event']['type'],
           matchId: _r.event.matchId,
+          tournamentId: _r.event.tournamentId,
           categoryId: _r.event.categoryId,
           payload: _r.event.payload as unknown,
         },

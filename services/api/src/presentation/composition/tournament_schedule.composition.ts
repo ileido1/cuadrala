@@ -7,6 +7,7 @@ import { PrismaTournamentRegistrationRepository } from '../../infrastructure/ada
 import { PrismaTournamentScheduleRepository } from '../../infrastructure/adapters/prisma_tournament_schedule_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
 
 const TOURNAMENT_REPOSITORY = new PrismaTournamentRepository();
 const FORMAT_PRESET_REPOSITORY = new PrismaFormatPresetRepository();
@@ -23,6 +24,7 @@ export const GENERATE_TOURNAMENT_SCHEDULE_UC = new GenerateTournamentScheduleUse
   TOURNAMENT_SCHEDULE_REPOSITORY,
   TOURNAMENT_REGISTRATION_REPOSITORY,
   ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+  CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
 );
 
 export const GET_TOURNAMENT_SCHEDULE_UC = new GetTournamentScheduleUseCase(

@@ -27,6 +27,21 @@ function resolveNotificationBodySV(
   return _fallback;
 }
 
+/**
+ * A dónde lleva tocar la notificación.
+ *
+ * Antes era siempre `/matches/${matchId}`, porque todo evento era de un
+ * partido. Con los eventos de torneo ese link llevaba a ninguna parte.
+ */
+function deepLinkForEventSV(_event: {
+  matchId: string | null;
+  tournamentId: string | null;
+}): string | null {
+  if (_event.tournamentId !== null) return `/tournaments/${_event.tournamentId}`;
+  if (_event.matchId !== null) return `/matches/${_event.matchId}`;
+  return null;
+}
+
 export class ListMyInAppNotificationsUseCase {
   constructor(private readonly _notificationDeliveryRepository: NotificationDeliveryRepository) {}
 
@@ -45,7 +60,7 @@ export class ListMyInAppNotificationsUseCase {
       title: string;
       body: string;
       deepLink: string | null;
-      event: { type: string; matchId: string; categoryId: string; payload: unknown };
+      event: { type: string; matchId: string | null; tournamentId: string | null; categoryId: string; payload: unknown };
     }>;
     pageInfo: { page: number; limit: number; total: number };
   }> {
@@ -71,7 +86,7 @@ export class ListMyInAppNotificationsUseCase {
           type: _n.event.type,
           title: CONTENT.title,
           body: BODY,
-          deepLink: `/matches/${_n.event.matchId}`,
+          deepLink: deepLinkForEventSV(_n.event),
           event: _n.event,
         };
       }),

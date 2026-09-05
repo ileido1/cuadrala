@@ -32,7 +32,7 @@ export type DueNotificationDeliveryWithEventDTO = {
   status: 'PENDING' | 'FAILED';
   attemptCount: number;
   nextAttemptAt: Date | null;
-  event: { type: 'MATCH_SLOT_OPENED' | 'MATCH_CANCELLED'; matchId: string; categoryId: string };
+  event: { type: string; matchId: string | null; tournamentId: string | null; categoryId: string };
 };
 
 export type InAppNotificationDTO = {
@@ -43,7 +43,7 @@ export type InAppNotificationDTO = {
   createdAt: Date;
   sentAt: Date | null;
   readAt: Date | null;
-  event: { type: 'MATCH_SLOT_OPENED' | 'MATCH_CANCELLED'; matchId: string; categoryId: string; payload: unknown };
+  event: { type: string; matchId: string | null; tournamentId: string | null; categoryId: string; payload: unknown };
 };
 
 export interface NotificationDeliveryRepository {

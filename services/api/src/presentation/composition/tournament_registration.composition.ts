@@ -9,6 +9,7 @@ import { RegisterTournamentParticipantUseCase } from '../../application/use_case
 import { RemoveTournamentRegistrationUseCase } from '../../application/use_cases/remove_tournament_registration.use_case.js';
 import { UpdateTournamentRegistrationStatusUseCase } from '../../application/use_cases/update_tournament_registration_status.use_case.js';
 import { WithdrawTournamentRegistrationUseCase } from '../../application/use_cases/withdraw_tournament_registration.use_case.js';
+import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
 
 const TOURNAMENT_REPO = new PrismaTournamentRepository();
 const REGISTRATION_REPO = new PrismaTournamentRegistrationRepository();
@@ -18,6 +19,7 @@ const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAcces
 export const REGISTER_TOURNAMENT_PARTICIPANT_UC = new RegisterTournamentParticipantUseCase(
   TOURNAMENT_REPO,
   REGISTRATION_REPO,
+  CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
 );
 
 export const LIST_TOURNAMENT_REGISTRATIONS_UC = new ListTournamentRegistrationsUseCase(
@@ -40,6 +42,7 @@ export const UPDATE_TOURNAMENT_REGISTRATION_STATUS_UC = new UpdateTournamentRegi
   TOURNAMENT_REPO,
   REGISTRATION_REPO,
   ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+  CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
 );
 
 export const REMOVE_TOURNAMENT_REGISTRATION_UC = new RemoveTournamentRegistrationUseCase(

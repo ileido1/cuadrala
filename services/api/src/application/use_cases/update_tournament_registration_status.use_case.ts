@@ -5,12 +5,14 @@ import type {
 } from '../../domain/ports/tournament_registration_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
+import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
 
 export class UpdateTournamentRegistrationStatusUseCase {
   constructor(
     private readonly _tournamentRepository: TournamentRepository,
     private readonly _registrationRepository: TournamentRegistrationRepository,
     private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
+    private readonly _createTournamentNotificationEvent: CreateTournamentNotificationEventUseCase | null = null,
   ) {}
 
   async executeSV(_input: {
@@ -55,6 +57,28 @@ export class UpdateTournamentRegistrationStatusUseCase {
     if (UPDATED === null) {
       throw new AppError('INSCRIPCION_NO_ENCONTRADA', 'La inscripción indicada no existe.', 404);
     }
+    //? 6. Avisarle al jugador que quedó adentro. Sin esto la confirmación es
+    //? invisible: el cuadro se arma solo con los CONFIRMED y el jugador se
+    //? enteraría recién al aparecer (o no) en el calendario.
+    //? Los invitados sin cuenta (`userId` nulo) no tienen a dónde recibirlo.
+    if (
+      this._createTournamentNotificationEvent !== null &&
+      UPDATED.userId !== null &&
+      REGISTRATION.status !== 'CONFIRMED'
+    ) {
+      try {
+        await this._createTournamentNotificationEvent.executeSV({
+          type: 'TOURNAMENT_REGISTRATION_CONFIRMED',
+          tournamentId: TOURNAMENT.id,
+          categoryId: TOURNAMENT.categoryId,
+          payload: { tournamentName: TOURNAMENT.name },
+          userIds: [UPDATED.userId],
+        });
+      } catch {
+        // No bloquear la confirmación si falla la notificación.
+      }
+    }
+
     return UPDATED;
   }
 }

@@ -1,4 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
 import { createAmericanoScheduleKeySV, generateAmericanoScheduleSV } from '../../domain/americano/americano_schedule_generator.js';
 import { createRoundRobinScheduleKeySV, generateRoundRobinScheduleSV } from '../../domain/round_robin/round_robin_schedule_generator.js';
 import { createSingleEliminationScheduleKeySV, generateSingleEliminationScheduleSV } from '../../domain/single_elimination/bracket_generator.js';
@@ -17,7 +18,30 @@ export class GenerateTournamentScheduleUseCase {
     private readonly _tournamentScheduleRepository: TournamentScheduleRepository,
     private readonly _tournamentRegistrationRepository: TournamentRegistrationRepository,
     private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
+    private readonly _createTournamentNotificationEvent: CreateTournamentNotificationEventUseCase | null = null,
   ) {}
+
+  /**
+   * Avisa a los inscriptos confirmados que ya pueden ver cuándo juegan.
+   * Nunca bloquea la generación del cuadro.
+   */
+  private async _notifyScheduleSV(
+    _tournament: { id: string; name: string; categoryId: string },
+    _userIds: string[],
+  ): Promise<void> {
+    if (this._createTournamentNotificationEvent === null) return;
+    try {
+      await this._createTournamentNotificationEvent.executeSV({
+        type: 'TOURNAMENT_SCHEDULE_PUBLISHED',
+        tournamentId: _tournament.id,
+        categoryId: _tournament.categoryId,
+        payload: { tournamentName: _tournament.name },
+        userIds: _userIds,
+      });
+    } catch {
+      // No bloquear la generacion del cuadro si falla la notificacion.
+    }
+  }
 
   async executeSV(_input: {
     tournamentId: string;
@@ -58,6 +82,11 @@ export class GenerateTournamentScheduleUseCase {
       'CONFIRMED',
     );
     const PARTICIPANT_REGISTRATION_IDS = CONFIRMED_REGISTRATIONS.map((_r) => _r.id);
+    //? A quién avisarle: los invitados sin cuenta (`userId` nulo) juegan el
+    //? torneo pero no tienen dónde recibir la notificación.
+    const CONFIRMED_USER_IDS = CONFIRMED_REGISTRATIONS.map((_r) => _r.userId).filter(
+      (_id): _id is string => _id !== null,
+    );
 
     const PRESET = await this._formatPresetRepository.findByIdSV(TOURNAMENT.formatPresetId);
     if (PRESET === null) {
@@ -75,6 +104,11 @@ export class GenerateTournamentScheduleUseCase {
         scheduleKey: SCHEDULE_KEY,
         payload: PAYLOAD,
       });
+      //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
+      //? y volver a avisar por cada intento sería ruido.
+      if (RES.created) {
+        await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
+      }
       return {
         created: RES.created,
         schedule: {
@@ -101,6 +135,11 @@ export class GenerateTournamentScheduleUseCase {
         scheduleKey: SCHEDULE_KEY,
         payload: PAYLOAD,
       });
+      //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
+      //? y volver a avisar por cada intento sería ruido.
+      if (RES.created) {
+        await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
+      }
       return {
         created: RES.created,
         schedule: {
@@ -127,6 +166,11 @@ export class GenerateTournamentScheduleUseCase {
         scheduleKey: SCHEDULE_KEY,
         payload: PAYLOAD,
       });
+      //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
+      //? y volver a avisar por cada intento sería ruido.
+      if (RES.created) {
+        await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
+      }
       return {
         created: RES.created,
         schedule: {
