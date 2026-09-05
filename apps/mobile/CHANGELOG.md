@@ -5,6 +5,30 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.0.5] - 2026-09-05
+
+### Cambiado
+
+- **Ahora te podés anotar a un torneo publicado.** La autoinscripción solo se
+  admitía mientras el torneo estaba en "Borrador"; al publicarlo pasaba a
+  "OPEN" y el jugador recibía un error, aunque el organizador sí podía seguir
+  invitando gente. El estado que se lee como "abierto, anotate" era justo donde
+  la puerta pública estaba cerrada. La ventana de inscripción ahora es la misma
+  para las cuatro acciones sobre el plantel.
+
+### Corregido
+
+- **El botón de inscripción ofrecía una acción imposible.** No miraba el estado
+  del torneo: se mostraba siempre, y con el torneo en curso la API respondía
+  con un error que aparecía en rojo al lado del botón. Ahora aparece solo
+  cuando se puede entrar, y si no, explica por qué.
+- **Los estados del torneo se mostraban sin traducir.** La pantalla traducía
+  tres estados que ya no existen en la API, así que los reales —"OPEN",
+  "COMPLETED"— llegaban crudos al usuario.
+- **No se distinguía estar anotado de estar aceptado.** El único texto era
+  "Cancelar inscripción", así que quien esperaba la aprobación del organizador
+  no tenía forma de saberlo — y el cuadro se arma solo con los confirmados.
+
 ## [1.0.4] - 2026-09-04
 
 ### Corregido
