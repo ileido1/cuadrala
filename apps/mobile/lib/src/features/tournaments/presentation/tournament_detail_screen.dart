@@ -19,6 +19,8 @@ import 'cubit/tournament_schedule_cubit.dart';
 import 'cubit/tournament_schedule_state.dart';
 import 'cubit/tournament_scoreboard_cubit.dart';
 import 'cubit/tournament_scoreboard_state.dart';
+import 'tournament_status_view.dart';
+import 'widgets/enroll_button.dart';
 import 'widgets/invite_guest_sheet.dart';
 
 /// Etiquetas de las pestañas del detalle, en orden.
@@ -311,7 +313,7 @@ final class TournamentDetailBody extends StatelessWidget {
                       ),
                     ],
                     const Spacer(),
-                    _EnrollButton(tournamentId: tournamentId),
+                    EnrollButton(tournamentStatus: tournament?.status),
                   ],
                 ),
               ),
@@ -432,7 +434,7 @@ final class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _statusColor(status);
+    final color = tournamentStatusColor(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -440,7 +442,7 @@ final class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        _label(status),
+        tournamentStatusLabel(status),
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -450,102 +452,8 @@ final class _StatusBadge extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String s) {
-    switch (s.toUpperCase()) {
-      case 'REGISTRATION_OPEN':
-        return Colors.green;
-      case 'REGISTRATION_CLOSED':
-        return Colors.orange;
-      case 'IN_PROGRESS':
-        return Colors.blue;
-      case 'FINISHED':
-        return Colors.indigo;
-      case 'CANCELLED':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _label(String s) {
-    switch (s.toUpperCase()) {
-      case 'DRAFT':
-        return 'Borrador';
-      case 'REGISTRATION_OPEN':
-        return 'Inscripciones abiertas';
-      case 'REGISTRATION_CLOSED':
-        return 'Inscripciones cerradas';
-      case 'IN_PROGRESS':
-        return 'En curso';
-      case 'FINISHED':
-        return 'Finalizado';
-      case 'CANCELLED':
-        return 'Cancelado';
-      default:
-        return s;
-    }
-  }
 }
 
-final class _EnrollButton extends StatelessWidget {
-  const _EnrollButton({required this.tournamentId});
-  final String tournamentId;
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
-      builder: (context, state) {
-        if (state is! TournamentRegistrationsLoaded) {
-          return const SizedBox.shrink();
-        }
-        final cubit = context.read<TournamentRegistrationsCubit>();
-        final isRegistered = cubit.isCurrentUserRegistered;
-        final isLoading = state.registering;
-        final status = state.registerError;
-
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (status != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                ),
-              ),
-            FilledButton.icon(
-              //? El theme global usa Size.fromHeight(48) (ancho mínimo = ∞),
-              //? que revienta dentro de un Row (ancho sin límite). Acá se
-              //? acota para que el botón se ajuste a su contenido.
-              style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
-              onPressed: isLoading
-                  ? null
-                  : () {
-                      if (isRegistered) {
-                        cubit.withdraw();
-                      } else {
-                        cubit.register();
-                      }
-                    },
-              icon: isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(isRegistered ? Icons.person_remove : Icons.person_add),
-              label: Text(isRegistered ? 'Cancelar inscripción' : 'Inscribirse'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
 
 /// Legal next statuses for the current one, mirroring the backend's
 /// `tournament_status_machine.ts` (table-driven edges: DRAFT→OPEN,

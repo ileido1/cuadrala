@@ -77,7 +77,21 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
   final String? registrationActionError;
 
   bool isUserRegistered(String userId) {
-    return items.any((r) => r.userId == userId && r.status != 'WITHDRAWN');
+    return registrationFor(userId) != null;
+  }
+
+  /// La inscripción viva del usuario, o `null` si no está anotado.
+  ///
+  /// Hace falta el registro entero y no solo un booleano porque `PENDING` y
+  /// `CONFIRMED` son cosas distintas para el jugador: anotado no es lo mismo
+  /// que aceptado, y el cuadro se arma solo con los confirmados.
+  TournamentRegistrationDto? registrationFor(String userId) {
+    for (final registration in items) {
+      if (registration.userId == userId && registration.status != 'WITHDRAWN') {
+        return registration;
+      }
+    }
+    return null;
   }
 
   /// The current user's own PENDING invitation, if any.
