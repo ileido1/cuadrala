@@ -5,6 +5,24 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.0.6] - 2026-09-05
+
+### Añadido
+
+- **El torneo ahora avisa.** Antes no emitía ninguna notificación: te anotabas y
+  quedabas pendiente sin saberlo, el organizador te confirmaba en silencio, el
+  calendario salía en silencio y el torneo arrancaba en silencio — y el
+  organizador tampoco se enteraba de que tenía una inscripción esperando. Se
+  suman cuatro avisos: inscripción recibida, inscripción confirmada, calendario
+  publicado y torneo iniciado.
+
+### Corregido
+
+- **Una partida cancelada llevaba a distinto lado según cómo llegara el aviso.**
+  Con la app abierta abría el detalle de la partida; si llegaba como
+  notificación del sistema, caía en el listado de avisos. Eran dos copias del
+  mismo código que se habían separado. Ahora la decisión es una sola.
+
 ## [1.0.5] - 2026-09-05
 
 ### Cambiado
