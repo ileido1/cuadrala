@@ -221,6 +221,77 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/tournaments/{tournamentId}/registrations/pairs': {
+      post: {
+        tags: ['Tournaments'],
+        summary: 'El organizador arma una dupla fija',
+        description:
+          'Solo en torneos con `pairedRegistration`. En el MVP las duplas las arma el organizador: el jugador se inscribe solo, como en cualquier torneo. Rechaza inscripciones de otro torneo, retiradas, o que ya estén en otra dupla. Rehacer la misma dupla es idempotente.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['firstRegistrationId', 'secondRegistrationId'],
+                properties: {
+                  firstRegistrationId: { type: 'string', format: 'uuid' },
+                  secondRegistrationId: { type: 'string', format: 'uuid' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Dupla armada' },
+          '400': { description: 'Validación fallida' },
+          '403': { description: 'No es el organizador ni staff de la sede' },
+          '404': { description: 'Torneo o inscripción no encontrada' },
+          '409': {
+            description:
+              'El torneo no es de duplas fijas, ya no admite cambios de inscripción, o alguno de los jugadores ya está emparejado',
+          },
+        },
+      },
+    },
+    '/api/v1/tournaments/{tournamentId}/registrations/{registrationId}/pair': {
+      delete: {
+        tags: ['Tournaments'],
+        summary: 'El organizador deshace una dupla',
+        description:
+          'Desarma la dupla de esa inscripción y la de su compañero. `data.unpaired` es false cuando no había dupla: no es un error.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'registrationId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': { description: 'Dupla deshecha' },
+          '403': { description: 'No es el organizador ni staff de la sede' },
+          '404': { description: 'Torneo o inscripción no encontrada' },
+          '409': { description: 'El torneo ya no admite cambios de inscripción' },
+        },
+      },
+    },
     '/api/v1/notifications/tournament-slot-holds/expire': {
       post: {
         tags: ['Notifications'],
@@ -241,6 +312,56 @@ const OPENAPI_CONST = {
               'Barrido completado. `data.expiredHolds` son las canchas liberadas y `data.notifiedTournaments` los organizadores avisados.',
           },
           '401': { description: 'Secreto de dispatch inválido' },
+        },
+      },
+    },
+    '/api/v1/tournaments/{tournamentId}/schedule/rounds/{roundNumber}/matches/{matchNumber}/settle': {
+      post: {
+        tags: ['Tournaments'],
+        summary: 'El organizador cierra o libera el turno de un partido',
+        description:
+          'Solo el organizador del torneo o staff de la sede. Confirma la cancha apartada sin esperar la respuesta de los jugadores, o la libera para reubicar el partido. En americano y en los formatos que juegan una ronda entera a la vez, el organizador lleva el proceso. `data.applied` es false cuando el turno ya no estaba apartado: alguien lo confirmó o venció antes.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'roundNumber',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1 },
+          },
+          {
+            name: 'matchNumber',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['decision'],
+                properties: {
+                  decision: { type: 'string', enum: ['CONFIRM', 'RELEASE'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Turno actualizado' },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'Sesión no disponible' },
+          '403': { description: 'No es el organizador ni staff de la sede' },
+          '404': { description: 'Torneo no encontrado, o el partido no tiene cancha apartada' },
         },
       },
     },

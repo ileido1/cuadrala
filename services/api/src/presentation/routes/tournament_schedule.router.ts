@@ -4,6 +4,7 @@ import {
   getTournamentScheduleCON,
   postGenerateTournamentScheduleCON,
   postRespondTournamentSlotCON,
+  postSettleTournamentSlotCON,
 } from '../controllers/tournament_schedule.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
@@ -28,4 +29,12 @@ TOURNAMENT_SCHEDULE_ROUTER.post(
   '/tournaments/:tournamentId/schedule/rounds/:roundNumber/matches/:matchNumber/respond',
   requireAuth,
   asyncHandler(postRespondTournamentSlotCON),
+);
+
+//? Solo el organizador (o staff de la sede); el guard vive en el caso de uso
+//? porque necesita el torneo para saber quien lo organiza.
+TOURNAMENT_SCHEDULE_ROUTER.post(
+  '/tournaments/:tournamentId/schedule/rounds/:roundNumber/matches/:matchNumber/settle',
+  requireAuth,
+  asyncHandler(postSettleTournamentSlotCON),
 );

@@ -1,4 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import { collapsePairsToCompetitorsSV } from '../../domain/tournament/tournament_pairing.js';
 import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
 import type { ReserveTournamentScheduleSlotsUseCase } from './reserve_tournament_schedule_slots.use_case.js';
 import { buildMaterializedMatchPlansSV } from '../../domain/tournament/tournament_match_materialization.js';
@@ -133,7 +134,23 @@ export class GenerateTournamentScheduleUseCase {
       TOURNAMENT.id,
       'CONFIRMED',
     );
-    const PARTICIPANT_REGISTRATION_IDS = CONFIRMED_REGISTRATIONS.map((_r) => _r.id);
+    //? En un torneo de duplas fijas el competidor es la pareja, no la persona:
+    //? el cuadro cruza duplas. Una inscripcion sin companero queda afuera —
+    //? media pareja no compite— y el organizador tiene que emparejarla o
+    //? sacarla antes de generar.
+    const COLLAPSED = TOURNAMENT.pairedRegistration
+      ? collapsePairsToCompetitorsSV(CONFIRMED_REGISTRATIONS)
+      : { competitorIds: CONFIRMED_REGISTRATIONS.map((_r) => _r.id), unpairedIds: [] };
+
+    if (TOURNAMENT.pairedRegistration && COLLAPSED.unpairedIds.length > 0) {
+      throw new AppError(
+        'DUPLAS_INCOMPLETAS',
+        `Hay ${COLLAPSED.unpairedIds.length} inscripción(es) sin dupla. Emparejalas o quitalas antes de generar el calendario.`,
+        409,
+      );
+    }
+
+    const PARTICIPANT_REGISTRATION_IDS = COLLAPSED.competitorIds;
     //? A quién avisarle: los invitados sin cuenta (`userId` nulo) juegan el
     //? torneo pero no tienen dónde recibir la notificación.
     const CONFIRMED_USER_IDS = CONFIRMED_REGISTRATIONS.map((_r) => _r.userId).filter(

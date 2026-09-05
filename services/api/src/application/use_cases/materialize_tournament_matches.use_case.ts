@@ -60,7 +60,10 @@ export class MaterializeTournamentMatchesUseCase {
         SLOT_BY_MATCH.get(`${_plan.roundNumber}|${_plan.matchNumber}`)?.scheduledAt ??
         _input.startsAt,
       courtId: SLOT_BY_MATCH.get(`${_plan.roundNumber}|${_plan.matchNumber}`)?.courtId ?? null,
-      participants: _plan.participants.map((_p) => {
+      //? En duplas fijas cada token del cuadro es una PAREJA, no una persona:
+      //? se expande en sus dos jugadores. El lado (A/B) sale de la posicion del
+      //? token, porque los formatos 1v1 no traen `teamLabel`.
+      participants: _plan.participants.flatMap((_p, _index) => {
         const REGISTRATION = REGISTRATION_BY_ID.get(_p.participantRef);
         if (REGISTRATION === undefined) {
           throw new AppError(
@@ -69,11 +72,37 @@ export class MaterializeTournamentMatchesUseCase {
             409,
           );
         }
-        return {
+
+        const TEAM_LABEL = _p.teamLabel ?? (_index === 0 ? 'A' : 'B');
+        const SELF = {
           userId: REGISTRATION.userId,
           tournamentRegistrationId: REGISTRATION.id,
           teamLabel: _p.teamLabel,
         };
+
+        //? `?? null`: una inscripcion sin el campo (torneo individual, o un DTO
+        //? viejo) no tiene dupla; sin esto `undefined` caia en la busqueda y se
+        //? reportaba el cuadro como obsoleto.
+        const PARTNER_ID = REGISTRATION.partnerRegistrationId ?? null;
+        if (PARTNER_ID === null) return [SELF];
+
+        const PARTNER = REGISTRATION_BY_ID.get(PARTNER_ID);
+        if (PARTNER === undefined) {
+          throw new AppError(
+            'CALENDARIO_OBSOLETO',
+            'El calendario está desactualizado; regenera el calendario del torneo.',
+            409,
+          );
+        }
+
+        return [
+          { ...SELF, teamLabel: TEAM_LABEL },
+          {
+            userId: PARTNER.userId,
+            tournamentRegistrationId: PARTNER.id,
+            teamLabel: TEAM_LABEL,
+          },
+        ];
       }),
     }));
 

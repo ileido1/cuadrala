@@ -678,6 +678,14 @@ model Tournament {
   venue               Venue?                 @relation(fields: [venueId], references: [id], onDelete: SetNull)
   /// Slice 1 (tournament-guest-registration): torneo competitivo (aplica Elo) vs recreativo.
   isCompetitive       Boolean                @default(false)
+  /// `true` cuando se compite en duplas fijas: los jugadores se inscriben de a
+  /// dos y juegan todo el torneo con el mismo companero (padel de parejas).
+  ///
+  /// No confundir con AMERICANO, que tambien se juega 2v2 pero rota companero
+  /// cada ronda: ahi la inscripcion sigue siendo individual y la dupla existe
+  /// solo para ese partido. Por eso el flag habla de la INSCRIPCION y no de
+  /// cuantos juegan.
+  pairedRegistration  Boolean                @default(false)
   /// Slice 1 (tournament-guest-registration): precio de inscripción; null = gratuito.
   /// Elo solo se aplica cuando `isCompetitive=true AND inscriptionPrice > 0`.
   inscriptionPrice    Decimal?               @db.Decimal(10, 2)
@@ -770,6 +778,19 @@ model TournamentRegistration {
 
   // Postgres permite múltiples NULL en un índice único ⇒ las filas GUEST (userId=null)
   // nunca colisionan entre sí; solo se deduplican inscripciones AUTHENTICATED reales.
+  /// La otra mitad de la dupla, cuando el torneo se juega en parejas fijas.
+  ///
+  /// Simetrico: las dos filas se apuntan entre si. El `@unique` impide que una
+  /// persona quede en dos duplas del mismo torneo.
+  ///
+  /// Es un enlace entre inscripciones y no una entidad aparte a proposito: la
+  /// dupla no existe fuera del torneo, y modelarla como entidad habria obligado
+  /// a que todo lo que hoy habla de inscripciones aprendiera un segundo tipo de
+  /// participante.
+  partnerRegistrationId String?                 @unique
+  partner               TournamentRegistration? @relation("TournamentPair", fields: [partnerRegistrationId], references: [id], onDelete: SetNull)
+  partnerOf             TournamentRegistration? @relation("TournamentPair")
+
   @@unique([tournamentId, userId])
   @@index([tournamentId, status])
   @@index([tournamentId, registrationType])

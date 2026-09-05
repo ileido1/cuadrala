@@ -8,6 +8,7 @@ import {
   REMOVE_TOURNAMENT_REGISTRATION_UC,
   UPDATE_TOURNAMENT_REGISTRATION_STATUS_UC,
   WITHDRAW_TOURNAMENT_REGISTRATION_UC,
+  PAIR_TOURNAMENT_REGISTRATIONS_UC,
 } from '../composition/tournament_registration.composition.js';
 import {
   CREATE_TOURNAMENT_REGISTRATION_BODY_SCHEMA,
@@ -16,6 +17,7 @@ import {
   TOURNAMENT_REGISTRATION_PARAMS_SCHEMA,
   UPDATE_TOURNAMENT_REGISTRATION_STATUS_BODY_SCHEMA,
   WITHDRAW_TOURNAMENT_REGISTRATION_PARAMS_SCHEMA,
+  PAIR_TOURNAMENT_REGISTRATIONS_BODY_SCHEMA,
 } from '../validation/tournament_registration.validation.js';
 
 export async function postRegisterTournamentParticipantCON(
@@ -134,4 +136,38 @@ export async function deleteTournamentRegistrationCON(
   });
 
   _res.status(204).send();
+}
+
+export async function postPairTournamentRegistrationsCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
+  const PARAMS = TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
+  const BODY = PAIR_TOURNAMENT_REGISTRATIONS_BODY_SCHEMA.parse(_req.body);
+
+  const RESULT = await PAIR_TOURNAMENT_REGISTRATIONS_UC.pairSV({
+    tournamentId: PARAMS.tournamentId,
+    firstRegistrationId: BODY.firstRegistrationId,
+    secondRegistrationId: BODY.secondRegistrationId,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({ success: true, message: 'Dupla armada.', data: RESULT });
+}
+
+export async function deleteTournamentRegistrationPairCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
+  const PARAMS = TOURNAMENT_REGISTRATION_ID_PARAMS_SCHEMA.parse(_req.params);
+
+  const RESULT = await PAIR_TOURNAMENT_REGISTRATIONS_UC.unpairSV({
+    tournamentId: PARAMS.tournamentId,
+    registrationId: PARAMS.registrationId,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({ success: true, message: 'Dupla deshecha.', data: RESULT });
 }

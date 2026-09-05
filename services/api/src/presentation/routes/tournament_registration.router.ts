@@ -1,6 +1,8 @@
 import { Router } from 'express';
 
 import {
+  postPairTournamentRegistrationsCON,
+  deleteTournamentRegistrationPairCON,
   deleteTournamentRegistrationCON,
   getTournamentRegistrationsCON,
   patchTournamentRegistrationStatusCON,
@@ -48,4 +50,20 @@ TOURNAMENT_REGISTRATION_ROUTER.delete(
   '/tournaments/:tournamentId/registrations/:registrationId',
   requireAuth,
   asyncHandler(deleteTournamentRegistrationCON),
+);
+
+//? Duplas fijas: en el MVP las arma el organizador. El jugador se inscribe
+//? solo, como en cualquier torneo, y el emparejamiento es trabajo de quien
+//? lleva el torneo. El guard de organizador vive en el caso de uso porque
+//? necesita el torneo para saber quien lo organiza.
+TOURNAMENT_REGISTRATION_ROUTER.post(
+  '/tournaments/:tournamentId/registrations/pairs',
+  requireAuth,
+  asyncHandler(postPairTournamentRegistrationsCON),
+);
+
+TOURNAMENT_REGISTRATION_ROUTER.delete(
+  '/tournaments/:tournamentId/registrations/:registrationId/pair',
+  requireAuth,
+  asyncHandler(deleteTournamentRegistrationPairCON),
 );

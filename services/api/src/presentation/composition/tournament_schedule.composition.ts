@@ -12,6 +12,7 @@ import { ReserveTournamentScheduleSlotsUseCase } from '../../application/use_cas
 import { PrismaMatchCourtAvailabilityRepository } from '../../infrastructure/adapters/prisma_match_court_availability_repository.js';
 import { PrismaTournamentSlotHoldRepository } from '../../infrastructure/adapters/prisma_tournament_slot_hold_repository.js';
 import { RespondTournamentSlotUseCase } from '../../application/use_cases/respond_tournament_slot.use_case.js';
+import { SettleTournamentSlotAsOrganizerUseCase } from '../../application/use_cases/settle_tournament_slot_as_organizer.use_case.js';
 import {
   PrismaTournamentSlotHoldLifecycleRepository,
   PrismaTournamentSlotResponseRepository,
@@ -31,6 +32,15 @@ export const RESERVE_TOURNAMENT_SCHEDULE_SLOTS_UC = new ReserveTournamentSchedul
   new PrismaMatchCourtAvailabilityRepository(),
   new PrismaTournamentSlotHoldRepository(),
 );
+
+/** El organizador cierra o libera el turno sin esperar a los jugadores. */
+export const SETTLE_TOURNAMENT_SLOT_AS_ORGANIZER_UC =
+  new SettleTournamentSlotAsOrganizerUseCase(
+    TOURNAMENT_REPOSITORY,
+    TOURNAMENT_SCHEDULE_REPOSITORY,
+    ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+    new PrismaTournamentSlotHoldLifecycleRepository(),
+  );
 
 /** El jugador contesta si le sirve el horario que le toco. */
 export const RESPOND_TOURNAMENT_SLOT_UC = new RespondTournamentSlotUseCase(

@@ -24,3 +24,8 @@ export const RESPOND_TOURNAMENT_SLOT_PARAM_SCHEMA = z.object({
 export const RESPOND_TOURNAMENT_SLOT_BODY_SCHEMA = z.object({
   response: z.enum(['ACCEPTED', 'REJECTED']),
 });
+
+/** Decisión del organizador sobre el turno de un partido. */
+export const SETTLE_TOURNAMENT_SLOT_BODY_SCHEMA = z.object({
+  decision: z.enum(['CONFIRM', 'RELEASE']),
+});
