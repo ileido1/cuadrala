@@ -888,7 +888,12 @@ final class _ScheduleTab extends StatelessWidget {
                   ),
                 ],
               ),
-            TournamentScheduleEmpty() => Column(
+            //? Esta Column no tenía scroll propio: en pantallas bajas el
+            //? contador de participantes y el CTA de generar calendario
+            //? desbordaban y quedaban fuera de alcance. El scroll va sólo acá
+            //? — la rama de éxito ya es un ListView y anidarlo lo rompe.
+            TournamentScheduleEmpty() => SingleChildScrollView(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const _InfoBox(
@@ -953,6 +958,7 @@ final class _ScheduleTab extends StatelessWidget {
                     },
                   ),
                 ],
+                ),
               ),
             TournamentScheduleError(:final message) => _ErrorBox(
                 message: message,
