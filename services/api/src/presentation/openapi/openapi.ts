@@ -221,6 +221,29 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/notifications/tournament-slot-holds/expire': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Liberar los turnos de torneo que nadie confirmó',
+        description:
+          'Endpoint de operación: lo corre el worker, no la app. Suelta las canchas apartadas que llegaron a su vencimiento sin que los jugadores aceptaran el horario, y le avisa una vez por torneo al organizador. Sin este barrido, un jugador que no responde bloquea una cancha vendible para siempre.',
+        parameters: [
+          {
+            name: 'x-dispatch-secret',
+            in: 'header',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          '200': {
+            description:
+              'Barrido completado. `data.expiredHolds` son las canchas liberadas y `data.notifiedTournaments` los organizadores avisados.',
+          },
+          '401': { description: 'Secreto de dispatch inválido' },
+        },
+      },
+    },
     '/api/v1/tournaments/{tournamentId}/schedule/rounds/{roundNumber}/matches/{matchNumber}/respond': {
       post: {
         tags: ['Tournaments'],

@@ -189,6 +189,8 @@ enum NotificationEventType {
   TOURNAMENT_REGISTRATION_CONFIRMED
   TOURNAMENT_SCHEDULE_PUBLISHED
   TOURNAMENT_STARTED
+  /// Un partido del cuadro se quedo sin horario: lo rechazaron o vencio su turno.
+  TOURNAMENT_MATCH_NEEDS_ATTENTION
 }
 
 enum NotificationDeliveryStatus {

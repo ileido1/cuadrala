@@ -7,6 +7,7 @@ import {
   postCreateMatchCancelledNotificationEventCON,
   postCreatePaymentPendingNotificationEventCON,
   postDispatchNotificationsCON,
+  postExpireTournamentSlotHoldsCON,
 } from '../controllers/notifications.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
 import { requireSecret } from '../middleware/auth.middleware.js';
@@ -17,6 +18,15 @@ export const NOTIFICATIONS_ROUTER = Router();
 const REQUIRE_DISPATCH_SECRET = requireSecret(
   'x-dispatch-secret',
   ENV_CONST.NOTIFICATIONS_DISPATCH_SECRET,
+);
+
+//? Barrido de turnos apartados: suelta los que nadie confirmo y avisa al
+//? organizador. Vive con los endpoints de operacion porque lo corre el worker,
+//? no la app.
+NOTIFICATIONS_ROUTER.post(
+  '/notifications/tournament-slot-holds/expire',
+  REQUIRE_DISPATCH_SECRET,
+  asyncHandler(postExpireTournamentSlotHoldsCON),
 );
 
 NOTIFICATIONS_ROUTER.post(

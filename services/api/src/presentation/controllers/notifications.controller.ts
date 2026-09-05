@@ -5,6 +5,7 @@ import {
   CREATE_CHAT_MESSAGE_NOTIFICATION_EVENT_UC,
   CREATE_PAYMENT_PENDING_NOTIFICATION_EVENT_UC,
   DISPATCH_NOTIFICATIONS_UC,
+  EXPIRE_TOURNAMENT_SLOT_HOLDS_UC,
 } from '../composition/notifications.composition.js';
 import {
   CREATE_CHAT_MESSAGE_NOTIFICATION_EVENT_BODY_SCHEMA,
@@ -135,6 +136,19 @@ export async function postCreateChatMessageNotificationEventCON(
   _res.status(201).json({
     success: true,
     message: 'Evento creado correctamente.',
+    data: RESULT,
+  });
+}
+
+export async function postExpireTournamentSlotHoldsCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const RESULT = await EXPIRE_TOURNAMENT_SLOT_HOLDS_UC.executeSV();
+
+  _res.status(200).json({
+    success: true,
+    message: 'Barrido de turnos apartados completado.',
     data: RESULT,
   });
 }

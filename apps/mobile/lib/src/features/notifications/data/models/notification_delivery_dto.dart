@@ -9,6 +9,7 @@ enum NotificationType {
   tournamentRegistrationConfirmed,
   tournamentSchedulePublished,
   tournamentStarted,
+  tournamentMatchNeedsAttention,
   unknown,
 }
 
@@ -28,6 +29,8 @@ extension NotificationTypeWire on NotificationType {
         NotificationType.tournamentSchedulePublished =>
           'TOURNAMENT_SCHEDULE_PUBLISHED',
         NotificationType.tournamentStarted => 'TOURNAMENT_STARTED',
+        NotificationType.tournamentMatchNeedsAttention =>
+          'TOURNAMENT_MATCH_NEEDS_ATTENTION',
         NotificationType.unknown => '',
       };
 }
@@ -46,6 +49,8 @@ NotificationType notificationTypeFromWire(String raw) {
       NotificationType.tournamentRegistrationConfirmed,
     'TOURNAMENT_SCHEDULE_PUBLISHED' => NotificationType.tournamentSchedulePublished,
     'TOURNAMENT_STARTED' => NotificationType.tournamentStarted,
+    'TOURNAMENT_MATCH_NEEDS_ATTENTION' =>
+      NotificationType.tournamentMatchNeedsAttention,
     _ => NotificationType.unknown,
   };
 }
@@ -118,6 +123,7 @@ final class NotificationDeliveryDto {
       NotificationType.tournamentRegistrationConfirmed => 'Estás dentro',
       NotificationType.tournamentSchedulePublished => 'Ya está el calendario',
       NotificationType.tournamentStarted => 'Arrancó el torneo',
+      NotificationType.tournamentMatchNeedsAttention => 'Un partido necesita horario',
       NotificationType.unknown => 'Notificación',
     };
   }
@@ -141,6 +147,8 @@ final class NotificationDeliveryDto {
         'Se publicó el calendario del torneo. Mirá cuándo te toca jugar.',
       NotificationType.tournamentStarted =>
         'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
+      NotificationType.tournamentMatchNeedsAttention =>
+        'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
       NotificationType.unknown => '',
     };
   }

@@ -53,6 +53,11 @@ export function notificationContentForTypeSV(
         title: 'Arrancó el torneo',
         body: 'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
       };
+    case 'TOURNAMENT_MATCH_NEEDS_ATTENTION':
+      return {
+        title: 'Un partido necesita horario',
+        body: 'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
+      };
     default:
       return { title: 'Notificación', body: 'Tienes una nueva notificación.' };
   }

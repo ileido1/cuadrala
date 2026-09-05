@@ -125,6 +125,7 @@ class _ForegroundNotificationState extends State<ForegroundNotificationHandler> 
       NotificationType.tournamentRegistrationConfirmed => 'Estás dentro',
       NotificationType.tournamentSchedulePublished => 'Ya está el calendario',
       NotificationType.tournamentStarted => 'Arrancó el torneo',
+      NotificationType.tournamentMatchNeedsAttention => 'Un partido necesita horario',
       NotificationType.unknown => 'Notificación',
     };
   }
@@ -151,6 +152,8 @@ class _ForegroundNotificationState extends State<ForegroundNotificationHandler> 
         'Se publicó el calendario del torneo. Mirá cuándo te toca jugar.',
       NotificationType.tournamentStarted =>
         'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
+      NotificationType.tournamentMatchNeedsAttention =>
+        'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
       NotificationType.unknown => '',
     };
   }

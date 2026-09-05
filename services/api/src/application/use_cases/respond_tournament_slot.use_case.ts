@@ -7,6 +7,8 @@ import {
 import { buildMaterializedMatchPlansSV } from '../../domain/tournament/tournament_match_materialization.js';
 import type { TournamentScheduleRepository } from '../../domain/ports/tournament_schedule_repository.js';
 import type { TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
+import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
+import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
 
 export type TournamentSlotResponseRepository = {
   upsertSV(_input: {
@@ -45,7 +47,40 @@ export class RespondTournamentSlotUseCase {
     private readonly _registrationRepository: TournamentRegistrationRepository,
     private readonly _responseRepository: TournamentSlotResponseRepository,
     private readonly _holdRepository: TournamentSlotHoldLifecycleRepository,
+    private readonly _tournamentRepository: TournamentRepository | null = null,
+    private readonly _createTournamentNotificationEvent: CreateTournamentNotificationEventUseCase | null = null,
   ) {}
+
+  /**
+   * Le avisa al organizador que ese partido se quedo sin horario.
+   *
+   * Comparte evento con el vencimiento del turno: para el organizador son el
+   * mismo problema, "reubicalo". Nunca bloquea la respuesta del jugador.
+   */
+  private async _notifyOrganizerSV(_tournamentId: string, _roundNumber: number, _matchNumber: number): Promise<void> {
+    if (this._createTournamentNotificationEvent === null) return;
+    if (this._tournamentRepository === null) return;
+
+    try {
+      const TOURNAMENT = await this._tournamentRepository.findByIdSV(_tournamentId);
+      if (TOURNAMENT === null || TOURNAMENT.organizerUserId === null) return;
+
+      await this._createTournamentNotificationEvent.executeSV({
+        type: 'TOURNAMENT_MATCH_NEEDS_ATTENTION',
+        tournamentId: TOURNAMENT.id,
+        categoryId: TOURNAMENT.categoryId,
+        payload: {
+          tournamentName: TOURNAMENT.name,
+          roundNumber: _roundNumber,
+          matchNumber: _matchNumber,
+          reason: 'PLAYER_REJECTED',
+        },
+        userIds: [TOURNAMENT.organizerUserId],
+      });
+    } catch {
+      // No bloquear la respuesta del jugador si falla el aviso.
+    }
+  }
 
   async executeSV(_input: {
     tournamentId: string;
@@ -108,6 +143,10 @@ export class RespondTournamentSlotUseCase {
       } else if (DECISION === 'REJECTED') {
         await this._holdRepository.releaseHoldSV(HOLD);
       }
+    }
+
+    if (DECISION === 'REJECTED') {
+      await this._notifyOrganizerSV(_input.tournamentId, _input.roundNumber, _input.matchNumber);
     }
 
     return { decision: DECISION };

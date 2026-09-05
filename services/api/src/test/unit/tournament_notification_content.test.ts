@@ -7,12 +7,15 @@ import {
 import { TOURNAMENT_NOTIFICATION_EVENT_TYPES } from '../../domain/notifications/tournament_notification_events.js';
 
 describe('Tournament notification events', () => {
-  it('should cover the four moments a tournament has to announce', () => {
+  it('should cover every moment a tournament has to announce', () => {
     expect([...TOURNAMENT_NOTIFICATION_EVENT_TYPES]).toEqual([
       'TOURNAMENT_REGISTRATION_RECEIVED',
       'TOURNAMENT_REGISTRATION_CONFIRMED',
       'TOURNAMENT_SCHEDULE_PUBLISHED',
       'TOURNAMENT_STARTED',
+      //? Un rechazo y un vencimiento comparten evento: para el organizador son
+      //? el mismo problema, "este partido necesita que lo mires".
+      'TOURNAMENT_MATCH_NEEDS_ATTENTION',
     ]);
   });
 

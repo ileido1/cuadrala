@@ -38,6 +38,8 @@ export const RESPOND_TOURNAMENT_SLOT_UC = new RespondTournamentSlotUseCase(
   TOURNAMENT_REGISTRATION_REPOSITORY,
   new PrismaTournamentSlotResponseRepository(),
   new PrismaTournamentSlotHoldLifecycleRepository(),
+  TOURNAMENT_REPOSITORY,
+  CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
 );
 
 export const GENERATE_TOURNAMENT_SCHEDULE_UC = new GenerateTournamentScheduleUseCase(
