@@ -20,7 +20,9 @@ import 'cubit/tournament_schedule_state.dart';
 import 'cubit/tournament_scoreboard_cubit.dart';
 import 'cubit/tournament_scoreboard_state.dart';
 import 'tournament_status_view.dart';
+import 'tournament_roster_grouping.dart';
 import 'widgets/enroll_button.dart';
+import 'widgets/tournament_pairing_section.dart';
 import 'widgets/invite_guest_sheet.dart';
 
 /// Etiquetas de las pestañas del detalle, en orden.
@@ -383,6 +385,7 @@ final class TournamentDetailBody extends StatelessWidget {
               tournamentId: tournamentId,
               organizerUserId: tournament?.organizerUserId,
               tournamentStatus: tournament?.status,
+              pairedRegistration: tournament?.pairedRegistration ?? false,
             ),
           ],
         ),
@@ -958,11 +961,16 @@ final class _RegistrationsTab extends StatelessWidget {
     required this.tournamentId,
     required this.organizerUserId,
     required this.tournamentStatus,
+    required this.pairedRegistration,
   });
 
   final String tournamentId;
   final String? organizerUserId;
   final String? tournamentStatus;
+
+  /// `true` en torneos de duplas fijas: el roster se muestra por pareja y el
+  /// organizador puede emparejar. En torneo individual no cambia nada.
+  final bool pairedRegistration;
 
   @override
   Widget build(BuildContext context) {
@@ -1114,6 +1122,24 @@ final class _RegistrationsTab extends StatelessWidget {
                 const _InfoBox(
                   message:
                       'Aún no hay participantes. ¡Compartí el torneo para que más jugadores se inscriban!',
+                )
+              //? Torneo de duplas fijas: el roster se lee por pareja, no por
+              //? persona. Cuatro filas sueltas no dicen quien juega con quien, y
+              //? el organizador necesita ver a quien le falta companero antes de
+              //? generar el cuadro.
+              else if (pairedRegistration)
+                TournamentPairingSection(
+                  roster: groupRosterIntoPairs(
+                    registrations: activeItems,
+                    paired: true,
+                  ),
+                  canManage: canManageGuests,
+                  busyRegistrationId: loaded.busyRegistrationId,
+                  onPair: (first, second) => context
+                      .read<TournamentRegistrationsCubit>()
+                      .pairRegistrations(first, second),
+                  onUnpair: (id) =>
+                      context.read<TournamentRegistrationsCubit>().unpairRegistration(id),
                 )
               else ...[
                 for (final reg in authenticatedItems)

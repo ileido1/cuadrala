@@ -294,5 +294,28 @@ class TournamentsRepository {
       registrationId: registrationId,
     );
   }
-}
 
+  /// Duplas fijas: el organizador empareja dos inscripciones del torneo.
+  Future<void> pairRegistrations({
+    required String tournamentId,
+    required String firstRegistrationId,
+    required String secondRegistrationId,
+  }) {
+    return _tournamentsApi.pairTournamentRegistrations(
+      tournamentId: tournamentId,
+      firstRegistrationId: firstRegistrationId,
+      secondRegistrationId: secondRegistrationId,
+    );
+  }
+
+  /// Deshace la dupla de esa inscripción y la de su compañero.
+  Future<void> unpairRegistration({
+    required String tournamentId,
+    required String registrationId,
+  }) {
+    return _tournamentsApi.unpairTournamentRegistration(
+      tournamentId: tournamentId,
+      registrationId: registrationId,
+    );
+  }
+}

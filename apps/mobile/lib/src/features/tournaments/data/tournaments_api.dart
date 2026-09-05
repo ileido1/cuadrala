@@ -121,6 +121,19 @@ abstract interface class TournamentsApi {
     required String tournamentId,
     required String registrationId,
   });
+
+  /// Duplas fijas: el organizador empareja dos inscripciones del torneo.
+  Future<void> pairTournamentRegistrations({
+    required String tournamentId,
+    required String firstRegistrationId,
+    required String secondRegistrationId,
+  });
+
+  /// Deshace la dupla de esa inscripción y la de su compañero.
+  Future<void> unpairTournamentRegistration({
+    required String tournamentId,
+    required String registrationId,
+  });
 }
 
 final class DioTournamentsApi implements TournamentsApi {
@@ -337,5 +350,31 @@ final class DioTournamentsApi implements TournamentsApi {
       '/api/v1/tournaments/$tournamentId/registrations/$registrationId',
     );
   }
-}
 
+  @override
+  Future<void> pairTournamentRegistrations({
+    required String tournamentId,
+    required String firstRegistrationId,
+    required String secondRegistrationId,
+  }) async {
+    await _apiClient.postJson(
+      '/api/v1/tournaments/$tournamentId/registrations/pairs',
+      body: {
+        'firstRegistrationId': firstRegistrationId,
+        'secondRegistrationId': secondRegistrationId,
+      },
+    );
+  }
+
+  @override
+  Future<void> unpairTournamentRegistration({
+    required String tournamentId,
+    required String registrationId,
+  }) async {
+    //? La respuesta trae `{ unpaired: bool }` pero al cliente no le aporta:
+    //? recarga el roster igual y ahí ve el estado real.
+    await _apiClient.deleteNoContent(
+      '/api/v1/tournaments/$tournamentId/registrations/$registrationId/pair',
+    );
+  }
+}
