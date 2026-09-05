@@ -4,9 +4,12 @@ import { AppError } from '../../domain/errors/app_error.js';
 import {
   GENERATE_TOURNAMENT_SCHEDULE_UC,
   GET_TOURNAMENT_SCHEDULE_UC,
+  RESPOND_TOURNAMENT_SLOT_UC,
 } from '../composition/tournament_schedule.composition.js';
 import {
   GENERATE_TOURNAMENT_SCHEDULE_BODY_SCHEMA,
+  RESPOND_TOURNAMENT_SLOT_BODY_SCHEMA,
+  RESPOND_TOURNAMENT_SLOT_PARAM_SCHEMA,
   TOURNAMENT_ID_PARAM_SCHEMA,
 } from '../validation/tournament_schedule.validation.js';
 
@@ -44,3 +47,27 @@ export async function getTournamentScheduleCON(_req: Request, _res: Response): P
   });
 }
 
+
+export async function postRespondTournamentSlotCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = RESPOND_TOURNAMENT_SLOT_PARAM_SCHEMA.parse(_req.params);
+  const BODY = RESPOND_TOURNAMENT_SLOT_BODY_SCHEMA.parse(_req.body);
+
+  const RESULT = await RESPOND_TOURNAMENT_SLOT_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    roundNumber: PARAMS.roundNumber,
+    matchNumber: PARAMS.matchNumber,
+    actorUserId: ACTOR_USER_ID,
+    response: BODY.response,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Respuesta registrada.',
+    data: RESULT,
+  });
+}

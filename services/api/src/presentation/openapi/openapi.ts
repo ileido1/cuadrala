@@ -221,6 +221,59 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/tournaments/{tournamentId}/schedule/rounds/{roundNumber}/matches/{matchNumber}/respond': {
+      post: {
+        tags: ['Tournaments'],
+        summary: 'Responder al horario asignado a un partido del cuadro',
+        description:
+          'Solo puede responder quien juega ese partido. Cuando aceptan todos los jugadores con cuenta, la cancha apartada pasa a reserva firme; si alguno rechaza, se libera y el partido vuelve al organizador. Los invitados sin cuenta no bloquean la decisión.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'roundNumber',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1 },
+          },
+          {
+            name: 'matchNumber',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['response'],
+                properties: {
+                  response: { type: 'string', enum: ['ACCEPTED', 'REJECTED'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description:
+              'Respuesta registrada. `data.decision` dice cómo quedó el partido: PENDING, ACCEPTED o REJECTED.',
+          },
+          '400': { description: 'Validación fallida' },
+          '401': { description: 'Sesión no disponible' },
+          '403': { description: 'No juega ese partido' },
+          '404': { description: 'Torneo, calendario o partido no encontrado' },
+        },
+      },
+    },
     '/api/v1/tournaments/{tournamentId}/schedule:generate': {
       post: {
         tags: ['Tournaments'],

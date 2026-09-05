@@ -238,6 +238,11 @@ enum Visibility {
 
 /// Visibilidad de un torneo: `PUBLIC` aparece en el catálogo público;
 /// `PRIVATE` solo es accesible por link directo / invitación (nunca listado).
+enum TournamentSlotResponseValue {
+  ACCEPTED
+  REJECTED
+}
+
 enum TournamentVisibility {
   PUBLIC
   PRIVATE
@@ -320,6 +325,7 @@ model User {
   updatedAt        DateTime         @updatedAt
 
   tournamentRegistrations     TournamentRegistration[]
+  tournamentSlotResponses     TournamentSlotResponse[]
   matchParticipants           MatchParticipant[]
   rankingEntries              RankingEntry[]
   matchResultScores           MatchResultScore[]
@@ -680,6 +686,7 @@ model Tournament {
   invitations        TournamentInvitation[]
   matches            Match[]
   schedule           TournamentSchedule?
+  slotResponses      TournamentSlotResponse[]
   chatThread         ChatThread?
   notificationEvents NotificationEvent[]
 
@@ -688,6 +695,27 @@ model Tournament {
   @@index([organizerUserId])
   @@index([venueId])
   @@index([visibility])
+}
+
+/// Respuesta de un jugador al horario que le toco en el cuadro.
+///
+/// Cuelga del torneo y del par ronda/partido, NO de `Match`: los partidos
+/// recien se materializan al pasar a IN_PROGRESS, y la aceptacion ocurre antes,
+/// mientras las canchas estan apartadas.
+model TournamentSlotResponse {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  roundNumber  Int
+  matchNumber  Int
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  response     TournamentSlotResponseValue
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([tournamentId, roundNumber, matchNumber, userId])
+  @@index([tournamentId, roundNumber, matchNumber])
 }
 
 /// Schedule genérico por torneo (MVP: reutiliza payload JSON).
