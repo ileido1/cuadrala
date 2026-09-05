@@ -103,6 +103,21 @@ export class PrismaMatchCourtAvailabilityRepository implements MatchCourtAvailab
     return null;
   }
 
+  async listLiveReservationSlotsSV(_params: {
+    venueId: string;
+    from: Date;
+    to: Date;
+  }): Promise<Array<{ courtId: string; scheduledAt: Date }>> {
+    return PRISMA.reservation.findMany({
+      where: {
+        venueId: _params.venueId,
+        scheduledAt: { gte: _params.from, lt: _params.to },
+        status: { in: [...LIVE_RESERVATION_STATUSES] as ('HELD' | 'CONFIRMED')[] },
+      },
+      select: { courtId: true, scheduledAt: true },
+    });
+  }
+
   async hasConfirmedReservationAtCourtScheduledAtSV(
     _courtId: string,
     _scheduledAt: Date,

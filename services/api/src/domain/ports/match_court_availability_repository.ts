@@ -26,6 +26,18 @@ export interface MatchCourtAvailabilityRepository {
     excludeMatchId?: string;
   }): Promise<string | null>;
 
+  /**
+   * Turnos vivos (HELD o CONFIRMED) de una sede dentro de una ventana.
+   *
+   * Lectura en bloque para planificar el calendario de un torneo: preguntar
+   * cancha por cancha y horario por horario serian cientos de consultas.
+   */
+  listLiveReservationSlotsSV(_params: {
+    venueId: string;
+    from: Date;
+    to: Date;
+  }): Promise<Array<{ courtId: string; scheduledAt: Date }>>;
+
   hasConfirmedReservationAtCourtScheduledAtSV(
     _courtId: string,
     _scheduledAt: Date,

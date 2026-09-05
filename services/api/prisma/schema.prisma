@@ -702,6 +702,13 @@ model TournamentSchedule {
   scheduleKey String
   /// Payload JSON del schedule (estructura depende del formato).
   payload     Json
+  /// Horario y cancha por partido: `[{ roundNumber, matchNumber, courtId, scheduledAt }]`.
+  ///
+  /// Va aparte de `payload` a proposito: ese es el cuadro (quien juega contra
+  /// quien, dominio puro del formato) y esto es donde y cuando se juega, que
+  /// depende de la sede. Antes no existia y todos los partidos heredaban
+  /// `Tournament.startsAt` sin cancha.
+  slotPlan    Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

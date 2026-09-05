@@ -44,13 +44,22 @@ export class MaterializeTournamentMatchesUseCase {
     const REGISTRATIONS = await this._tournamentRegistrationRepository.listByTournamentIdSV(_input.tournamentId);
     const REGISTRATION_BY_ID = new Map(REGISTRATIONS.map((_r) => [_r.id, _r]));
 
+    //? Horario y cancha por partido, planificados contra la disponibilidad de la
+    //? sede al generar el cuadro. Antes no existian: todos los partidos heredaban
+    //? `Tournament.startsAt` sin cancha, asi que el jugador no podia saber cuando
+    //? ni donde jugaba. El fallback se mantiene para los cuadros viejos y para el
+    //? torneo sin sede, que no tiene contra que planificar.
+    const SLOT_BY_MATCH = new Map(
+      (SCHEDULE.slotPlan ?? []).map((_s) => [`${_s.roundNumber}|${_s.matchNumber}`, _s]),
+    );
+
     const PLANS = RAW_PLANS.map((_plan) => ({
       roundNumber: _plan.roundNumber,
       matchNumber: _plan.matchNumber,
-      // Sin plan de horario/canchas persistido aún (ver Design §12 open question):
-      // se usa el fallback documentado — scheduledAt = Tournament.startsAt, courtId = null.
-      scheduledAt: _input.startsAt,
-      courtId: null,
+      scheduledAt:
+        SLOT_BY_MATCH.get(`${_plan.roundNumber}|${_plan.matchNumber}`)?.scheduledAt ??
+        _input.startsAt,
+      courtId: SLOT_BY_MATCH.get(`${_plan.roundNumber}|${_plan.matchNumber}`)?.courtId ?? null,
       participants: _plan.participants.map((_p) => {
         const REGISTRATION = REGISTRATION_BY_ID.get(_p.participantRef);
         if (REGISTRATION === undefined) {
