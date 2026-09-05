@@ -21,6 +21,22 @@ import 'cubit/tournament_scoreboard_cubit.dart';
 import 'cubit/tournament_scoreboard_state.dart';
 import 'widgets/invite_guest_sheet.dart';
 
+/// Etiquetas de las pestañas del detalle, en orden.
+///
+/// Público a propósito: los tests navegan tocando estas etiquetas, y el
+/// nombre de la tercera cambió dos veces en dos días
+/// (Inscripciones → Inscriptos → Registrados) dejando la suite en rojo cada
+/// vez, porque el texto estaba duplicado en los tests. Renombrar acá ahora
+/// arrastra a los tests con él.
+const tournamentDetailTabLabels = <String>[
+  'Calendario',
+  'Clasificación',
+  'Registrados',
+];
+
+/// Índice de la pestaña de inscripciones dentro de [tournamentDetailTabLabels].
+const tournamentRegistrationsTabIndex = 2;
+
 /// Tournament statuses that still allow generating/regenerating the
 /// schedule and managing guest registrations (organizer confirm/remove),
 /// mirroring the backend's `STATUSES_ALLOWING_SCHEDULE_GENERATION` /
@@ -345,10 +361,9 @@ final class TournamentDetailBody extends StatelessWidget {
                   labelColor: Theme.of(context).colorScheme.primary,
                   unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
                   indicatorColor: Theme.of(context).colorScheme.primary,
-                  tabs: const [
-                    Tab(text: 'Calendario'),
-                    Tab(text: 'Clasificación'),
-                    Tab(text: 'Registrados'),
+                  tabs: [
+                    for (final label in tournamentDetailTabLabels)
+                      Tab(text: label),
                   ],
                 ),
               ),
