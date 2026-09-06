@@ -1,0 +1,14 @@
+# El CLI de Vercel sube todo el directorio si no se le dice que no.
+# Sin esto el deploy arrastra ~1 GB de artefactos de Flutter que Vercel no usa.
+build/
+.dart_tool/
+.idea/
+android/
+ios/
+linux/
+macos/
+windows/
+test/
+docs/
+design_handoff_auth_onboarding/
+*.iml

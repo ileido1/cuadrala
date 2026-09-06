@@ -1,0 +1,74 @@
+# Despliegue de la app web a Vercel.
+#
+# Flutter no viene en las imágenes de Vercel y `build/` está en .gitignore, así
+# que Vercel no puede construir la app por su cuenta. Acá se construye —donde
+# Flutter sí está soportado— y a Vercel se le entrega el resultado ya compilado
+# con `--prebuilt`. Vercel hace lo que hace bien: servir estáticos.
+#
+# La ventaja real sobre dejar que Vercel construya: los tests corren ANTES de
+# publicar. Un build que compila con la suite en rojo no llega a producción.
+name: Desplegar app web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/deploy-mobile.yml'
+  # Para poder republicar sin tocar código.
+  workflow_dispatch:
+
+concurrency:
+  # Un push nuevo cancela el deploy anterior: publicar una versión vieja encima
+  # de una nueva es peor que tardar un minuto más.
+  group: deploy-mobile
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Fijada a la version de desarrollo. `flutter-version-file` no sirve
+          # acá: pubspec.yaml declara el SDK de Dart pero no el de Flutter, y un
+          # canal flotante haria que el build cambie sin que cambie el codigo.
+          flutter-version: '3.35.7'
+          channel: stable
+          cache: true
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Analizar
+        run: flutter analyze lib test
+
+      - name: Tests
+        run: flutter test
+
+      - name: Construir la app web
+        run: flutter build web --release
+
+      - name: Armar la salida para Vercel
+        # Build Output API v3: Vercel publica `.vercel/output` tal cual, sin
+        # ejecutar ningún build propio.
+        run: |
+          mkdir -p .vercel/output/static
+          cp -r build/web/. .vercel/output/static/
+          # En una linea a proposito: un heredoc adentro del YAML no termina,
+          # porque su delimitador queda indentado y el shell no lo reconoce.
+          # `filesystem` sirve los archivos reales; el resto cae en index.html
+          # para que las rutas de go_router funcionen al recargar la pagina.
+          echo '{"version":3,"routes":[{"handle":"filesystem"},{"src":"/.*","dest":"/index.html"}]}' > .vercel/output/config.json
+
+      - name: Publicar en Vercel
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx --yes vercel@latest deploy --prebuilt --prod --token "${{ secrets.VERCEL_TOKEN }}"
