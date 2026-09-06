@@ -105,8 +105,8 @@ class TournamentsRepository {
   }) async {
     try {
       final body = <String, Object?>{
-        if (doubleRound != null) 'doubleRound': doubleRound,
-        if (thirdPlaceMatch != null) 'thirdPlaceMatch': thirdPlaceMatch,
+        'doubleRound': ?doubleRound,
+        'thirdPlaceMatch': ?thirdPlaceMatch,
       };
       final data = await _tournamentsApi.generateTournamentScheduleEnvelope(
         tournamentId: tournamentId,
@@ -262,8 +262,8 @@ class TournamentsRepository {
       tournamentId: tournamentId,
       body: {
         'name': name,
-        if (phone != null) 'phone': phone,
-        if (email != null) 'email': email,
+        'phone': ?phone,
+        'email': ?email,
       },
     );
     return TournamentRegistrationDto.fromJson(decodeEnvelopeDataMap(data));

@@ -1289,7 +1289,7 @@ final class _RegistrationTile extends StatelessWidget {
     final avatarLabel = label.substring(0, label.length >= 2 ? 2 : label.length).toUpperCase();
 
     //? Color del badge según status
-    Color _statusColor(String status) {
+    Color statusColorSV(String status) {
       switch (status) {
         case 'PENDING':
           return Colors.orange;
@@ -1343,7 +1343,7 @@ final class _RegistrationTile extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _statusColor(registration.status).withValues(alpha: 0.2),
+                        color: statusColorSV(registration.status).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -1351,7 +1351,7 @@ final class _RegistrationTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: _statusColor(registration.status),
+                          color: statusColorSV(registration.status),
                         ),
                       ),
                     ),
