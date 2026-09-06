@@ -4,6 +4,7 @@ import {
   getTournamentScheduleCON,
   postGenerateTournamentScheduleCON,
   postRespondTournamentSlotCON,
+  getMyTournamentMatchesCON,
   postRescheduleTournamentMatchCON,
   postSettleTournamentSlotCON,
 } from '../controllers/tournament_schedule.controller.js';
@@ -46,4 +47,12 @@ TOURNAMENT_SCHEDULE_ROUTER.post(
   '/tournaments/:tournamentId/schedule/rounds/:roundNumber/matches/:matchNumber/reschedule',
   requireAuth,
   asyncHandler(postRescheduleTournamentMatchCON),
+);
+
+//? Responde la pregunta concreta del jugador —"cuando y donde juego"— en vez de
+//? devolver el cuadro entero para que el cliente se busque adentro.
+TOURNAMENT_SCHEDULE_ROUTER.get(
+  '/tournaments/:tournamentId/schedule/my-matches',
+  requireAuth,
+  asyncHandler(getMyTournamentMatchesCON),
 );

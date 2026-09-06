@@ -315,6 +315,28 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/tournaments/{tournamentId}/schedule/my-matches': {
+      get: {
+        tags: ['Tournaments'],
+        summary: 'Los partidos del jugador en el torneo',
+        description:
+          'Día, hora, cancha, compañero y rivales de cada partido del jugador autenticado, en orden de juego. En duplas fijas expande la pareja. Devuelve vacío —no 404— cuando el calendario todavía no se generó: es un estado normal del torneo. `myResponse` es lo que ya contestó y `decision` cómo quedó el partido con las respuestas de todos.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': { description: 'Lista de partidos del jugador' },
+          '401': { description: 'Sesión no disponible' },
+          '404': { description: 'Torneo no encontrado' },
+        },
+      },
+    },
     '/api/v1/tournaments/{tournamentId}/schedule/rounds/{roundNumber}/matches/{matchNumber}/reschedule': {
       post: {
         tags: ['Tournaments'],

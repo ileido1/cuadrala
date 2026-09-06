@@ -122,6 +122,19 @@ abstract interface class TournamentsApi {
     required String registrationId,
   });
 
+  /// Los partidos del jugador autenticado en el torneo.
+  Future<Map<String, Object?>> getMyTournamentMatchesEnvelope({
+    required String tournamentId,
+  });
+
+  /// El jugador contesta si le sirve el horario de su partido.
+  Future<void> respondToTournamentSlot({
+    required String tournamentId,
+    required int roundNumber,
+    required int matchNumber,
+    required String response,
+  });
+
   /// Duplas fijas: el organizador empareja dos inscripciones del torneo.
   Future<void> pairTournamentRegistrations({
     required String tournamentId,
@@ -375,6 +388,28 @@ final class DioTournamentsApi implements TournamentsApi {
     //? recarga el roster igual y ahí ve el estado real.
     await _apiClient.deleteNoContent(
       '/api/v1/tournaments/$tournamentId/registrations/$registrationId/pair',
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> getMyTournamentMatchesEnvelope({
+    required String tournamentId,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/tournaments/$tournamentId/schedule/my-matches',
+    );
+  }
+
+  @override
+  Future<void> respondToTournamentSlot({
+    required String tournamentId,
+    required int roundNumber,
+    required int matchNumber,
+    required String response,
+  }) async {
+    await _apiClient.postJson(
+      '/api/v1/tournaments/$tournamentId/schedule/rounds/$roundNumber/matches/$matchNumber/respond',
+      body: {'response': response},
     );
   }
 }

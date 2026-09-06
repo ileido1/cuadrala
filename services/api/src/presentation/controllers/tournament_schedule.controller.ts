@@ -7,6 +7,7 @@ import {
   RESPOND_TOURNAMENT_SLOT_UC,
   SETTLE_TOURNAMENT_SLOT_AS_ORGANIZER_UC,
   RESCHEDULE_TOURNAMENT_MATCH_UC,
+  LIST_MY_TOURNAMENT_MATCHES_UC,
 } from '../composition/tournament_schedule.composition.js';
 import {
   GENERATE_TOURNAMENT_SCHEDULE_BODY_SCHEMA,
@@ -122,4 +123,20 @@ export async function postRescheduleTournamentMatchCON(
   });
 
   _res.status(200).json({ success: true, message: 'Partido reubicado.', data: RESULT });
+}
+
+export async function getMyTournamentMatchesCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = TOURNAMENT_ID_PARAM_SCHEMA.parse(_req.params);
+
+  const RESULT = await LIST_MY_TOURNAMENT_MATCHES_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({ success: true, message: 'OK', data: RESULT });
 }

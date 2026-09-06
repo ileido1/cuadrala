@@ -12,6 +12,7 @@ import { ReserveTournamentScheduleSlotsUseCase } from '../../application/use_cas
 import { PrismaMatchCourtAvailabilityRepository } from '../../infrastructure/adapters/prisma_match_court_availability_repository.js';
 import { PrismaTournamentSlotHoldRepository } from '../../infrastructure/adapters/prisma_tournament_slot_hold_repository.js';
 import { RespondTournamentSlotUseCase } from '../../application/use_cases/respond_tournament_slot.use_case.js';
+import { ListMyTournamentMatchesUseCase } from '../../application/use_cases/list_my_tournament_matches.use_case.js';
 import { RescheduleTournamentMatchUseCase } from '../../application/use_cases/reschedule_tournament_match.use_case.js';
 import { SettleTournamentSlotAsOrganizerUseCase } from '../../application/use_cases/settle_tournament_slot_as_organizer.use_case.js';
 import {
@@ -32,6 +33,15 @@ const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAcces
 export const RESERVE_TOURNAMENT_SCHEDULE_SLOTS_UC = new ReserveTournamentScheduleSlotsUseCase(
   new PrismaMatchCourtAvailabilityRepository(),
   new PrismaTournamentSlotHoldRepository(),
+);
+
+/** Los partidos del jugador, con dia, hora, cancha y rival. */
+export const LIST_MY_TOURNAMENT_MATCHES_UC = new ListMyTournamentMatchesUseCase(
+  TOURNAMENT_REPOSITORY,
+  TOURNAMENT_SCHEDULE_REPOSITORY,
+  TOURNAMENT_REGISTRATION_REPOSITORY,
+  new PrismaTournamentSlotResponseRepository(),
+  new PrismaMatchCourtAvailabilityRepository(),
 );
 
 /** El organizador mueve un partido a otro horario o cancha. */

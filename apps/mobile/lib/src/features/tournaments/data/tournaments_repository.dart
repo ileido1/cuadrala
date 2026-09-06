@@ -7,6 +7,7 @@ import 'models/tournament_list_item_dto.dart';
 import 'models/tournament_list_page.dart';
 import 'models/tournament_preset_dto.dart';
 import 'models/tournament_registration_dto.dart';
+import 'models/my_tournament_match_dto.dart';
 import 'models/tournament_schedule_dto.dart';
 import 'models/tournament_scoreboard_dto.dart';
 import 'tournaments_api.dart';
@@ -316,6 +317,37 @@ class TournamentsRepository {
     return _tournamentsApi.unpairTournamentRegistration(
       tournamentId: tournamentId,
       registrationId: registrationId,
+    );
+  }
+
+  /// Los partidos del jugador en el torneo, con día, hora, cancha y rival.
+  Future<List<MyTournamentMatchDto>> listMyTournamentMatches({
+    required String tournamentId,
+  }) async {
+    final data = await _tournamentsApi.getMyTournamentMatchesEnvelope(
+      tournamentId: tournamentId,
+    );
+    final raw = data['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, Object?>.from(e))
+        .map(MyTournamentMatchDto.fromJson)
+        .toList(growable: false);
+  }
+
+  /// El jugador contesta si le sirve el horario de su partido.
+  Future<void> respondToTournamentSlot({
+    required String tournamentId,
+    required int roundNumber,
+    required int matchNumber,
+    required String response,
+  }) {
+    return _tournamentsApi.respondToTournamentSlot(
+      tournamentId: tournamentId,
+      roundNumber: roundNumber,
+      matchNumber: matchNumber,
+      response: response,
     );
   }
 }
