@@ -30,7 +30,14 @@ export type NotificationsDispatchBatchOutcomeDTO = {
 };
 
 export type NotificationsDispatchWarningDTO = {
-  kind: 'BACKLOG_GROWING' | 'FAILURE_RATE_HIGH' | 'TICK_TIMEOUT' | 'OVERLAP_SKIPPED';
+  kind:
+    | 'BACKLOG_GROWING'
+    | 'FAILURE_RATE_HIGH'
+    | 'TICK_TIMEOUT'
+    | 'OVERLAP_SKIPPED'
+    /// Fallo el barrido de turnos apartados de torneo. No frena el dispatch,
+    /// pero si se repite hay canchas que no se estan liberando.
+    | 'HOLD_SWEEP_FAILED';
   backlogEvents?: number;
   backlogDeliveries?: number;
   failedDeliveries?: number;

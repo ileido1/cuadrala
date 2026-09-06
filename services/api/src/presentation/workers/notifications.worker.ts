@@ -1,4 +1,5 @@
 import type { DispatchNotificationsUseCase } from '../../application/use_cases/dispatch_notifications.use_case.js';
+import type { ExpireTournamentSlotHoldsUseCase } from '../../application/use_cases/expire_tournament_slot_holds.use_case.js';
 import { ENV_CONST } from '../../config/env.js';
 import { NOTIFICATIONS_OBSERVABILITY } from '../observability/notifications_metrics.js';
 import type { DistributedLockRepository } from '../../domain/ports/distributed_lock_repository.js';
@@ -26,6 +27,14 @@ async function withTimeoutSV<T>(_promise: Promise<T>, _timeoutMs: number): Promi
 export function startNotificationsWorkerSV(
   _dispatchNotificationsUC: DispatchNotificationsUseCase,
   _distributedLockRepository: DistributedLockRepository | null = null,
+  /**
+   * Barrido de turnos apartados de torneo.
+   *
+   * Viaja con el worker de notificaciones y no en un cron aparte porque su
+   * trabajo termina emitiendo un aviso: comparte el lock, el intervalo y el
+   * proceso que ya existen para eso.
+   */
+  _expireTournamentSlotHoldsUC: ExpireTournamentSlotHoldsUseCase | null = null,
 ): NotificationsWorkerHandle | null {
   if (ENV_CONST.NODE_ENV === 'test') {
     return null;
@@ -63,6 +72,18 @@ export function startNotificationsWorkerSV(
         if (!LOCKED) {
           NOTIFICATIONS_OBSERVABILITY.onWarningSV({ kind: 'OVERLAP_SKIPPED' });
           return;
+        }
+      }
+
+      //? Antes del dispatch, no despues: el barrido crea eventos de aviso, y
+      //? corriendolo primero salen en este mismo tick en vez de esperar al
+      //? siguiente. Su error se traga aparte porque despachar lo que ya esta
+      //? encolado importa mas que soltar canchas.
+      if (_expireTournamentSlotHoldsUC !== null) {
+        try {
+          await withTimeoutSV(_expireTournamentSlotHoldsUC.executeSV(), TICK_TIMEOUT_MS);
+        } catch {
+          NOTIFICATIONS_OBSERVABILITY.onWarningSV({ kind: 'HOLD_SWEEP_FAILED' });
         }
       }
 
