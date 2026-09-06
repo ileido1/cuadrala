@@ -41,6 +41,14 @@ export class PrismaTournamentSlotResponseRepository
       select: { userId: true, response: true },
     });
   }
+
+  async deleteByMatchSV(_input: {
+    tournamentId: string;
+    roundNumber: number;
+    matchNumber: number;
+  }): Promise<void> {
+    await PRISMA.tournamentSlotResponse.deleteMany({ where: _input });
+  }
 }
 
 export class PrismaTournamentSlotHoldLifecycleRepository

@@ -315,6 +315,59 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/tournaments/{tournamentId}/schedule/rounds/{roundNumber}/matches/{matchNumber}/reschedule': {
+      post: {
+        tags: ['Tournaments'],
+        summary: 'El organizador mueve un partido a otro horario o cancha',
+        description:
+          'Solo el organizador o staff de la sede. Aparta el turno nuevo antes de soltar el viejo: si la cancha destino está tomada el partido se queda donde estaba, en vez de perder los dos turnos. Borra las respuestas de los jugadores, porque eran sobre el horario anterior y hay que volver a preguntar.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'roundNumber',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1 },
+          },
+          {
+            name: 'matchNumber',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['courtId', 'scheduledAt'],
+                properties: {
+                  courtId: { type: 'string', format: 'uuid' },
+                  scheduledAt: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Partido reubicado' },
+          '400': { description: 'Validación fallida' },
+          '403': { description: 'No es el organizador ni staff de la sede' },
+          '404': { description: 'Torneo o calendario no encontrado' },
+          '409': {
+            description: 'El torneo no tiene sede, o ese horario ya está tomado en esa cancha',
+          },
+        },
+      },
+    },
     '/api/v1/tournaments/{tournamentId}/schedule/rounds/{roundNumber}/matches/{matchNumber}/settle': {
       post: {
         tags: ['Tournaments'],

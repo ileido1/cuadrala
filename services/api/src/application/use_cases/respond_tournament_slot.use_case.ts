@@ -24,6 +24,17 @@ export type TournamentSlotResponseRepository = {
     roundNumber: number;
     matchNumber: number;
   }): Promise<Array<{ userId: string; response: TournamentSlotResponseValue }>>;
+
+  /**
+   * Borra las respuestas de un partido.
+   *
+   * Se usa al moverlo de horario: lo que contestaron era sobre el turno viejo.
+   */
+  deleteByMatchSV(_input: {
+    tournamentId: string;
+    roundNumber: number;
+    matchNumber: number;
+  }): Promise<void>;
 };
 
 export type TournamentSlotHoldLifecycleRepository = {

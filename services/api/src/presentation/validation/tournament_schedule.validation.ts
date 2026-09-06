@@ -29,3 +29,9 @@ export const RESPOND_TOURNAMENT_SLOT_BODY_SCHEMA = z.object({
 export const SETTLE_TOURNAMENT_SLOT_BODY_SCHEMA = z.object({
   decision: z.enum(['CONFIRM', 'RELEASE']),
 });
+
+/** Nuevo horario y cancha para un partido del cuadro. */
+export const RESCHEDULE_TOURNAMENT_MATCH_BODY_SCHEMA = z.object({
+  courtId: z.string().uuid(),
+  scheduledAt: z.coerce.date(),
+});

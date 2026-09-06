@@ -4,6 +4,7 @@ import {
   getTournamentScheduleCON,
   postGenerateTournamentScheduleCON,
   postRespondTournamentSlotCON,
+  postRescheduleTournamentMatchCON,
   postSettleTournamentSlotCON,
 } from '../controllers/tournament_schedule.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
@@ -37,4 +38,12 @@ TOURNAMENT_SCHEDULE_ROUTER.post(
   '/tournaments/:tournamentId/schedule/rounds/:roundNumber/matches/:matchNumber/settle',
   requireAuth,
   asyncHandler(postSettleTournamentSlotCON),
+);
+
+//? Mover un partido es la salida que hace viable pedirle el OK a los jugadores:
+//? cuando alguien rechaza, o el turno vence, el partido vuelve al organizador.
+TOURNAMENT_SCHEDULE_ROUTER.post(
+  '/tournaments/:tournamentId/schedule/rounds/:roundNumber/matches/:matchNumber/reschedule',
+  requireAuth,
+  asyncHandler(postRescheduleTournamentMatchCON),
 );

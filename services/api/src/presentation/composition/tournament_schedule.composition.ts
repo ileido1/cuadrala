@@ -12,6 +12,7 @@ import { ReserveTournamentScheduleSlotsUseCase } from '../../application/use_cas
 import { PrismaMatchCourtAvailabilityRepository } from '../../infrastructure/adapters/prisma_match_court_availability_repository.js';
 import { PrismaTournamentSlotHoldRepository } from '../../infrastructure/adapters/prisma_tournament_slot_hold_repository.js';
 import { RespondTournamentSlotUseCase } from '../../application/use_cases/respond_tournament_slot.use_case.js';
+import { RescheduleTournamentMatchUseCase } from '../../application/use_cases/reschedule_tournament_match.use_case.js';
 import { SettleTournamentSlotAsOrganizerUseCase } from '../../application/use_cases/settle_tournament_slot_as_organizer.use_case.js';
 import {
   PrismaTournamentSlotHoldLifecycleRepository,
@@ -31,6 +32,16 @@ const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAcces
 export const RESERVE_TOURNAMENT_SCHEDULE_SLOTS_UC = new ReserveTournamentScheduleSlotsUseCase(
   new PrismaMatchCourtAvailabilityRepository(),
   new PrismaTournamentSlotHoldRepository(),
+);
+
+/** El organizador mueve un partido a otro horario o cancha. */
+export const RESCHEDULE_TOURNAMENT_MATCH_UC = new RescheduleTournamentMatchUseCase(
+  TOURNAMENT_REPOSITORY,
+  TOURNAMENT_SCHEDULE_REPOSITORY,
+  ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+  new PrismaTournamentSlotHoldLifecycleRepository(),
+  new PrismaTournamentSlotHoldRepository(),
+  new PrismaTournamentSlotResponseRepository(),
 );
 
 /** El organizador cierra o libera el turno sin esperar a los jugadores. */
