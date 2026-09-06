@@ -53,7 +53,21 @@ jobs:
         run: flutter test
 
       - name: Construir la app web
-        run: flutter build web --release
+        # `API_BASE_URL` NO tiene default util en el codigo: cuando falta, la app
+        # cae en http://localhost:4000 y en produccion el navegador termina
+        # buscando un servidor en la maquina del usuario. Sin este dart-define el
+        # build compila igual y falla recien al abrirlo.
+        #
+        # Se puede sobrescribir con la variable de repositorio API_BASE_URL para
+        # apuntar a otro entorno sin tocar el workflow.
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://cuadrala-api.onrender.com' }}
+          # Opcional: sin esto la app funciona, pero el login con Google no.
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          flutter build web --release \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
 
       - name: Armar la salida para Vercel
         # Build Output API v3: Vercel publica `.vercel/output` tal cual, sin
