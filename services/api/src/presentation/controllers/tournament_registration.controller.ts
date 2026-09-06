@@ -9,6 +9,7 @@ import {
   UPDATE_TOURNAMENT_REGISTRATION_STATUS_UC,
   WITHDRAW_TOURNAMENT_REGISTRATION_UC,
   PAIR_TOURNAMENT_REGISTRATIONS_UC,
+  CONFIRM_PENDING_TOURNAMENT_REGISTRATIONS_UC,
 } from '../composition/tournament_registration.composition.js';
 import {
   CREATE_TOURNAMENT_REGISTRATION_BODY_SCHEMA,
@@ -170,4 +171,23 @@ export async function deleteTournamentRegistrationPairCON(
   });
 
   _res.status(200).json({ success: true, message: 'Dupla deshecha.', data: RESULT });
+}
+
+export async function postConfirmPendingTournamentRegistrationsCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
+  const PARAMS = TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
+
+  const RESULT = await CONFIRM_PENDING_TOURNAMENT_REGISTRATIONS_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Inscripciones confirmadas.',
+    data: RESULT,
+  });
 }

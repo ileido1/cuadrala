@@ -21,6 +21,7 @@ import 'cubit/tournament_scoreboard_cubit.dart';
 import 'cubit/tournament_scoreboard_state.dart';
 import 'tournament_status_view.dart';
 import 'tournament_roster_grouping.dart';
+import 'tournament_roster_summary.dart';
 import 'widgets/enroll_button.dart';
 import 'widgets/tournament_pairing_section.dart';
 import 'widgets/invite_guest_sheet.dart';
@@ -1116,6 +1117,44 @@ final class _RegistrationsTab extends StatelessWidget {
                       ],
                     ),
                   ),
+                ),
+              ],
+              //? El calendario se arma solo con los confirmados. Enterarse de
+              //? que falta gente al recibir el error es tarde: el aviso va
+              //? antes, con el boton que lo resuelve al lado.
+              if (canManageGuests && activeItems.isNotEmpty) ...[
+                Builder(
+                  builder: (context) {
+                    final summary = summarizeRoster(
+                      registrations: activeItems,
+                      paired: pairedRegistration,
+                    );
+                    final warning = summary.warning;
+                    if (warning == null) return const SizedBox.shrink();
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _InfoBox(message: warning),
+                          if (summary.pending > 0) ...[
+                            const SizedBox(height: 8),
+                            FilledButton.icon(
+                              key: const Key('tournament.confirmPendingButton'),
+                              onPressed: loaded.busyRegistrationId != null
+                                  ? null
+                                  : () => context
+                                      .read<TournamentRegistrationsCubit>()
+                                      .confirmPendingRegistrations(),
+                              icon: const Icon(AppIcons.checkCircle, size: 18),
+                              label: Text('Confirmar a los ${summary.pending} pendientes'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
               if (activeItems.isEmpty)

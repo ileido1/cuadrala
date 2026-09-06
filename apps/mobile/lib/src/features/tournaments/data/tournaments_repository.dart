@@ -350,4 +350,11 @@ class TournamentsRepository {
       response: response,
     );
   }
+
+  /// El organizador confirma a todos los inscriptos pendientes de una vez.
+  Future<void> confirmPendingRegistrations({required String tournamentId}) {
+    return _tournamentsApi.confirmPendingTournamentRegistrations(
+      tournamentId: tournamentId,
+    );
+  }
 }

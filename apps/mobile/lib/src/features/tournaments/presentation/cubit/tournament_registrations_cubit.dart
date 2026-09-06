@@ -359,4 +359,14 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
       ));
     }
   }
+
+  /// El organizador confirma a todos los pendientes de una vez.
+  Future<void> confirmPendingRegistrations() async {
+    await _mutateRosterSV(
+      //? No hay una inscripción concreta ocupada: la acción es sobre todas.
+      busyId: '__confirm-pending__',
+      errorMessage: 'No se pudieron confirmar las inscripciones.',
+      action: () => _repo.confirmPendingRegistrations(tournamentId: _tournamentId),
+    );
+  }
 }

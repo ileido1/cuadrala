@@ -331,6 +331,13 @@ void main() {
 
     testWidgets('shows guests grouped separately with translated status labels',
         (tester) async {
+      //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
+      //? empuja la sección de invitados fuera de lo que el ListView construye
+      //? con la ventana por defecto.
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       when(() => registrationsCubit.state).thenReturn(
         TournamentRegistrationsLoaded(
           items: [
@@ -394,6 +401,13 @@ void main() {
 
     testWidgets('organizer taps confirm on a PENDING guest -> calls cubit.confirmRegistration',
         (tester) async {
+      //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
+      //? empuja la sección de invitados fuera de lo que el ListView construye
+      //? con la ventana por defecto.
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       when(() => registrationsCubit.state).thenReturn(
         TournamentRegistrationsLoaded(
           items: [_guestRegistration(id: 'reg-guest-1', status: 'PENDING')],

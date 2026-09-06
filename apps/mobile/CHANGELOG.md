@@ -5,6 +5,17 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.0.9] - 2026-09-05
+
+### Añadido
+
+- **Confirmar a todos los inscriptos de una vez.** Con dieciséis anotados,
+  confirmar de a uno son dieciséis toques, y saltearse a alguien lo dejaba
+  afuera del cuadro sin que nadie se enterara.
+- **Aviso antes de generar el calendario.** Si quedan inscripciones sin
+  confirmar o jugadores sin pareja, ahora se dice antes de tocar el botón y con
+  el número exacto — no después, en forma de error.
+
 ## [1.0.8] - 2026-09-05
 
 ### Añadido

@@ -122,6 +122,11 @@ abstract interface class TournamentsApi {
     required String registrationId,
   });
 
+  /// El organizador confirma a todos los inscriptos pendientes.
+  Future<void> confirmPendingTournamentRegistrations({
+    required String tournamentId,
+  });
+
   /// Los partidos del jugador autenticado en el torneo.
   Future<Map<String, Object?>> getMyTournamentMatchesEnvelope({
     required String tournamentId,
@@ -410,6 +415,16 @@ final class DioTournamentsApi implements TournamentsApi {
     await _apiClient.postJson(
       '/api/v1/tournaments/$tournamentId/schedule/rounds/$roundNumber/matches/$matchNumber/respond',
       body: {'response': response},
+    );
+  }
+
+  @override
+  Future<void> confirmPendingTournamentRegistrations({
+    required String tournamentId,
+  }) async {
+    await _apiClient.postJson(
+      '/api/v1/tournaments/$tournamentId/registrations/confirm-pending',
+      body: const {},
     );
   }
 }

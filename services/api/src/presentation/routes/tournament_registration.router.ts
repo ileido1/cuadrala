@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import {
+  postConfirmPendingTournamentRegistrationsCON,
   postPairTournamentRegistrationsCON,
   deleteTournamentRegistrationPairCON,
   deleteTournamentRegistrationCON,
@@ -66,4 +67,12 @@ TOURNAMENT_REGISTRATION_ROUTER.delete(
   '/tournaments/:tournamentId/registrations/:registrationId/pair',
   requireAuth,
   asyncHandler(deleteTournamentRegistrationPairCON),
+);
+
+//? Confirmar de a uno con dieciseis inscriptos son dieciseis toques, y
+//? saltearse uno deja a ese jugador fuera del cuadro sin que nadie se entere.
+TOURNAMENT_REGISTRATION_ROUTER.post(
+  '/tournaments/:tournamentId/registrations/confirm-pending',
+  requireAuth,
+  asyncHandler(postConfirmPendingTournamentRegistrationsCON),
 );

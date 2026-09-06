@@ -124,6 +124,13 @@ void main() {
     testWidgets(
       'organizer invites a guest via the UI, sees PENDING, confirms it, then removes it — cubit refreshes the roster each step',
       (tester) async {
+        //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
+        //? empuja la sección de invitados fuera de lo que el ListView construye
+        //? con la ventana por defecto.
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
         final tournament = TournamentListItemDto(
           id: _tournamentId,
           name: 'Torneo E2E Móvil',

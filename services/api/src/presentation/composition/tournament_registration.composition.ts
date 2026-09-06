@@ -10,12 +10,22 @@ import { RemoveTournamentRegistrationUseCase } from '../../application/use_cases
 import { UpdateTournamentRegistrationStatusUseCase } from '../../application/use_cases/update_tournament_registration_status.use_case.js';
 import { WithdrawTournamentRegistrationUseCase } from '../../application/use_cases/withdraw_tournament_registration.use_case.js';
 import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
+import { ConfirmPendingTournamentRegistrationsUseCase } from '../../application/use_cases/confirm_pending_tournament_registrations.use_case.js';
 import { PairTournamentRegistrationsUseCase } from '../../application/use_cases/pair_tournament_registrations.use_case.js';
 
 const TOURNAMENT_REPO = new PrismaTournamentRepository();
 const REGISTRATION_REPO = new PrismaTournamentRegistrationRepository();
 const VENUE_STAFF_REPO = new PrismaVenueStaffRepository(PRISMA);
 const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAccessUseCase(VENUE_STAFF_REPO);
+
+/** El organizador confirma de una vez a todos los inscriptos pendientes. */
+export const CONFIRM_PENDING_TOURNAMENT_REGISTRATIONS_UC =
+  new ConfirmPendingTournamentRegistrationsUseCase(
+    TOURNAMENT_REPO,
+    REGISTRATION_REPO,
+    ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+    CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
+  );
 
 /** El organizador arma y deshace las duplas fijas del torneo. */
 export const PAIR_TOURNAMENT_REGISTRATIONS_UC = new PairTournamentRegistrationsUseCase(

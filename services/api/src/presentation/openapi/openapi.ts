@@ -221,6 +221,29 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/tournaments/{tournamentId}/registrations/confirm-pending': {
+      post: {
+        tags: ['Tournaments'],
+        summary: 'El organizador confirma a todos los inscriptos pendientes',
+        description:
+          'Solo el organizador o staff de la sede. Confirma cada inscripción PENDING del torneo; en torneos de duplas fijas mueve también al compañero. Emite el mismo aviso que la confirmación individual, en un solo evento. `data.confirmed` es cuántas se confirmaron.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': { description: 'Inscripciones confirmadas' },
+          '403': { description: 'No es el organizador ni staff de la sede' },
+          '404': { description: 'Torneo no encontrado' },
+          '409': { description: 'El torneo ya no admite cambios de inscripción' },
+        },
+      },
+    },
     '/api/v1/tournaments/{tournamentId}/registrations/pairs': {
       post: {
         tags: ['Tournaments'],
