@@ -86,5 +86,7 @@ export const GENERATE_TOURNAMENT_SCHEDULE_UC = new GenerateTournamentScheduleUse
 export const GET_TOURNAMENT_SCHEDULE_UC = new GetTournamentScheduleUseCase(
   TOURNAMENT_REPOSITORY,
   TOURNAMENT_SCHEDULE_REPOSITORY,
+  TOURNAMENT_REGISTRATION_REPOSITORY,
+  new PrismaMatchCourtAvailabilityRepository(),
 );
 

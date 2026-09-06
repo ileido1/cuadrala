@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.0.10] - 2026-09-05
+
+### Corregido
+
+- **La pestaña Calendario del torneo mostraba vacío siempre.** La app esperaba
+  el cuadro armado y la API devolvía la estructura cruda del formato, sin
+  nombres ni horarios. No fallaba: mostraba el estado vacío como si el
+  calendario no existiera. Ahora se ve quién juega contra quién, cuándo y en qué
+  cancha.
+
 ## [1.0.9] - 2026-09-05
 
 ### Añadido
