@@ -4,9 +4,17 @@ import { AppError } from '../../domain/errors/app_error.js';
 import {
   GENERATE_TOURNAMENT_SCHEDULE_UC,
   GET_TOURNAMENT_SCHEDULE_UC,
+  RESPOND_TOURNAMENT_SLOT_UC,
+  SETTLE_TOURNAMENT_SLOT_AS_ORGANIZER_UC,
+  RESCHEDULE_TOURNAMENT_MATCH_UC,
+  LIST_MY_TOURNAMENT_MATCHES_UC,
 } from '../composition/tournament_schedule.composition.js';
 import {
   GENERATE_TOURNAMENT_SCHEDULE_BODY_SCHEMA,
+  RESPOND_TOURNAMENT_SLOT_BODY_SCHEMA,
+  RESPOND_TOURNAMENT_SLOT_PARAM_SCHEMA,
+  RESCHEDULE_TOURNAMENT_MATCH_BODY_SCHEMA,
+  SETTLE_TOURNAMENT_SLOT_BODY_SCHEMA,
   TOURNAMENT_ID_PARAM_SCHEMA,
 } from '../validation/tournament_schedule.validation.js';
 
@@ -44,3 +52,91 @@ export async function getTournamentScheduleCON(_req: Request, _res: Response): P
   });
 }
 
+
+export async function postRespondTournamentSlotCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = RESPOND_TOURNAMENT_SLOT_PARAM_SCHEMA.parse(_req.params);
+  const BODY = RESPOND_TOURNAMENT_SLOT_BODY_SCHEMA.parse(_req.body);
+
+  const RESULT = await RESPOND_TOURNAMENT_SLOT_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    roundNumber: PARAMS.roundNumber,
+    matchNumber: PARAMS.matchNumber,
+    actorUserId: ACTOR_USER_ID,
+    response: BODY.response,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Respuesta registrada.',
+    data: RESULT,
+  });
+}
+
+export async function postSettleTournamentSlotCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = RESPOND_TOURNAMENT_SLOT_PARAM_SCHEMA.parse(_req.params);
+  const BODY = SETTLE_TOURNAMENT_SLOT_BODY_SCHEMA.parse(_req.body);
+
+  const RESULT = await SETTLE_TOURNAMENT_SLOT_AS_ORGANIZER_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    roundNumber: PARAMS.roundNumber,
+    matchNumber: PARAMS.matchNumber,
+    actorUserId: ACTOR_USER_ID,
+    decision: BODY.decision,
+  });
+
+  _res.status(200).json({
+    success: true,
+    message: 'Turno actualizado.',
+    data: RESULT,
+  });
+}
+
+export async function postRescheduleTournamentMatchCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = RESPOND_TOURNAMENT_SLOT_PARAM_SCHEMA.parse(_req.params);
+  const BODY = RESCHEDULE_TOURNAMENT_MATCH_BODY_SCHEMA.parse(_req.body);
+
+  const RESULT = await RESCHEDULE_TOURNAMENT_MATCH_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    roundNumber: PARAMS.roundNumber,
+    matchNumber: PARAMS.matchNumber,
+    courtId: BODY.courtId,
+    scheduledAt: BODY.scheduledAt,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({ success: true, message: 'Partido reubicado.', data: RESULT });
+}
+
+export async function getMyTournamentMatchesCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
+  const PARAMS = TOURNAMENT_ID_PARAM_SCHEMA.parse(_req.params);
+
+  const RESULT = await LIST_MY_TOURNAMENT_MATCHES_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    actorUserId: ACTOR_USER_ID,
+  });
+
+  _res.status(200).json({ success: true, message: 'OK', data: RESULT });
+}

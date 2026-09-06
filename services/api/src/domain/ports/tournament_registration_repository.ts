@@ -13,6 +13,8 @@ export type TournamentRegistrationDTO = {
   guestEmail: string | null;
   /** Organizador que dio de alta al invitado (solo GUEST). */
   registeredByUserId: string | null;
+  /** La otra mitad de la dupla, en torneos de parejas fijas. */
+  partnerRegistrationId: string | null;
   createdAt: Date;
 };
 
@@ -53,4 +55,18 @@ export interface TournamentRegistrationRepository {
 
   /** Elimina una inscripción por id; cascada elimina sus `MatchParticipant` (Prisma onDelete: Cascade). */
   deleteByIdSV(_id: string): Promise<boolean>;
+
+  /**
+   * Enlaza dos inscripciones como dupla, en una sola transaccion.
+   *
+   * El enlace es simetrico: dejar una sola fila apuntando seria media dupla,
+   * que es justo el estado que rompe la generacion del cuadro.
+   */
+  pairSV(_firstId: string, _secondId: string): Promise<void>;
+
+  /** Deshace la dupla de una inscripcion y la de su companero. */
+  unpairSV(_registrationId: string): Promise<boolean>;
+
+  /** Cambia el estado de una inscripcion y el de su companero a la vez. */
+  updateStatusWithPartnerSV(_id: string, _status: string): Promise<TournamentRegistrationDTO | null>;
 }

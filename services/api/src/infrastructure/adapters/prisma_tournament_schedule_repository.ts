@@ -2,12 +2,41 @@ import type { TournamentScheduleDTO, TournamentScheduleRepository } from '../../
 import { AppError } from '../../domain/errors/app_error.js';
 import { PRISMA } from '../prisma_client.js';
 
+/**
+ * `slotPlan` se guarda como JSON, asi que las fechas vuelven como texto.
+ * Se rehidratan aca para que el resto del sistema vea `Date` y no strings.
+ */
+function mapSlotPlanSV(_raw: unknown): TournamentScheduleDTO['slotPlan'] {
+  if (!Array.isArray(_raw)) return null;
+  const PLAN: NonNullable<TournamentScheduleDTO['slotPlan']> = [];
+  for (const ITEM of _raw) {
+    if (typeof ITEM !== 'object' || ITEM === null) continue;
+    const I = ITEM as Record<string, unknown>;
+    if (
+      typeof I.roundNumber !== 'number' ||
+      typeof I.matchNumber !== 'number' ||
+      typeof I.courtId !== 'string' ||
+      typeof I.scheduledAt !== 'string'
+    ) {
+      continue;
+    }
+    PLAN.push({
+      roundNumber: I.roundNumber,
+      matchNumber: I.matchNumber,
+      courtId: I.courtId,
+      scheduledAt: new Date(I.scheduledAt),
+    });
+  }
+  return PLAN.length === 0 ? null : PLAN;
+}
+
 function mapRowSV(_row: {
   id: string;
   tournamentId: string;
   formatCode: string;
   scheduleKey: string;
   payload: unknown;
+  slotPlan?: unknown;
   createdAt: Date;
   updatedAt: Date;
 }): TournamentScheduleDTO {
@@ -17,6 +46,7 @@ function mapRowSV(_row: {
     formatCode: _row.formatCode,
     scheduleKey: _row.scheduleKey,
     payload: _row.payload,
+    slotPlan: mapSlotPlanSV(_row.slotPlan),
     createdAt: _row.createdAt,
     updatedAt: _row.updatedAt,
   };
@@ -32,11 +62,34 @@ export class PrismaTournamentScheduleRepository implements TournamentScheduleRep
         formatCode: true,
         scheduleKey: true,
         payload: true,
+        slotPlan: true,
         createdAt: true,
         updatedAt: true,
       },
     });
     return ROW === null ? null : mapRowSV(ROW);
+  }
+
+  async saveSlotPlanSV(_input: {
+    tournamentId: string;
+    slotPlan: Array<{
+      roundNumber: number;
+      matchNumber: number;
+      courtId: string;
+      scheduledAt: Date;
+    }>;
+  }): Promise<void> {
+    await PRISMA.tournamentSchedule.update({
+      where: { tournamentId: _input.tournamentId },
+      data: {
+        slotPlan: _input.slotPlan.map((_s) => ({
+          roundNumber: _s.roundNumber,
+          matchNumber: _s.matchNumber,
+          courtId: _s.courtId,
+          scheduledAt: _s.scheduledAt.toISOString(),
+        })),
+      },
+    });
   }
 
   async createOrValidateIdempotencySV(_input: {

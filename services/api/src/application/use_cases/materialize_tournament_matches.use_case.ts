@@ -44,14 +44,26 @@ export class MaterializeTournamentMatchesUseCase {
     const REGISTRATIONS = await this._tournamentRegistrationRepository.listByTournamentIdSV(_input.tournamentId);
     const REGISTRATION_BY_ID = new Map(REGISTRATIONS.map((_r) => [_r.id, _r]));
 
+    //? Horario y cancha por partido, planificados contra la disponibilidad de la
+    //? sede al generar el cuadro. Antes no existian: todos los partidos heredaban
+    //? `Tournament.startsAt` sin cancha, asi que el jugador no podia saber cuando
+    //? ni donde jugaba. El fallback se mantiene para los cuadros viejos y para el
+    //? torneo sin sede, que no tiene contra que planificar.
+    const SLOT_BY_MATCH = new Map(
+      (SCHEDULE.slotPlan ?? []).map((_s) => [`${_s.roundNumber}|${_s.matchNumber}`, _s]),
+    );
+
     const PLANS = RAW_PLANS.map((_plan) => ({
       roundNumber: _plan.roundNumber,
       matchNumber: _plan.matchNumber,
-      // Sin plan de horario/canchas persistido aún (ver Design §12 open question):
-      // se usa el fallback documentado — scheduledAt = Tournament.startsAt, courtId = null.
-      scheduledAt: _input.startsAt,
-      courtId: null,
-      participants: _plan.participants.map((_p) => {
+      scheduledAt:
+        SLOT_BY_MATCH.get(`${_plan.roundNumber}|${_plan.matchNumber}`)?.scheduledAt ??
+        _input.startsAt,
+      courtId: SLOT_BY_MATCH.get(`${_plan.roundNumber}|${_plan.matchNumber}`)?.courtId ?? null,
+      //? En duplas fijas cada token del cuadro es una PAREJA, no una persona:
+      //? se expande en sus dos jugadores. El lado (A/B) sale de la posicion del
+      //? token, porque los formatos 1v1 no traen `teamLabel`.
+      participants: _plan.participants.flatMap((_p, _index) => {
         const REGISTRATION = REGISTRATION_BY_ID.get(_p.participantRef);
         if (REGISTRATION === undefined) {
           throw new AppError(
@@ -60,11 +72,37 @@ export class MaterializeTournamentMatchesUseCase {
             409,
           );
         }
-        return {
+
+        const TEAM_LABEL = _p.teamLabel ?? (_index === 0 ? 'A' : 'B');
+        const SELF = {
           userId: REGISTRATION.userId,
           tournamentRegistrationId: REGISTRATION.id,
           teamLabel: _p.teamLabel,
         };
+
+        //? `?? null`: una inscripcion sin el campo (torneo individual, o un DTO
+        //? viejo) no tiene dupla; sin esto `undefined` caia en la busqueda y se
+        //? reportaba el cuadro como obsoleto.
+        const PARTNER_ID = REGISTRATION.partnerRegistrationId ?? null;
+        if (PARTNER_ID === null) return [SELF];
+
+        const PARTNER = REGISTRATION_BY_ID.get(PARTNER_ID);
+        if (PARTNER === undefined) {
+          throw new AppError(
+            'CALENDARIO_OBSOLETO',
+            'El calendario está desactualizado; regenera el calendario del torneo.',
+            409,
+          );
+        }
+
+        return [
+          { ...SELF, teamLabel: TEAM_LABEL },
+          {
+            userId: PARTNER.userId,
+            tournamentRegistrationId: PARTNER.id,
+            teamLabel: TEAM_LABEL,
+          },
+        ];
       }),
     }));
 

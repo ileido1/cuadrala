@@ -13,3 +13,25 @@ export const GENERATE_TOURNAMENT_SCHEDULE_BODY_SCHEMA = z
   })
   .strict();
 
+
+/** Respuesta de un jugador al horario de su partido. */
+export const RESPOND_TOURNAMENT_SLOT_PARAM_SCHEMA = z.object({
+  tournamentId: z.string().uuid(),
+  roundNumber: z.coerce.number().int().positive(),
+  matchNumber: z.coerce.number().int().positive(),
+});
+
+export const RESPOND_TOURNAMENT_SLOT_BODY_SCHEMA = z.object({
+  response: z.enum(['ACCEPTED', 'REJECTED']),
+});
+
+/** Decisión del organizador sobre el turno de un partido. */
+export const SETTLE_TOURNAMENT_SLOT_BODY_SCHEMA = z.object({
+  decision: z.enum(['CONFIRM', 'RELEASE']),
+});
+
+/** Nuevo horario y cancha para un partido del cuadro. */
+export const RESCHEDULE_TOURNAMENT_MATCH_BODY_SCHEMA = z.object({
+  courtId: z.string().uuid(),
+  scheduledAt: z.coerce.date(),
+});

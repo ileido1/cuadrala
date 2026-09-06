@@ -11,6 +11,7 @@ final class TournamentRegistrationDto {
     this.guestPhone,
     this.guestEmail,
     this.registeredByUserId,
+    this.partnerRegistrationId,
   });
 
   final String id;
@@ -38,6 +39,12 @@ final class TournamentRegistrationDto {
   /// Id of the organizer (or venue staff) who added this guest.
   final String? registeredByUserId;
 
+  /// La otra mitad de la dupla, en torneos de parejas fijas. `null` en torneos
+  /// individuales y en quien todavía no tiene compañero.
+  final String? partnerRegistrationId;
+
+  bool get hasPartner => partnerRegistrationId != null;
+
   bool get isGuest => registrationType == 'GUEST';
 
   /// Display label for UI lists: user name for AUTHENTICATED, guest name for
@@ -57,6 +64,7 @@ final class TournamentRegistrationDto {
       guestPhone: json['guestPhone'] as String?,
       guestEmail: json['guestEmail'] as String?,
       registeredByUserId: json['registeredByUserId'] as String?,
+      partnerRegistrationId: json['partnerRegistrationId'] as String?,
     );
   }
 }

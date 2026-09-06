@@ -49,8 +49,10 @@ export class UpdateTournamentRegistrationStatusUseCase {
       throw new AppError('INSCRIPCION_NO_ENCONTRADA', 'La inscripción indicada no existe.', 404);
     }
 
-    //? 5. Actualizar el status
-    const UPDATED = await this._registrationRepository.updateStatusByIdSV(
+    //? 5. Actualizar el status. En torneos de duplas fijas las dos filas se
+    //? mueven juntas: confirmar media pareja dejaria un competidor suelto en el
+    //? cuadro, porque el calendario se arma solo con los CONFIRMED.
+    const UPDATED = await this._registrationRepository.updateStatusWithPartnerSV(
       _input.registrationId,
       _input.status,
     );

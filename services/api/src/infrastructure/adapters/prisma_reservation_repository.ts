@@ -11,6 +11,7 @@ import type {
   ReservationDTO,
 } from '../../domain/entities/booking/reservation.entity.js';
 
+import { LIVE_RESERVATION_STATUSES } from '../../domain/reservation/reservation_slot.js';
 import { PRISMA } from '../prisma_client.js';
 import {
   loadVenuePricingCurrencySV,
@@ -54,9 +55,18 @@ export class PrismaReservationRepository implements ReservationRepository {
     return ROW === null ? null : mapPrismaReservationRowToDtoSV(ROW);
   }
 
-  async findByCourtAndScheduledAtSV(_courtId: string, _scheduledAt: Date): Promise<ReservationDTO | null> {
-    const ROW = await PRISMA.reservation.findUnique({
-      where: { courtId_scheduledAt: { courtId: _courtId, scheduledAt: _scheduledAt } },
+  async findLiveByCourtAndScheduledAtSV(
+    _courtId: string,
+    _scheduledAt: Date,
+  ): Promise<ReservationDTO | null> {
+    //? Ya no es `findUnique`: la unicidad paso a ser parcial, asi que un turno
+    //? puede tener varias filas y solo una viva.
+    const ROW = await PRISMA.reservation.findFirst({
+      where: {
+        courtId: _courtId,
+        scheduledAt: _scheduledAt,
+        status: { in: [...LIVE_RESERVATION_STATUSES] as ('HELD' | 'CONFIRMED')[] },
+      },
       select: RESERVATION_LIST_SELECT,
     });
     return ROW === null ? null : mapPrismaReservationRowToDtoSV(ROW);

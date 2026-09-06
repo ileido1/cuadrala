@@ -5,6 +5,33 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.0.8] - 2026-09-05
+
+### Añadido
+
+- **Ya podés ver cuándo y dónde jugás.** Cada partido tuyo del torneo muestra
+  día, hora, cancha, tu compañero y contra quién jugás — antes todos los
+  partidos heredaban la hora de inicio del torneo y ninguno tenía cancha, así
+  que el dato directamente no existía.
+- **Podés decir si te sirve el horario.** Cuando el partido ya tiene cancha
+  apartada, aparecen "Me sirve" y "No puedo". Si aceptan todos, la cancha queda
+  reservada en firme; si alguien no puede, se libera y el organizador lo
+  reubica.
+
+## [1.0.7] - 2026-09-05
+
+### Añadido
+
+- **Torneos de pádel en duplas fijas.** Te inscribís solo, como en cualquier
+  torneo, y el organizador arma las parejas desde la pestaña de registrados.
+  Cada dupla se ve en una fila —cuatro nombres sueltos no dicen quién juega con
+  quién— y abajo queda la lista de quienes todavía esperan compañero, con el
+  número a la vista: una inscripción sin dupla frena la generación del cuadro.
+  En torneos individuales la pantalla no cambia.
+- **El organizador puede cerrar el horario de un partido sin esperar a los
+  jugadores.** En americano y en los formatos que juegan una ronda entera a la
+  vez, es el organizador quien lleva el proceso.
+
 ## [1.0.6] - 2026-09-05
 
 ### Añadido

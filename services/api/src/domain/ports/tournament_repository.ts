@@ -22,6 +22,8 @@ export interface TournamentRepository {
     startsAt: Date | null;
     organizerUserId: string | null;
     venueId: string | null;
+    /** `true` cuando se compite en duplas fijas (padel de parejas). */
+    pairedRegistration: boolean;
     isCompetitive: boolean;
     inscriptionPrice: number | null;
     createdAt: Date;

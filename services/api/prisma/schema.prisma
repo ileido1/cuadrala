@@ -189,6 +189,8 @@ enum NotificationEventType {
   TOURNAMENT_REGISTRATION_CONFIRMED
   TOURNAMENT_SCHEDULE_PUBLISHED
   TOURNAMENT_STARTED
+  /// Un partido del cuadro se quedo sin horario: lo rechazaron o vencio su turno.
+  TOURNAMENT_MATCH_NEEDS_ATTENTION
 }
 
 enum NotificationDeliveryStatus {
@@ -238,14 +240,24 @@ enum Visibility {
 
 /// Visibilidad de un torneo: `PUBLIC` aparece en el catálogo público;
 /// `PRIVATE` solo es accesible por link directo / invitación (nunca listado).
+enum TournamentSlotResponseValue {
+  ACCEPTED
+  REJECTED
+}
+
 enum TournamentVisibility {
   PUBLIC
   PRIVATE
 }
 
 enum ReservationStatus {
+  /// Turno apartado pero todavia no firme: bloquea la cancha y vence solo.
+  /// Lo usa el calendario de torneo mientras los jugadores aceptan su horario.
+  HELD
   CONFIRMED
   CANCELLED
+  /// Un HELD que llego a `holdExpiresAt` sin confirmarse. Libera el turno.
+  EXPIRED
 }
 
 enum SportType {
@@ -315,6 +327,7 @@ model User {
   updatedAt        DateTime         @updatedAt
 
   tournamentRegistrations     TournamentRegistration[]
+  tournamentSlotResponses     TournamentSlotResponse[]
   matchParticipants           MatchParticipant[]
   rankingEntries              RankingEntry[]
   matchResultScores           MatchResultScore[]
@@ -665,6 +678,14 @@ model Tournament {
   venue               Venue?                 @relation(fields: [venueId], references: [id], onDelete: SetNull)
   /// Slice 1 (tournament-guest-registration): torneo competitivo (aplica Elo) vs recreativo.
   isCompetitive       Boolean                @default(false)
+  /// `true` cuando se compite en duplas fijas: los jugadores se inscriben de a
+  /// dos y juegan todo el torneo con el mismo companero (padel de parejas).
+  ///
+  /// No confundir con AMERICANO, que tambien se juega 2v2 pero rota companero
+  /// cada ronda: ahi la inscripcion sigue siendo individual y la dupla existe
+  /// solo para ese partido. Por eso el flag habla de la INSCRIPCION y no de
+  /// cuantos juegan.
+  pairedRegistration  Boolean                @default(false)
   /// Slice 1 (tournament-guest-registration): precio de inscripción; null = gratuito.
   /// Elo solo se aplica cuando `isCompetitive=true AND inscriptionPrice > 0`.
   inscriptionPrice    Decimal?               @db.Decimal(10, 2)
@@ -675,6 +696,7 @@ model Tournament {
   invitations        TournamentInvitation[]
   matches            Match[]
   schedule           TournamentSchedule?
+  slotResponses      TournamentSlotResponse[]
   chatThread         ChatThread?
   notificationEvents NotificationEvent[]
 
@@ -683,6 +705,27 @@ model Tournament {
   @@index([organizerUserId])
   @@index([venueId])
   @@index([visibility])
+}
+
+/// Respuesta de un jugador al horario que le toco en el cuadro.
+///
+/// Cuelga del torneo y del par ronda/partido, NO de `Match`: los partidos
+/// recien se materializan al pasar a IN_PROGRESS, y la aceptacion ocurre antes,
+/// mientras las canchas estan apartadas.
+model TournamentSlotResponse {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  roundNumber  Int
+  matchNumber  Int
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  response     TournamentSlotResponseValue
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([tournamentId, roundNumber, matchNumber, userId])
+  @@index([tournamentId, roundNumber, matchNumber])
 }
 
 /// Schedule genérico por torneo (MVP: reutiliza payload JSON).
@@ -697,6 +740,13 @@ model TournamentSchedule {
   scheduleKey String
   /// Payload JSON del schedule (estructura depende del formato).
   payload     Json
+  /// Horario y cancha por partido: `[{ roundNumber, matchNumber, courtId, scheduledAt }]`.
+  ///
+  /// Va aparte de `payload` a proposito: ese es el cuadro (quien juega contra
+  /// quien, dominio puro del formato) y esto es donde y cuando se juega, que
+  /// depende de la sede. Antes no existia y todos los partidos heredaban
+  /// `Tournament.startsAt` sin cancha.
+  slotPlan    Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -728,6 +778,19 @@ model TournamentRegistration {
 
   // Postgres permite múltiples NULL en un índice único ⇒ las filas GUEST (userId=null)
   // nunca colisionan entre sí; solo se deduplican inscripciones AUTHENTICATED reales.
+  /// La otra mitad de la dupla, cuando el torneo se juega en parejas fijas.
+  ///
+  /// Simetrico: las dos filas se apuntan entre si. El `@unique` impide que una
+  /// persona quede en dos duplas del mismo torneo.
+  ///
+  /// Es un enlace entre inscripciones y no una entidad aparte a proposito: la
+  /// dupla no existe fuera del torneo, y modelarla como entidad habria obligado
+  /// a que todo lo que hoy habla de inscripciones aprendiera un segundo tipo de
+  /// participante.
+  partnerRegistrationId String?                 @unique
+  partner               TournamentRegistration? @relation("TournamentPair", fields: [partnerRegistrationId], references: [id], onDelete: SetNull)
+  partnerOf             TournamentRegistration? @relation("TournamentPair")
+
   @@unique([tournamentId, userId])
   @@index([tournamentId, status])
   @@index([tournamentId, registrationType])
@@ -830,6 +893,8 @@ model Reservation {
   matchStatus         MatchStatus? // solo cuando type=MATCH
 
   status            ReservationStatus @default(CONFIRMED)
+  /// Solo para `HELD`: momento en que el turno se libera si nadie lo confirma.
+  holdExpiresAt     DateTime?
   scheduledAt       DateTime
   durationMinutes   Int               @default(60)
   notes             String?
@@ -862,8 +927,12 @@ model Reservation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([courtId, scheduledAt])
+  //? La exclusividad del turno la da el indice parcial
+  //? `Reservation_court_slot_live_uniq` (ver migracion): solo aplica a HELD y
+  //? CONFIRMED. Como @@unique aca cubria todas las filas, un turno cancelado
+  //? quedaba tomado para siempre. Prisma no expresa indices parciales.
   @@index([courtId, scheduledAt])
+  @@index([status, holdExpiresAt])
   @@index([venueId])
   @@index([status])
   @@index([type])

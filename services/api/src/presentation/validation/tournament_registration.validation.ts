@@ -43,3 +43,9 @@ export const UPDATE_TOURNAMENT_REGISTRATION_STATUS_BODY_SCHEMA = z
     status: z.literal('CONFIRMED'),
   })
   .strict();
+
+/** El organizador arma una dupla con dos inscripciones del torneo. */
+export const PAIR_TOURNAMENT_REGISTRATIONS_BODY_SCHEMA = z.object({
+  firstRegistrationId: z.string().uuid(),
+  secondRegistrationId: z.string().uuid(),
+});

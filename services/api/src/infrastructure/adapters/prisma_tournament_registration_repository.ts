@@ -29,6 +29,7 @@ function mapRowSV(_row: {
   guestPhone: string | null;
   guestEmail: string | null;
   registeredByUserId: string | null;
+  partnerRegistrationId?: string | null;
   createdAt: Date;
 }): TournamentRegistrationDTO {
   return {
@@ -42,6 +43,7 @@ function mapRowSV(_row: {
     guestPhone: _row.guestPhone,
     guestEmail: _row.guestEmail,
     registeredByUserId: _row.registeredByUserId,
+    partnerRegistrationId: _row.partnerRegistrationId ?? null,
     createdAt: _row.createdAt,
   };
 }
@@ -190,5 +192,69 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
       if (isPrismaErrorCodeSV(_error, 'P2025')) return false;
       throw _error;
     }
+  }
+
+  async pairSV(_firstId: string, _secondId: string): Promise<void> {
+    //? Las dos escrituras van juntas: dejar una sola fila apuntando seria media
+    //? dupla, que es el estado que rompe la generacion del cuadro.
+    await PRISMA.$transaction([
+      PRISMA.tournamentRegistration.update({
+        where: { id: _firstId },
+        data: { partnerRegistrationId: null },
+      }),
+      PRISMA.tournamentRegistration.update({
+        where: { id: _secondId },
+        data: { partnerRegistrationId: _firstId },
+      }),
+      PRISMA.tournamentRegistration.update({
+        where: { id: _firstId },
+        data: { partnerRegistrationId: _secondId },
+      }),
+    ]);
+  }
+
+  async unpairSV(_registrationId: string): Promise<boolean> {
+    const REG = await PRISMA.tournamentRegistration.findUnique({
+      where: { id: _registrationId },
+      select: { partnerRegistrationId: true },
+    });
+    if (REG === null || REG.partnerRegistrationId === null) return false;
+
+    await PRISMA.$transaction([
+      PRISMA.tournamentRegistration.update({
+        where: { id: _registrationId },
+        data: { partnerRegistrationId: null },
+      }),
+      PRISMA.tournamentRegistration.update({
+        where: { id: REG.partnerRegistrationId },
+        data: { partnerRegistrationId: null },
+      }),
+    ]);
+    return true;
+  }
+
+  async updateStatusWithPartnerSV(
+    _id: string,
+    _status: string,
+  ): Promise<TournamentRegistrationDTO | null> {
+    const REG = await PRISMA.tournamentRegistration.findUnique({
+      where: { id: _id },
+      select: { partnerRegistrationId: true },
+    });
+    if (REG === null) return null;
+
+    //? Confirmar media dupla dejaria un competidor suelto en el cuadro: las dos
+    //? filas se mueven juntas o no se mueve ninguna.
+    const IDS = REG.partnerRegistrationId === null ? [_id] : [_id, REG.partnerRegistrationId];
+    await PRISMA.tournamentRegistration.updateMany({
+      where: { id: { in: IDS } },
+      data: { status: _status as never },
+    });
+
+    const UPDATED = await PRISMA.tournamentRegistration.findUnique({
+      where: { id: _id },
+      include: { user: { select: { name: true } } },
+    });
+    return UPDATED === null ? null : mapRowSV(UPDATED);
   }
 }

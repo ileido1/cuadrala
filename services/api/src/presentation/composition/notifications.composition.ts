@@ -21,6 +21,8 @@ import { PrismaNotificationEventRepository } from '../../infrastructure/adapters
 import { PrismaNotificationSubscriptionRepository } from '../../infrastructure/adapters/prisma_notification_subscription_repository.js';
 import { ENV_CONST } from '../../config/env.js';
 import { NOTIFICATIONS_OBSERVABILITY } from '../observability/notifications_metrics.js';
+import { ExpireTournamentSlotHoldsUseCase } from '../../application/use_cases/expire_tournament_slot_holds.use_case.js';
+import { PrismaTournamentHoldSweepRepository } from '../../infrastructure/adapters/prisma_tournament_hold_sweep_repository.js';
 
 const NOTIFICATION_SUBSCRIPTION_REPOSITORY = new PrismaNotificationSubscriptionRepository();
 const NOTIFICATION_EVENT_REPOSITORY = new PrismaNotificationEventRepository();
@@ -90,6 +92,12 @@ export const CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC =
     NOTIFICATION_EVENT_REPOSITORY,
     NOTIFICATION_DELIVERY_REPOSITORY,
   );
+
+/** Suelta los turnos apartados que nadie confirmo y avisa al organizador. */
+export const EXPIRE_TOURNAMENT_SLOT_HOLDS_UC = new ExpireTournamentSlotHoldsUseCase(
+  new PrismaTournamentHoldSweepRepository(),
+  CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
+);
 
 export const CREATE_MATCH_PLAYER_JOINED_NOTIFICATION_EVENT_UC =
   new CreateMatchPlayerJoinedNotificationEventUseCase(

@@ -265,6 +265,7 @@ final class _NotificationTile extends StatelessWidget {
       NotificationType.tournamentRegistrationConfirmed => AppIcons.checkCircle,
       NotificationType.tournamentSchedulePublished => AppIcons.calendar,
       NotificationType.tournamentStarted => AppIcons.trophy,
+      NotificationType.tournamentMatchNeedsAttention => AppIcons.calendarBusy,
       NotificationType.unknown => AppIcons.bell,
     };
   }

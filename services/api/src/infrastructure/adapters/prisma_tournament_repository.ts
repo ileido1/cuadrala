@@ -20,6 +20,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
     startsAt: Date | null;
     organizerUserId: string | null;
     venueId: string | null;
+    pairedRegistration: boolean;
     isCompetitive: boolean;
     inscriptionPrice: number | null;
     createdAt: Date;
@@ -40,6 +41,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
       startsAt: ROW.startsAt,
       organizerUserId: ROW.organizerUserId,
       venueId: ROW.venueId,
+      pairedRegistration: ROW.pairedRegistration,
       isCompetitive: ROW.isCompetitive,
       inscriptionPrice: ROW.inscriptionPrice === null ? null : ROW.inscriptionPrice.toNumber(),
       createdAt: ROW.createdAt,

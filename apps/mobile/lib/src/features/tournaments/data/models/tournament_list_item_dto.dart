@@ -13,6 +13,7 @@ final class TournamentListItemDto extends Equatable {
     this.imageUrl,
     this.organizerUserId,
     this.visibility = 'PUBLIC',
+    this.pairedRegistration = false,
   });
 
   final String id;
@@ -27,6 +28,13 @@ final class TournamentListItemDto extends Equatable {
   /// `PUBLIC` (listado en catálogo) o `PRIVATE` (solo por link directo).
   final String visibility;
 
+  /// `true` cuando se compite en duplas fijas: el organizador arma las parejas
+  /// y el roster se muestra por dupla, no por persona.
+  ///
+  /// No confundir con AMERICANO, que también es 2v2 pero rota compañero cada
+  /// ronda: ahí la inscripción sigue siendo individual.
+  final bool pairedRegistration;
+
   /// Owner of the tournament (drives organizer-only UI controls).
   /// Used to avoid fetching tournament detail just to check organizer status.
   final String? organizerUserId;
@@ -36,6 +44,7 @@ final class TournamentListItemDto extends Equatable {
       id: json['id'] as String,
       name: json['name'] as String,
       status: json['status'] as String,
+      pairedRegistration: json['pairedRegistration'] as bool? ?? false,
       sportName: (json['sportName'] ?? json['sport_name'] ?? '') as String,
       categoryName:
           (json['categoryName'] ?? json['category_name'] ?? '') as String,
@@ -67,5 +76,6 @@ final class TournamentListItemDto extends Equatable {
         registrationCount,
         imageUrl,
         organizerUserId,
+        pairedRegistration,
       ];
 }

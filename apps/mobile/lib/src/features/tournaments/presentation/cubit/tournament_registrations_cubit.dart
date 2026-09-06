@@ -295,4 +295,68 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
       ));
     }
   }
+
+  /// Duplas fijas: el organizador empareja dos inscripciones.
+  ///
+  /// Recarga el roster en vez de mutarlo en memoria: el enlace es simétrico y
+  /// toca dos filas, así que reconstruirlo a mano se desincroniza fácil.
+  Future<void> pairRegistrations(String firstId, String secondId) async {
+    await _mutateRosterSV(
+      busyId: firstId,
+      errorMessage: 'No se pudo armar la dupla.',
+      action: () => _repo.pairRegistrations(
+        tournamentId: _tournamentId,
+        firstRegistrationId: firstId,
+        secondRegistrationId: secondId,
+      ),
+    );
+  }
+
+  /// Deshace la dupla de esa inscripción y la de su compañero.
+  Future<void> unpairRegistration(String registrationId) async {
+    await _mutateRosterSV(
+      busyId: registrationId,
+      errorMessage: 'No se pudo deshacer la dupla.',
+      action: () => _repo.unpairRegistration(
+        tournamentId: _tournamentId,
+        registrationId: registrationId,
+      ),
+    );
+  }
+
+  /// Corre una acción de organizador sobre el roster y lo recarga.
+  Future<void> _mutateRosterSV({
+    required String busyId,
+    required String errorMessage,
+    required Future<void> Function() action,
+  }) async {
+    final current = state;
+    if (current is! TournamentRegistrationsLoaded) return;
+    if (current.busyRegistrationId != null) return;
+
+    emit(current.copyWith(
+      busyRegistrationId: busyId,
+      clearRegistrationActionError: true,
+    ));
+
+    try {
+      await action();
+      final refreshed = await _repo.listRegistrations(tournamentId: _tournamentId);
+      emit(current.copyWith(
+        items: refreshed,
+        total: refreshed.length,
+        clearBusyRegistrationId: true,
+      ));
+    } on AppFailure catch (e) {
+      emit(current.copyWith(
+        clearBusyRegistrationId: true,
+        registrationActionError: e.message,
+      ));
+    } catch (_) {
+      emit(current.copyWith(
+        clearBusyRegistrationId: true,
+        registrationActionError: errorMessage,
+      ));
+    }
+  }
 }

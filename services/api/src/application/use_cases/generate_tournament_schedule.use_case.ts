@@ -1,5 +1,8 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import { collapsePairsToCompetitorsSV } from '../../domain/tournament/tournament_pairing.js';
 import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
+import type { ReserveTournamentScheduleSlotsUseCase } from './reserve_tournament_schedule_slots.use_case.js';
+import { buildMaterializedMatchPlansSV } from '../../domain/tournament/tournament_match_materialization.js';
 import { createAmericanoScheduleKeySV, generateAmericanoScheduleSV } from '../../domain/americano/americano_schedule_generator.js';
 import { createRoundRobinScheduleKeySV, generateRoundRobinScheduleSV } from '../../domain/round_robin/round_robin_schedule_generator.js';
 import { createSingleEliminationScheduleKeySV, generateSingleEliminationScheduleSV } from '../../domain/single_elimination/bracket_generator.js';
@@ -19,7 +22,57 @@ export class GenerateTournamentScheduleUseCase {
     private readonly _tournamentRegistrationRepository: TournamentRegistrationRepository,
     private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
     private readonly _createTournamentNotificationEvent: CreateTournamentNotificationEventUseCase | null = null,
+    private readonly _reserveScheduleSlots: ReserveTournamentScheduleSlotsUseCase | null = null,
   ) {}
+
+  /**
+   * Aparta cancha y horario para cada partido del cuadro recien creado.
+   *
+   * Nunca tira abajo la generacion: si la sede no da o alguien gana la carrera
+   * por un turno, el cuadro igual queda y el organizador ubica esos partidos a
+   * mano. Un cuadro a medio planificar sirve; perderlo entero no.
+   */
+  private async _reserveSlotsSV(
+    _tournament: {
+      id: string;
+      venueId: string | null;
+      sportId: string;
+      categoryId: string;
+      organizerUserId: string | null;
+      startsAt: Date | null;
+    },
+    _formatCode: string,
+    _payload: unknown,
+    _actorUserId: string,
+  ): Promise<void> {
+    if (this._reserveScheduleSlots === null) return;
+
+    try {
+      const PLANS = buildMaterializedMatchPlansSV({
+        formatCode: _formatCode,
+        payload: _payload,
+      }).map((_p) => ({ roundNumber: _p.roundNumber, matchNumber: _p.matchNumber }));
+
+      const RESULT = await this._reserveScheduleSlots.executeSV({
+        tournamentId: _tournament.id,
+        venueId: _tournament.venueId,
+        sportId: _tournament.sportId,
+        categoryId: _tournament.categoryId,
+        organizerUserId: _tournament.organizerUserId ?? _actorUserId,
+        startsAt: _tournament.startsAt,
+        plans: PLANS,
+      });
+
+      if (RESULT.slots.length > 0) {
+        await this._tournamentScheduleRepository.saveSlotPlanSV({
+          tournamentId: _tournament.id,
+          slotPlan: RESULT.slots,
+        });
+      }
+    } catch {
+      // No bloquear la generacion del cuadro si falla la reserva de turnos.
+    }
+  }
 
   /**
    * Avisa a los inscriptos confirmados que ya pueden ver cuándo juegan.
@@ -81,7 +134,23 @@ export class GenerateTournamentScheduleUseCase {
       TOURNAMENT.id,
       'CONFIRMED',
     );
-    const PARTICIPANT_REGISTRATION_IDS = CONFIRMED_REGISTRATIONS.map((_r) => _r.id);
+    //? En un torneo de duplas fijas el competidor es la pareja, no la persona:
+    //? el cuadro cruza duplas. Una inscripcion sin companero queda afuera —
+    //? media pareja no compite— y el organizador tiene que emparejarla o
+    //? sacarla antes de generar.
+    const COLLAPSED = TOURNAMENT.pairedRegistration
+      ? collapsePairsToCompetitorsSV(CONFIRMED_REGISTRATIONS)
+      : { competitorIds: CONFIRMED_REGISTRATIONS.map((_r) => _r.id), unpairedIds: [] };
+
+    if (TOURNAMENT.pairedRegistration && COLLAPSED.unpairedIds.length > 0) {
+      throw new AppError(
+        'DUPLAS_INCOMPLETAS',
+        `Hay ${COLLAPSED.unpairedIds.length} inscripción(es) sin dupla. Emparejalas o quitalas antes de generar el calendario.`,
+        409,
+      );
+    }
+
+    const PARTICIPANT_REGISTRATION_IDS = COLLAPSED.competitorIds;
     //? A quién avisarle: los invitados sin cuenta (`userId` nulo) juegan el
     //? torneo pero no tienen dónde recibir la notificación.
     const CONFIRMED_USER_IDS = CONFIRMED_REGISTRATIONS.map((_r) => _r.userId).filter(
@@ -107,6 +176,7 @@ export class GenerateTournamentScheduleUseCase {
       //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
       //? y volver a avisar por cada intento sería ruido.
       if (RES.created) {
+        await this._reserveSlotsSV(TOURNAMENT, FORMAT_CODE, RES.schedule.payload, _input.actorUserId);
         await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
       }
       return {
@@ -138,6 +208,7 @@ export class GenerateTournamentScheduleUseCase {
       //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
       //? y volver a avisar por cada intento sería ruido.
       if (RES.created) {
+        await this._reserveSlotsSV(TOURNAMENT, FORMAT_CODE, RES.schedule.payload, _input.actorUserId);
         await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
       }
       return {
@@ -169,6 +240,7 @@ export class GenerateTournamentScheduleUseCase {
       //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
       //? y volver a avisar por cada intento sería ruido.
       if (RES.created) {
+        await this._reserveSlotsSV(TOURNAMENT, FORMAT_CODE, RES.schedule.payload, _input.actorUserId);
         await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
       }
       return {

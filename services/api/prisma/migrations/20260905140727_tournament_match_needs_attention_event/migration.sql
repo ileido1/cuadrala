@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "NotificationEventType" ADD VALUE 'TOURNAMENT_MATCH_NEEDS_ATTENTION';

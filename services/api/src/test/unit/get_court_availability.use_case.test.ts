@@ -18,6 +18,7 @@ function buildRepo(): MatchCourtAvailabilityRepository {
     getCourtVenueIdSV: vi.fn(),
     findPublishedVacantAtCourtScheduledAtSV: vi.fn().mockResolvedValue(null),
     findConflictingActiveMatchIdSV: vi.fn().mockResolvedValue(null),
+    listLiveReservationSlotsSV: vi.fn().mockResolvedValue([]),
     hasConfirmedReservationAtCourtScheduledAtSV: vi.fn().mockResolvedValue(false),
   };
 }

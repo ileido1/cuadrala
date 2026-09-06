@@ -14,6 +14,10 @@ export const TOURNAMENT_NOTIFICATION_EVENT_TYPES = [
   'TOURNAMENT_REGISTRATION_CONFIRMED',
   'TOURNAMENT_SCHEDULE_PUBLISHED',
   'TOURNAMENT_STARTED',
+  //? Un rechazo y un vencimiento le crean al organizador la misma necesidad
+  //? —"este partido necesita que lo mires"—, asi que comparten evento en vez
+  //? de inventar dos notificaciones para el mismo problema.
+  'TOURNAMENT_MATCH_NEEDS_ATTENTION',
 ] as const;
 
 export type TournamentNotificationEventType =

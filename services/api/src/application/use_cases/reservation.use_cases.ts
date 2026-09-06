@@ -4,6 +4,7 @@
  */
 
 import { AppError } from '../../domain/errors/app_error.js';
+import { occupiesSlotSV } from '../../domain/reservation/reservation_slot.js';
 import type { ReservationRepository } from '../../domain/ports/reservation_repository.js';
 import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 import type { BookingCatalogReadRepository } from '../../domain/ports/booking_catalog_read_repository.js';
@@ -84,14 +85,17 @@ export class CreateReservationUseCase {
     );
 
     // Verificar que no exista una reserva confirmada para ese court+scheduledAt
-    const EXISTING = await this._reservationRepository.findByCourtAndScheduledAtSV(
+    const EXISTING = await this._reservationRepository.findLiveByCourtAndScheduledAtSV(
       _input.courtId,
       _input.scheduledAt,
     );
-    if (EXISTING !== null && EXISTING.status === 'CONFIRMED') {
+    //? Mira lo mismo que el indice parcial de la base: un turno apartado
+    //? tambien ocupa la cancha. Comparar contra 'CONFIRMED' a secas dejaba
+    //? pasar la reserva sobre un HELD y reventaba contra la restriccion.
+    if (EXISTING !== null && occupiesSlotSV(EXISTING.status)) {
       throw new AppError(
         'CONFLICTO',
-        'Ya existe una reserva confirmada para ese horario en esta cancha.',
+        'Ese horario ya está tomado en esta cancha.',
         409,
       );
     }
@@ -278,7 +282,7 @@ export class UnblockCourtSlotUseCase {
       );
     }
 
-    const RESERVATION = await this._reservationRepository.findByCourtAndScheduledAtSV(
+    const RESERVATION = await this._reservationRepository.findLiveByCourtAndScheduledAtSV(
       _input.courtId,
       _input.scheduledAt,
     );
