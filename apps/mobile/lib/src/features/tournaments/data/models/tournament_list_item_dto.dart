@@ -85,21 +85,32 @@ final class TournamentListItemDto extends Equatable {
       venueId: json['venueId'] as String? ?? json['venue_id'] as String?,
       venueName: json['venueName'] as String? ?? json['venue_name'] as String?,
       //? Decimal serializado: puede llegar int (15) o double (12.5).
-      inscriptionPrice:
-          (json['inscriptionPrice'] ?? json['inscription_price']) is num
-              ? ((json['inscriptionPrice'] ?? json['inscription_price']) as num)
-                  .toDouble()
-              : null,
-      maxSlots: (json['maxSlots'] ?? json['max_slots']) as int?,
-      registrationClosesAt:
-          (json['registrationClosesAt'] ?? json['registration_closes_at'])
-                  is String
-              ? DateTime.tryParse(
-                  (json['registrationClosesAt'] ??
-                      json['registration_closes_at']) as String,
-                )
-              : null,
+      inscriptionPrice: _parseNumericFieldSV(
+        json['inscriptionPrice'],
+        json['inscription_price'],
+      ),
+      maxSlots: _parseIntFieldSV(json['maxSlots'], json['max_slots']),
+      registrationClosesAt: _parseDateTimeFieldSV(
+        json['registrationClosesAt'],
+        json['registration_closes_at'],
+      ),
     );
+  }
+
+  static double? _parseNumericFieldSV(Object? camel, Object? snake) {
+    final value = camel ?? snake;
+    if (value is num) return value.toDouble();
+    return null;
+  }
+
+  static int? _parseIntFieldSV(Object? camel, Object? snake) {
+    return (camel ?? snake) as int?;
+  }
+
+  static DateTime? _parseDateTimeFieldSV(Object? camel, Object? snake) {
+    final value = camel ?? snake;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   @override

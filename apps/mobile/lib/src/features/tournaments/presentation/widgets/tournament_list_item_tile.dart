@@ -92,6 +92,15 @@ final class TournamentListItemTile extends StatelessWidget {
 
   //? En mayúsculas y sin año: "SÁB 12 SEP · 09:00". El año sobra cuando el
   //? torneo es de esta temporada, que es el caso del listado.
+  static String _occupancyLabel(int count, int? max) {
+    if (max == null) {
+      return count == 1 ? '$count inscripto' : '$count inscriptos';
+    }
+    //? En la forma "11/16", usa el plural siempre porque el denominador
+    //? define la escala: "1/16 inscriptos" no sé lee roto.
+    return '$count/$max inscriptos';
+  }
+
   static String _formatStartSV(DateTime startsAt) {
     final local = startsAt.toLocal();
     return DateFormat('EEE d MMM · HH:mm', 'es_ES').format(local).toUpperCase();
@@ -160,6 +169,15 @@ final class _MetaRow extends StatelessWidget {
 ///
 /// Sin `maxSlots` no hay denominador: se dice cuántos hay y no se dibuja barra,
 /// en vez de inventar un total que el organizador nunca puso.
+String _occupancyLabel(int count, int? max) {
+  if (max == null) {
+    return count == 1 ? '$count inscripto' : '$count inscriptos';
+  }
+  //? En la forma "11/16", usa el plural siempre porque el denominador
+  //? define la escala: "1/16 inscriptos" no se lee roto.
+  return '$count/$max inscriptos';
+}
+
 final class _Occupancy extends StatelessWidget {
   const _Occupancy({required this.tournament});
 
@@ -170,8 +188,6 @@ final class _Occupancy extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final count = tournament.registrationCount;
     final max = tournament.maxSlots;
-    final noun = count == 1 ? 'inscripto' : 'inscriptos';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -179,7 +195,7 @@ final class _Occupancy extends StatelessWidget {
           children: [
             Flexible(
               child: Text(
-                max == null ? '$count $noun' : '$count/$max $noun',
+                _occupancyLabel(count, max),
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
