@@ -230,7 +230,10 @@ void main() {
       ));
       await tester.pump();
 
-      // Default tab is Fixture.
+      // Navigate to Calendario tab to show schedule
+      await tester.tap(find.text('Calendario'));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.text('Partido 1'));
       await tester.pumpAndSettle();
 
@@ -268,6 +271,10 @@ void main() {
         scoreboardCubit: scoreboardCubit,
       ));
       await tester.pump();
+
+      // Navigate to Calendario tab to show schedule
+      await tester.tap(find.text('Calendario'));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Partido 1'));
       await tester.pumpAndSettle();
