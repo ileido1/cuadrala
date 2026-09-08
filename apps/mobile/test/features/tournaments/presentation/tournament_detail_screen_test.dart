@@ -10,6 +10,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_registration_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_schedule_dto.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_registrations_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_registrations_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_schedule_cubit.dart';
@@ -30,6 +31,8 @@ class _MockScheduleCubit extends MockCubit<TournamentScheduleState>
 
 class _MockScoreboardCubit extends MockCubit<TournamentScoreboardState>
     implements TournamentScoreboardCubit {}
+
+class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -105,6 +108,7 @@ Widget _buildTestApp({
           child: TournamentDetailBody(
             tournamentId: 't-1',
             tournament: tournament,
+            tournamentsRepository: _MockTournamentsRepository(),
           ),
         ),
       ),

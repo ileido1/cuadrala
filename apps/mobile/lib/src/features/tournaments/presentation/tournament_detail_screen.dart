@@ -88,6 +88,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
   late final TournamentScheduleCubit _scheduleCubit;
   late final TournamentScoreboardCubit _scoreboardCubit;
   late final TournamentRegistrationsCubit _registrationsCubit;
+  late final TournamentsRepository _tournamentsRepository;
 
   TournamentListItemDto? _tournament;
   bool _loadingTournament = false;
@@ -101,6 +102,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     _scheduleCubit = getIt<TournamentScheduleCubit>(param1: widget.tournamentId);
     _scoreboardCubit = getIt<TournamentScoreboardCubit>(param1: widget.tournamentId);
     _registrationsCubit = getIt<TournamentRegistrationsCubit>(param1: widget.tournamentId)..load();
+    _tournamentsRepository = getIt<TournamentsRepository>();
     //? Only load registrations eagerly; others load on tab switch
 
     //? Cargar ratings del jugador en background para saber eligibilidad
@@ -195,6 +197,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
               tournamentId: widget.tournamentId,
               tournament: _tournament,
               playerRatings: _playerRatings,
+              tournamentsRepository: _tournamentsRepository,
             ),
     );
   }
@@ -209,11 +212,13 @@ final class TournamentDetailBody extends StatelessWidget {
     required this.tournamentId,
     required this.tournament,
     this.playerRatings,
+    required this.tournamentsRepository,
   });
 
   final String tournamentId;
   final TournamentListItemDto? tournament;
   final List<UserRatingDto>? playerRatings;
+  final TournamentsRepository tournamentsRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -429,7 +434,10 @@ final class TournamentDetailBody extends StatelessWidget {
               tournamentStatus: tournament?.status,
               pairedRegistration: tournament?.pairedRegistration ?? false,
             ),
-            _BracketTab(tournamentId: tournamentId),
+            _BracketTab(
+              tournamentId: tournamentId,
+              tournamentsRepository: tournamentsRepository,
+            ),
           ],
         ),
       ),
@@ -1910,13 +1918,16 @@ final class _InfoTab extends StatelessWidget {
 }
 
 final class _BracketTab extends StatelessWidget {
-  const _BracketTab({required this.tournamentId});
+  const _BracketTab({
+    required this.tournamentId,
+    required this.tournamentsRepository,
+  });
 
   final String tournamentId;
+  final TournamentsRepository tournamentsRepository;
 
   @override
   Widget build(BuildContext context) {
-    final tournamentsRepository = getIt<TournamentsRepository>();
     return BracketScreen(
       tournamentId: tournamentId,
       tournamentsRepository: tournamentsRepository,
