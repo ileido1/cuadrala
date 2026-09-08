@@ -19,6 +19,15 @@ export type TournamentListItemDTO = {
   categoryName: string;
   startsAt: string | null;
   registrationCount: number;
+  /** Sede del torneo; `null` cuando el organizador no la declaró. */
+  venueId: string | null;
+  venueName: string | null;
+  /** Precio por jugador. `0` es "gratis declarado"; `null` es "sin declarar". */
+  inscriptionPrice: number | null;
+  /** Cupo máximo declarado. Sin esto el listado no tiene denominador. */
+  maxSlots: number | null;
+  /** Cierre informativo de la inscripción (ISO 8601). */
+  registrationClosesAt: string | null;
 };
 
 export type TournamentDetailDTO = TournamentListItemDTO & {

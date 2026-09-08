@@ -25,12 +25,22 @@ const mockValidator = {
   validateAndNormalizeSV: vi.fn((_input: unknown) => undefined),
 };
 
+const mockVenueRepository = {
+  findByIdSV: vi.fn(),
+};
+
+const mockVenueStaffRepository = {
+  isUserStaffOfVenueSV: vi.fn(),
+};
+
 const useCase = new CreateParametrizedTournamentUseCase(
   mockCategoryRepository as never,
   mockSportRepository as never,
   mockFormatPresetRepository as never,
   mockTournamentRepository as never,
   mockValidator as never,
+  mockVenueRepository as never,
+  mockVenueStaffRepository as never,
 );
 
 const CATEGORY = { id: 'category-1', name: 'Categoría', sportId: 'sport-1' };

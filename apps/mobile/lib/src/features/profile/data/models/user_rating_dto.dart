@@ -3,17 +3,30 @@ final class UserRatingDto {
     required this.categoryId,
     required this.rating,
     required this.updatedAt,
+    this.categoryName,
+    this.sportId,
   });
 
   final String categoryId;
   final double rating;
   final DateTime updatedAt;
 
+  /// Nombre de la categoría (ej. "7ma"). Opcional, puede no venir en todos los endpoints.
+  final String? categoryName;
+
+  /// ID del deporte (ej. "sport-padel"). Opcional, puede no venir en todos los endpoints.
+  final String? sportId;
+
   static UserRatingDto fromJson(Map<String, Object?> json) {
     return UserRatingDto(
-      categoryId: json['categoryId'] as String,
+      categoryId: (json['categoryId'] ?? json['category_id']) as String,
       rating: (json['rating'] as num).toDouble(),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      updatedAt: DateTime.parse(
+        (json['updatedAt'] ?? json['updated_at']) as String,
+      ),
+      categoryName:
+          (json['categoryName'] ?? json['category_name']) as String?,
+      sportId: (json['sportId'] ?? json['sport_id']) as String?,
     );
   }
 }

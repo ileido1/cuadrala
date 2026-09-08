@@ -689,6 +689,19 @@ model Tournament {
   /// Slice 1 (tournament-guest-registration): precio de inscripción; null = gratuito.
   /// Elo solo se aplica cuando `isCompetitive=true AND inscriptionPrice > 0`.
   inscriptionPrice    Decimal?               @db.Decimal(10, 2)
+  /// Cupo máximo de inscripciones; null = sin tope declarado.
+  ///
+  /// El listado muestra "11/16 inscriptos" y una barra de ocupación: sin este
+  /// dato el denominador no existe y la barra no se puede dibujar. No se
+  /// valida contra el formato acá — un cuadro de 16 con 20 anotados es una
+  /// decisión del organizador, no un error de datos.
+  maxSlots            Int?
+  /// Momento en que cierra la inscripción; null = cierra cuando el organizador
+  /// cambia el estado a mano.
+  ///
+  /// Es informativo para el cliente ("cierra VIE"): la ventana real la sigue
+  /// gobernando `status` (DRAFT/OPEN), no esta fecha.
+  registrationClosesAt DateTime?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 

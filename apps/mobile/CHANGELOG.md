@@ -5,6 +5,33 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.1.0] - 2026-09-07
+
+### Agregado
+
+- **La tarjeta del listado de torneos responde "¿puedo entrar?".** Rediseño del
+  handoff: pill de estado, categoría, nombre, cuándo, dónde, ocupación
+  (`11/16 inscriptos` con barra) y precio por jugador.
+
+  Consume los campos nuevos de la API 1.3.0 (`venueName`, `inscriptionPrice`,
+  `maxSlots`, `registrationClosesAt`). Lo que el organizador no declaró **no se
+  inventa**: la fila desaparece en vez de mostrarse vacía. Un precio `0`
+  declarado dice **Gratis**, que no es lo mismo que un precio ausente.
+
+  El importe en Bs queda fuera a propósito: la conversión necesita la tasa real
+  y `DualPrice` es presentacional.
+
+### Corregido
+
+- **El listado de torneos mostraba el estado en crudo.** La tarjeta traducía
+  `REGISTRATION_OPEN`, `REGISTRATION_CLOSED` y `FINISHED`, estados de un modelo
+  anterior que ya no existen: los reales (`OPEN`, `COMPLETED`) caían en el
+  `default` y al usuario le aparecía el valor del enum en gris.
+
+  El arreglo de la v1.0.8 se había hecho sólo en `tournament_status_view.dart`,
+  que alimenta el detalle, y nunca llegó a la tarjeta. Ahora las dos pantallas
+  usan el mismo traductor a través del nuevo `TournamentStatusPill`.
+
 ## [1.0.10] - 2026-09-05
 
 ### Corregido

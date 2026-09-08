@@ -7,6 +7,7 @@ import type {
   TournamentQueryRepository,
 } from '../../domain/ports/tournament_query_repository.js';
 
+import type { Prisma } from '../../generated/prisma/client.js';
 import { PRISMA } from '../prisma_client.js';
 
 function toListItemDTO(_row: {
@@ -20,6 +21,11 @@ function toListItemDTO(_row: {
   categoryId: string;
   category: { name: string };
   startsAt: Date | null;
+  venueId: string | null;
+  venue: { name: string } | null;
+  inscriptionPrice: Prisma.Decimal | null;
+  maxSlots: number | null;
+  registrationClosesAt: Date | null;
   _count: { registrations: number };
 }): TournamentListItemDTO {
   return {
@@ -34,6 +40,15 @@ function toListItemDTO(_row: {
     categoryName: _row.category.name,
     startsAt: _row.startsAt != null ? _row.startsAt.toISOString() : null,
     registrationCount: _row._count.registrations,
+    venueId: _row.venueId,
+    venueName: _row.venue?.name ?? null,
+    //? Decimal de Prisma no serializa como número en JSON: sin toNumber() el
+    //? cliente recibe un objeto y el precio se muestra vacío.
+    inscriptionPrice:
+      _row.inscriptionPrice === null ? null : _row.inscriptionPrice.toNumber(),
+    maxSlots: _row.maxSlots,
+    registrationClosesAt:
+      _row.registrationClosesAt != null ? _row.registrationClosesAt.toISOString() : null,
   };
 }
 
@@ -48,15 +63,26 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
       sportId?: string;
       categoryId?: string;
       startsAt?: { gte?: Date; lte?: Date };
-      matches?: { some: { court: { venueId: string } } };
+      OR?: Array<
+        { venueId: string } | { matches: { some: { court: { venueId: string } } } }
+      >;
     } = {
       //? Catálogo público: solo torneos PUBLIC (los PRIVATE solo por link directo).
       visibility: 'PUBLIC',
       ...(_filters.status !== undefined ? { status: _filters.status } : {}),
       ...(_filters.sportId !== undefined ? { sportId: _filters.sportId } : {}),
       ...(_filters.categoryId !== undefined ? { categoryId: _filters.categoryId } : {}),
+      //? La sede propia del torneo O la de sus canchas. Solo mirar los partidos
+      //? escondia los torneos recien creados, que todavia no tienen ninguno;
+      //? solo mirar la columna dejaria afuera a los torneos viejos, creados
+      //? cuando la ruta de alta no aceptaba `venueId`.
       ...(_filters.venueId !== undefined
-        ? { matches: { some: { court: { venueId: _filters.venueId } } } }
+        ? {
+            OR: [
+              { venueId: _filters.venueId },
+              { matches: { some: { court: { venueId: _filters.venueId } } } },
+            ],
+          }
         : {}),
       ...(_filters.startsAtFrom !== undefined || _filters.startsAtTo !== undefined
         ? {
@@ -93,6 +119,11 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           categoryId: true,
           category: { select: { name: true } },
           startsAt: true,
+          venueId: true,
+          venue: { select: { name: true } },
+          inscriptionPrice: true,
+          maxSlots: true,
+          registrationClosesAt: true,
           _count: { select: { registrations: true } },
         },
       }),
@@ -115,6 +146,11 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
         categoryId: true,
         category: { select: { name: true } },
         startsAt: true,
+        venueId: true,
+        venue: { select: { name: true } },
+        inscriptionPrice: true,
+        maxSlots: true,
+        registrationClosesAt: true,
         formatPresetId: true,
         formatPreset: { select: { name: true } },
         presetSchemaVersion: true,
@@ -170,15 +206,16 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
       status?: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
       sportId?: string;
       categoryId?: string;
-      matches?: { some: { court: { venueId: string } } };
+      OR?: Array<
+        { venueId: string } | { matches: { some: { court: { venueId: string } } } }
+      >;
     } = {
-      matches: {
-        some: {
-          court: {
-            venueId: _venueId,
-          },
-        },
-      },
+      //? Mismo criterio que el listado global: la sede propia del torneo o la
+      //? de sus canchas. Ver el comentario en listTournamentsSV.
+      OR: [
+        { venueId: _venueId },
+        { matches: { some: { court: { venueId: _venueId } } } },
+      ],
       ...(_filters.status !== undefined ? { status: _filters.status } : {}),
       ...(_filters.sportId !== undefined ? { sportId: _filters.sportId } : {}),
       ...(_filters.categoryId !== undefined ? { categoryId: _filters.categoryId } : {}),
@@ -205,6 +242,11 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           categoryId: true,
           category: { select: { name: true } },
           startsAt: true,
+          venueId: true,
+          venue: { select: { name: true } },
+          inscriptionPrice: true,
+          maxSlots: true,
+          registrationClosesAt: true,
           _count: { select: { registrations: true } },
         },
       }),

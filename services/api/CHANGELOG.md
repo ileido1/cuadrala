@@ -5,6 +5,33 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-09-07
+
+### Agregado
+
+- **El torneo lleva sede, precio, cupos y cierre de inscripción.** `POST
+  /tournaments` acepta ahora `venueId`, `inscriptionPrice`, `maxSlots` y
+  `registrationClosesAt`, y los cuatro se devuelven en `GET /tournaments` y
+  `GET /tournaments/:id` junto con `venueName`.
+
+  Antes no había forma de crear un torneo con sede ni con precio: las columnas
+  `venueId` e `inscriptionPrice` existían en el modelo pero ni la ruta de alta
+  las aceptaba ni el DTO de lectura las exponía. La pantalla que le responde al
+  jugador "¿puedo entrar?" —nivel, precio, cuándo y dónde— no tenía con qué
+  responderse.
+
+  `maxSlots` y `registrationClosesAt` son columnas nuevas (migración
+  `20260907220000_tournament_slots_and_registration_deadline`). Las cuatro son
+  opcionales y los torneos ya creados siguen siendo válidos: `null` significa
+  "el organizador no lo declaró", que no es lo mismo que `0`.
+
+  `registrationClosesAt` es informativo para el cliente: la ventana real de
+  inscripción la sigue gobernando `status` (`DRAFT`/`OPEN`). Se rechaza con
+  `400 VALIDACION_FALLIDA` si cae después de `startsAt`.
+
+  El OpenAPI de `POST /tournaments` documenta los cuatro campos nuevos y además
+  `visibility`, que se aceptaba desde antes sin estar documentado.
+
 ## [1.2.1] - 2026-09-04
 
 ### Seguridad
