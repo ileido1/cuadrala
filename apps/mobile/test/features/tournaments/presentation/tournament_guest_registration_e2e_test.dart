@@ -19,6 +19,8 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
+import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/bracket_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_invitation_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_registration_dto.dart';
@@ -30,7 +32,12 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
 
-class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockTournamentsRepository extends Mock implements TournamentsRepository {
+  @override
+  Future<BracketDto> getBracket({required String tournamentId}) async {
+    throw const AppFailure(code: 'VALIDACION_FALLIDA', message: 'Test mock');
+  }
+}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -70,6 +77,7 @@ Widget _buildTestApp({
   required TournamentScheduleCubit scheduleCubit,
   required TournamentScoreboardCubit scoreboardCubit,
   required TournamentListItemDto tournament,
+  required TournamentsRepository tournamentsRepository,
 }) {
   final router = GoRouter(
     initialLocation: '/tournaments/$_tournamentId',
@@ -82,7 +90,11 @@ Widget _buildTestApp({
             BlocProvider<TournamentScheduleCubit>.value(value: scheduleCubit),
             BlocProvider<TournamentScoreboardCubit>.value(value: scoreboardCubit),
           ],
-          child: TournamentDetailBody(tournamentId: _tournamentId, tournament: tournament),
+          child: TournamentDetailBody(
+            tournamentId: _tournamentId,
+            tournament: tournament,
+            tournamentsRepository: tournamentsRepository,
+          ),
         ),
       ),
     ],
@@ -137,6 +149,7 @@ void main() {
           status: 'DRAFT',
           sportName: 'Pádel',
           categoryName: 'Mixto',
+          categoryId: 'cat-1',
           startsAt: null,
           registrationCount: 1,
           organizerUserId: _organizerId,
@@ -157,6 +170,7 @@ void main() {
           scheduleCubit: scheduleCubit,
           scoreboardCubit: scoreboardCubit,
           tournament: tournament,
+          tournamentsRepository: tournamentsRepository,
         ));
         await cubit.load();
         await tester.pumpAndSettle();
@@ -278,6 +292,7 @@ void main() {
           status: 'IN_PROGRESS',
           sportName: 'Pádel',
           categoryName: 'Mixto',
+          categoryId: 'cat-1',
           startsAt: null,
           registrationCount: 4,
           organizerUserId: _organizerId,
@@ -311,6 +326,7 @@ void main() {
           scheduleCubit: scheduleCubit,
           scoreboardCubit: scoreboardCubit,
           tournament: tournament,
+          tournamentsRepository: tournamentsRepository,
         ));
         await cubit.load();
         await tester.pumpAndSettle();

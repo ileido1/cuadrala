@@ -40,6 +40,10 @@ export interface TournamentRepository {
     startsAt?: Date;
     organizerUserId?: string;
     visibility?: TournamentVisibility;
+    venueId?: string;
+    inscriptionPrice?: number;
+    maxSlots?: number;
+    registrationClosesAt?: Date;
   }): Promise<TournamentCreatedDTO>;
 
   updateStatusSV(

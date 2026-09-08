@@ -1,0 +1,164 @@
+/* cuadrala-app.jsx — root: device frame, navigation, create sheet, tweaks */
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "dark",
+  "venueView": "Lista",
+  "corners": "Redondeadas",
+  "start": "Bienvenida",
+  "insc": "Sin inscribir",
+  "bracket": "Normal"
+}/*EDITMODE-END*/;
+
+const START_AUTH = { 'Bienvenida': 'welcome', 'Login': 'login', 'Registro': 'register', 'Onboarding': 'onboarding', 'App (sin auth)': null };
+
+function Stage({ children }) {
+  const [scale, setScale] = React.useState(1);
+  React.useEffect(() => {
+    const fit = () => {
+      const s = Math.min(1, (window.innerWidth - 40) / 402, (window.innerHeight - 40) / 874);
+      setScale(s);
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#06080d' }}>
+      <div style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}>{children}</div>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [auth, setAuth] = React.useState(() => START_AUTH[t.start] ?? 'welcome');
+  const [tab, setTab] = React.useState('inicio');
+  const [stack, setStack] = React.useState([]);
+  const [selMatch, setSelMatch] = React.useState({ ...DEMO_MATCH, total: 4 });
+  const [joinedPos, setJoinedPos] = React.useState(null);
+  const [payment, setPayment] = React.useState('none');
+  const [played, setPlayed] = React.useState(false);
+  const [tSel, setTSel] = React.useState(TORNEOS[0]);
+  const [tDetailTab, setTDetailTab] = React.useState('Info');
+  const INSC_MAP = { 'Sin inscribir': 'none', 'Pendiente': 'PENDING', 'Confirmada': 'CONFIRMED' };
+  const [inscs, setInscs] = React.useState({ t1: 'none', t3: 'CONFIRMED' });
+  const [invite, setInvite] = React.useState(true);
+  const setInsc = (id, v) => setInscs(p => ({ ...p, [id]: v }));
+  const bracketState = t.bracket === 'Formato no soportado' ? 'format' : t.bracket === 'Sin confirmados' ? 'few' : 'ok';
+  const openTorneo = (tt, tab = 'Info') => { setTSel(tt); setTDetailTab(tab); reset('tdetail'); };
+  const dark = t.theme === 'dark';
+  const SCORES = { A: '6 · 4 · 6', B: '4 · 6 · 3' };
+
+  const top = stack[stack.length - 1] || null;
+  const push = s => setStack(p => [...p, s]);
+  const pop = () => setStack(p => p.slice(0, -1));
+  const reset = s => setStack(s ? [s] : []);
+  const openMatch = m => {
+    setSelMatch({ ...DEMO_MATCH, ...(m || {}), total: 4 });
+    setJoinedPos(null); setPayment('none'); setPlayed(false);
+    reset('detail');
+  };
+
+  const screens = {
+    inicio: <HomeScreen onCreate={() => reset('create')} onSearch={() => reset('search')} onBell={() => setTab('avisos')} onOpenMatch={openMatch} />,
+    partidas: <MatchesScreen onOpenMatch={openMatch} />,
+    torneos: <TorneosScreen inscs={inscs} invite={invite} onOpen={tt => openTorneo(tt)} onInvite={() => reset('tinvite')} onOrg={() => { setTSel(TORNEOS[0]); reset('torg'); }} onCreate={() => reset('tcreate')} />,
+    avisos: <AvisosScreen />,
+    perfil: <PerfilScreen />,
+  };
+
+  const overlays = {
+    create: <CreateMatchScreen onClose={pop} initialView={t.venueView} />,
+    search: <SearchScreen onClose={pop} onOpenMatch={openMatch} onCreate={() => reset('create')} />,
+    detail: <MatchDetailScreen match={selMatch} court={DEMO_COURT} joinedPos={joinedPos} payment={payment} played={played} scores={SCORES}
+      onBack={() => { reset(); setTab('inicio'); }} onJoin={k => setJoinedPos(k)} onPay={() => push('payment')} onLoadResult={() => push('result')} onShare={() => {}} />,
+    payment: <PaymentFlow club={selMatch.club} price={selMatch.price} onClose={pop}
+      onConfirm={() => setPayment('pending')} onHome={() => { reset(); setTab('inicio'); }} onViewMatch={() => reset('detail')} />,
+    result: <LoadResultFlow onClose={pop} onSaved={() => setPlayed(true)} />,
+    tdetail: <TorneoDetail t={tSel} insc={inscs[tSel.id] || 'none'} tab={tDetailTab} setTab={setTDetailTab}
+      onBack={() => { reset(); setTab('torneos'); }} onJoin={() => setInsc(tSel.id, 'PENDING')} onWithdraw={() => setInsc(tSel.id, 'none')}
+      onBracket={() => push('tbracket')} />,
+    tbracket: <BracketScreen t={tSel} state={bracketState} onBack={pop} />,
+    torg: <OrgTorneoScreen t={tSel} onBack={() => { reset(); setTab('torneos'); }} onBracket={() => push('tbracketorg')} />,
+    tbracketorg: <BracketScreen t={tSel} state={bracketState} canEdit onMatch={() => {}} onBack={pop} />,
+    tcreate: <CrearTorneoScreen onClose={() => { reset(); setTab('torneos'); }}
+      onCreated={pub => { setTSel(TORNEOS[0]); reset('torg'); }} />,
+    tinvite: <InvitacionSheet onClose={() => { reset(); setTab('torneos'); }}
+      onRespond={a => { setInvite(false); if (a === 'ACCEPT') { setInsc('t2', 'CONFIRMED'); openTorneo(TORNEOS[1]); } else { reset(); setTab('torneos'); } }} />,
+  };
+
+  const authScreens = {
+    welcome: <WelcomeScreen onRegister={() => setAuth('register')} onLogin={() => setAuth('login')} />,
+    login: <LoginScreen onSwitch={() => setAuth('register')} onSubmit={() => { setAuth(null); setTab('inicio'); reset(); }} />,
+    register: <RegisterScreen onSwitch={() => setAuth('login')} onSubmit={() => setAuth('onboarding')} />,
+    onboarding: <OnboardingScreen onExit={() => setAuth('register')} onFinish={() => { setAuth(null); setTab('inicio'); reset(); }} />,
+  };
+
+  const czStyle = {
+    height: '100%', position: 'relative', display: 'flex', flexDirection: 'column',
+    background: 'var(--bg)', color: 'var(--text)',
+    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    '--radius-card': t.corners === 'Redondeadas' ? '18px' : '12px',
+  };
+
+  return (
+    <Stage>
+      <IOSDevice dark={dark}>
+        <div className="cz" data-theme={t.theme} style={czStyle}>
+          {auth ? (
+            <div key={auth} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              {authScreens[auth]}
+            </div>
+          ) : (
+            <>
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} key={tab}>
+                {screens[tab]}
+              </div>
+              <BottomNav tab={tab} setTab={setTab} />
+
+              {top && (
+                <div key={top + stack.length} style={{ position: 'absolute', inset: 0, zIndex: 5, animation: 'sheetUp .28s cubic-bezier(.3,.8,.3,1)' }}>
+                  {overlays[top]}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </IOSDevice>
+
+      <TweaksPanel>
+        <TweakSection label="Apariencia" />
+        <TweakRadio label="Tema" value={t.theme} options={['dark', 'light']} onChange={v => setTweak('theme', v)} />
+        <TweakRadio label="Esquinas" value={t.corners} options={['Redondeadas', 'Suaves']} onChange={v => setTweak('corners', v)} />
+        <TweakSection label="Crear partida" />
+        <TweakRadio label="Vista de sedes" value={t.venueView} options={['Lista', 'Mapa']} onChange={v => setTweak('venueView', v)} />
+        <TweakSection label="Autenticación" />
+        <TweakButton label="Bienvenida" onClick={() => setAuth('welcome')} />
+        <TweakButton label="Login" onClick={() => setAuth('login')} />
+        <TweakButton label="Registro" onClick={() => setAuth('register')} />
+        <TweakButton label="Onboarding (4 pasos)" onClick={() => setAuth('onboarding')} />
+        <TweakButton label="Entrar a la app" onClick={() => { setAuth(null); setTab('inicio'); reset(); }} />
+        <TweakSection label="Torneos — jugador" />
+        <TweakRadio label="Mi inscripción" value={t.insc} options={['Sin inscribir', 'Pendiente', 'Confirmada']} onChange={v => { setTweak('insc', v); setInsc(tSel.id, INSC_MAP[v]); }} />
+        <TweakRadio label="Cuadro" value={t.bracket} options={['Normal', 'Formato no soportado', 'Sin confirmados']} onChange={v => setTweak('bracket', v)} />
+        <TweakButton label="Listado de torneos" onClick={() => { setTab('torneos'); reset(); }} />
+        <TweakButton label="Detalle de torneo" onClick={() => openTorneo(TORNEOS[0])} />
+        <TweakButton label="Mis partidos (cuándo juego)" onClick={() => openTorneo(TORNEOS[2], 'Mis partidos')} />
+        <TweakButton label="Tabla (cómo voy)" onClick={() => openTorneo(TORNEOS[2], 'Tabla')} />
+        <TweakButton label="Cuadro" onClick={() => reset('tbracket')} />
+        <TweakButton label="Invitación recibida" onClick={() => reset('tinvite')} />
+        <TweakSection label="Torneos — organizador" />
+        <TweakButton label="Crear torneo" onClick={() => reset('tcreate')} />
+        <TweakButton label="Panel del organizador" onClick={() => { setTSel(TORNEOS[0]); reset('torg'); }} />
+        <TweakSection label="Ir a pantalla" />
+        <TweakButton label="Crear partida" onClick={() => reset('create')} />
+        <TweakButton label="Buscar / matchmaking" onClick={() => reset('search')} />
+        <TweakButton label="Detalle de partida" onClick={() => openMatch(null)} />
+        <TweakButton label="Método de pago" onClick={() => reset('payment')} />
+        <TweakButton label="Cargar resultado" onClick={() => reset('result')} />
+      </TweaksPanel>
+    </Stage>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);

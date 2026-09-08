@@ -92,6 +92,10 @@ abstract final class BrandColors {
   /// Warning state — readable on both light and dark backgrounds.
   static const warningAmber = Color(0xFFFB8C00);
 
+  /// Error / blocked state del rediseño (`#F87171` en el handoff). Se usa como
+  /// tinte de fondo y como texto sobre ese tinte, no como color de CTA.
+  static const dangerRed = Color(0xFFF87171);
+
   /// Success / good state — readable on both light and dark backgrounds.
   static const successGreen = Color(0xFF8BC34A);
 

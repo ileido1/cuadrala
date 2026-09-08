@@ -2,144 +2,93 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/theme/app_icons.dart';
+import '../../../../core/formatting/money_format.dart';
+import '../../../../core/models/currency_code.dart';
 import '../../../../router/routes.dart';
+import '../../../../shared/widgets/dual_price.dart';
 import '../../data/models/tournament_list_item_dto.dart';
+import 'tournament_status_pill.dart';
 
+String _occupancyLabel(int count, int? max) {
+  if (max == null) {
+    return count == 1 ? '$count inscripto' : '$count inscriptos';
+  }
+  return '$count/$max inscriptos';
+}
+
+/// Tarjeta de torneo del listado (rediseño).
+///
+/// Responde la primera pregunta del jugador —¿puedo entrar?— sin abrir nada:
+/// estado, categoría, cuándo, dónde, cuánta gente hay y cuánto sale. Los datos
+/// que el organizador no declaró **no se inventan**: la fila desaparece en vez
+/// de mostrarse vacía o con un placeholder.
 final class TournamentListItemTile extends StatelessWidget {
-  const TournamentListItemTile({
-    super.key,
-    required this.tournament,
-  });
+  const TournamentListItemTile({super.key, required this.tournament});
 
   final TournamentListItemDto tournament;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dateFormat = DateFormat('dd MMM · HH:mm', 'es_ES');
-
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.1),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(Routes.tournamentDetail(tournament.id), extra: tournament),
+        onTap: () => context.push(
+          Routes.tournamentDetail(tournament.id),
+          extra: tournament,
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Status icon with better visual
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      _statusColor(tournament.status).withValues(alpha: 0.2),
-                      _statusColor(tournament.status).withValues(alpha: 0.1),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _statusColor(tournament.status).withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Icon(
-                  AppIcons.trophy,
-                  color: _statusColor(tournament.status),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 14),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tournament.name,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${tournament.sportName} · ${tournament.categoryName}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: 12,
-                      ),
-                    ),
-                    if (tournament.startsAt != null) ...[
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 10,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            dateFormat.format(tournament.startsAt!),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // Registration count + status
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
                 children: [
-                  _StatusChip(status: tournament.status),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${tournament.registrationCount}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  TournamentStatusPill(status: tournament.status),
+                  const SizedBox(width: 8),
+                  Flexible(child: _CategoryChip(label: tournament.categoryName)),
                 ],
               ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                size: 20,
+              const SizedBox(height: 10),
+              Text(
+                tournament.name,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              //? Cuándo y dónde en una fila que envuelve: en pantallas angostas
+              //? la sede baja sola en vez de recortarse con puntos suspensivos.
+              Wrap(
+                spacing: 14,
+                runSpacing: 4,
+                children: [
+                  if (tournament.startsAt != null)
+                    _MetaRow(
+                      icon: Icons.calendar_today_outlined,
+                      label: _formatStartSV(tournament.startsAt!),
+                    ),
+                  if (tournament.venueName != null)
+                    _MetaRow(
+                      key: const Key('tournament.card.venue'),
+                      icon: Icons.place_outlined,
+                      label: tournament.venueName!,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: _Occupancy(tournament: tournament)),
+                  if (tournament.inscriptionPrice != null) ...[
+                    const SizedBox(width: 12),
+                    _Price(
+                      key: const Key('tournament.card.price'),
+                      amount: tournament.inscriptionPrice!,
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -148,97 +97,171 @@ final class TournamentListItemTile extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'DRAFT':
-        return Colors.grey;
-      case 'REGISTRATION_OPEN':
-        return Colors.green;
-      case 'REGISTRATION_CLOSED':
-        return Colors.orange;
-      case 'IN_PROGRESS':
-        return Colors.blue;
-      case 'FINISHED':
-        return Colors.indigo;
-      case 'CANCELLED':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
+  static String _formatStartSV(DateTime startsAt) {
+    final local = startsAt.toLocal();
+    return DateFormat('EEE d MMM · HH:mm', 'es_ES').format(local).toUpperCase();
   }
 }
 
-final class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+final class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.label});
 
-  final String status;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final color = _chipColor(status);
+    final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withValues(alpha: 0.15),
-            color.withValues(alpha: 0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        _label(status),
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
           letterSpacing: 0.3,
+          color: scheme.onSurfaceVariant,
         ),
       ),
     );
   }
+}
 
-  String _label(String s) {
-    switch (s.toUpperCase()) {
-      case 'DRAFT':
-        return 'Borrador';
-      case 'REGISTRATION_OPEN':
-        return 'Inscripciones abiertas';
-      case 'REGISTRATION_CLOSED':
-        return 'Inscripciones cerradas';
-      case 'IN_PROGRESS':
-        return 'En curso';
-      case 'FINISHED':
-        return 'Finalizado';
-      case 'CANCELLED':
-        return 'Cancelado';
-      default:
-        return s;
-    }
+final class _MetaRow extends StatelessWidget {
+  const _MetaRow({super.key, required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
   }
+}
 
-  Color _chipColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'REGISTRATION_OPEN':
-        return Colors.green;
-      case 'IN_PROGRESS':
-        return Colors.blue;
-      case 'FINISHED':
-        return Colors.indigo;
-      case 'CANCELLED':
-        return Colors.red;
-      case 'REGISTRATION_CLOSED':
-        return Colors.orange;
-      default:
-        return Colors.grey;
+final class _Occupancy extends StatelessWidget {
+  const _Occupancy({required this.tournament});
+
+  final TournamentListItemDto tournament;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final count = tournament.registrationCount;
+    final max = tournament.maxSlots;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                _occupancyLabel(count, max),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (tournament.registrationClosesAt != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                'cierra ${DateFormat('EEE', 'es_ES').format(tournament.registrationClosesAt!.toLocal()).toUpperCase()}',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (max != null) ...[
+          const SizedBox(height: 6),
+          _SlotBar(key: const Key('tournament.card.slots'), filled: count, total: max),
+        ],
+      ],
+    );
+  }
+}
+
+final class _SlotBar extends StatelessWidget {
+  const _SlotBar({super.key, required this.filled, required this.total});
+
+  final int filled;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    //? Se satura en 1: un torneo con más anotados que cupos es decisión del
+    //? organizador, y la barra no debe desbordar por eso.
+    final ratio = total <= 0 ? 0.0 : (filled / total).clamp(0.0, 1.0);
+    final isFull = ratio >= 1.0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: LinearProgressIndicator(
+        value: ratio,
+        minHeight: 5,
+        backgroundColor: scheme.surfaceContainerHighest,
+        valueColor: AlwaysStoppedAnimation<Color>(
+          isFull ? scheme.onSurfaceVariant : scheme.primary,
+        ),
+      ),
+    );
+  }
+}
+
+/// Precio de inscripción por jugador.
+///
+/// Un `0` declarado dice **Gratis**: es información, no ausencia de dato. El
+/// secundario en Bs queda fuera a propósito — [DualPrice] es presentacional y
+/// la conversión necesita la tasa real, no un factor fijo.
+final class _Price extends StatelessWidget {
+  const _Price({super.key, required this.amount});
+
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) {
+    if (amount == 0) {
+      return Text(
+        'Gratis',
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      );
     }
+
+    return DualPrice(
+      primaryLabel: formatMoneyFromMajor(amount, CurrencyCode.usd),
+      suffix: 'p/p',
+    );
   }
 }

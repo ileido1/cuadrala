@@ -152,6 +152,11 @@ abstract interface class TournamentsApi {
     required String tournamentId,
     required String registrationId,
   });
+
+  /// Obtiene el cuadro (bracket) del torneo si es SINGLE_ELIMINATION y hay ≥2 confirmados.
+  Future<Map<String, Object?>> getTournamentBracketEnvelope({
+    required String tournamentId,
+  });
 }
 
 final class DioTournamentsApi implements TournamentsApi {
@@ -425,6 +430,15 @@ final class DioTournamentsApi implements TournamentsApi {
     await _apiClient.postJson(
       '/api/v1/tournaments/$tournamentId/registrations/confirm-pending',
       body: const {},
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> getTournamentBracketEnvelope({
+    required String tournamentId,
+  }) {
+    return _apiClient.getEnvelopeDataMap(
+      '/api/v1/tournaments/$tournamentId/bracket',
     );
   }
 }

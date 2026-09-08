@@ -59,6 +59,10 @@ export class PrismaTournamentRepository implements TournamentRepository {
     startsAt?: Date;
     organizerUserId?: string;
     visibility?: TournamentVisibility;
+    venueId?: string;
+    inscriptionPrice?: number;
+    maxSlots?: number;
+    registrationClosesAt?: Date;
   }): Promise<TournamentCreatedDTO> {
     const CREATED = await PRISMA.tournament.create({
       data: {
@@ -71,6 +75,14 @@ export class PrismaTournamentRepository implements TournamentRepository {
         ...(_data.visibility !== undefined ? { visibility: _data.visibility } : {}),
         ...(_data.formatParameters !== undefined ? { formatParameters: _data.formatParameters as never } : {}),
         ...(_data.startsAt !== undefined ? { startsAt: _data.startsAt } : {}),
+        ...(_data.venueId !== undefined ? { venueId: _data.venueId } : {}),
+        ...(_data.inscriptionPrice !== undefined
+          ? { inscriptionPrice: _data.inscriptionPrice }
+          : {}),
+        ...(_data.maxSlots !== undefined ? { maxSlots: _data.maxSlots } : {}),
+        ...(_data.registrationClosesAt !== undefined
+          ? { registrationClosesAt: _data.registrationClosesAt }
+          : {}),
       },
     });
 

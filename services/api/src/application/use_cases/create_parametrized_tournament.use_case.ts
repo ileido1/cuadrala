@@ -4,6 +4,8 @@ import type { FormatPresetRepository } from '../../domain/ports/format_preset_re
 import type { SportRepository } from '../../domain/ports/sport_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 import type { TournamentFormatParametersValidator } from '../../domain/ports/tournament_format_parameters_validator.js';
+import type { VenueRepository } from '../../domain/ports/venue_repository.js';
+import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 
 export type CreateParametrizedTournamentInput = {
   name: string;
@@ -16,6 +18,14 @@ export type CreateParametrizedTournamentInput = {
   organizerUserId?: string;
   /** `PUBLIC` (default) se lista en el catálogo; `PRIVATE` solo por link. */
   visibility?: 'PUBLIC' | 'PRIVATE';
+  /** Sede del torneo. Habilita además el fallback de autorización por staff. */
+  venueId?: string;
+  /** Precio por jugador; `0` es "gratis declarado", ausente es "sin declarar". */
+  inscriptionPrice?: number;
+  /** Cupo máximo declarado por el organizador. */
+  maxSlots?: number;
+  /** Cierre informativo de la inscripción; la ventana real la manda `status`. */
+  registrationClosesAt?: Date;
 };
 
 export class CreateParametrizedTournamentUseCase {
@@ -25,7 +35,49 @@ export class CreateParametrizedTournamentUseCase {
     private readonly _formatPresetRepository: FormatPresetRepository,
     private readonly _tournamentRepository: TournamentRepository,
     private readonly _tournamentFormatParametersValidator: TournamentFormatParametersValidator,
+    private readonly _venueRepository: VenueRepository,
+    private readonly _venueStaffRepository: VenueStaffRepository,
   ) {}
+
+  /**
+   * Valida que quien crea el torneo pueda ponerle esa sede.
+   *
+   * `venueId` no es un dato de vitrina: `AssertTournamentOrganizerAccessUseCase`
+   * trata al staff de la sede como organizador del torneo. Aceptarlo sin
+   * permiso deja que cualquiera publique un torneo a nombre de un club ajeno
+   * —el listado lo muestra con su `venueName`— y de paso le entregue el control
+   * al staff de ese club. La ruta es `optionalAuth`, así que sin sesión no hay
+   * a quién atribuirle la sede.
+   */
+  private async _assertVenueAuthoritySV(
+    _venueId: string,
+    _actorUserId: string | undefined,
+  ): Promise<void> {
+    if (_actorUserId === undefined) {
+      throw new AppError(
+        'NO_AUTORIZADO',
+        'Se requiere iniciar sesión para asociar el torneo a una sede.',
+        401,
+      );
+    }
+
+    const VENUE = await this._venueRepository.findByIdSV(_venueId);
+    if (VENUE === null) {
+      throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
+    }
+
+    const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
+      _actorUserId,
+      _venueId,
+    );
+    if (!IS_STAFF) {
+      throw new AppError(
+        'NO_AUTORIZADO',
+        'No tienes permisos para crear torneos en esa sede.',
+        403,
+      );
+    }
+  }
 
   async executeSV(_input: CreateParametrizedTournamentInput): Promise<{
     tournamentId: string;
@@ -43,6 +95,10 @@ export class CreateParametrizedTournamentUseCase {
         presetSchemaVersion: 1,
         formatParameters: _input.formatParameters,
       });
+    }
+
+    if (_input.venueId !== undefined) {
+      await this._assertVenueAuthoritySV(_input.venueId, _input.organizerUserId);
     }
 
     const CATEGORY = await this._categoryRepository.findByIdSV(_input.categoryId);
@@ -102,6 +158,14 @@ export class CreateParametrizedTournamentUseCase {
         ? { formatParameters: NORMALIZED_FORMAT_PARAMETERS }
         : {}),
       ...(_input.startsAt !== undefined ? { startsAt: _input.startsAt } : {}),
+      ...(_input.venueId !== undefined ? { venueId: _input.venueId } : {}),
+      ...(_input.inscriptionPrice !== undefined
+        ? { inscriptionPrice: _input.inscriptionPrice }
+        : {}),
+      ...(_input.maxSlots !== undefined ? { maxSlots: _input.maxSlots } : {}),
+      ...(_input.registrationClosesAt !== undefined
+        ? { registrationClosesAt: _input.registrationClosesAt }
+        : {}),
     });
 
     return {
