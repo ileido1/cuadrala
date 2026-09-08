@@ -209,6 +209,29 @@ const OPENAPI_CONST = {
                     ],
                   },
                   startsAt: { type: 'string', format: 'date-time' },
+                  visibility: { type: 'string', enum: ['PUBLIC', 'PRIVATE'] },
+                  venueId: {
+                    type: 'string',
+                    format: 'uuid',
+                    description: 'Sede del torneo. Habilita el fallback de autorización por staff.',
+                  },
+                  inscriptionPrice: {
+                    type: 'number',
+                    minimum: 0,
+                    description: 'Precio por jugador. 0 es "gratis declarado"; ausente es "sin declarar".',
+                  },
+                  maxSlots: {
+                    type: 'integer',
+                    minimum: 2,
+                    maximum: 256,
+                    description: 'Cupo máximo declarado por el organizador.',
+                  },
+                  registrationClosesAt: {
+                    type: 'string',
+                    format: 'date-time',
+                    description:
+                      'Cierre informativo de la inscripción; no puede ser posterior a startsAt. La ventana real la gobierna status (DRAFT/OPEN).',
+                  },
                 },
                 anyOf: [{ required: ['formatPresetId'] }, { required: ['formatPresetCode'] }],
               },

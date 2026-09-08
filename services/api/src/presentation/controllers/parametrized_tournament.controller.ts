@@ -31,6 +31,18 @@ export async function postParametrizedTournamentCON(_req: Request, _res: Respons
   if (BODY.visibility !== undefined) {
     INPUT.visibility = BODY.visibility;
   }
+  if (BODY.venueId !== undefined) {
+    INPUT.venueId = BODY.venueId;
+  }
+  if (BODY.inscriptionPrice !== undefined) {
+    INPUT.inscriptionPrice = BODY.inscriptionPrice;
+  }
+  if (BODY.maxSlots !== undefined) {
+    INPUT.maxSlots = BODY.maxSlots;
+  }
+  if (BODY.registrationClosesAt !== undefined) {
+    INPUT.registrationClosesAt = new Date(BODY.registrationClosesAt);
+  }
 
   const RESULT = await CREATE_PARAMETRIZED_TOURNAMENT_UC.executeSV(INPUT);
 

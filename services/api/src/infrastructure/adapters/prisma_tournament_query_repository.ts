@@ -7,6 +7,7 @@ import type {
   TournamentQueryRepository,
 } from '../../domain/ports/tournament_query_repository.js';
 
+import type { Prisma } from '../../generated/prisma/client.js';
 import { PRISMA } from '../prisma_client.js';
 
 function toListItemDTO(_row: {
@@ -20,6 +21,11 @@ function toListItemDTO(_row: {
   categoryId: string;
   category: { name: string };
   startsAt: Date | null;
+  venueId: string | null;
+  venue: { name: string } | null;
+  inscriptionPrice: Prisma.Decimal | null;
+  maxSlots: number | null;
+  registrationClosesAt: Date | null;
   _count: { registrations: number };
 }): TournamentListItemDTO {
   return {
@@ -34,6 +40,15 @@ function toListItemDTO(_row: {
     categoryName: _row.category.name,
     startsAt: _row.startsAt != null ? _row.startsAt.toISOString() : null,
     registrationCount: _row._count.registrations,
+    venueId: _row.venueId,
+    venueName: _row.venue?.name ?? null,
+    //? Decimal de Prisma no serializa como número en JSON: sin toNumber() el
+    //? cliente recibe un objeto y el precio se muestra vacío.
+    inscriptionPrice:
+      _row.inscriptionPrice === null ? null : _row.inscriptionPrice.toNumber(),
+    maxSlots: _row.maxSlots,
+    registrationClosesAt:
+      _row.registrationClosesAt != null ? _row.registrationClosesAt.toISOString() : null,
   };
 }
 
@@ -93,6 +108,11 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           categoryId: true,
           category: { select: { name: true } },
           startsAt: true,
+          venueId: true,
+          venue: { select: { name: true } },
+          inscriptionPrice: true,
+          maxSlots: true,
+          registrationClosesAt: true,
           _count: { select: { registrations: true } },
         },
       }),
@@ -115,6 +135,11 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
         categoryId: true,
         category: { select: { name: true } },
         startsAt: true,
+        venueId: true,
+        venue: { select: { name: true } },
+        inscriptionPrice: true,
+        maxSlots: true,
+        registrationClosesAt: true,
         formatPresetId: true,
         formatPreset: { select: { name: true } },
         presetSchemaVersion: true,
@@ -205,6 +230,11 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           categoryId: true,
           category: { select: { name: true } },
           startsAt: true,
+          venueId: true,
+          venue: { select: { name: true } },
+          inscriptionPrice: true,
+          maxSlots: true,
+          registrationClosesAt: true,
           _count: { select: { registrations: true } },
         },
       }),

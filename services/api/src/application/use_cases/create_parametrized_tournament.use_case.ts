@@ -16,6 +16,14 @@ export type CreateParametrizedTournamentInput = {
   organizerUserId?: string;
   /** `PUBLIC` (default) se lista en el catálogo; `PRIVATE` solo por link. */
   visibility?: 'PUBLIC' | 'PRIVATE';
+  /** Sede del torneo. Habilita además el fallback de autorización por staff. */
+  venueId?: string;
+  /** Precio por jugador; `0` es "gratis declarado", ausente es "sin declarar". */
+  inscriptionPrice?: number;
+  /** Cupo máximo declarado por el organizador. */
+  maxSlots?: number;
+  /** Cierre informativo de la inscripción; la ventana real la manda `status`. */
+  registrationClosesAt?: Date;
 };
 
 export class CreateParametrizedTournamentUseCase {
@@ -102,6 +110,14 @@ export class CreateParametrizedTournamentUseCase {
         ? { formatParameters: NORMALIZED_FORMAT_PARAMETERS }
         : {}),
       ...(_input.startsAt !== undefined ? { startsAt: _input.startsAt } : {}),
+      ...(_input.venueId !== undefined ? { venueId: _input.venueId } : {}),
+      ...(_input.inscriptionPrice !== undefined
+        ? { inscriptionPrice: _input.inscriptionPrice }
+        : {}),
+      ...(_input.maxSlots !== undefined ? { maxSlots: _input.maxSlots } : {}),
+      ...(_input.registrationClosesAt !== undefined
+        ? { registrationClosesAt: _input.registrationClosesAt }
+        : {}),
     });
 
     return {
