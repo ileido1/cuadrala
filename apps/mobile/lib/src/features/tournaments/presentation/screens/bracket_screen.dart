@@ -41,26 +41,31 @@ class _BracketScreenState extends State<BracketScreen> {
         if (snapshot.hasError) {
           final error = snapshot.error;
           if (error is AppFailure) {
-            if (error.code == 'FORMATO_NO_SOPORTADO') {
-              return _EmptyState(
-                icon: Icons.info_outline,
-                title: 'Formato no soportado',
-                subtitle:
-                    'El cuadro está disponible solo para torneos de eliminación directa.',
-              );
-            }
-            if (error.code == 'VALIDACION_FALLIDA') {
-              return _EmptyState(
-                icon: Icons.group,
-                title: 'Cuadro pendiente',
-                subtitle: 'Se necesitan al menos 2 jugadores confirmados.',
-              );
+            switch (error.code) {
+              case 'FORMATO_NO_SOPORTADO':
+                return _EmptyState(
+                  icon: Icons.info_outline,
+                  title: 'Formato no soportado',
+                  subtitle: 'El cuadro está disponible solo para torneos de eliminación directa.',
+                );
+              case 'VALIDACION_FALLIDA':
+                return _EmptyState(
+                  icon: Icons.group,
+                  title: 'Cuadro pendiente',
+                  subtitle: 'Se necesitan al menos 2 jugadores confirmados.',
+                );
+              default:
+                return _EmptyState(
+                  icon: Icons.error_outline,
+                  title: 'Error',
+                  subtitle: error.message,
+                );
             }
           }
           return _EmptyState(
             icon: Icons.error_outline,
-            title: 'Error',
-            subtitle: error.toString(),
+            title: 'Error inesperado',
+            subtitle: 'No se pudo cargar el cuadro. Intenta de nuevo.',
           );
         }
 
