@@ -122,8 +122,11 @@ class _BracketRoundCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final columnWidth = (screenWidth < 500) ? 160.0 : 190.0;
+
     return Container(
-      width: 190,
+      width: columnWidth,
       margin: const EdgeInsets.only(right: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,38 +156,42 @@ class _BracketMatchCard extends StatelessWidget {
     final isInProgress = match.status == 'IN_PROGRESS';
     final isBye = match.status == 'BYE';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: isInProgress ? scheme.primary : scheme.outlineVariant,
-          width: isInProgress ? 2 : 1,
+    return GestureDetector(
+      onTap: !isBye
+          ? () => _showMatchDetails(context)
+          : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isInProgress ? scheme.primary : scheme.outlineVariant,
+            width: isInProgress ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isInProgress
+              ? [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
         ),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: isInProgress
-            ? [
-                BoxShadow(
-                  color: scheme.primary.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  spreadRadius: 1,
+        child: isBye
+            ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                child: Text(
+                  'BYE',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ]
-            : null,
-      ),
-      child: isBye
-          ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              child: Text(
-                'BYE',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            )
-          : Column(
+              )
+            : Column(
               children: [
                 _MatchPlayer(
                   player: match.playerA,
@@ -218,7 +225,65 @@ class _BracketMatchCard extends StatelessWidget {
                 ],
               ],
             ),
+      ),
     );
+  }
+
+  void _showMatchDetails(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Partido ${match.matchNumber}',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              match.playerA?.displayName ?? 'Por definir',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            Text(
+              'vs.',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+            Text(
+              match.playerB?.displayName ?? 'Por definir',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            if (match.status == 'COMPLETED' && match.score != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Resultado: ${_formatScore(match.score!)}',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Chip(
+              label: Text(_statusLabel(match.status)),
+              backgroundColor: match.status == 'IN_PROGRESS'
+                  ? scheme.primary.withValues(alpha: 0.2)
+                  : scheme.surfaceContainerHighest,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _statusLabel(String status) {
+    return switch (status) {
+      'PENDING' => 'Pendiente',
+      'IN_PROGRESS' => 'En juego',
+      'COMPLETED' => 'Completado',
+      'BYE' => 'BYE',
+      _ => status,
+    };
   }
 
   String _formatScore(List<Map<String, Object?>> score) {

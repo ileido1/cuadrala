@@ -991,9 +991,18 @@ final class _ScoreboardTab extends StatelessWidget {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: () {
-                      //? Tab 0=Calendario, 1=Clasificación, 2=Registrados; queremos ir a Calendario
                       final controller = DefaultTabController.of(context);
-                      controller.animateTo(0);
+                      controller.animateTo(tournamentBracketTabIndex);
+                    },
+                    icon: const Icon(Icons.table_chart),
+                    label: const Text('Ver el cuadro completo'),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: () {
+                      //? Tab 0=Info, 1=Calendario, 2=Clasificación, 3=Registrados, 4=Tabla
+                      final controller = DefaultTabController.of(context);
+                      controller.animateTo(1);
                     },
                     icon: const Icon(Icons.calendar_today),
                     label: const Text('Ir a Calendario para registrar resultados'),
