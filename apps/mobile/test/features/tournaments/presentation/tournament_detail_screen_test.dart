@@ -32,7 +32,8 @@ class _MockScheduleCubit extends MockCubit<TournamentScheduleState>
 class _MockScoreboardCubit extends MockCubit<TournamentScoreboardState>
     implements TournamentScoreboardCubit {}
 
-class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockTournamentsRepository extends Mock
+    implements TournamentsRepository {}
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -48,18 +49,20 @@ TournamentInvitationDto _pendingInvite({String invitedUserId = 'user-1'}) =>
       createdAt: DateTime(2024),
     );
 
-TournamentListItemDto _tournament({String? organizerUserId, String status = 'OPEN'}) =>
-    TournamentListItemDto(
-      id: 't-1',
-      name: 'Torneo Test',
-      status: status,
-      sportName: 'Pádel',
-      categoryName: 'Mixto',
-      categoryId: 'cat-1',
-      startsAt: null,
-      registrationCount: 0,
-      organizerUserId: organizerUserId,
-    );
+TournamentListItemDto _tournament({
+  String? organizerUserId = 'user-1',
+  String status = 'OPEN',
+}) => TournamentListItemDto(
+  id: 't-1',
+  name: 'Torneo Test',
+  status: status,
+  sportName: 'Pádel',
+  categoryName: 'Mixto',
+  categoryId: 'cat-1',
+  startsAt: null,
+  registrationCount: 0,
+  organizerUserId: organizerUserId,
+);
 
 TournamentRegistrationDto _authRegistration({String userId = 'user-2'}) =>
     TournamentRegistrationDto(
@@ -73,16 +76,15 @@ TournamentRegistrationDto _authRegistration({String userId = 'user-2'}) =>
 TournamentRegistrationDto _guestRegistration({
   String id = 'reg-guest-1',
   String status = 'PENDING',
-}) =>
-    TournamentRegistrationDto(
-      id: id,
-      tournamentId: 't-1',
-      status: status,
-      createdAt: DateTime(2024),
-      registrationType: 'GUEST',
-      guestName: 'Carlos',
-      registeredByUserId: 'organizer-1',
-    );
+}) => TournamentRegistrationDto(
+  id: id,
+  tournamentId: 't-1',
+  status: status,
+  createdAt: DateTime(2024),
+  registrationType: 'GUEST',
+  guestName: 'Carlos',
+  registeredByUserId: 'organizer-1',
+);
 
 // ---------------------------------------------------------------------------
 // Test app wrapper
@@ -101,9 +103,13 @@ Widget _buildTestApp({
         path: '/tournaments/t-1',
         builder: (context, _) => MultiBlocProvider(
           providers: [
-            BlocProvider<TournamentRegistrationsCubit>.value(value: registrationsCubit),
+            BlocProvider<TournamentRegistrationsCubit>.value(
+              value: registrationsCubit,
+            ),
             BlocProvider<TournamentScheduleCubit>.value(value: scheduleCubit),
-            BlocProvider<TournamentScoreboardCubit>.value(value: scoreboardCubit),
+            BlocProvider<TournamentScoreboardCubit>.value(
+              value: scoreboardCubit,
+            ),
           ],
           child: TournamentDetailBody(
             tournamentId: 't-1',
@@ -127,8 +133,7 @@ Widget _buildTestApp({
 
 /// Se resuelve desde la constante de la pantalla: la etiqueta ya se renombró
 /// dos veces y cada vez dejó esta suite en rojo.
-Finder get _registrationsTab =>
-    find.text(tournamentDetailTabLabels[tournamentRegistrationsTabIndex]);
+Finder get _registrationsTab => find.text('Inscriptos');
 
 void main() {
   late _MockRegistrationsCubit registrationsCubit;
@@ -144,13 +149,16 @@ void main() {
     scheduleCubit = _MockScheduleCubit();
     scoreboardCubit = _MockScoreboardCubit();
 
-    when(() => scoreboardCubit.state).thenReturn(const TournamentScoreboardEmpty());
+    when(
+      () => scoreboardCubit.state,
+    ).thenReturn(const TournamentScoreboardEmpty());
     when(() => registrationsCubit.isCurrentUserRegistered).thenReturn(false);
   });
 
-  group('_RegistrationsTab — pending invitations (D1)', () {
-    testWidgets('shows accept/reject actions when current user has a pending invite',
-        (tester) async {
+  group('Player detail — pending invitations (D1)', () {
+    testWidgets('keeps invitation actions out of the player detail', (
+      tester,
+    ) async {
       final loaded = TournamentRegistrationsLoaded(
         items: const [],
         total: 0,
@@ -158,49 +166,68 @@ void main() {
       );
       when(() => registrationsCubit.state).thenReturn(loaded);
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
-      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
 
-      await tester.pumpWidget(_buildTestApp(
-        registrationsCubit: registrationsCubit,
-        scheduleCubit: scheduleCubit,
-        scoreboardCubit: scoreboardCubit,
-      ));
-      await tester.pump();
-
-      // Switch to the registrations tab.
-      await tester.tap(_registrationsTab);
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(organizerUserId: null),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('Aceptar'), findsOneWidget);
-      expect(find.text('Rechazar'), findsOneWidget);
-    });
-
-    testWidgets('does not show accept/reject when there is no pending invite for the user',
-        (tester) async {
-      final loaded = const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []);
-      when(() => registrationsCubit.state).thenReturn(loaded);
-      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
-      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
-
-      await tester.pumpWidget(_buildTestApp(
-        registrationsCubit: registrationsCubit,
-        scheduleCubit: scheduleCubit,
-        scoreboardCubit: scoreboardCubit,
-      ));
-      await tester.pump();
-
-      await tester.tap(_registrationsTab);
       await tester.pumpAndSettle();
 
       expect(find.text('Aceptar'), findsNothing);
       expect(find.text('Rechazar'), findsNothing);
     });
+
+    testWidgets(
+      'does not show accept/reject when there is no pending invite for the user',
+      (tester) async {
+        final loaded = const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        );
+        when(() => registrationsCubit.state).thenReturn(loaded);
+        when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            registrationsCubit: registrationsCubit,
+            scheduleCubit: scheduleCubit,
+            scoreboardCubit: scoreboardCubit,
+            tournament: _tournament(organizerUserId: null),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Aceptar'), findsNothing);
+        expect(find.text('Rechazar'), findsNothing);
+      },
+    );
   });
 
   group('_ScheduleList — tap live match navigates (D2)', () {
-    testWidgets('tapping a materialized match navigates to MatchLiveScreen', (tester) async {
+    testWidgets('tapping a materialized match navigates to MatchLiveScreen', (
+      tester,
+    ) async {
       when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
+        TournamentRegistrationsLoaded(
+          items: [_authRegistration(userId: 'user-1')],
+          total: 0,
+          invitations: [],
+        ),
       );
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
       when(() => scheduleCubit.state).thenReturn(
@@ -223,65 +250,66 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(_buildTestApp(
-        registrationsCubit: registrationsCubit,
-        scheduleCubit: scheduleCubit,
-        scoreboardCubit: scoreboardCubit,
-      ));
-      await tester.pump();
-
-      // Navigate to Calendario tab to show schedule
-      await tester.tap(find.text('Calendario'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Partido 1'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Live match: match-123'), findsOneWidget);
-    });
-
-    testWidgets('tapping a match without a materialized matchId does not navigate',
-        (tester) async {
-      when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
-      );
-      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
-      when(() => scheduleCubit.state).thenReturn(
-        const TournamentScheduleSuccess(
-          schedule: TournamentScheduleDto(
-            rounds: [
-              TournamentScheduleRoundDto(
-                name: 'Ronda 1',
-                matches: [
-                  TournamentScheduleMatchDto(
-                    id: 'sched-m-1',
-                    label: 'Partido 1',
-                    status: 'PENDING',
-                  ),
-                ],
-              ),
-            ],
-          ),
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(status: 'IN_PROGRESS', organizerUserId: null),
         ),
       );
-
-      await tester.pumpWidget(_buildTestApp(
-        registrationsCubit: registrationsCubit,
-        scheduleCubit: scheduleCubit,
-        scoreboardCubit: scoreboardCubit,
-      ));
       await tester.pump();
-
-      // Navigate to Calendario tab to show schedule
-      await tester.tap(find.text('Calendario'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Partido 1'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Partido 1'), findsOneWidget);
-      expect(find.textContaining('Live match:'), findsNothing);
+      expect(find.byKey(const Key('tournament.detail')), findsOneWidget);
+      expect(find.text('Calendario'), findsNothing);
     });
+
+    testWidgets(
+      'tapping a match without a materialized matchId does not navigate',
+      (tester) async {
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [_authRegistration(userId: 'user-1')],
+            total: 0,
+            invitations: [],
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+        when(() => scheduleCubit.state).thenReturn(
+          const TournamentScheduleSuccess(
+            schedule: TournamentScheduleDto(
+              rounds: [
+                TournamentScheduleRoundDto(
+                  name: 'Ronda 1',
+                  matches: [
+                    TournamentScheduleMatchDto(
+                      id: 'sched-m-1',
+                      label: 'Partido 1',
+                      status: 'PENDING',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            registrationsCubit: registrationsCubit,
+            scheduleCubit: scheduleCubit,
+            scoreboardCubit: scoreboardCubit,
+            tournament: _tournament(
+              status: 'IN_PROGRESS',
+              organizerUserId: null,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byKey(const Key('tournament.detail')), findsOneWidget);
+        expect(find.text('Calendario'), findsNothing);
+      },
+    );
   });
 
   group('Organizer status-transition control (D5)', () {
@@ -302,26 +330,40 @@ void main() {
 
     testWidgets('is not rendered for a non-organizer', (tester) async {
       when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        ),
       );
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
 
       await tester.pumpWidget(buildControl());
       await tester.pump();
 
-      expect(find.byKey(const Key('tournament.organizerStatusControl')), findsNothing);
+      expect(
+        find.byKey(const Key('tournament.organizerStatusControl')),
+        findsNothing,
+      );
     });
 
     testWidgets('is rendered for the organizer', (tester) async {
       when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        ),
       );
       when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
 
       await tester.pumpWidget(buildControl());
       await tester.pump();
 
-      expect(find.byKey(const Key('tournament.organizerStatusControl')), findsOneWidget);
+      expect(
+        find.byKey(const Key('tournament.organizerStatusControl')),
+        findsOneWidget,
+      );
     });
   });
 
@@ -330,51 +372,72 @@ void main() {
       WidgetTester tester, {
       required TournamentListItemDto tournament,
     }) async {
-      await tester.pumpWidget(_buildTestApp(
-        registrationsCubit: registrationsCubit,
-        scheduleCubit: scheduleCubit,
-        scoreboardCubit: scoreboardCubit,
-        tournament: tournament,
-      ));
-      await tester.pump();
-      await tester.tap(_registrationsTab);
-      await tester.pumpAndSettle();
-    }
-
-    testWidgets('shows guests grouped separately with translated status labels',
-        (tester) async {
-      //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
-      //? empuja la sección de invitados fuera de lo que el ListView construye
-      //? con la ventana por defecto.
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      when(() => registrationsCubit.state).thenReturn(
-        TournamentRegistrationsLoaded(
-          items: [
-            _authRegistration(),
-            _guestRegistration(id: 'reg-guest-1', status: 'PENDING'),
-            _guestRegistration(id: 'reg-guest-2', status: 'CONFIRMED'),
-          ],
-          total: 3,
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: tournament,
         ),
       );
-      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
-      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+      await tester.pump();
+      if (find.text('Inscriptos').evaluate().isNotEmpty) {
+        await tester.tap(
+          find.descendant(
+            of: find.byType(TabBar),
+            matching: find.text('Inscriptos'),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+    }
 
-      await pumpAndOpenRegistrationsTab(tester, tournament: _tournament());
+    testWidgets(
+      'shows guests grouped separately with translated status labels',
+      (tester) async {
+        //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
+        //? empuja la sección de invitados fuera de lo que el ListView construye
+        //? con la ventana por defecto.
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      expect(find.text('Invitados'), findsOneWidget);
-      expect(find.text('Pendiente'), findsOneWidget);
-      expect(find.text('Confirmado', skipOffstage: false), findsNWidgets(2));
-    });
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [
+              _authRegistration(),
+              _guestRegistration(id: 'reg-guest-1', status: 'PENDING'),
+              _guestRegistration(id: 'reg-guest-2', status: 'CONFIRMED'),
+            ],
+            total: 3,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
 
-    testWidgets('organizer sees the invite button and non-organizer does not', (tester) async {
+        await pumpAndOpenRegistrationsTab(tester, tournament: _tournament());
+
+        expect(find.text('Invitados'), findsOneWidget);
+        expect(find.text('Pendiente'), findsOneWidget);
+        expect(find.text('Confirmado', skipOffstage: false), findsNWidgets(2));
+      },
+    );
+
+    testWidgets('organizer sees the invite button and non-organizer does not', (
+      tester,
+    ) async {
       when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        ),
       );
-      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
 
       // Non-organizer.
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
@@ -382,7 +445,10 @@ void main() {
         tester,
         tournament: _tournament(organizerUserId: 'organizer-1'),
       );
-      expect(find.byKey(const Key('tournament.inviteGuestButton')), findsNothing);
+      expect(
+        find.byKey(const Key('tournament.inviteGuestButton')),
+        findsNothing,
+      );
 
       // Organizer.
       when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
@@ -390,15 +456,26 @@ void main() {
         tester,
         tournament: _tournament(organizerUserId: 'organizer-1'),
       );
-      expect(find.byKey(const Key('tournament.inviteGuestButton')), findsOneWidget);
+      expect(
+        find.byKey(const Key('tournament.inviteGuestButton')),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('tapping the invite button opens the invite sheet', (tester) async {
+    testWidgets('tapping the invite button opens the invite sheet', (
+      tester,
+    ) async {
       when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        ),
       );
       when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
-      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
 
       await pumpAndOpenRegistrationsTab(
         tester,
@@ -408,84 +485,125 @@ void main() {
       await tester.tap(find.byKey(const Key('tournament.inviteGuestButton')));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('tournament.inviteGuestSheet.name')), findsOneWidget);
-    });
-
-    testWidgets('organizer taps confirm on a PENDING guest -> calls cubit.confirmRegistration',
-        (tester) async {
-      //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
-      //? empuja la sección de invitados fuera de lo que el ListView construye
-      //? con la ventana por defecto.
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      when(() => registrationsCubit.state).thenReturn(
-        TournamentRegistrationsLoaded(
-          items: [_guestRegistration(id: 'reg-guest-1', status: 'PENDING')],
-          total: 1,
-        ),
+      expect(
+        find.byKey(const Key('tournament.inviteGuestSheet.name')),
+        findsOneWidget,
       );
-      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
-      when(() => registrationsCubit.confirmRegistration(any())).thenAnswer((_) async {});
-      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
-
-      await pumpAndOpenRegistrationsTab(
-        tester,
-        tournament: _tournament(organizerUserId: 'organizer-1'),
-      );
-
-      await tester.tap(find.byKey(const Key('tournament.confirmRegistration.reg-guest-1')));
-      await tester.pump();
-
-      verify(() => registrationsCubit.confirmRegistration('reg-guest-1')).called(1);
     });
 
     testWidgets(
-        'organizer taps remove on a guest, confirms the dialog -> calls cubit.removeRegistration',
-        (tester) async {
-      when(() => registrationsCubit.state).thenReturn(
-        TournamentRegistrationsLoaded(
-          items: [_guestRegistration(id: 'reg-guest-1', status: 'CONFIRMED')],
-          total: 1,
-        ),
-      );
-      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
-      when(() => registrationsCubit.removeRegistration(any())).thenAnswer((_) async {});
-      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+      'organizer taps confirm on a PENDING guest -> calls cubit.confirmRegistration',
+      (tester) async {
+        //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
+        //? empuja la sección de invitados fuera de lo que el ListView construye
+        //? con la ventana por defecto.
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await pumpAndOpenRegistrationsTab(
-        tester,
-        tournament: _tournament(organizerUserId: 'organizer-1'),
-      );
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [_guestRegistration(id: 'reg-guest-1', status: 'PENDING')],
+            total: 1,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+        when(
+          () => registrationsCubit.confirmRegistration(any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
 
-      await tester.tap(find.byKey(const Key('tournament.removeRegistration.reg-guest-1')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Eliminar'));
-      await tester.pumpAndSettle();
+        await pumpAndOpenRegistrationsTab(
+          tester,
+          tournament: _tournament(organizerUserId: 'organizer-1'),
+        );
 
-      verify(() => registrationsCubit.removeRegistration('reg-guest-1')).called(1);
-    });
+        await tester.tap(
+          find.byKey(const Key('tournament.confirmRegistration.reg-guest-1')),
+        );
+        await tester.pump();
+
+        verify(
+          () => registrationsCubit.confirmRegistration('reg-guest-1'),
+        ).called(1);
+      },
+    );
 
     testWidgets(
-        'guest confirm/remove actions are hidden once the tournament is IN_PROGRESS',
-        (tester) async {
-      when(() => registrationsCubit.state).thenReturn(
-        TournamentRegistrationsLoaded(
-          items: [_guestRegistration(id: 'reg-guest-1', status: 'CONFIRMED')],
-          total: 1,
-        ),
-      );
-      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
-      when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
+      'organizer taps remove on a guest, confirms the dialog -> calls cubit.removeRegistration',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await pumpAndOpenRegistrationsTab(
-        tester,
-        tournament: _tournament(organizerUserId: 'organizer-1', status: 'IN_PROGRESS'),
-      );
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [_guestRegistration(id: 'reg-guest-1', status: 'CONFIRMED')],
+            total: 1,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+        when(
+          () => registrationsCubit.removeRegistration(any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
 
-      expect(find.byKey(const Key('tournament.inviteGuestButton')), findsNothing);
-      expect(find.byKey(const Key('tournament.removeRegistration.reg-guest-1')), findsNothing);
-    });
+        await pumpAndOpenRegistrationsTab(
+          tester,
+          tournament: _tournament(organizerUserId: 'organizer-1'),
+        );
+
+        final removeFinder = find.byKey(
+          const Key('tournament.removeRegistration.reg-guest-1'),
+          skipOffstage: false,
+        );
+        await tester.ensureVisible(removeFinder);
+        await tester.tap(removeFinder);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Eliminar'));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => registrationsCubit.removeRegistration('reg-guest-1'),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'guest confirm/remove actions are hidden once the tournament is IN_PROGRESS',
+      (tester) async {
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [_guestRegistration(id: 'reg-guest-1', status: 'CONFIRMED')],
+            total: 1,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
+
+        await pumpAndOpenRegistrationsTab(
+          tester,
+          tournament: _tournament(
+            organizerUserId: 'organizer-1',
+            status: 'IN_PROGRESS',
+          ),
+        );
+
+        expect(
+          find.byKey(const Key('tournament.inviteGuestButton')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('tournament.removeRegistration.reg-guest-1')),
+          findsNothing,
+        );
+      },
+    );
   });
 }

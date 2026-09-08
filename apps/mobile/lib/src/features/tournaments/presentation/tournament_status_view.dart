@@ -32,20 +32,20 @@ bool isTournamentRosterOpen(String? status) {
 
 /// Etiqueta en español para [status]. Nunca devuelve el valor crudo del enum.
 String tournamentStatusLabel(String? status) => switch (status?.toUpperCase()) {
-      'DRAFT' => 'Borrador',
-      'OPEN' => 'Inscripciones abiertas',
-      'IN_PROGRESS' => 'En curso',
-      'COMPLETED' => 'Finalizado',
-      'CANCELLED' => 'Cancelado',
-      _ => 'Estado desconocido',
-    };
+  'DRAFT' => 'Borrador',
+  'OPEN' => 'Inscripción abierta',
+  'IN_PROGRESS' => 'En juego',
+  'COMPLETED' => 'Finalizado',
+  'CANCELLED' => 'Cancelado',
+  _ => 'Estado desconocido',
+};
 
 /// Color del badge de [status]. Verde solo cuando el torneo admite gente.
 Color tournamentStatusColor(String? status) => switch (status?.toUpperCase()) {
-      'DRAFT' => Colors.blueGrey,
-      'OPEN' => Colors.green,
-      'IN_PROGRESS' => Colors.blue,
-      'COMPLETED' => Colors.indigo,
-      'CANCELLED' => Colors.red,
-      _ => Colors.grey,
-    };
+  'DRAFT' => const Color(0xFF94A3B8),
+  'OPEN' => const Color(0xFF17A34A),
+  'IN_PROGRESS' => const Color(0xFFC5FF00),
+  'COMPLETED' => const Color(0xFF94A3B8),
+  'CANCELLED' => const Color(0xFFF87171),
+  _ => Colors.grey,
+};

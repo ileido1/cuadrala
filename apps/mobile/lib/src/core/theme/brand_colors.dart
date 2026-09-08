@@ -69,7 +69,7 @@ abstract final class BrandColors {
   static const darkSurface2 = Color(0xFF1B2740);
 
   /// `--line` oscuro — borde débil (cards, chips, segmented, inputs).
-  static const darkOutline = Color(0xFF1F2937);
+  static const darkOutline = Color(0x17FFFFFF);
 
   /// `--line-strong` oscuro — borde fuerte (OutlineBtn, toggle off, anillo
   /// punteado de avatar vacío). El prototipo lo define como blanco
@@ -83,14 +83,14 @@ abstract final class BrandColors {
   /// `--muted-2` oscuro — texto terciario/deshabilitado.
   static const darkMuted2 = Color(0xFF5C6B85);
 
-  static const darkOnSurface = Color(0xFFE5E7EB);
+  static const darkOnSurface = Color(0xFFF8FAFC);
 
   // ─── Semantic / fixed colours ─────────────────────────────────────────────
   /// Apple sign-in button background — always near-black per Apple HIG.
   static const appleBlack = Color(0xFF111111);
 
   /// Warning state — readable on both light and dark backgrounds.
-  static const warningAmber = Color(0xFFFB8C00);
+  static const warningAmber = Color(0xFFF59E0B);
 
   /// Error / blocked state del rediseño (`#F87171` en el handoff). Se usa como
   /// tinte de fondo y como texto sobre ese tinte, no como color de CTA.
@@ -115,13 +115,13 @@ abstract final class BrandColors {
   static const sportFallback = Color(0xFF546E7A);
 
   static Color sportColorForCode(String code) => switch (code.toUpperCase()) {
-        'PADEL' => sportPadel,
-        'TENNIS' => sportTennis,
-        'PICKLEBALL' => sportPickleball,
-        'BEACH_TENNIS' => sportBeachTennis,
-        'FOOTBALL5' => sportFootball5,
-        'BASKETBALL3X3' => sportBasketball3x3,
-        'VOLLEY_BEACH' => sportVolleyBeach,
-        _ => sportFallback,
-      };
+    'PADEL' => sportPadel,
+    'TENNIS' => sportTennis,
+    'PICKLEBALL' => sportPickleball,
+    'BEACH_TENNIS' => sportBeachTennis,
+    'FOOTBALL5' => sportFootball5,
+    'BASKETBALL3X3' => sportBasketball3x3,
+    'VOLLEY_BEACH' => sportVolleyBeach,
+    _ => sportFallback,
+  };
 }

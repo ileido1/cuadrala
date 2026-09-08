@@ -8,8 +8,8 @@ void main() {
     //? en el default y al usuario le aparecía "OPEN" y "COMPLETED" crudos.
     test('should translate every status the API can actually return', () {
       expect(tournamentStatusLabel('DRAFT'), 'Borrador');
-      expect(tournamentStatusLabel('OPEN'), 'Inscripciones abiertas');
-      expect(tournamentStatusLabel('IN_PROGRESS'), 'En curso');
+      expect(tournamentStatusLabel('OPEN'), 'Inscripción abierta');
+      expect(tournamentStatusLabel('IN_PROGRESS'), 'En juego');
       expect(tournamentStatusLabel('COMPLETED'), 'Finalizado');
       expect(tournamentStatusLabel('CANCELLED'), 'Cancelado');
     });

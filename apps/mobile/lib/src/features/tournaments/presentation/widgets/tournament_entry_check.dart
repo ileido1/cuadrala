@@ -69,30 +69,32 @@ class TournamentEntryCheck extends StatelessWidget {
               )
             : null,
       ),
-      if (inscriptionPrice != null)
-        _EntryRow(
-          icon: Icons.payments_outlined,
-          label: 'INSCRIPCIÓN',
-          value: inscriptionPrice == 0
-              ? 'Gratis'
-              : formatMoneyFromMajor(inscriptionPrice!, CurrencyCode.usd),
-          sub: 'Por jugador, se paga al confirmar',
-        ),
-      if (startsAt != null)
-        _EntryRow(
-          icon: Icons.event_outlined,
-          label: 'CUÁNDO',
-          value: _formatDateTimeSV(startsAt!),
-          sub: registrationClosesAt == null
-              ? null
-              : 'Inscripción hasta ${_formatDateTimeSV(registrationClosesAt!)}',
-        ),
-      if (venueName != null)
-        _EntryRow(
-          icon: Icons.place_outlined,
-          label: 'DÓNDE',
-          value: venueName!,
-        ),
+      _EntryRow(
+        icon: Icons.payments_outlined,
+        label: 'INSCRIPCIÓN',
+        value: inscriptionPrice == null
+            ? 'Precio por confirmar'
+            : inscriptionPrice == 0
+            ? 'Gratis'
+            : formatMoneyFromMajor(inscriptionPrice!, CurrencyCode.usd),
+        sub: 'Por jugador, se paga al confirmar',
+      ),
+      _EntryRow(
+        icon: Icons.event_outlined,
+        label: 'CUÁNDO',
+        value: startsAt == null
+            ? 'Fecha por confirmar'
+            : _formatDateTimeSV(startsAt!),
+        sub: registrationClosesAt == null
+            ? null
+            : 'Inscripción hasta ${_formatDateTimeSV(registrationClosesAt!)}',
+      ),
+      _EntryRow(
+        icon: Icons.place_outlined,
+        label: 'DÓNDE',
+        value: venueName ?? 'Sede por confirmar',
+        sub: venueName == null ? 'La sede todavía no fue declarada' : null,
+      ),
     ];
 
     return Container(
@@ -109,7 +111,11 @@ class TournamentEntryCheck extends StatelessWidget {
               //? debajo del icono, para que las filas se lean como una lista.
               Padding(
                 padding: const EdgeInsets.only(left: 60),
-                child: Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: scheme.outlineVariant,
+                ),
               ),
             rows[i],
           ],
@@ -119,15 +125,17 @@ class TournamentEntryCheck extends StatelessWidget {
   }
 
   String _levelSubSV() => switch (eligibility) {
-        TournamentEligibility.invited =>
-          'Te invitaron: entrás aunque juegues otra categoría.',
-        TournamentEligibility.wrongCategory => playerCategoryName == null
-            ? 'No jugás esta categoría.'
-            : 'Jugás $playerCategoryName. No podés entrar a este torneo.',
-        TournamentEligibility.eligible => playerCategoryName == null
-            ? 'Podés entrar.'
-            : 'Jugás $playerCategoryName. Podés entrar.',
-      };
+    TournamentEligibility.invited =>
+      'Te invitaron: entrás aunque juegues otra categoría.',
+    TournamentEligibility.wrongCategory =>
+      playerCategoryName == null
+          ? 'No jugás esta categoría.'
+          : 'Jugás $playerCategoryName. No podés entrar a este torneo.',
+    TournamentEligibility.eligible =>
+      playerCategoryName == null
+          ? 'Podés entrar.'
+          : 'Jugás $playerCategoryName. Podés entrar.',
+  };
 
   static String _formatDateTimeSV(DateTime value) {
     final local = value.toLocal();
@@ -188,7 +196,10 @@ final class _EntryRow extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 if (sub != null) ...[
                   const SizedBox(height: 2),
@@ -196,7 +207,9 @@ final class _EntryRow extends StatelessWidget {
                     sub!,
                     style: TextStyle(
                       fontSize: 12.5,
-                      color: blocked ? BrandColors.dangerRed : scheme.onSurfaceVariant,
+                      color: blocked
+                          ? BrandColors.dangerRed
+                          : scheme.onSurfaceVariant,
                     ),
                   ),
                 ],

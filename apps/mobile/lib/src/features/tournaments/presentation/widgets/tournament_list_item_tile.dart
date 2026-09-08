@@ -46,13 +46,18 @@ final class TournamentListItemTile extends StatelessWidget {
                 children: [
                   TournamentStatusPill(status: tournament.status),
                   const SizedBox(width: 8),
-                  Flexible(child: _CategoryChip(label: tournament.categoryName)),
+                  Flexible(
+                    child: _CategoryChip(label: tournament.categoryName),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
               Text(
                 tournament.name,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -113,10 +118,10 @@ final class _CategoryChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
@@ -201,7 +206,11 @@ final class _Occupancy extends StatelessWidget {
         ),
         if (max != null) ...[
           const SizedBox(height: 6),
-          _SlotBar(key: const Key('tournament.card.slots'), filled: count, total: max),
+          _SlotBar(
+            key: const Key('tournament.card.slots'),
+            filled: count,
+            total: max,
+          ),
         ],
       ],
     );

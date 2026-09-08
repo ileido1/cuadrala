@@ -41,36 +41,39 @@ class _MockTournamentsRepository extends Mock implements TournamentsRepository {
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
-class _MockScheduleCubit extends MockCubit<TournamentScheduleState> implements TournamentScheduleCubit {}
+class _MockScheduleCubit extends MockCubit<TournamentScheduleState>
+    implements TournamentScheduleCubit {}
 
-class _MockScoreboardCubit extends MockCubit<TournamentScoreboardState> implements TournamentScoreboardCubit {}
+class _MockScoreboardCubit extends MockCubit<TournamentScoreboardState>
+    implements TournamentScoreboardCubit {}
 
 const _tournamentId = 't-e2e-1';
 const _organizerId = 'organizer-e2e-1';
 
-TournamentRegistrationDto _authRegistration({String id = 'reg-auth-1', String userId = 'user-2'}) =>
-    TournamentRegistrationDto(
-      id: id,
-      tournamentId: _tournamentId,
-      userId: userId,
-      status: 'CONFIRMED',
-      createdAt: DateTime(2024),
-    );
+TournamentRegistrationDto _authRegistration({
+  String id = 'reg-auth-1',
+  String userId = 'user-2',
+}) => TournamentRegistrationDto(
+  id: id,
+  tournamentId: _tournamentId,
+  userId: userId,
+  status: 'CONFIRMED',
+  createdAt: DateTime(2024),
+);
 
 TournamentRegistrationDto _guestRegistration({
   required String id,
   required String name,
   String status = 'PENDING',
-}) =>
-    TournamentRegistrationDto(
-      id: id,
-      tournamentId: _tournamentId,
-      status: status,
-      createdAt: DateTime(2024),
-      registrationType: 'GUEST',
-      guestName: name,
-      registeredByUserId: _organizerId,
-    );
+}) => TournamentRegistrationDto(
+  id: id,
+  tournamentId: _tournamentId,
+  status: status,
+  createdAt: DateTime(2024),
+  registrationType: 'GUEST',
+  guestName: name,
+  registeredByUserId: _organizerId,
+);
 
 Widget _buildTestApp({
   required TournamentRegistrationsCubit registrationsCubit,
@@ -86,9 +89,13 @@ Widget _buildTestApp({
         path: '/tournaments/$_tournamentId',
         builder: (context, _) => MultiBlocProvider(
           providers: [
-            BlocProvider<TournamentRegistrationsCubit>.value(value: registrationsCubit),
+            BlocProvider<TournamentRegistrationsCubit>.value(
+              value: registrationsCubit,
+            ),
             BlocProvider<TournamentScheduleCubit>.value(value: scheduleCubit),
-            BlocProvider<TournamentScoreboardCubit>.value(value: scoreboardCubit),
+            BlocProvider<TournamentScoreboardCubit>.value(
+              value: scoreboardCubit,
+            ),
           ],
           child: TournamentDetailBody(
             tournamentId: _tournamentId,
@@ -105,7 +112,7 @@ Widget _buildTestApp({
 /// Se resuelve desde la constante de la pantalla: la etiqueta ya se renombró
 /// dos veces y cada vez dejó esta suite en rojo.
 Finder get _registrationsTab =>
-    find.text(tournamentDetailTabLabels[tournamentRegistrationsTabIndex]);
+    find.descendant(of: find.byType(TabBar), matching: find.text('Inscriptos'));
 
 void main() {
   late _MockTournamentsRepository tournamentsRepository;
@@ -124,231 +131,313 @@ void main() {
     scoreboardCubit = _MockScoreboardCubit();
 
     when(() => profileRepository.getMe()).thenAnswer(
-      (_) async => const UserMeDto(id: _organizerId, email: 'organizer@test.com', name: 'Organizer', subscriptionType: 'FREE'),
+      (_) async => const UserMeDto(
+        id: _organizerId,
+        email: 'organizer@test.com',
+        name: 'Organizer',
+        subscriptionType: 'FREE',
+      ),
     );
     when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
-    when(() => scoreboardCubit.state).thenReturn(const TournamentScoreboardEmpty());
-    when(() => tournamentsRepository.listInvitations(tournamentId: _tournamentId))
-        .thenAnswer((_) async => const <TournamentInvitationDto>[]);
+    when(
+      () => scoreboardCubit.state,
+    ).thenReturn(const TournamentScoreboardEmpty());
+    when(
+      () => tournamentsRepository.listInvitations(tournamentId: _tournamentId),
+    ).thenAnswer((_) async => const <TournamentInvitationDto>[]);
   });
 
-  group('T21/T22 (mobile) — full guest lifecycle through the real cubit + widget tree', () {
-    testWidgets(
-      'organizer invites a guest via the UI, sees PENDING, confirms it, then removes it — cubit refreshes the roster each step',
-      (tester) async {
-        //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
-        //? empuja la sección de invitados fuera de lo que el ListView construye
-        //? con la ventana por defecto.
-        tester.view.physicalSize = const Size(1080, 2400);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
+  group(
+    'T21/T22 (mobile) — full guest lifecycle through the real cubit + widget tree',
+    () {
+      testWidgets(
+        'organizer invites a guest via the UI, sees PENDING, confirms it, then removes it — cubit refreshes the roster each step',
+        (tester) async {
+          //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
+          //? empuja la sección de invitados fuera de lo que el ListView construye
+          //? con la ventana por defecto.
+          tester.view.physicalSize = const Size(1080, 2400);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
 
-        final tournament = TournamentListItemDto(
-          id: _tournamentId,
-          name: 'Torneo E2E Móvil',
-          status: 'DRAFT',
-          sportName: 'Pádel',
-          categoryName: 'Mixto',
-          categoryId: 'cat-1',
-          startsAt: null,
-          registrationCount: 1,
-          organizerUserId: _organizerId,
-        );
+          final tournament = TournamentListItemDto(
+            id: _tournamentId,
+            name: 'Torneo E2E Móvil',
+            status: 'DRAFT',
+            sportName: 'Pádel',
+            categoryName: 'Mixto',
+            categoryId: 'cat-1',
+            startsAt: null,
+            registrationCount: 1,
+            organizerUserId: _organizerId,
+          );
 
-        //? Roster starts with just one authenticated player.
-        when(() => tournamentsRepository.listRegistrations(tournamentId: _tournamentId))
-            .thenAnswer((_) async => [_authRegistration()]);
+          //? Roster starts with just one authenticated player.
+          when(
+            () => tournamentsRepository.listRegistrations(
+              tournamentId: _tournamentId,
+            ),
+          ).thenAnswer((_) async => [_authRegistration()]);
 
-        final cubit = TournamentRegistrationsCubit(
-          tournamentsRepository: tournamentsRepository,
-          profileRepository: profileRepository,
-          tournamentId: _tournamentId,
-        );
-
-        await tester.pumpWidget(_buildTestApp(
-          registrationsCubit: cubit,
-          scheduleCubit: scheduleCubit,
-          scoreboardCubit: scoreboardCubit,
-          tournament: tournament,
-          tournamentsRepository: tournamentsRepository,
-        ));
-        await cubit.load();
-        await tester.pumpAndSettle();
-
-        await tester.tap(_registrationsTab);
-        await tester.pumpAndSettle();
-
-        //? Organizer-only invite button is visible (currentUserId == organizerUserId).
-        expect(find.byKey(const Key('tournament.inviteGuestButton')), findsOneWidget);
-
-        //? --- Invite Alice ---------------------------------------------------
-        final alicePending = _guestRegistration(id: 'reg-alice', name: 'Alice');
-        when(
-          () => tournamentsRepository.inviteGuestToTournament(
+          final cubit = TournamentRegistrationsCubit(
+            tournamentsRepository: tournamentsRepository,
+            profileRepository: profileRepository,
             tournamentId: _tournamentId,
+          );
+
+          await tester.pumpWidget(
+            _buildTestApp(
+              registrationsCubit: cubit,
+              scheduleCubit: scheduleCubit,
+              scoreboardCubit: scoreboardCubit,
+              tournament: tournament,
+              tournamentsRepository: tournamentsRepository,
+            ),
+          );
+          await cubit.load();
+          await tester.pumpAndSettle();
+
+          await tester.tap(_registrationsTab);
+          await tester.pumpAndSettle();
+
+          //? Organizer-only invite button is visible (currentUserId == organizerUserId).
+          expect(
+            find.byKey(const Key('tournament.inviteGuestButton')),
+            findsOneWidget,
+          );
+
+          //? --- Invite Alice ---------------------------------------------------
+          final alicePending = _guestRegistration(
+            id: 'reg-alice',
             name: 'Alice',
-            phone: null,
-            email: null,
-          ),
-        ).thenAnswer((_) async => alicePending);
-        //? After a successful invite, the cubit reloads the roster.
-        when(() => tournamentsRepository.listRegistrations(tournamentId: _tournamentId))
-            .thenAnswer((_) async => [_authRegistration(), alicePending]);
+          );
+          when(
+            () => tournamentsRepository.inviteGuestToTournament(
+              tournamentId: _tournamentId,
+              name: 'Alice',
+              phone: null,
+              email: null,
+            ),
+          ).thenAnswer((_) async => alicePending);
+          //? After a successful invite, the cubit reloads the roster.
+          when(
+            () => tournamentsRepository.listRegistrations(
+              tournamentId: _tournamentId,
+            ),
+          ).thenAnswer((_) async => [_authRegistration(), alicePending]);
 
-        await tester.tap(find.byKey(const Key('tournament.inviteGuestButton')));
-        await tester.pumpAndSettle();
+          await tester.tap(
+            find.byKey(const Key('tournament.inviteGuestButton')),
+          );
+          await tester.pumpAndSettle();
 
-        await tester.enterText(find.byKey(const Key('tournament.inviteGuestSheet.name')), 'Alice');
-        await tester.tap(find.byKey(const Key('tournament.inviteGuestSheet.submit')));
-        await tester.pumpAndSettle();
+          await tester.enterText(
+            find.byKey(const Key('tournament.inviteGuestSheet.name')),
+            'Alice',
+          );
+          await tester.tap(
+            find.byKey(const Key('tournament.inviteGuestSheet.submit')),
+          );
+          await tester.pumpAndSettle();
 
-        verify(
-          () => tournamentsRepository.inviteGuestToTournament(
-            tournamentId: _tournamentId,
+          verify(
+            () => tournamentsRepository.inviteGuestToTournament(
+              tournamentId: _tournamentId,
+              name: 'Alice',
+              phone: null,
+              email: null,
+            ),
+          ).called(1);
+
+          //? Alice now shows in the "Invitados" group as PENDING.
+          //? `skipOffstage: false` because these tiles live inside the TabBarView's
+          //? registrations page, whose RenderBox transform can be temporarily
+          //? unresolvable to the default onstage check right after a tab switch +
+          //? bottom-sheet pop in the same pumpAndSettle cycle, even though the
+          //? widgets are genuinely built with the right data (confirmed via
+          //? `tester.allWidgets` during triage).
+          expect(find.text('Invitados', skipOffstage: false), findsOneWidget);
+          expect(find.text('Alice', skipOffstage: false), findsOneWidget);
+          expect(find.text('Pendiente', skipOffstage: false), findsOneWidget);
+
+          //? --- Confirm Alice ----------------------------------------------------
+          final aliceConfirmed = _guestRegistration(
+            id: 'reg-alice',
             name: 'Alice',
-            phone: null,
-            email: null,
-          ),
-        ).called(1);
+            status: 'CONFIRMED',
+          );
+          when(
+            () => tournamentsRepository.confirmRegistration(
+              tournamentId: _tournamentId,
+              registrationId: 'reg-alice',
+            ),
+          ).thenAnswer((_) async => aliceConfirmed);
+          when(
+            () => tournamentsRepository.listRegistrations(
+              tournamentId: _tournamentId,
+            ),
+          ).thenAnswer((_) async => [_authRegistration(), aliceConfirmed]);
 
-        //? Alice now shows in the "Invitados" group as PENDING.
-        //? `skipOffstage: false` because these tiles live inside the TabBarView's
-        //? registrations page, whose RenderBox transform can be temporarily
-        //? unresolvable to the default onstage check right after a tab switch +
-        //? bottom-sheet pop in the same pumpAndSettle cycle, even though the
-        //? widgets are genuinely built with the right data (confirmed via
-        //? `tester.allWidgets` during triage).
-        expect(find.text('Invitados', skipOffstage: false), findsOneWidget);
-        expect(find.text('Alice', skipOffstage: false), findsOneWidget);
-        expect(find.text('Pendiente', skipOffstage: false), findsOneWidget);
+          //? `skipOffstage: false` — see the note on the earlier `find.text` calls in this test.
+          //? `ensureVisible` — this tile lives below the fold of the fixed 800x600 test surface
+          //? inside the tab's scroll view; `tap()` needs a real, in-viewport hit-test point.
+          final confirmFinder = find.byKey(
+            const Key('tournament.confirmRegistration.reg-alice'),
+            skipOffstage: false,
+          );
+          await tester.ensureVisible(confirmFinder);
+          await tester.pumpAndSettle();
+          await tester.tap(confirmFinder);
+          await tester.pumpAndSettle();
 
-        //? --- Confirm Alice ----------------------------------------------------
-        final aliceConfirmed = _guestRegistration(id: 'reg-alice', name: 'Alice', status: 'CONFIRMED');
-        when(
-          () => tournamentsRepository.confirmRegistration(
+          verify(
+            () => tournamentsRepository.confirmRegistration(
+              tournamentId: _tournamentId,
+              registrationId: 'reg-alice',
+            ),
+          ).called(1);
+          expect(
+            find.text('Confirmado', skipOffstage: false),
+            findsNWidgets(2),
+          );
+          expect(find.text('Pendiente'), findsNothing);
+
+          //? --- Remove Alice (behind the AlertDialog confirm) ---------------------
+          when(
+            () => tournamentsRepository.removeRegistration(
+              tournamentId: _tournamentId,
+              registrationId: 'reg-alice',
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => tournamentsRepository.listRegistrations(
+              tournamentId: _tournamentId,
+            ),
+          ).thenAnswer((_) async => [_authRegistration()]);
+
+          final removeFinder = find.byKey(
+            const Key('tournament.removeRegistration.reg-alice'),
+            skipOffstage: false,
+          );
+          await tester.ensureVisible(removeFinder);
+          await tester.pumpAndSettle();
+          await tester.tap(removeFinder);
+          await tester.pumpAndSettle();
+          expect(find.text('Eliminar jugador'), findsOneWidget);
+          await tester.tap(find.text('Eliminar').last);
+          await tester.pumpAndSettle();
+
+          verify(
+            () => tournamentsRepository.removeRegistration(
+              tournamentId: _tournamentId,
+              registrationId: 'reg-alice',
+            ),
+          ).called(1);
+          expect(find.text('Alice'), findsNothing);
+          expect(find.text('Invitados'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'guest-only roster (0 authenticated players) renders correctly and organizer actions stay hidden once IN_PROGRESS',
+        (tester) async {
+          final tournament = TournamentListItemDto(
+            id: _tournamentId,
+            name: 'Torneo Solo Invitados',
+            status: 'IN_PROGRESS',
+            sportName: 'Pádel',
+            categoryName: 'Mixto',
+            categoryId: 'cat-1',
+            startsAt: null,
+            registrationCount: 4,
+            organizerUserId: _organizerId,
+          );
+
+          //? El roster es un ListView (perezoso): con la ventana por defecto el
+          //? cuarto invitado nunca se construye y `skipOffstage: false` no
+          //? alcanza, porque no está oculto sino ausente del árbol. Se agranda la
+          //? superficie para que los cuatro entren y la aserción diga lo que dice.
+          tester.view.physicalSize = const Size(1080, 2400);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
+
+          final guests = [
+            _guestRegistration(
+              id: 'reg-g1',
+              name: 'Guest A',
+              status: 'CONFIRMED',
+            ),
+            _guestRegistration(
+              id: 'reg-g2',
+              name: 'Guest B',
+              status: 'CONFIRMED',
+            ),
+            _guestRegistration(
+              id: 'reg-g3',
+              name: 'Guest C',
+              status: 'CONFIRMED',
+            ),
+            _guestRegistration(
+              id: 'reg-g4',
+              name: 'Guest D',
+              status: 'CONFIRMED',
+            ),
+          ];
+          when(
+            () => tournamentsRepository.listRegistrations(
+              tournamentId: _tournamentId,
+            ),
+          ).thenAnswer((_) async => guests);
+
+          final cubit = TournamentRegistrationsCubit(
+            tournamentsRepository: tournamentsRepository,
+            profileRepository: profileRepository,
             tournamentId: _tournamentId,
-            registrationId: 'reg-alice',
-          ),
-        ).thenAnswer((_) async => aliceConfirmed);
-        when(() => tournamentsRepository.listRegistrations(tournamentId: _tournamentId))
-            .thenAnswer((_) async => [_authRegistration(), aliceConfirmed]);
+          );
 
-        //? `skipOffstage: false` — see the note on the earlier `find.text` calls in this test.
-        //? `ensureVisible` — this tile lives below the fold of the fixed 800x600 test surface
-        //? inside the tab's scroll view; `tap()` needs a real, in-viewport hit-test point.
-        final confirmFinder =
-            find.byKey(const Key('tournament.confirmRegistration.reg-alice'), skipOffstage: false);
-        await tester.ensureVisible(confirmFinder);
-        await tester.pumpAndSettle();
-        await tester.tap(confirmFinder);
-        await tester.pumpAndSettle();
+          await tester.pumpWidget(
+            _buildTestApp(
+              registrationsCubit: cubit,
+              scheduleCubit: scheduleCubit,
+              scoreboardCubit: scoreboardCubit,
+              tournament: tournament,
+              tournamentsRepository: tournamentsRepository,
+            ),
+          );
+          await cubit.load();
+          await tester.pumpAndSettle();
 
-        verify(
-          () => tournamentsRepository.confirmRegistration(
-            tournamentId: _tournamentId,
-            registrationId: 'reg-alice',
-          ),
-        ).called(1);
-        expect(find.text('Confirmado', skipOffstage: false), findsNWidgets(2));
-        expect(find.text('Pendiente'), findsNothing);
+          await tester.tap(_registrationsTab);
+          await tester.pumpAndSettle();
 
-        //? --- Remove Alice (behind the AlertDialog confirm) ---------------------
-        when(
-          () => tournamentsRepository.removeRegistration(
-            tournamentId: _tournamentId,
-            registrationId: 'reg-alice',
-          ),
-        ).thenAnswer((_) async {});
-        when(() => tournamentsRepository.listRegistrations(tournamentId: _tournamentId))
-            .thenAnswer((_) async => [_authRegistration()]);
+          //? All 4 guests render, none has a real userId (isGuest / displayName getters).
+          //? `skipOffstage: false` — see the note on the first testWidgets in this file.
+          for (final guest in guests) {
+            expect(
+              find.text(guest.guestName!, skipOffstage: false),
+              findsOneWidget,
+            );
+            expect(guest.userId, isNull);
+            expect(guest.isGuest, isTrue);
+          }
 
-        final removeFinder =
-            find.byKey(const Key('tournament.removeRegistration.reg-alice'), skipOffstage: false);
-        await tester.ensureVisible(removeFinder);
-        await tester.pumpAndSettle();
-        await tester.tap(removeFinder);
-        await tester.pumpAndSettle();
-        expect(find.text('Eliminar jugador'), findsOneWidget);
-        await tester.tap(find.text('Eliminar').last);
-        await tester.pumpAndSettle();
-
-        verify(
-          () => tournamentsRepository.removeRegistration(
-            tournamentId: _tournamentId,
-            registrationId: 'reg-alice',
-          ),
-        ).called(1);
-        expect(find.text('Alice'), findsNothing);
-        expect(find.text('Invitados'), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'guest-only roster (0 authenticated players) renders correctly and organizer actions stay hidden once IN_PROGRESS',
-      (tester) async {
-        final tournament = TournamentListItemDto(
-          id: _tournamentId,
-          name: 'Torneo Solo Invitados',
-          status: 'IN_PROGRESS',
-          sportName: 'Pádel',
-          categoryName: 'Mixto',
-          categoryId: 'cat-1',
-          startsAt: null,
-          registrationCount: 4,
-          organizerUserId: _organizerId,
-        );
-
-        //? El roster es un ListView (perezoso): con la ventana por defecto el
-        //? cuarto invitado nunca se construye y `skipOffstage: false` no
-        //? alcanza, porque no está oculto sino ausente del árbol. Se agranda la
-        //? superficie para que los cuatro entren y la aserción diga lo que dice.
-        tester.view.physicalSize = const Size(1080, 2400);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
-
-        final guests = [
-          _guestRegistration(id: 'reg-g1', name: 'Guest A', status: 'CONFIRMED'),
-          _guestRegistration(id: 'reg-g2', name: 'Guest B', status: 'CONFIRMED'),
-          _guestRegistration(id: 'reg-g3', name: 'Guest C', status: 'CONFIRMED'),
-          _guestRegistration(id: 'reg-g4', name: 'Guest D', status: 'CONFIRMED'),
-        ];
-        when(() => tournamentsRepository.listRegistrations(tournamentId: _tournamentId))
-            .thenAnswer((_) async => guests);
-
-        final cubit = TournamentRegistrationsCubit(
-          tournamentsRepository: tournamentsRepository,
-          profileRepository: profileRepository,
-          tournamentId: _tournamentId,
-        );
-
-        await tester.pumpWidget(_buildTestApp(
-          registrationsCubit: cubit,
-          scheduleCubit: scheduleCubit,
-          scoreboardCubit: scoreboardCubit,
-          tournament: tournament,
-          tournamentsRepository: tournamentsRepository,
-        ));
-        await cubit.load();
-        await tester.pumpAndSettle();
-
-        await tester.tap(_registrationsTab);
-        await tester.pumpAndSettle();
-
-        //? All 4 guests render, none has a real userId (isGuest / displayName getters).
-        //? `skipOffstage: false` — see the note on the first testWidgets in this file.
-        for (final guest in guests) {
-          expect(find.text(guest.guestName!, skipOffstage: false), findsOneWidget);
-          expect(guest.userId, isNull);
-          expect(guest.isGuest, isTrue);
-        }
-
-        //? Backend guard mirrored client-side: invite/confirm/remove hidden once IN_PROGRESS.
-        expect(find.byKey(const Key('tournament.inviteGuestButton')), findsNothing);
-        for (final guest in guests) {
-          expect(find.byKey(Key('tournament.confirmRegistration.${guest.id}')), findsNothing);
-          expect(find.byKey(Key('tournament.removeRegistration.${guest.id}')), findsNothing);
-        }
-      },
-    );
-  });
+          //? Backend guard mirrored client-side: invite/confirm/remove hidden once IN_PROGRESS.
+          expect(
+            find.byKey(const Key('tournament.inviteGuestButton')),
+            findsNothing,
+          );
+          for (final guest in guests) {
+            expect(
+              find.byKey(Key('tournament.confirmRegistration.${guest.id}')),
+              findsNothing,
+            );
+            expect(
+              find.byKey(Key('tournament.removeRegistration.${guest.id}')),
+              findsNothing,
+            );
+          }
+        },
+      );
+    },
+  );
 }

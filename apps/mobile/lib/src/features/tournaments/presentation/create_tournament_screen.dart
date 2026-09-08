@@ -108,7 +108,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         }
       }
     } catch (e) {
-      final message = e is AppFailure ? e.message : 'No se pudieron cargar los deportes.';
+      final message = e is AppFailure
+          ? e.message
+          : 'No se pudieron cargar los deportes.';
       if (mounted) {
         setState(() => _sportsError = message);
       }
@@ -130,7 +132,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       _submitError = null;
       //? Al cambiar de deporte se resetea la categoría a la primera del nuevo
       //? deporte (la anterior puede no pertenecerle).
-      _selectedCategoryId = _categoriesForSport.isEmpty ? null : _categoriesForSport.first.id;
+      _selectedCategoryId = _categoriesForSport.isEmpty
+          ? null
+          : _categoriesForSport.first.id;
     });
     _tournamentPresetsCubit.load(sportId: sportId);
   }
@@ -217,9 +221,20 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         },
         child: Scaffold(
           key: const Key('tournaments.create'),
-          appBar: AppBar(title: const Text('Crear torneo')),
+          appBar: AppBar(
+            title: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Crear torneo'),
+                Text(
+                  'Lo creás en borrador: nadie lo ve todavía',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             children: [
               //? Error banner sticky en top si hay error
               if (_submitError != null)
@@ -230,50 +245,66 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     decoration: BoxDecoration(
                       color: scheme.errorContainer.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: scheme.error.withValues(alpha: 0.35)),
+                      border: Border.all(
+                        color: scheme.error.withValues(alpha: 0.35),
+                      ),
                     ),
                     child: Text(
                       _submitError!,
-                      style: TextStyle(color: scheme.error, fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        color: scheme.error,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
               Text(
                 'Nombre',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
-                onChanged: (_) => setState(() {}), //? Rebuild para update _canSubmit
+                onChanged: (_) =>
+                    setState(() {}), //? Rebuild para update _canSubmit
                 decoration: InputDecoration(
                   hintText: 'Ej: Torneo de Otoño',
                   border: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: _nameController.text.isEmpty ? scheme.error : scheme.outline,
+                      color: _nameController.text.isEmpty
+                          ? scheme.error
+                          : scheme.outline,
                     ),
                   ),
                   errorText: _nameController.text.isEmpty ? 'Requerido' : null,
                 ),
               ),
               const SizedBox(height: 14),
+              _CreateUnavailableField(
+                title: 'Dónde',
+                message:
+                    'La sede se asigna después de crear el torneo. El API todavía no expone este campo.',
+              ),
+              const SizedBox(height: 14),
               Text(
                 'Deporte',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               if (_isLoadingSports)
-                const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
-              else if (_sportsError != null)
-                _ErrorBox(
-                  message: _sportsError!,
-                  onRetry: _loadSports,
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(),
+                  ),
                 )
+              else if (_sportsError != null)
+                _ErrorBox(message: _sportsError!, onRetry: _loadSports)
               else if (_sports.isEmpty)
                 _EmptyBox(message: 'No hay deportes disponibles.')
               else
@@ -291,15 +322,29 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       .toList(),
                 ),
               const SizedBox(height: 14),
+              _CreateUnavailableField(
+                title: 'Cupos',
+                message:
+                    'Se usan los cupos del preset actual hasta que el API exponga el límite configurable.',
+              ),
+              const SizedBox(height: 14),
+              _CreateUnavailableField(
+                title: 'Inscripción',
+                message:
+                    'El precio se define fuera de este formulario por ahora.',
+              ),
+              const SizedBox(height: 14),
               Text(
                 'Categoría',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               if (_categoriesForSport.isEmpty)
-                _EmptyBox(message: 'No hay categorías disponibles para este deporte.')
+                _EmptyBox(
+                  message: 'No hay categorías disponibles para este deporte.',
+                )
               else
                 Wrap(
                   spacing: 10,
@@ -308,7 +353,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       .map(
                         (c) => ChoiceChip(
                           selected: _selectedCategoryId == c.id,
-                          onSelected: (_) => setState(() => _selectedCategoryId = c.id),
+                          onSelected: (_) =>
+                              setState(() => _selectedCategoryId = c.id),
                           label: Text(c.name),
                         ),
                       )
@@ -317,173 +363,250 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               const SizedBox(height: 14),
               Text(
                 'Preset',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               BlocBuilder<TournamentPresetsCubit, TournamentPresetsState>(
                 builder: (context, state) {
                   return switch (state) {
                     TournamentPresetsInitial() => _EmptyBox(
-                        message: _selectedSportId == null
-                            ? 'Selecciona un deporte para ver presets.'
-                            : 'Cargando presets...',
-                      ),
+                      message: _selectedSportId == null
+                          ? 'Selecciona un deporte para ver presets.'
+                          : 'Cargando presets...',
+                    ),
                     TournamentPresetsLoading() => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: CircularProgressIndicator(),
-                        ),
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(),
                       ),
+                    ),
                     TournamentPresetsEmpty() => _EmptyBox(
-                        message: 'No hay presets para este deporte.',
-                      ),
+                      message: 'No hay presets para este deporte.',
+                    ),
                     TournamentPresetsError(:final message) => _ErrorBox(
-                        message: message,
-                        onRetry: () {
-                          final sportId = _selectedSportId;
-                          if (sportId != null) {
-                            context.read<TournamentPresetsCubit>().load(sportId: sportId);
-                          }
-                        },
-                      ),
+                      message: message,
+                      onRetry: () {
+                        final sportId = _selectedSportId;
+                        if (sportId != null) {
+                          context.read<TournamentPresetsCubit>().load(
+                            sportId: sportId,
+                          );
+                        }
+                      },
+                    ),
                     TournamentPresetsSuccess(:final presets) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          RadioGroup<String>(
-                            groupValue: _selectedPreset?.id,
-                            onChanged: (id) {
-                              final preset = presets.where((p) => p.id == id).firstOrNull;
-                              setState(() => _selectedPreset = preset);
-                            },
-                            child: Column(
-                              children: [
-                                for (final p in presets)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: RadioListTile<String>(
-                                      value: p.id,
-                                      title: Text(
-                                        p.name,
-                                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        RadioGroup<String>(
+                          groupValue: _selectedPreset?.id,
+                          onChanged: (id) {
+                            final preset = presets
+                                .where((p) => p.id == id)
+                                .firstOrNull;
+                            setState(() => _selectedPreset = preset);
+                          },
+                          child: Column(
+                            children: [
+                              for (final p in presets)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: RadioListTile<String>(
+                                    value: p.id,
+                                    title: Text(
+                                      p.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
                                       ),
-                                      subtitle: Text(
-                                        _presetDescription(p.code),
-                                        style: TextStyle(
-                                          color: scheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                    ),
+                                    subtitle: Text(
+                                      _presetDescription(p.code),
+                                      style: TextStyle(
+                                        color: scheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-                              ],
-                            ),
+                                ),
+                            ],
                           ),
-                          if (_selectedPreset != null) ...[
-                            const SizedBox(height: 6),
-                            _PresetParametersCard(
-                              preset: _selectedPreset!,
-                              doubleRound: _doubleRound,
-                              onToggleDoubleRound: (v) => setState(() => _doubleRound = v),
-                              americanoRounds: _americanoRounds,
-                              onChangeAmericanoRounds: (v) => setState(() => _americanoRounds = v),
-                              americanoCourts: _americanoCourts,
-                              onChangeAmericanoCourts: (v) => setState(() => _americanoCourts = v),
-                              thirdPlaceMatch: _thirdPlaceMatch,
-                              onToggleThirdPlaceMatch: (v) => setState(() => _thirdPlaceMatch = v),
-                            ),
-                          ],
+                        ),
+                        if (_selectedPreset != null) ...[
+                          const SizedBox(height: 6),
+                          _PresetParametersCard(
+                            preset: _selectedPreset!,
+                            doubleRound: _doubleRound,
+                            onToggleDoubleRound: (v) =>
+                                setState(() => _doubleRound = v),
+                            americanoRounds: _americanoRounds,
+                            onChangeAmericanoRounds: (v) =>
+                                setState(() => _americanoRounds = v),
+                            americanoCourts: _americanoCourts,
+                            onChangeAmericanoCourts: (v) =>
+                                setState(() => _americanoCourts = v),
+                            thirdPlaceMatch: _thirdPlaceMatch,
+                            onToggleThirdPlaceMatch: (v) =>
+                                setState(() => _thirdPlaceMatch = v),
+                          ),
                         ],
-                      ),
+                      ],
+                    ),
                   };
                 },
               ),
               const SizedBox(height: 14),
               Text(
-                'Visibilidad',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                'Publicación',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                    value: 'PUBLIC',
-                    label: Text('Público'),
-                    icon: Icon(Icons.public),
+              Card(
+                child: SwitchListTile(
+                  value: _visibility == 'PUBLIC',
+                  onChanged: (value) => setState(
+                    () => _visibility = value ? 'PUBLIC' : 'PRIVATE',
                   ),
-                  ButtonSegment(
-                    value: 'PRIVATE',
-                    label: Text('Privado'),
-                    icon: Icon(Icons.lock_outline),
+                  title: const Text(
+                    'Publicar al crear',
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
-                ],
-                selected: {_visibility},
-                onSelectionChanged: (selection) =>
-                    setState(() => _visibility = selection.first),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _visibility == 'PUBLIC'
-                    ? 'Visible en el catálogo para todos los jugadores.'
-                    : 'Oculto del catálogo: solo accesible por link o invitación.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 14),
-              BlocBuilder<CreateTournamentCubit, CreateTournamentState>(
-                builder: (context, state) {
-                  final isSubmitting = state is CreateTournamentSubmitting;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FilledButton.icon(
-                        //? Disable si no se cumplen requerimientos O si está submitting
-                        onPressed: (_canSubmit && !isSubmitting) ? _onSubmit : null,
-                        icon: isSubmitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(AppIcons.check),
-                        label: Text(isSubmitting ? 'Creando...' : 'Crear torneo'),
-                      ),
-                      if (!_canSubmit) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          '⚠️ Se necesitan: nombre + deporte + categoría + formato',
-                          style: TextStyle(
-                            color: scheme.onSurfaceVariant,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                      if (state is CreateTournamentError) ...[
-                        const SizedBox(height: 12),
-                        SelectableText.rich(
-                          TextSpan(
-                            text: state.message,
-                            style: TextStyle(
-                              color: scheme.error,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  );
-                },
+                  subtitle: Text(
+                    _visibility == 'PUBLIC'
+                        ? 'Aparece en el listado y se abre la inscripción.'
+                        : 'Queda en borrador: cargás gente vos y publicás después.',
+                  ),
+                ),
               ),
             ],
           ),
+          bottomNavigationBar:
+              BlocBuilder<CreateTournamentCubit, CreateTournamentState>(
+                builder: (context, state) {
+                  final isSubmitting = state is CreateTournamentSubmitting;
+                  final ready = _canSubmit && !isSubmitting;
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLow,
+                      border: Border(
+                        top: BorderSide(color: scheme.outlineVariant),
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+                    child: SafeArea(
+                      top: false,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Sede pendiente · ${_selectedCategoryId == null ? 'categoría pendiente' : 'categoría seleccionada'}',
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                    fontSize: 12.5,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                'Precio por confirmar',
+                                style: TextStyle(
+                                  color: scheme.onSurface,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          FilledButton.icon(
+                            onPressed: ready ? _onSubmit : null,
+                            icon: isSubmitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(AppIcons.check),
+                            label: Text(
+                              isSubmitting
+                                  ? 'Creando...'
+                                  : !_canSubmit &&
+                                        _nameController.text.trim().isEmpty
+                                  ? 'Ponele nombre al torneo'
+                                  : _visibility == 'PUBLIC'
+                                  ? 'Crear y publicar'
+                                  : 'Crear borrador',
+                            ),
+                          ),
+                          if (state is CreateTournamentError)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                state.message,
+                                style: TextStyle(
+                                  color: scheme.error,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
         ),
       ),
+    );
+  }
+}
+
+final class _CreateUnavailableField extends StatelessWidget {
+  const _CreateUnavailableField({required this.title, required this.message});
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Text(
+            message,
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 12.5,
+              height: 1.45,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -508,9 +631,9 @@ final class _EmptyBox extends StatelessWidget {
         TextSpan(
           text: message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
@@ -596,9 +719,9 @@ final class _PresetParametersCard extends StatelessWidget {
         children: [
           Text(
             'Parámetros',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 10),
           if (preset.code == 'ROUND_ROBIN')
@@ -667,7 +790,9 @@ final class _PresetParametersCard extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.w900),
               ),
               subtitle: Text(
-                thirdPlaceMatch ? 'Incluye partido por el 3er lugar' : 'Solo bracket principal',
+                thirdPlaceMatch
+                    ? 'Incluye partido por el 3er lugar'
+                    : 'Solo bracket principal',
                 style: TextStyle(
                   color: scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
@@ -736,4 +861,3 @@ final class _StepperTiny extends StatelessWidget {
     );
   }
 }
-

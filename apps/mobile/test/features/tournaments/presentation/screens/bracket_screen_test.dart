@@ -25,15 +25,17 @@ class _TestTournamentsRepository implements TournamentsRepository {
 void main() {
   group('BracketScreen', () {
     Widget buildTestWidget(TournamentsRepository repository) => MaterialApp(
-          home: Scaffold(
-            body: BracketScreen(
-              tournamentId: 't-1',
-              tournamentsRepository: repository,
-            ),
-          ),
-        );
+      home: Scaffold(
+        body: BracketScreen(
+          tournamentId: 't-1',
+          tournamentsRepository: repository,
+        ),
+      ),
+    );
 
-    testWidgets('displays bracket data when loaded successfully', (tester) async {
+    testWidgets('displays bracket data when loaded successfully', (
+      tester,
+    ) async {
       final bracket = BracketDto(
         tournamentId: 't-1',
         tournamentName: 'Test Tournament',
@@ -113,7 +115,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget(repository));
       await tester.pumpAndSettle();
 
-      expect(find.text('BYE'), findsOneWidget);
+      expect(find.text('Bye'), findsOneWidget);
     });
 
     testWidgets('shows winner checkmark on completed match', (tester) async {
@@ -141,7 +143,9 @@ void main() {
                   seedPosition: 2,
                 ),
                 winnerId: 'u-1',
-                score: [{'playerAScore': '6', 'playerBScore': '4'}],
+                score: [
+                  {'playerAScore': '6', 'playerBScore': '4'},
+                ],
                 status: 'COMPLETED',
                 matchId: 'm-1',
               ),

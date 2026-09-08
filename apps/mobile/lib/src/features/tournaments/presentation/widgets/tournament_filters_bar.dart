@@ -55,8 +55,8 @@ final class TournamentFiltersBar extends StatelessWidget {
                 _QuickFilterChip(
                   label: 'Abiertos',
                   icon: Icons.check_circle_outline,
-                  selected: filters.status == 'REGISTRATION_OPEN',
-                  onTap: () => _toggleStatus('REGISTRATION_OPEN'),
+                  selected: filters.status == 'OPEN',
+                  onTap: () => _toggleStatus('OPEN'),
                 ),
                 const SizedBox(width: 8),
                 _QuickFilterChip(
@@ -102,7 +102,9 @@ final class TournamentFiltersBar extends StatelessWidget {
                 FilterChip(
                   label: Text(_categoryLabel()),
                   selected: filters.categoryId != null,
-                  onSelected: filters.sportId == null ? null : (_) => _showCategoryPicker(context),
+                  onSelected: filters.sportId == null
+                      ? null
+                      : (_) => _showCategoryPicker(context),
                   avatar: filters.categoryId != null
                       ? const Icon(Icons.check, size: 16)
                       : const Icon(Icons.category, size: 16),
@@ -164,10 +166,7 @@ final class TournamentFiltersBar extends StatelessWidget {
       final now = DateTime.now();
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
       final weekEnd = weekStart.add(const Duration(days: 7));
-      onApply(_mergeFilters(
-        startsAtFrom: weekStart,
-        startsAtTo: weekEnd,
-      ));
+      onApply(_mergeFilters(startsAtFrom: weekStart, startsAtTo: weekEnd));
     }
   }
 
@@ -178,37 +177,34 @@ final class TournamentFiltersBar extends StatelessWidget {
       final now = DateTime.now();
       final monthStart = DateTime(now.year, now.month, 1);
       final monthEnd = DateTime(now.year, now.month + 1, 0);
-      onApply(_mergeFilters(
-        startsAtFrom: monthStart,
-        startsAtTo: monthEnd,
-      ));
+      onApply(_mergeFilters(startsAtFrom: monthStart, startsAtTo: monthEnd));
     }
   }
 
   String _sportLabel() {
     if (filters.sportId == null) return 'Deporte';
     final sport = sports.cast<SportDto?>().firstWhere(
-          (s) => s?.id == filters.sportId,
-          orElse: () => null,
-        );
+      (s) => s?.id == filters.sportId,
+      orElse: () => null,
+    );
     return sport?.name ?? 'Deporte';
   }
 
   String _categoryLabel() {
     if (filters.categoryId == null) return 'Categoría';
     final category = categories.cast<CategoryDto?>().firstWhere(
-          (c) => c?.id == filters.categoryId,
-          orElse: () => null,
-        );
+      (c) => c?.id == filters.categoryId,
+      orElse: () => null,
+    );
     return category?.name ?? 'Categoría';
   }
 
   String _venueLabel() {
     if (filters.venueId == null) return 'Sede';
     final venue = venues.cast<VenueDto?>().firstWhere(
-          (v) => v?.id == filters.venueId,
-          orElse: () => null,
-        );
+      (v) => v?.id == filters.venueId,
+      orElse: () => null,
+    );
     return venue?.name ?? 'Sede';
   }
 
@@ -227,7 +223,9 @@ final class TournamentFiltersBar extends StatelessWidget {
   }) {
     return TournamentListFilters(
       status: clearStatus ? null : (status ?? filters.status),
-      startsAtFrom: clearStartsAtFrom ? null : (startsAtFrom ?? filters.startsAtFrom),
+      startsAtFrom: clearStartsAtFrom
+          ? null
+          : (startsAtFrom ?? filters.startsAtFrom),
       startsAtTo: startsAtTo ?? filters.startsAtTo,
       venueId: clearVenue ? null : (venueId ?? filters.venueId),
       sportId: clearSport ? null : (sportId ?? filters.sportId),
@@ -258,11 +256,13 @@ final class TournamentFiltersBar extends StatelessWidget {
     if (result == null) return;
     final newSportId = result.isEmpty ? null : result;
     final cleared = newSportId == null || newSportId != filters.sportId;
-    onApply(_mergeFilters(
-      sportId: newSportId,
-      clearSport: cleared,
-      clearCategory: cleared,
-    ));
+    onApply(
+      _mergeFilters(
+        sportId: newSportId,
+        clearSport: cleared,
+        clearCategory: cleared,
+      ),
+    );
     if (newSportId != null && newSportId != filters.sportId) {
       onSportChanged?.call(newSportId);
     }
@@ -290,10 +290,12 @@ final class TournamentFiltersBar extends StatelessWidget {
     );
     if (result == null) return;
     final newCategoryId = result.isEmpty ? null : result;
-    onApply(_mergeFilters(
-      categoryId: newCategoryId,
-      clearCategory: newCategoryId == null,
-    ));
+    onApply(
+      _mergeFilters(
+        categoryId: newCategoryId,
+        clearCategory: newCategoryId == null,
+      ),
+    );
   }
 
   Future<void> _showVenuePicker(BuildContext context) async {

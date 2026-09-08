@@ -45,14 +45,15 @@ class _BracketScreenState extends State<BracketScreen> {
               case 'FORMATO_NO_SOPORTADO':
                 return _EmptyState(
                   icon: Icons.info_outline,
-                  title: 'Formato no soportado',
-                  subtitle: 'El cuadro está disponible solo para torneos de eliminación directa.',
+                  title: 'Este torneo no arma cuadro',
+                  subtitle:
+                      'El cuadro existe sólo para eliminación simple. Este torneo es round robin: seguí la posición en la tabla.',
                 );
               case 'VALIDACION_FALLIDA':
                 return _EmptyState(
                   icon: Icons.group,
-                  title: 'Cuadro pendiente',
-                  subtitle: 'Se necesitan al menos 2 jugadores confirmados.',
+                  title: 'Todavía no hay cuadro',
+                  subtitle: 'Hacen falta al menos 2 inscriptos confirmados.',
                 );
               default:
                 return _EmptyState(
@@ -64,8 +65,8 @@ class _BracketScreenState extends State<BracketScreen> {
           }
           return _EmptyState(
             icon: Icons.error_outline,
-            title: 'Error inesperado',
-            subtitle: 'No se pudo cargar el cuadro. Intenta de nuevo.',
+            title: 'No se pudo cargar el cuadro',
+            subtitle: 'Revisá tu conexión e intentá de nuevo.',
           );
         }
 
@@ -92,7 +93,7 @@ class _BracketView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -102,8 +103,17 @@ class _BracketView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${bracket.totalRounds} ronda${bracket.totalRounds > 1 ? 's' : ''} • Cupo: ${bracket.bracketSize}',
+            '${bracket.totalRounds} ronda${bracket.totalRounds > 1 ? 's' : ''} · ${bracket.bracketSize} jugadores',
             style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Los huéspedes (inscriptos sin cuenta) no entran al cuadro: sólo jugadores con cuenta.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 20),
           SingleChildScrollView(
@@ -132,13 +142,17 @@ class _BracketRoundCard extends StatelessWidget {
 
     return Container(
       width: columnWidth,
-      margin: const EdgeInsets.only(right: 16),
+      margin: const EdgeInsets.only(right: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             round.name,
-            style: Theme.of(context).textTheme.titleSmall,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.4,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -162,17 +176,15 @@ class _BracketMatchCard extends StatelessWidget {
     final isBye = match.status == 'BYE';
 
     return GestureDetector(
-      onTap: !isBye
-          ? () => _showMatchDetails(context)
-          : null,
+      onTap: !isBye ? () => _showMatchDetails(context) : null,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           border: Border.all(
             color: isInProgress ? scheme.primary : scheme.outlineVariant,
             width: isInProgress ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: isInProgress
               ? [
                   BoxShadow(
@@ -183,53 +195,65 @@ class _BracketMatchCard extends StatelessWidget {
                 ]
               : null,
         ),
-        child: isBye
-            ? Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                child: Text(
-                  'BYE',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              )
-            : Column(
-              children: [
-                _MatchPlayer(
-                  player: match.playerA,
-                  isWinner: match.winnerId == match.playerA?.userId,
-                ),
-                Divider(
-                  height: 1,
-                  color: scheme.outlineVariant,
-                ),
-                _MatchPlayer(
-                  player: match.playerB,
-                  isWinner: match.winnerId == match.playerB?.userId,
-                ),
-                if (match.status == 'COMPLETED' && match.score != null) ...[
-                  Divider(
-                    height: 1,
-                    color: scheme.outlineVariant,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              color: scheme.surfaceContainerHighest,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
                     child: Text(
-                      _formatScore(match.score!),
+                      'Partido ${match.matchNumber}',
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 10.5,
                         color: scheme.onSurfaceVariant,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
+                  if (!isBye)
+                    Text(
+                      _statusLabel(match.status),
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: isInProgress
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
+                      ),
+                    ),
                 ],
-              ],
+              ),
             ),
+            _MatchPlayer(
+              player: match.playerA,
+              isWinner: match.winnerId == match.playerA?.userId,
+              score: _scoreForPlayer(match.score, true),
+            ),
+            Divider(height: 1, color: scheme.outlineVariant),
+            _MatchPlayer(
+              player: match.playerB,
+              isWinner: match.winnerId == match.playerB?.userId,
+              score: _scoreForPlayer(match.score, false),
+              bye: isBye,
+            ),
+            if (match.status == 'COMPLETED' && match.score != null) ...[
+              Divider(height: 1, color: scheme.outlineVariant),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Text(
+                  _formatScore(match.score!),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -253,10 +277,7 @@ class _BracketMatchCard extends StatelessWidget {
               match.playerA?.displayName ?? 'Por definir',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            Text(
-              'vs.',
-              style: TextStyle(color: scheme.onSurfaceVariant),
-            ),
+            Text('vs.', style: TextStyle(color: scheme.onSurfaceVariant)),
             Text(
               match.playerB?.displayName ?? 'Por definir',
               style: const TextStyle(fontWeight: FontWeight.w600),
@@ -265,7 +286,10 @@ class _BracketMatchCard extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'Resultado: ${_formatScore(match.score!)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -286,7 +310,7 @@ class _BracketMatchCard extends StatelessWidget {
       'PENDING' => 'Pendiente',
       'IN_PROGRESS' => 'En juego',
       'COMPLETED' => 'Completado',
-      'BYE' => 'BYE',
+      'BYE' => 'Bye',
       _ => status,
     };
   }
@@ -300,16 +324,26 @@ class _BracketMatchCard extends StatelessWidget {
         })
         .join(' ');
   }
+
+  String? _scoreForPlayer(List<Map<String, Object?>>? score, bool playerA) {
+    if (score == null || score.isEmpty) return null;
+    final key = playerA ? 'playerAScore' : 'playerBScore';
+    return score.map((set) => set[key]?.toString() ?? '0').join(' · ');
+  }
 }
 
 class _MatchPlayer extends StatelessWidget {
   const _MatchPlayer({
     required this.player,
     required this.isWinner,
+    this.score,
+    this.bye = false,
   });
 
   final BracketPlayerDto? player;
   final bool isWinner;
+  final String? score;
+  final bool bye;
 
   @override
   Widget build(BuildContext context) {
@@ -320,26 +354,32 @@ class _MatchPlayer extends StatelessWidget {
       child: Row(
         children: [
           if (isWinner) ...[
-            Icon(
-              Icons.check_circle,
-              size: 16,
-              color: scheme.primary,
-            ),
+            Icon(Icons.check_circle, size: 16, color: scheme.primary),
             const SizedBox(width: 4),
-          ] else if (player != null)
-            SizedBox(width: 20),
+          ],
           Expanded(
             child: Text(
-              player?.displayName ?? 'Por definir',
+              player?.displayName ?? (bye ? 'Bye' : 'Por definir'),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isWinner ? FontWeight.w700 : FontWeight.w500,
-                color: player == null ? scheme.onSurfaceVariant : scheme.onSurface,
+                color: player == null
+                    ? scheme.onSurfaceVariant
+                    : scheme.onSurface,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (score != null)
+            Text(
+              score!,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: isWinner ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+            ),
         ],
       ),
     );
@@ -367,12 +407,17 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 56,
-              color: scheme.onSurfaceVariant,
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: scheme.outlineVariant, width: 1.5),
+              ),
+              child: Icon(icon, size: 26, color: scheme.onSurfaceVariant),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium,
@@ -381,10 +426,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
           ],
