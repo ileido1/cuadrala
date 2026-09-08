@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -26,6 +27,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let sportPadelId: string;
     let venueId: string;
     let venueName: string;
+    let staffToken: string;
+    let outsiderToken: string;
 
     const CLOSES_AT = '2026-09-11T20:00:00.000Z';
 
@@ -44,6 +47,20 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       venueName = `Club Cuádrala ${Date.now()}`;
       const VENUE = await PRISMA.venue.create({ data: { name: venueName } });
       venueId = VENUE.id;
+
+      const TS = Date.now();
+      const STAFF = await PRISMA.user.create({
+        data: { email: `venue-staff-${TS}@test.local`, name: 'Staff' },
+      });
+      const OUTSIDER = await PRISMA.user.create({
+        data: { email: `outsider-${TS}@test.local`, name: 'Outsider' },
+      });
+      await PRISMA.venueStaff.create({
+        data: { venueId, userId: STAFF.id, role: 'OWNER' },
+      });
+
+      staffToken = signAccessTokenSV(STAFF.id, STAFF.email);
+      outsiderToken = signAccessTokenSV(OUTSIDER.id, OUTSIDER.email);
     });
 
     afterAll(async () => {
@@ -64,6 +81,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           registrationClosesAt: CLOSES_AT,
           visibility: 'PUBLIC',
         })
+        .set('Authorization', `Bearer ${staffToken}`)
         .set('Content-Type', 'application/json');
 
       expect(RES.status).toBe(201);
@@ -143,6 +161,78 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       expect(RES.status).toBe(400);
       expect(RES.body.code).toBe('VALIDACION_FALLIDA');
+    });
+
+    //? El filtro por sede miraba los partidos (matches.some.court.venueId), no
+    //? la columna del torneo. Un torneo recien creado no tiene partidos —se
+    //? materializan al pasar a IN_PROGRESS— asi que el listado lo mostraba con
+    //? su venueName pero desaparecia al filtrar justo por esa sede.
+    it('should find a tournament by venue before any match exists', async () => {
+      const TOURNAMENT_ID = await createTournamentSV();
+
+      const RES = await request(APP).get(
+        `/api/v1/tournaments?venueId=${venueId}&limit=100`,
+      );
+
+      expect(RES.status).toBe(200);
+      const IDS = (RES.body.data.items as Array<Record<string, unknown>>).map(
+        (i) => i['id'],
+      );
+      expect(IDS).toContain(TOURNAMENT_ID);
+    });
+
+    //? `venueId` no es solo un dato de vitrina: AssertTournamentOrganizerAccess
+    //? trata al staff de la sede como organizador. Aceptarlo sin permiso deja
+    //? que cualquiera publique un torneo a nombre de un club ajeno y le entregue
+    //? el control a su staff.
+    it('should reject a venue the anonymous caller has no authority over', async () => {
+      const RES = await request(APP)
+        .post('/api/v1/tournaments')
+        .send({
+          name: 'Torneo a nombre ajeno',
+          categoryId,
+          sportId: sportPadelId,
+          formatPresetCode: 'ROUND_ROBIN',
+          venueId,
+        })
+        .set('Content-Type', 'application/json');
+
+      expect(RES.status).toBe(401);
+      expect(RES.body.code).toBe('NO_AUTORIZADO');
+    });
+
+    it('should reject a venue the authenticated caller does not work at', async () => {
+      const RES = await request(APP)
+        .post('/api/v1/tournaments')
+        .send({
+          name: 'Torneo a nombre ajeno',
+          categoryId,
+          sportId: sportPadelId,
+          formatPresetCode: 'ROUND_ROBIN',
+          venueId,
+        })
+        .set('Authorization', `Bearer ${outsiderToken}`)
+        .set('Content-Type', 'application/json');
+
+      expect(RES.status).toBe(403);
+      expect(RES.body.code).toBe('NO_AUTORIZADO');
+    });
+
+    it('should reject a venue that does not exist', async () => {
+      const RES = await request(APP)
+        .post('/api/v1/tournaments')
+        .send({
+          name: 'Torneo sin sede real',
+          categoryId,
+          sportId: sportPadelId,
+          formatPresetCode: 'ROUND_ROBIN',
+          venueId: '550e8400-e29b-41d4-a716-446655440000',
+        })
+        .set('Authorization', `Bearer ${outsiderToken}`)
+        .set('Content-Type', 'application/json');
+
+      expect(RES.status).toBe(404);
+      expect(RES.body.code).toBe('SEDE_NO_ENCONTRADA');
     });
 
     it('should reject a non-positive slot count', async () => {

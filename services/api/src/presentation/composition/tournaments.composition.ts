@@ -15,6 +15,7 @@ import { PrismaTournamentScheduleRepository } from '../../infrastructure/adapter
 import { PrismaTournamentMatchMaterializationRepository } from '../../infrastructure/adapters/prisma_tournament_match_materialization_repository.js';
 import { PrismaTournamentRegistrationRepository } from '../../infrastructure/adapters/prisma_tournament_registration_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+import { PrismaVenueRepository } from '../../infrastructure/adapters/prisma_venue_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { DefaultTournamentFormatParametersValidator } from '../../domain/services/tournament/tournament_format_parameters_validator.js';
 import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
@@ -28,6 +29,7 @@ const TOURNAMENT_SCHEDULE_REPOSITORY = new PrismaTournamentScheduleRepository();
 const TOURNAMENT_MATCH_MATERIALIZATION_REPOSITORY = new PrismaTournamentMatchMaterializationRepository();
 const TOURNAMENT_REGISTRATION_REPOSITORY = new PrismaTournamentRegistrationRepository();
 const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
+const VENUE_REPOSITORY = new PrismaVenueRepository(PRISMA);
 const FORMAT_VALIDATOR = new DefaultTournamentFormatParametersValidator();
 const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAccessUseCase(
   VENUE_STAFF_REPOSITORY,
@@ -47,6 +49,8 @@ export const CREATE_PARAMETRIZED_TOURNAMENT_UC = new CreateParametrizedTournamen
   FORMAT_PRESET_REPOSITORY,
   TOURNAMENT_REPOSITORY,
   FORMAT_VALIDATOR,
+  VENUE_REPOSITORY,
+  VENUE_STAFF_REPOSITORY,
 );
 export const UPDATE_TOURNAMENT_STATUS_UC = new UpdateTournamentStatusUseCase(
   TOURNAMENT_REPOSITORY,
