@@ -7,6 +7,7 @@ final class TournamentListItemDto extends Equatable {
     required this.name,
     required this.status,
     required this.sportName,
+    required this.categoryId,
     required this.categoryName,
     required this.startsAt,
     required this.registrationCount,
@@ -25,6 +26,7 @@ final class TournamentListItemDto extends Equatable {
   final String name;
   final String status;
   final String sportName;
+  final String categoryId;
   final String categoryName;
   final DateTime? startsAt;
   final int registrationCount;
@@ -67,6 +69,7 @@ final class TournamentListItemDto extends Equatable {
       status: json['status'] as String,
       pairedRegistration: json['pairedRegistration'] as bool? ?? false,
       sportName: (json['sportName'] ?? json['sport_name'] ?? '') as String,
+      categoryId: (json['categoryId'] ?? json['category_id'] ?? '') as String,
       categoryName:
           (json['categoryName'] ?? json['category_name'] ?? '') as String,
       startsAt: json['startsAt'] != null || json['starts_at'] != null
@@ -120,6 +123,7 @@ final class TournamentListItemDto extends Equatable {
         status,
         visibility,
         sportName,
+        categoryId,
         categoryName,
         startsAt,
         registrationCount,

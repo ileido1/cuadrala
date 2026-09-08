@@ -7,8 +7,11 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/failures/app_failure.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
+import '../../profile/data/models/user_rating_dto.dart';
+import '../../profile/data/profile_repository.dart';
 import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';
+import '../domain/tournament_eligibility_resolver.dart';
 import '../data/models/tournament_registration_dto.dart';
 import '../data/models/tournament_schedule_dto.dart';
 import '../data/models/tournament_scoreboard_dto.dart';
@@ -23,6 +26,7 @@ import 'tournament_status_view.dart';
 import 'tournament_roster_grouping.dart';
 import 'tournament_roster_summary.dart';
 import 'widgets/enroll_button.dart';
+import 'widgets/tournament_entry_check.dart';
 import 'widgets/tournament_pairing_section.dart';
 import 'widgets/invite_guest_sheet.dart';
 
@@ -34,13 +38,17 @@ import 'widgets/invite_guest_sheet.dart';
 /// vez, porque el texto estaba duplicado en los tests. Renombrar acá ahora
 /// arrastra a los tests con él.
 const tournamentDetailTabLabels = <String>[
+  'Info',
   'Calendario',
   'Clasificación',
   'Registrados',
 ];
 
+/// Índice de la pestaña de información del torneo.
+const tournamentInfoTabIndex = 0;
+
 /// Índice de la pestaña de inscripciones dentro de [tournamentDetailTabLabels].
-const tournamentRegistrationsTabIndex = 2;
+const tournamentRegistrationsTabIndex = 3;
 
 /// Tournament statuses that still allow generating/regenerating the
 /// schedule and managing guest registrations (organizer confirm/remove),
@@ -78,6 +86,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
 
   TournamentListItemDto? _tournament;
   bool _loadingTournament = false;
+  List<UserRatingDto>? _playerRatings;
 
   @override
   void initState() {
@@ -88,6 +97,11 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     _scoreboardCubit = getIt<TournamentScoreboardCubit>(param1: widget.tournamentId);
     _registrationsCubit = getIt<TournamentRegistrationsCubit>(param1: widget.tournamentId)..load();
     //? Only load registrations eagerly; others load on tab switch
+
+    //? Cargar ratings del jugador en background para saber eligibilidad
+    //? No awaitar acá para que el detalle se muestre rápido; el resolver
+    //? maneja ratings == null como "no determinado aún".
+    Future.microtask(_loadPlayerRatings);
 
     //? Validar tipo antes de asignar (evita silent null cuando extra es tipo incorrecto)
     _tournament = widget.extra is TournamentListItemDto ? widget.extra as TournamentListItemDto : null;
@@ -143,6 +157,17 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     }
   }
 
+  Future<void> _loadPlayerRatings() async {
+    try {
+      final ratings = await getIt<ProfileRepository>().getUserRatings(userId: 'me');
+      if (!mounted) return;
+      setState(() => _playerRatings = ratings);
+    } catch (_) {
+      //? Eligibility resolver maneja ratings == null como desconocido.
+      //? Si falla el fetch, simplemente no bloqueamos al usuario.
+    }
+  }
+
   @override
   void dispose() {
     _scheduleCubit.close();
@@ -164,6 +189,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
           : TournamentDetailBody(
               tournamentId: widget.tournamentId,
               tournament: _tournament,
+              playerRatings: _playerRatings,
             ),
     );
   }
@@ -173,10 +199,16 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
 /// in widget tests against mocked cubits (see `tournament_detail_screen_test.dart`).
 @visibleForTesting
 final class TournamentDetailBody extends StatelessWidget {
-  const TournamentDetailBody({super.key, required this.tournamentId, required this.tournament});
+  const TournamentDetailBody({
+    super.key,
+    required this.tournamentId,
+    required this.tournament,
+    this.playerRatings,
+  });
 
   final String tournamentId;
   final TournamentListItemDto? tournament;
+  final List<UserRatingDto>? playerRatings;
 
   @override
   Widget build(BuildContext context) {
@@ -187,7 +219,7 @@ final class TournamentDetailBody extends StatelessWidget {
     // "No TabController for TabBarView" (pre-existing gap fixed here since
     // it blocks every tab, including the invitations/schedule work below).
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         key: const Key('tournament.detail'),
         body: NestedScrollView(
@@ -377,6 +409,10 @@ final class TournamentDetailBody extends StatelessWidget {
         },
         body: TabBarView(
           children: [
+            _InfoTab(
+              tournament: tournament,
+              playerRatings: playerRatings,
+            ),
             _ScheduleTab(
               tournamentId: tournamentId,
               organizerUserId: tournament?.organizerUserId,
@@ -1796,6 +1832,70 @@ final class _ErrorBox extends StatelessWidget {
             onPressed: onRetry,
             icon: const Icon(AppIcons.refresh),
             label: const Text('Reintentar'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pestaña Info: responde "¿Puedo entrar?" con el bloque de eligibilidad.
+final class _InfoTab extends StatelessWidget {
+  const _InfoTab({
+    required this.tournament,
+    required this.playerRatings,
+  });
+
+  final TournamentListItemDto? tournament;
+  final List<UserRatingDto>? playerRatings;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tournament == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    //? Convertir ratings a Map<String, String> para compatibilidad con resolver
+    final ratingsMap = playerRatings?.map((r) {
+      return {'categoryId': r.categoryId, 'categoryName': r.categoryName ?? ''};
+    }).toList();
+
+    final eligibility = resolveTournamentEligibilitySV(
+      tournamentCategoryId: tournament!.categoryId,
+      playerRatings: ratingsMap,
+      playerIsInvited: false, //? TODO: check si el usuario tiene invitación
+    );
+
+    //? Buscar la categoría del torneo en los ratings del jugador
+    UserRatingDto? playerTournamentRating;
+    if (playerRatings != null) {
+      try {
+        playerTournamentRating = playerRatings!.firstWhere(
+          (r) => r.categoryId == tournament!.categoryId,
+        );
+      } catch (_) {
+        // No está en los ratings del jugador
+      }
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '¿Puedo entrar?',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 16),
+          TournamentEntryCheck(
+            eligibility: eligibility,
+            categoryName: tournament!.categoryName,
+            playerCategoryName: playerTournamentRating?.categoryName,
+            inscriptionPrice: tournament!.inscriptionPrice,
+            startsAt: tournament!.startsAt,
+            registrationClosesAt: tournament!.registrationClosesAt,
+            venueName: tournament!.venueName,
           ),
         ],
       ),
