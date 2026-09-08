@@ -2,6 +2,7 @@ import '../../../core/failures/app_failure.dart';
 import '../../../core/network/api_json.dart';
 import 'models/create_tournament_request.dart';
 import 'models/create_tournament_response.dart';
+import 'models/bracket_dto.dart';
 import 'models/tournament_invitation_dto.dart';
 import 'models/tournament_list_item_dto.dart';
 import 'models/tournament_list_page.dart';
@@ -356,5 +357,17 @@ class TournamentsRepository {
     return _tournamentsApi.confirmPendingTournamentRegistrations(
       tournamentId: tournamentId,
     );
+  }
+
+  /// Obtiene el cuadro (bracket) del torneo si es SINGLE_ELIMINATION y hay ≥2 confirmados.
+  ///
+  /// Devuelve un AppError si:
+  /// - El formato no es SINGLE_ELIMINATION (400 FORMATO_NO_SOPORTADO)
+  /// - Hay menos de 2 inscriptos confirmados (400 VALIDACION_FALLIDA)
+  Future<BracketDto> getBracket({required String tournamentId}) async {
+    final data = await _tournamentsApi.getTournamentBracketEnvelope(
+      tournamentId: tournamentId,
+    );
+    return BracketDto.fromJson(data);
   }
 }

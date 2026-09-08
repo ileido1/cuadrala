@@ -12,6 +12,7 @@ TournamentListItemDto tournamentSV({
   int? maxSlots,
   DateTime? registrationClosesAt,
   int registrationCount = 11,
+  String categoryId = 'cat-1',
 }) =>
     TournamentListItemDto(
       id: 'tournament-1',
@@ -19,6 +20,7 @@ TournamentListItemDto tournamentSV({
       status: status,
       sportName: 'Padel',
       categoryName: 'Masculino 7ma',
+      categoryId: categoryId,
       startsAt: DateTime.utc(2026, 9, 12, 9),
       registrationCount: registrationCount,
       venueName: venueName,

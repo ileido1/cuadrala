@@ -52,6 +52,7 @@ TournamentListItemDto _tournament({String? organizerUserId, String status = 'OPE
       status: status,
       sportName: 'Pádel',
       categoryName: 'Mixto',
+      categoryId: 'cat-1',
       startsAt: null,
       registrationCount: 0,
       organizerUserId: organizerUserId,

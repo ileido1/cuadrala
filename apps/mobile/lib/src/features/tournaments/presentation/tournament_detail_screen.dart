@@ -28,6 +28,7 @@ import 'tournament_roster_summary.dart';
 import 'widgets/enroll_button.dart';
 import 'widgets/tournament_entry_check.dart';
 import 'widgets/tournament_pairing_section.dart';
+import 'screens/bracket_screen.dart';
 import 'widgets/invite_guest_sheet.dart';
 
 /// Etiquetas de las pestañas del detalle, en orden.
@@ -42,6 +43,7 @@ const tournamentDetailTabLabels = <String>[
   'Calendario',
   'Clasificación',
   'Registrados',
+  'Tabla',
 ];
 
 /// Índice de la pestaña de información del torneo.
@@ -49,6 +51,9 @@ const tournamentInfoTabIndex = 0;
 
 /// Índice de la pestaña de inscripciones dentro de [tournamentDetailTabLabels].
 const tournamentRegistrationsTabIndex = 3;
+
+/// Índice de la pestaña de tabla (bracket) dentro de [tournamentDetailTabLabels].
+const tournamentBracketTabIndex = 4;
 
 /// Tournament statuses that still allow generating/regenerating the
 /// schedule and managing guest registrations (organizer confirm/remove),
@@ -219,7 +224,7 @@ final class TournamentDetailBody extends StatelessWidget {
     // "No TabController for TabBarView" (pre-existing gap fixed here since
     // it blocks every tab, including the invitations/schedule work below).
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         key: const Key('tournament.detail'),
         body: NestedScrollView(
@@ -424,6 +429,7 @@ final class TournamentDetailBody extends StatelessWidget {
               tournamentStatus: tournament?.status,
               pairedRegistration: tournament?.pairedRegistration ?? false,
             ),
+            _BracketTab(tournamentId: tournamentId),
           ],
         ),
       ),
@@ -1899,6 +1905,21 @@ final class _InfoTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+final class _BracketTab extends StatelessWidget {
+  const _BracketTab({required this.tournamentId});
+
+  final String tournamentId;
+
+  @override
+  Widget build(BuildContext context) {
+    final tournamentsRepository = getIt<TournamentsRepository>();
+    return BracketScreen(
+      tournamentId: tournamentId,
+      tournamentsRepository: tournamentsRepository,
     );
   }
 }
