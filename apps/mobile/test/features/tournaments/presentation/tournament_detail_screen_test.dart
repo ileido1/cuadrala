@@ -131,10 +131,6 @@ Widget _buildTestApp({
   return MaterialApp.router(routerConfig: router);
 }
 
-/// Se resuelve desde la constante de la pantalla: la etiqueta ya se renombró
-/// dos veces y cada vez dejó esta suite en rojo.
-Finder get _registrationsTab => find.text('Inscriptos');
-
 void main() {
   late _MockRegistrationsCubit registrationsCubit;
   late _MockScheduleCubit scheduleCubit;
