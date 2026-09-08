@@ -14,6 +14,11 @@ final class TournamentListItemDto extends Equatable {
     this.organizerUserId,
     this.visibility = 'PUBLIC',
     this.pairedRegistration = false,
+    this.venueId,
+    this.venueName,
+    this.inscriptionPrice,
+    this.maxSlots,
+    this.registrationClosesAt,
   });
 
   final String id;
@@ -39,6 +44,22 @@ final class TournamentListItemDto extends Equatable {
   /// Used to avoid fetching tournament detail just to check organizer status.
   final String? organizerUserId;
 
+  /// Sede del torneo. `null` cuando el organizador no la declaró.
+  final String? venueId;
+  final String? venueName;
+
+  /// Precio por jugador. `0` es "gratis declarado"; `null` es "sin declarar",
+  /// y la tarjeta los pinta distinto: uno dice Gratis, el otro no muestra fila.
+  final double? inscriptionPrice;
+
+  /// Cupo máximo declarado. Sin esto no hay denominador para "11/16 inscriptos"
+  /// ni barra de ocupación.
+  final int? maxSlots;
+
+  /// Cierre informativo de la inscripción. La ventana real la manda [status]:
+  /// la API sigue aceptando altas mientras el torneo esté en DRAFT u OPEN.
+  final DateTime? registrationClosesAt;
+
   factory TournamentListItemDto.fromJson(Map<String, Object?> json) {
     return TournamentListItemDto(
       id: json['id'] as String,
@@ -61,6 +82,23 @@ final class TournamentListItemDto extends Equatable {
           json['organizerUserId'] as String? ?? json['organizer_user_id'] as String?,
       visibility:
           (json['visibility'] as String?) ?? 'PUBLIC',
+      venueId: json['venueId'] as String? ?? json['venue_id'] as String?,
+      venueName: json['venueName'] as String? ?? json['venue_name'] as String?,
+      //? Decimal serializado: puede llegar int (15) o double (12.5).
+      inscriptionPrice:
+          (json['inscriptionPrice'] ?? json['inscription_price']) is num
+              ? ((json['inscriptionPrice'] ?? json['inscription_price']) as num)
+                  .toDouble()
+              : null,
+      maxSlots: (json['maxSlots'] ?? json['max_slots']) as int?,
+      registrationClosesAt:
+          (json['registrationClosesAt'] ?? json['registration_closes_at'])
+                  is String
+              ? DateTime.tryParse(
+                  (json['registrationClosesAt'] ??
+                      json['registration_closes_at']) as String,
+                )
+              : null,
     );
   }
 
@@ -77,5 +115,10 @@ final class TournamentListItemDto extends Equatable {
         imageUrl,
         organizerUserId,
         pairedRegistration,
+        venueId,
+        venueName,
+        inscriptionPrice,
+        maxSlots,
+        registrationClosesAt,
       ];
 }
