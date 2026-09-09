@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import 'widgets/dynamic_format_parameters_form.dart';
 import '../../../core/failures/app_failure.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
@@ -342,22 +343,15 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    ChoiceChip(
-                      selected: _tennisFormat == 'SINGLES',
-                      onSelected: (_) => setState(() => _tennisFormat = 'SINGLES'),
-                      label: const Text('Singles'),
-                    ),
-                    ChoiceChip(
-                      selected: _tennisFormat == 'DOUBLES',
-                      onSelected: (_) => setState(() => _tennisFormat = 'DOUBLES'),
-                      label: const Text('Dobles'),
-                    ),
-                  ],
-                ),
+if (_selectedPreset?.parametersSchema != null &&
+                    _selectedPreset!.parametersSchema!.isNotEmpty)
+                  DynamicFormatParametersForm(
+                    fields: _selectedPreset!.parametersSchema!,
+                    values: _formatParameterValues,
+                    onChanged: (key, value) => setState(() {
+                      _formatParameterValues[key] = value;
+                    }),
+                  ),
               ],
               const SizedBox(height: 14),
               _CreateUnavailableField(
