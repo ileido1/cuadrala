@@ -86,17 +86,6 @@ export class CreateParametrizedTournamentUseCase {
     presetSchemaVersion: number;
     status: string;
   }> {
-    // Contrato HTTP sin DB (MVP): si el cliente manda `formatPresetCode` + `formatParameters`,
-    // validamos temprano con schemaVersion=1 para rechazar parámetros inválidos sin tocar repositorios.
-    // Luego, tras resolver el preset real, se valida nuevamente con `PRESET.schemaVersion`.
-    if (_input.formatPresetCode !== undefined && _input.formatParameters !== undefined) {
-      this._tournamentFormatParametersValidator.validateAndNormalizeSV({
-        presetCode: _input.formatPresetCode,
-        presetSchemaVersion: 1,
-        formatParameters: _input.formatParameters,
-      });
-    }
-
     if (_input.venueId !== undefined) {
       await this._assertVenueAuthoritySV(_input.venueId, _input.organizerUserId);
     }
@@ -139,8 +128,7 @@ export class CreateParametrizedTournamentUseCase {
     }
 
     const NORMALIZED_FORMAT_PARAMETERS = this._tournamentFormatParametersValidator.validateAndNormalizeSV({
-      presetCode: PRESET.code,
-      presetSchemaVersion: PRESET.schemaVersion,
+      parametersSchema: PRESET.parametersSchema ?? [],
       formatParameters: _input.formatParameters,
     });
 

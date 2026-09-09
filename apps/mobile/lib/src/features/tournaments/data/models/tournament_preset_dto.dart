@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'format_parameter_field_def.dart';
 
 final class TournamentPresetDto extends Equatable {
   const TournamentPresetDto({
@@ -9,6 +10,7 @@ final class TournamentPresetDto extends Equatable {
     required this.name,
     required this.schemaVersion,
     required this.defaultParameters,
+    this.parametersSchema,
   });
 
   final String id;
@@ -18,8 +20,15 @@ final class TournamentPresetDto extends Equatable {
   final String name;
   final int schemaVersion;
   final Object? defaultParameters;
+  final List<FormatParameterFieldDef>? parametersSchema;
 
   factory TournamentPresetDto.fromJson(Map<String, Object?> json) {
+    final schemaJson = json['parametersSchema'] as List<dynamic>?;
+    final schema = schemaJson
+        ?.cast<Map<String, Object?>>()
+        .map((s) => FormatParameterFieldDef.fromJson(s))
+        .toList();
+
     return TournamentPresetDto(
       id: (json['id'] ?? '').toString(),
       sportId: (json['sportId'] ?? '').toString(),
@@ -28,6 +37,7 @@ final class TournamentPresetDto extends Equatable {
       name: (json['name'] ?? '').toString(),
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 0,
       defaultParameters: json['defaultParameters'],
+      parametersSchema: schema,
     );
   }
 
@@ -39,9 +49,21 @@ final class TournamentPresetDto extends Equatable {
         'name': name,
         'schemaVersion': schemaVersion,
         'defaultParameters': defaultParameters,
+        if (parametersSchema != null)
+          'parametersSchema':
+              parametersSchema!.map((s) => s.toJson()).toList(),
       };
 
   @override
-  List<Object?> get props => [id, sportId, code, version, name, schemaVersion, defaultParameters];
+  List<Object?> get props => [
+    id,
+    sportId,
+    code,
+    version,
+    name,
+    schemaVersion,
+    defaultParameters,
+    parametersSchema,
+  ];
 }
 

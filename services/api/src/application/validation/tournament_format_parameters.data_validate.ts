@@ -1,9 +1,9 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import { DefaultTournamentFormatParametersValidator } from '../../domain/services/tournament/tournament_format_parameters_validator.js';
+import type { FormatParameterFieldSchema } from '../../domain/ports/tournament_format_parameters_validator.js';
 
 type ValidateTournamentFormatParametersInput = {
-  presetCode: string;
-  presetSchemaVersion: number;
+  parametersSchema: FormatParameterFieldSchema[];
   formatParameters?: unknown;
 };
 

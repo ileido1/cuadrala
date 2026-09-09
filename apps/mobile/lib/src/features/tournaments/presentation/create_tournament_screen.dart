@@ -52,15 +52,13 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   List<CategoryDto> _categories = const [];
   String? _selectedCategoryId;
   TournamentPresetDto? _selectedPreset;
-  bool _doubleRound = false;
-  int _americanoRounds = 3;
-  int _americanoCourts = 1;
-  bool _thirdPlaceMatch = false;
+  Map<String, Object?> _formatParameterValues = {};
   String _visibility = 'PUBLIC';
 
   bool _isLoadingSports = false;
   String? _sportsError;
   String? _submitError;
+  bool _nameFieldTouched = false;
 
   /// Categorías del deporte actualmente seleccionado (cada categoría
   /// pertenece a un único deporte según `sportId`).
@@ -125,10 +123,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     setState(() {
       _selectedSportId = sportId;
       _selectedPreset = null;
-      _doubleRound = false;
-      _americanoRounds = 3;
-      _americanoCourts = 1;
-      _thirdPlaceMatch = false;
+      _formatParameterValues = {};
       _submitError = null;
       //? Al cambiar de deporte se resetea la categoría a la primera del nuevo
       //? deporte (la anterior puede no pertenecerle).
@@ -163,24 +158,23 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       return (request: null, error: 'Selecciona un formato de torneo.');
     }
 
-    //? 3. Construir parámetros según preset
-    Map<String, Object?>? params;
-    if (preset.code == 'ROUND_ROBIN') {
-      params = {'doubleRound': _doubleRound};
-    } else if (preset.code == 'AMERICANO') {
-      params = {'rounds': _americanoRounds, 'courts': _americanoCourts};
-    } else if (preset.code == 'SINGLE_ELIMINATION') {
-      params = {'thirdPlaceMatch': _thirdPlaceMatch};
+    //? 3. Validar campos requeridos del schema
+    if (preset.parametersSchema != null) {
+      for (final field in preset.parametersSchema!) {
+        if (field.required == true && (_formatParameterValues[field.key] == null)) {
+          return (request: null, error: 'El campo "${field.label}" es requerido.');
+        }
+      }
     }
 
-    //? 4. Retornar request válido
+    //? 4. Retornar request válido (parámetros ya listos en _formatParameterValues)
     return (
       request: CreateTournamentRequest(
         sportId: sportId,
         categoryId: categoryId,
         name: name,
         formatPresetId: preset.id,
-        formatParameters: params,
+        formatParameters: _formatParameterValues.isNotEmpty ? _formatParameterValues : null,
         visibility: _visibility,
       ),
       error: null,
@@ -199,10 +193,24 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
 
   //? Helper: validar mínimo requerido para habilitar submit
   bool get _canSubmit {
-    return _nameController.text.trim().isNotEmpty &&
-        _selectedSportId != null &&
-        _selectedCategoryId != null &&
-        _selectedPreset != null;
+    if (_nameController.text.trim().isEmpty ||
+        _selectedSportId == null ||
+        _selectedCategoryId == null ||
+        _selectedPreset == null) {
+      return false;
+    }
+
+    //? Validar campos requeridos del schema
+    final preset = _selectedPreset;
+    if (preset?.parametersSchema != null) {
+      for (final field in preset!.parametersSchema!) {
+        if (field.required == true && _formatParameterValues[field.key] == null) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   @override
@@ -268,18 +276,21 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               TextField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
-                onChanged: (_) =>
-                    setState(() {}), //? Rebuild para update _canSubmit
+                onChanged: (_) => setState(() {
+                  _nameFieldTouched = true;
+                }), //? Rebuild para update _canSubmit
                 decoration: InputDecoration(
                   hintText: 'Ej: Torneo de Otoño',
                   border: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: _nameController.text.isEmpty
+                      color: _nameFieldTouched && _nameController.text.isEmpty
                           ? scheme.error
                           : scheme.outline,
                     ),
                   ),
-                  errorText: _nameController.text.isEmpty ? 'Requerido' : null,
+                  errorText: _nameFieldTouched && _nameController.text.isEmpty
+                      ? 'Requerido'
+                      : null,
                 ),
               ),
               const SizedBox(height: 14),
@@ -321,11 +332,38 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       )
                       .toList(),
                 ),
+              //? Mostrar selector de singles/dobles solo si es tenis
+              if (_isTenis) ...[
+                const SizedBox(height: 14),
+                Text(
+                  'Categoría de juego',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    ChoiceChip(
+                      selected: _tennisFormat == 'SINGLES',
+                      onSelected: (_) => setState(() => _tennisFormat = 'SINGLES'),
+                      label: const Text('Singles'),
+                    ),
+                    ChoiceChip(
+                      selected: _tennisFormat == 'DOUBLES',
+                      onSelected: (_) => setState(() => _tennisFormat = 'DOUBLES'),
+                      label: const Text('Dobles'),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 14),
               _CreateUnavailableField(
                 title: 'Cupos',
                 message:
-                    'Se usan los cupos del preset actual hasta que el API exponga el límite configurable.',
+                    'Se usan los cupos del formato actual hasta que el API exponga el límite configurable.',
               ),
               const SizedBox(height: 14),
               _CreateUnavailableField(
@@ -362,7 +400,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 ),
               const SizedBox(height: 14),
               Text(
-                'Preset',
+                'Formato del torneo',
                 style: Theme.of(
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -373,8 +411,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                   return switch (state) {
                     TournamentPresetsInitial() => _EmptyBox(
                       message: _selectedSportId == null
-                          ? 'Selecciona un deporte para ver presets.'
-                          : 'Cargando presets...',
+                          ? 'Selecciona un deporte para ver formatos.'
+                          : 'Cargando formatos...',
                     ),
                     TournamentPresetsLoading() => const Center(
                       child: Padding(
@@ -383,7 +421,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       ),
                     ),
                     TournamentPresetsEmpty() => _EmptyBox(
-                      message: 'No hay presets para este deporte.',
+                      message: 'No hay formatos disponibles para este deporte.',
                     ),
                     TournamentPresetsError(:final message) => _ErrorBox(
                       message: message,
@@ -802,7 +840,7 @@ final class _PresetParametersCard extends StatelessWidget {
             )
           else
             Text(
-              'Este preset no requiere parámetros en el MVP.',
+              'Este formato no requiere parámetros en el MVP.',
               style: TextStyle(
                 color: scheme.onSurfaceVariant,
                 fontWeight: FontWeight.w700,

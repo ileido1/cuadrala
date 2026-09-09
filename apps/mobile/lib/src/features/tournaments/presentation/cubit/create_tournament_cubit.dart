@@ -22,7 +22,13 @@ final class CreateTournamentCubit extends Cubit<CreateTournamentState> {
     emit(const CreateTournamentSubmitting());
     try {
       final res = await _tournamentsRepository.createTournament(request: request);
-      emit(CreateTournamentSuccess(tournamentId: res.tournamentId));
+      if (res.tournamentId.isEmpty) {
+        emit(const CreateTournamentError(
+          message: 'El servidor no retornó un ID válido para el torneo.',
+        ));
+      } else {
+        emit(CreateTournamentSuccess(tournamentId: res.tournamentId));
+      }
     } catch (e) {
       final message =
           e is AppFailure ? e.message : 'No se pudo crear el torneo.';

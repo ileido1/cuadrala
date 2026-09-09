@@ -1,85 +1,224 @@
 import { describe, expect, it } from 'vitest';
 
 import { AppError } from '../../domain/errors/app_error.js';
-import { validateTournamentFormatParametersDVAL } from '../../application/validation/tournament_format_parameters.data_validate.js';
+import { DefaultTournamentFormatParametersValidator } from '../../domain/services/tournament/tournament_format_parameters_validator.js';
+import type { FormatParameterFieldSchema } from '../../domain/ports/format_preset_repository.js';
 
-describe('Sprint 32 — E0-02: Validador de formatParameters (application)', () => {
-  it('permite formatParameters undefined', () => {
-    expect(() =>
-      validateTournamentFormatParametersDVAL({
-        presetCode: 'AMERICANO',
-        presetSchemaVersion: 1,
+describe('S32 — Generic Tournament Format Parameters Validator (domain)', () => {
+  const VALIDATOR = new DefaultTournamentFormatParametersValidator();
+
+  describe('Schema-based validation', () => {
+    it('accepts undefined formatParameters when no schema defined', () => {
+      const RESULT = VALIDATOR.validateAndNormalizeSV({
+        parametersSchema: [],
         formatParameters: undefined,
-      }),
-    ).not.toThrow();
-  });
+      });
+      expect(RESULT).toBeUndefined();
+    });
 
-  it('rechaza formatParameters no-objeto (null/array)', () => {
-    for (const BAD of [null, [], 1, 'x'] as unknown[]) {
+    it('rejects non-object formatParameters', () => {
+      for (const BAD of [null, [], 1, 'x'] as unknown[]) {
+        expect(() =>
+          VALIDATOR.validateAndNormalizeSV({
+            parametersSchema: [],
+            formatParameters: BAD,
+          }),
+        ).toThrowError(AppError);
+      }
+    });
+
+    describe('Boolean field validation', () => {
+      it('accepts and normalizes valid boolean field', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false },
+        ];
+        const RESULT = VALIDATOR.validateAndNormalizeSV({
+          parametersSchema: SCHEMA,
+          formatParameters: { doubleRound: true },
+        });
+        expect(RESULT).toEqual({ doubleRound: true });
+      });
+
+      it('rejects non-boolean value for boolean field', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false },
+        ];
+        expect(() =>
+          VALIDATOR.validateAndNormalizeSV({
+            parametersSchema: SCHEMA,
+            formatParameters: { doubleRound: 'yes' },
+          }),
+        ).toThrowError(AppError);
+      });
+
+      it('accepts optional boolean field when missing', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false },
+        ];
+        const RESULT = VALIDATOR.validateAndNormalizeSV({
+          parametersSchema: SCHEMA,
+          formatParameters: {},
+        });
+        expect(RESULT).toEqual({});
+      });
+
+      it('rejects required boolean field when missing', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: true },
+        ];
+        expect(() =>
+          VALIDATOR.validateAndNormalizeSV({
+            parametersSchema: SCHEMA,
+            formatParameters: {},
+          }),
+        ).toThrowError(AppError);
+      });
+    });
+
+    describe('Int field validation', () => {
+      it('accepts valid int within bounds', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          { key: 'rounds', type: 'int', label: 'Rondas', min: 1, max: 50, required: false },
+        ];
+        const RESULT = VALIDATOR.validateAndNormalizeSV({
+          parametersSchema: SCHEMA,
+          formatParameters: { rounds: 10 },
+        });
+        expect(RESULT).toEqual({ rounds: 10 });
+      });
+
+      it('rejects int below min', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          { key: 'rounds', type: 'int', label: 'Rondas', min: 1, max: 50, required: false },
+        ];
+        expect(() =>
+          VALIDATOR.validateAndNormalizeSV({
+            parametersSchema: SCHEMA,
+            formatParameters: { rounds: 0 },
+          }),
+        ).toThrowError(AppError);
+      });
+
+      it('rejects int above max', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          { key: 'rounds', type: 'int', label: 'Rondas', min: 1, max: 50, required: false },
+        ];
+        expect(() =>
+          VALIDATOR.validateAndNormalizeSV({
+            parametersSchema: SCHEMA,
+            formatParameters: { rounds: 100 },
+          }),
+        ).toThrowError(AppError);
+      });
+
+      it('rejects non-integer value for int field', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          { key: 'rounds', type: 'int', label: 'Rondas', min: 1, max: 50, required: false },
+        ];
+        expect(() =>
+          VALIDATOR.validateAndNormalizeSV({
+            parametersSchema: SCHEMA,
+            formatParameters: { rounds: 10.5 },
+          }),
+        ).toThrowError(AppError);
+      });
+    });
+
+    describe('Enum field validation', () => {
+      it('accepts valid enum value', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          {
+            key: 'format',
+            type: 'enum',
+            label: 'Categoría',
+            required: true,
+            options: [
+              { value: 'SINGLES', label: 'Singles' },
+              { value: 'DOUBLES', label: 'Dobles' },
+            ],
+          },
+        ];
+        const RESULT = VALIDATOR.validateAndNormalizeSV({
+          parametersSchema: SCHEMA,
+          formatParameters: { format: 'SINGLES' },
+        });
+        expect(RESULT).toEqual({ format: 'SINGLES' });
+      });
+
+      it('rejects invalid enum value', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          {
+            key: 'format',
+            type: 'enum',
+            label: 'Categoría',
+            required: true,
+            options: [
+              { value: 'SINGLES', label: 'Singles' },
+              { value: 'DOUBLES', label: 'Dobles' },
+            ],
+          },
+        ];
+        expect(() =>
+          VALIDATOR.validateAndNormalizeSV({
+            parametersSchema: SCHEMA,
+            formatParameters: { format: 'MIXED' },
+          }),
+        ).toThrowError(AppError);
+      });
+
+      it('rejects required enum field when missing', () => {
+        const SCHEMA: FormatParameterFieldSchema[] = [
+          {
+            key: 'format',
+            type: 'enum',
+            label: 'Categoría',
+            required: true,
+            options: [
+              { value: 'SINGLES', label: 'Singles' },
+              { value: 'DOUBLES', label: 'Dobles' },
+            ],
+          },
+        ];
+        expect(() =>
+          VALIDATOR.validateAndNormalizeSV({
+            parametersSchema: SCHEMA,
+            formatParameters: {},
+          }),
+        ).toThrowError(AppError);
+      });
+    });
+
+    it('rejects extra keys not in schema', () => {
+      const SCHEMA: FormatParameterFieldSchema[] = [
+        { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false },
+      ];
       expect(() =>
-        validateTournamentFormatParametersDVAL({
-          presetCode: 'AMERICANO',
-          presetSchemaVersion: 1,
-          formatParameters: BAD,
+        VALIDATOR.validateAndNormalizeSV({
+          parametersSchema: SCHEMA,
+          formatParameters: { doubleRound: true, extra: 1 },
         }),
       ).toThrowError(AppError);
-    }
-  });
+    });
 
-  it('AMERICANO v1: valida rounds y courts como int>=1', () => {
-    expect(() =>
-      validateTournamentFormatParametersDVAL({
-        presetCode: 'AMERICANO',
-        presetSchemaVersion: 1,
-        formatParameters: { rounds: 1, courts: 2 },
-      }),
-    ).not.toThrow();
-
-    for (const BAD of [{ rounds: 0 }, { rounds: 1.2 }, { courts: 0 }, { courts: '2' }] as unknown[]) {
-      expect(() =>
-        validateTournamentFormatParametersDVAL({
-          presetCode: 'AMERICANO',
-          presetSchemaVersion: 1,
-          formatParameters: BAD,
-        }),
-      ).toThrowError(AppError);
-    }
-  });
-
-  it('AMERICANO v1: rechaza keys extra', () => {
-    expect(() =>
-      validateTournamentFormatParametersDVAL({
-        presetCode: 'AMERICANO',
-        presetSchemaVersion: 1,
-        formatParameters: { rounds: 1, extra: 1 },
-      }),
-    ).toThrowError(AppError);
-  });
-
-  it('ROUND_ROBIN v1: valida doubleRound?: boolean y rechaza extra', () => {
-    expect(() =>
-      validateTournamentFormatParametersDVAL({
-        presetCode: 'ROUND_ROBIN',
-        presetSchemaVersion: 1,
-        formatParameters: { doubleRound: true },
-      }),
-    ).not.toThrow();
-
-    expect(() =>
-      validateTournamentFormatParametersDVAL({
-        presetCode: 'ROUND_ROBIN',
-        presetSchemaVersion: 1,
-        formatParameters: { doubleRound: 'yes' },
-      }),
-    ).toThrowError(AppError);
-
-    expect(() =>
-      validateTournamentFormatParametersDVAL({
-        presetCode: 'ROUND_ROBIN',
-        presetSchemaVersion: 1,
-        formatParameters: { doubleRound: true, extra: 1 },
-      }),
-    ).toThrowError(AppError);
+    it('validates multiple fields together (Tennis v2)', () => {
+      const SCHEMA: FormatParameterFieldSchema[] = [
+        { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false },
+        {
+          key: 'format',
+          type: 'enum',
+          label: 'Categoría',
+          required: true,
+          options: [
+            { value: 'SINGLES', label: 'Singles' },
+            { value: 'DOUBLES', label: 'Dobles' },
+          ],
+        },
+      ];
+      const RESULT = VALIDATOR.validateAndNormalizeSV({
+        parametersSchema: SCHEMA,
+        formatParameters: { doubleRound: false, format: 'SINGLES' },
+      });
+      expect(RESULT).toEqual({ doubleRound: false, format: 'SINGLES' });
+    });
   });
 });
-

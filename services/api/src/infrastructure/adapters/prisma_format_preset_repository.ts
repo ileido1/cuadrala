@@ -4,7 +4,7 @@ import { PRISMA } from '../prisma_client.js';
 
 export class PrismaFormatPresetRepository implements FormatPresetRepository {
   async listActiveFormatPresetsBySportIdSV(_sportId: string, _now: Date) {
-    return PRISMA.tournamentFormatPreset.findMany({
+    const RESULTS = await PRISMA.tournamentFormatPreset.findMany({
       where: {
         sportId: _sportId,
         isActive: true,
@@ -20,12 +20,14 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
         name: true,
         schemaVersion: true,
         defaultParameters: true,
+        parametersSchema: true,
       },
     });
+    return RESULTS as unknown as import('../../domain/ports/format_preset_repository.js').TournamentFormatPresetDTO[];
   }
 
   async findByIdSV(_id: string) {
-    return PRISMA.tournamentFormatPreset.findUnique({
+    const RESULT = await PRISMA.tournamentFormatPreset.findUnique({
       where: { id: _id },
       select: {
         id: true,
@@ -35,12 +37,14 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
         name: true,
         schemaVersion: true,
         defaultParameters: true,
+        parametersSchema: true,
       },
     });
+    return RESULT as unknown as import('../../domain/ports/format_preset_repository.js').TournamentFormatPresetDTO | null;
   }
 
   async findActiveBySportAndCodeSV(_sportId: string, _code: string, _now: Date) {
-    return PRISMA.tournamentFormatPreset.findFirst({
+    const RESULT = await PRISMA.tournamentFormatPreset.findFirst({
       where: {
         sportId: _sportId,
         code: _code,
@@ -56,8 +60,10 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
         name: true,
         schemaVersion: true,
         defaultParameters: true,
+        parametersSchema: true,
       },
     });
+    return RESULT as unknown as import('../../domain/ports/format_preset_repository.js').TournamentFormatPresetDTO | null;
   }
 
   async publishNewVersionSV(_input: {
@@ -66,6 +72,7 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
     name: string;
     schemaVersion: number;
     defaultParameters: unknown;
+    parametersSchema?: unknown;
     effectiveFrom?: Date;
   }) {
     const NOW = _input.effectiveFrom ?? new Date();
@@ -93,6 +100,7 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
           name: _input.name,
           schemaVersion: _input.schemaVersion,
           defaultParameters: _input.defaultParameters as never,
+          parametersSchema: _input.parametersSchema ? (_input.parametersSchema as never) : (null as never),
           isActive: true,
           effectiveFrom: NOW,
           supersedesId: LATEST?.id ?? null,
@@ -105,13 +113,14 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
           name: true,
           schemaVersion: true,
           defaultParameters: true,
+          parametersSchema: true,
           isActive: true,
           effectiveFrom: true,
           supersedesId: true,
         },
       });
 
-      return CREATED;
+      return CREATED as unknown as import('../../domain/ports/format_preset_repository.js').TournamentFormatPresetDTO;
     });
   }
 }

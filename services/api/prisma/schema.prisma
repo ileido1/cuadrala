@@ -297,6 +297,8 @@ model TournamentFormatPreset {
   /// Versión del esquema de `defaultParameters` / `formatParameters` en torneos existentes.
   schemaVersion     Int                      @default(1)
   defaultParameters Json
+  /// Esquema de parámetros del formato: define qué parámetros acepta este preset (boolean/int/enum) y si son requeridos.
+  parametersSchema  Json?
   isActive          Boolean                  @default(true)
   /// Desde cuándo esta versión es elegible como "vigente" (si isActive=true).
   effectiveFrom     DateTime                 @default(now())

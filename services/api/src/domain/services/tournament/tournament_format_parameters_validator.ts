@@ -1,7 +1,7 @@
 import { AppError } from '../../errors/app_error.js';
 import type {
+  FormatParameterFieldSchema,
   TournamentFormatParametersValidator,
-  ValidateTournamentFormatParametersInput,
 } from '../../ports/tournament_format_parameters_validator.js';
 
 function isPlainObject(_value: unknown): _value is Record<string, unknown> {
@@ -31,18 +31,13 @@ function assertNoExtraKeys(_obj: Record<string, unknown>, _allowedKeys: string[]
   }
 }
 
-function assertIntGte1(_value: unknown): void {
-  if (typeof _value !== 'number' || !Number.isInteger(_value) || _value < 1) {
-    throwValidationFailed();
-  }
-}
-
 export class DefaultTournamentFormatParametersValidator
   implements TournamentFormatParametersValidator
 {
-  validateAndNormalizeSV(
-    _input: ValidateTournamentFormatParametersInput,
-  ): unknown | undefined {
+  validateAndNormalizeSV(_input: {
+    parametersSchema: FormatParameterFieldSchema[];
+    formatParameters?: unknown;
+  }): unknown | undefined {
     if (_input.formatParameters === undefined) {
       return undefined;
     }
@@ -52,51 +47,54 @@ export class DefaultTournamentFormatParametersValidator
     }
 
     const PARAMS = _input.formatParameters;
+    const SCHEMA = _input.parametersSchema;
+    const ALLOWED_KEYS = SCHEMA.map((f) => f.key);
 
-    if (_input.presetCode === 'AMERICANO' && _input.presetSchemaVersion === 1) {
-      assertNoExtraKeys(PARAMS, ['rounds', 'courts']);
+    // Check for extra keys
+    assertNoExtraKeys(PARAMS, ALLOWED_KEYS);
 
-      const OUT: { rounds?: number; courts?: number } = {};
-      if (PARAMS.rounds !== undefined) {
-        assertIntGte1(PARAMS.rounds);
-        OUT.rounds = PARAMS.rounds as number;
+    const OUT: Record<string, unknown> = {};
+
+    // Validate each field in schema
+    for (const FIELD_DEF of SCHEMA) {
+      const VALUE = PARAMS[FIELD_DEF.key];
+
+      // Check required
+      if (FIELD_DEF.required && VALUE === undefined) {
+        throwValidationFailed();
       }
-      if (PARAMS.courts !== undefined) {
-        assertIntGte1(PARAMS.courts);
-        OUT.courts = PARAMS.courts as number;
+
+      // Skip if field is optional and missing
+      if (VALUE === undefined) {
+        continue;
       }
 
-      return OUT;
-    }
-
-    if (_input.presetCode === 'ROUND_ROBIN' && _input.presetSchemaVersion === 1) {
-      assertNoExtraKeys(PARAMS, ['doubleRound']);
-
-      const OUT: { doubleRound?: boolean } = {};
-      if (PARAMS.doubleRound !== undefined) {
-        if (typeof PARAMS.doubleRound !== 'boolean') {
+      // Type-specific validation
+      if (FIELD_DEF.type === 'boolean') {
+        if (typeof VALUE !== 'boolean') {
           throwValidationFailed();
         }
-        OUT.doubleRound = PARAMS.doubleRound;
-      }
-
-      return OUT;
-    }
-
-    if (_input.presetCode === 'SINGLE_ELIMINATION' && _input.presetSchemaVersion === 1) {
-      assertNoExtraKeys(PARAMS, ['thirdPlaceMatch']);
-
-      const OUT: { thirdPlaceMatch?: boolean } = {};
-      if (PARAMS.thirdPlaceMatch !== undefined) {
-        if (typeof PARAMS.thirdPlaceMatch !== 'boolean') {
+        OUT[FIELD_DEF.key] = VALUE;
+      } else if (FIELD_DEF.type === 'int') {
+        if (typeof VALUE !== 'number' || !Number.isInteger(VALUE)) {
           throwValidationFailed();
         }
-        OUT.thirdPlaceMatch = PARAMS.thirdPlaceMatch;
+        if (FIELD_DEF.min !== undefined && VALUE < FIELD_DEF.min) {
+          throwValidationFailed();
+        }
+        if (FIELD_DEF.max !== undefined && VALUE > FIELD_DEF.max) {
+          throwValidationFailed();
+        }
+        OUT[FIELD_DEF.key] = VALUE;
+      } else if (FIELD_DEF.type === 'enum') {
+        const VALID_OPTIONS = FIELD_DEF.options.map((o) => o.value);
+        if (!VALID_OPTIONS.includes(VALUE as string)) {
+          throwValidationFailed();
+        }
+        OUT[FIELD_DEF.key] = VALUE;
       }
-
-      return OUT;
     }
 
-    throwValidationFailed();
+    return OUT;
   }
 }

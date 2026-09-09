@@ -35,10 +35,37 @@ async function seedCatalogSV(): Promise<void> {
     (_code) => ({ code: _code, name: SPORT_NAMES[_code] ?? _code }),
   );
 
-  const PRESETS_V1: Array<{ code: string; name: string; defaultParameters: Prisma.InputJsonValue }> = [
-    { code: 'AMERICANO', name: 'Americano', defaultParameters: {} },
-    { code: 'ROUND_ROBIN', name: 'Todos contra todos', defaultParameters: { doubleRound: false } },
-    { code: 'SINGLE_ELIMINATION', name: 'Eliminación simple', defaultParameters: { thirdPlaceMatch: false } },
+  const PRESETS_V1: Array<{
+    code: string;
+    name: string;
+    defaultParameters: Prisma.InputJsonValue;
+    parametersSchema?: Prisma.InputJsonValue;
+  }> = [
+    {
+      code: 'AMERICANO',
+      name: 'Americano',
+      defaultParameters: { rounds: 3, courts: 1 },
+      parametersSchema: [
+        { key: 'rounds', type: 'int', label: 'Rondas', required: false, min: 1, max: 50 },
+        { key: 'courts', type: 'int', label: 'Canchas', required: false, min: 1, max: 10 },
+      ],
+    },
+    {
+      code: 'ROUND_ROBIN',
+      name: 'Todos contra todos',
+      defaultParameters: { doubleRound: false },
+      parametersSchema: [
+        { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false },
+      ],
+    },
+    {
+      code: 'SINGLE_ELIMINATION',
+      name: 'Eliminación simple',
+      defaultParameters: { thirdPlaceMatch: false },
+      parametersSchema: [
+        { key: 'thirdPlaceMatch', type: 'boolean', label: 'Tercer lugar', required: false },
+      ],
+    },
   ];
 
   const SEEDED_SPORTS = await Promise.all(
@@ -77,6 +104,7 @@ async function seedCatalogSV(): Promise<void> {
           name: PRESET.name,
           schemaVersion: 1,
           defaultParameters: PRESET.defaultParameters,
+          ...(PRESET.parametersSchema ? { parametersSchema: PRESET.parametersSchema } : {}),
           // isActive/effectiveFrom quedan por defaults del schema.
         },
       });
@@ -86,6 +114,49 @@ async function seedCatalogSV(): Promise<void> {
   console.log(
     `[seed] Catálogo: deportes ${SPORTS_TO_SEED.map((_s) => _s.code).join(', ')} y presets v1 ${PRESETS_V1.map((_p) => _p.code).join(', ')} por deporte.`,
   );
+
+  //? Agregar Tennis v2 con campo format requerido
+  const TENNIS_SPORT = SEEDED_SPORTS.find((_s) => _s.code === 'TENIS');
+  if (TENNIS_SPORT) {
+    const TENNIS_V2_EXISTING = await PRISMA.tournamentFormatPreset.findUnique({
+      where: {
+        sportId_code_version: {
+          sportId: TENNIS_SPORT.id,
+          code: 'ROUND_ROBIN',
+          version: 2,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (TENNIS_V2_EXISTING === null) {
+      await PRISMA.tournamentFormatPreset.create({
+        data: {
+          sportId: TENNIS_SPORT.id,
+          code: 'ROUND_ROBIN',
+          version: 2,
+          name: 'Todos contra todos (con formato)',
+          schemaVersion: 1,
+          defaultParameters: { doubleRound: false, format: 'SINGLES' },
+          parametersSchema: [
+            { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false },
+            {
+              key: 'format',
+              type: 'enum',
+              label: 'Categoría de juego',
+              required: true,
+              options: [
+                { value: 'SINGLES', label: 'Singles' },
+                { value: 'DOUBLES', label: 'Dobles' },
+              ],
+            },
+          ],
+          isActive: true,
+        },
+      });
+      console.log('[seed] Tennis ROUND_ROBIN v2 (con formato) creada.');
+    }
+  }
 }
 
 async function seedFeeRuleSV(): Promise<void> {
