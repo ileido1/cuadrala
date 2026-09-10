@@ -14,6 +14,7 @@
   - Backward compatibility: Tennis v1 remains unchanged; only new tournaments against v2 require format field
 
 ### Changed
+- CI: `deploy-mobile.yml` uses `actions/checkout@v7` (Node 24) instead of `v4`, whose Node 20 runtime is deprecated on GitHub runners
 - `CreateParametrizedTournamentUseCase`: Removed early MVP validation; now validates against preset's schema directly
 - `create_tournament_screen.dart`: Replaced hardcoded `_isTenis`, `_tennisFormat`, `_doubleRound`, `_americanoRounds` with generic `_formatParameterValues` map
 - `TournamentPresetDto`: Added `parametersSchema` field for consuming schema from API
