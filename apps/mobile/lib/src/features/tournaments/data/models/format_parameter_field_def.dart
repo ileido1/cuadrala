@@ -51,6 +51,9 @@ abstract class FormatParameterFieldDef extends Equatable {
   }
 
   Map<String, Object?> toJson();
+
+  /// Value used when neither the user nor the preset defaults set one.
+  Object? get defaultValue;
 }
 
 final class BooleanFieldDef extends FormatParameterFieldDef {
@@ -59,6 +62,9 @@ final class BooleanFieldDef extends FormatParameterFieldDef {
     required super.label,
     super.required,
   }) : super(type: 'boolean');
+
+  @override
+  bool get defaultValue => false;
 
   @override
   Map<String, Object?> toJson() => {
@@ -83,6 +89,9 @@ final class IntFieldDef extends FormatParameterFieldDef {
     this.min,
     this.max,
   }) : super(type: 'int');
+
+  @override
+  int get defaultValue => min ?? 1;
 
   @override
   Map<String, Object?> toJson() => {
@@ -117,6 +126,10 @@ final class EnumFieldDef extends FormatParameterFieldDef {
     super.required,
     required this.options,
   }) : super(type: 'enum');
+
+  //? No implicit choice: a required enum must be picked explicitly.
+  @override
+  String? get defaultValue => null;
 
   @override
   Map<String, Object?> toJson() => {

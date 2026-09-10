@@ -5,6 +5,27 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.2.0] - 2026-09-10
+
+### Agregado
+
+- **Los parámetros del formato se arman desde la API.** Al crear un torneo, el
+  formulario sale del `parametersSchema` que declara cada formato (interruptores,
+  contadores con mínimo y máximo, opciones) en lugar de controles fijos por
+  formato. Un campo requerido sin valor bloquea la creación.
+
+### Corregido
+
+- **Un parámetro podía verse cargado sin estarlo.** El formulario mostraba
+  `false` en los interruptores y el mínimo en los contadores, pero no guardaba
+  esos valores: un campo requerido dejaba el botón de crear deshabilitado con un
+  valor válido en pantalla, y un contador en su mínimo obligaba a tocar `+` y
+  `-` para destrabarlo. Además ignoraba el default de la API: Americano mostraba
+  1 ronda cuando el preset define 3.
+
+  Ahora, al elegir el formato, se cargan los valores iniciales (el default del
+  preset y, si no declara uno, el del campo), y lo que se ve es lo que se envía.
+
 ## [1.1.0] - 2026-09-07
 
 ### Agregado

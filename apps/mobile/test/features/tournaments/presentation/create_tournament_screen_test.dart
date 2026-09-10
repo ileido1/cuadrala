@@ -66,6 +66,22 @@ const _presetWithSchema = TournamentPresetDto(
   ],
 );
 
+//? Mirrors the seeded AMERICANO preset: `rounds` has an API default that must
+//? win over the field minimum, `thirdPlaceMatch` has none and falls back.
+const _presetWithDefaults = TournamentPresetDto(
+  id: 'preset-am',
+  sportId: 'padel',
+  code: 'AMERICANO',
+  version: 1,
+  name: 'Americano',
+  schemaVersion: 1,
+  defaultParameters: {'rounds': 3},
+  parametersSchema: [
+    IntFieldDef(key: 'rounds', label: 'Rondas', required: true, min: 1, max: 50),
+    BooleanFieldDef(key: 'thirdPlaceMatch', label: 'Tercer lugar', required: true),
+  ],
+);
+
 const _presetWithoutSchema = TournamentPresetDto(
   id: 'preset-se',
   sportId: 'padel',
@@ -132,7 +148,9 @@ void main() {
     when(() => catalogRepository.listCategories()).thenAnswer((_) async => _categories);
     when(
       () => tournamentsRepository.getPresetsBySportId(sportId: any(named: 'sportId')),
-    ).thenAnswer((_) async => [_presetWithSchema, _presetWithoutSchema]);
+    ).thenAnswer(
+      (_) async => [_presetWithSchema, _presetWithDefaults, _presetWithoutSchema],
+    );
     //? Empty id makes the cubit emit an error, so the screen never navigates
     //? (there is no GoRouter in these tests).
     when(
@@ -239,6 +257,49 @@ void main() {
               as CreateTournamentRequest;
       expect(request.formatPresetId, 'preset-se');
       expect(request.formatParameters, isNull);
+    });
+  });
+
+  group('default values', () {
+    testWidgets('should display the preset default instead of the field minimum', (
+      tester,
+    ) async {
+      await _pumpScreen(tester);
+
+      await _selectPreset(tester, 'Americano');
+
+      expect(_inForm(find.text('3')), findsOneWidget);
+    });
+
+    testWidgets('should enable submit when required fields are untouched but have defaults', (
+      tester,
+    ) async {
+      await _pumpScreen(tester);
+      await _enterName(tester);
+
+      await _selectPreset(tester, 'Americano');
+
+      expect(_submitButton(tester).onPressed, isNotNull);
+    });
+
+    testWidgets('should send the displayed defaults when fields are untouched', (
+      tester,
+    ) async {
+      await _pumpScreen(tester);
+      await _enterName(tester);
+      await _selectPreset(tester, 'Americano');
+
+      await tester.tap(find.bySubtype<FilledButton>());
+      await tester.pumpAndSettle();
+
+      final request =
+          verify(
+                () => tournamentsRepository.createTournament(
+                  request: captureAny(named: 'request'),
+                ),
+              ).captured.single
+              as CreateTournamentRequest;
+      expect(request.formatParameters, {'rounds': 3, 'thirdPlaceMatch': false});
     });
   });
 

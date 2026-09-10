@@ -31,11 +31,11 @@ class DynamicFormatParametersForm extends StatelessWidget {
       return SwitchListTile(
         title: Text(field.label),
         subtitle: field.required == true ? const Text('Requerido') : null,
-        value: (values[field.key] as bool?) ?? false,
+        value: (values[field.key] as bool?) ?? field.defaultValue,
         onChanged: (value) => onChanged(field.key, value),
       );
     } else if (field is IntFieldDef) {
-      final currentValue = (values[field.key] as int?) ?? (field.min ?? 1);
+      final currentValue = (values[field.key] as int?) ?? field.defaultValue;
       return ListTile(
         title: Text(field.label),
         subtitle: field.required == true ? const Text('Requerido') : null,

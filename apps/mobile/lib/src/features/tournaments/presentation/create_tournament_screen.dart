@@ -35,6 +35,18 @@ String _presetDescription(String code) {
   }
 }
 
+/// Values the parameters form starts with: the preset default when the API
+/// declares one, otherwise the field fallback. Seeding them keeps what the user
+/// sees equal to what gets validated and sent.
+Map<String, Object?> _initialParameterValues(TournamentPresetDto? preset) {
+  final defaults = preset?.defaultParameters;
+  final presetDefaults = defaults is Map ? defaults : const {};
+  return {
+    for (final field in preset?.parametersSchema ?? const [])
+      field.key: ?(presetDefaults[field.key] ?? field.defaultValue),
+  };
+}
+
 final class CreateTournamentScreen extends StatefulWidget {
   const CreateTournamentScreen({super.key});
 
@@ -417,7 +429,12 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             final preset = presets
                                 .where((p) => p.id == id)
                                 .firstOrNull;
-                            setState(() => _selectedPreset = preset);
+                            setState(() {
+                              _selectedPreset = preset;
+                              _formatParameterValues = _initialParameterValues(
+                                preset,
+                              );
+                            });
                           },
                           child: Column(
                             children: [
