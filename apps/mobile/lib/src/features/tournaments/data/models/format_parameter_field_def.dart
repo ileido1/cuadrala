@@ -55,15 +55,10 @@ abstract class FormatParameterFieldDef extends Equatable {
 
 final class BooleanFieldDef extends FormatParameterFieldDef {
   const BooleanFieldDef({
-    required String key,
-    required String label,
-    bool? required,
-  }) : super(
-    key: key,
-    type: 'boolean',
-    label: label,
-    required: required,
-  );
+    required super.key,
+    required super.label,
+    super.required,
+  }) : super(type: 'boolean');
 
   @override
   Map<String, Object?> toJson() => {
@@ -82,17 +77,12 @@ final class IntFieldDef extends FormatParameterFieldDef {
   final int? max;
 
   const IntFieldDef({
-    required String key,
-    required String label,
-    bool? required,
+    required super.key,
+    required super.label,
+    super.required,
     this.min,
     this.max,
-  }) : super(
-    key: key,
-    type: 'int',
-    label: label,
-    required: required,
-  );
+  }) : super(type: 'int');
 
   @override
   Map<String, Object?> toJson() => {
@@ -122,16 +112,11 @@ final class EnumFieldDef extends FormatParameterFieldDef {
   final List<EnumOption> options;
 
   const EnumFieldDef({
-    required String key,
-    required String label,
-    bool? required,
+    required super.key,
+    required super.label,
+    super.required,
     required this.options,
-  }) : super(
-    key: key,
-    type: 'enum',
-    label: label,
-    required: required,
-  );
+  }) : super(type: 'enum');
 
   @override
   Map<String, Object?> toJson() => {

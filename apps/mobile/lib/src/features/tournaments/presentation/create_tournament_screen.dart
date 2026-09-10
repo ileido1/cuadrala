@@ -333,26 +333,6 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       )
                       .toList(),
                 ),
-              //? Mostrar selector de singles/dobles solo si es tenis
-              if (_isTenis) ...[
-                const SizedBox(height: 14),
-                Text(
-                  'Categoría de juego',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 8),
-if (_selectedPreset?.parametersSchema != null &&
-                    _selectedPreset!.parametersSchema!.isNotEmpty)
-                  DynamicFormatParametersForm(
-                    fields: _selectedPreset!.parametersSchema!,
-                    values: _formatParameterValues,
-                    onChanged: (key, value) => setState(() {
-                      _formatParameterValues[key] = value;
-                    }),
-                  ),
-              ],
               const SizedBox(height: 14),
               _CreateUnavailableField(
                 title: 'Cupos',
@@ -464,22 +444,16 @@ if (_selectedPreset?.parametersSchema != null &&
                             ],
                           ),
                         ),
-                        if (_selectedPreset != null) ...[
+                        //? Los parámetros los define el schema del preset.
+                        if (_selectedPreset?.parametersSchema?.isNotEmpty ??
+                            false) ...[
                           const SizedBox(height: 6),
-                          _PresetParametersCard(
-                            preset: _selectedPreset!,
-                            doubleRound: _doubleRound,
-                            onToggleDoubleRound: (v) =>
-                                setState(() => _doubleRound = v),
-                            americanoRounds: _americanoRounds,
-                            onChangeAmericanoRounds: (v) =>
-                                setState(() => _americanoRounds = v),
-                            americanoCourts: _americanoCourts,
-                            onChangeAmericanoCourts: (v) =>
-                                setState(() => _americanoCourts = v),
-                            thirdPlaceMatch: _thirdPlaceMatch,
-                            onToggleThirdPlaceMatch: (v) =>
-                                setState(() => _thirdPlaceMatch = v),
+                          DynamicFormatParametersForm(
+                            fields: _selectedPreset!.parametersSchema!,
+                            values: _formatParameterValues,
+                            onChanged: (key, value) => setState(
+                              () => _formatParameterValues[key] = value,
+                            ),
                           ),
                         ],
                       ],
@@ -709,187 +683,6 @@ final class _ErrorBox extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-final class _PresetParametersCard extends StatelessWidget {
-  const _PresetParametersCard({
-    required this.preset,
-    required this.doubleRound,
-    required this.onToggleDoubleRound,
-    required this.americanoRounds,
-    required this.onChangeAmericanoRounds,
-    required this.americanoCourts,
-    required this.onChangeAmericanoCourts,
-    required this.thirdPlaceMatch,
-    required this.onToggleThirdPlaceMatch,
-  });
-
-  final TournamentPresetDto preset;
-  final bool doubleRound;
-  final ValueChanged<bool> onToggleDoubleRound;
-  final int americanoRounds;
-  final ValueChanged<int> onChangeAmericanoRounds;
-  final int americanoCourts;
-  final ValueChanged<int> onChangeAmericanoCourts;
-  final bool thirdPlaceMatch;
-  final ValueChanged<bool> onToggleThirdPlaceMatch;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Parámetros',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 10),
-          if (preset.code == 'ROUND_ROBIN')
-            SwitchListTile(
-              value: doubleRound,
-              onChanged: onToggleDoubleRound,
-              title: const Text(
-                'Doble vuelta',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-              subtitle: Text(
-                doubleRound ? 'Ida y vuelta' : 'Una sola vuelta',
-                style: TextStyle(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              contentPadding: EdgeInsets.zero,
-            )
-          else if (preset.code == 'AMERICANO') ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Rondas',
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                _StepperTiny(
-                  value: americanoRounds,
-                  min: 1,
-                  max: 50,
-                  onChanged: onChangeAmericanoRounds,
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Canchas',
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                _StepperTiny(
-                  value: americanoCourts,
-                  min: 1,
-                  max: 20,
-                  onChanged: onChangeAmericanoCourts,
-                ),
-              ],
-            ),
-          ] else if (preset.code == 'SINGLE_ELIMINATION')
-            SwitchListTile(
-              value: thirdPlaceMatch,
-              onChanged: onToggleThirdPlaceMatch,
-              title: const Text(
-                'Partido por el 3er puesto',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-              subtitle: Text(
-                thirdPlaceMatch
-                    ? 'Incluye partido por el 3er lugar'
-                    : 'Solo bracket principal',
-                style: TextStyle(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              contentPadding: EdgeInsets.zero,
-            )
-          else
-            Text(
-              'Este formato no requiere parámetros en el MVP.',
-              style: TextStyle(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _StepperTiny extends StatelessWidget {
-  const _StepperTiny({
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-  });
-
-  final int value;
-  final int min;
-  final int max;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final canDec = value > min;
-    final canInc = value < max;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          visualDensity: VisualDensity.compact,
-          onPressed: canDec ? () => onChanged(value - 1) : null,
-          icon: const Icon(AppIcons.removeCircle),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: scheme.outlineVariant),
-          ),
-          child: Text(
-            '$value',
-            style: const TextStyle(fontWeight: FontWeight.w900),
-          ),
-        ),
-        IconButton(
-          visualDensity: VisualDensity.compact,
-          onPressed: canInc ? () => onChanged(value + 1) : null,
-          icon: const Icon(AppIcons.addCircle),
-        ),
-      ],
     );
   }
 }

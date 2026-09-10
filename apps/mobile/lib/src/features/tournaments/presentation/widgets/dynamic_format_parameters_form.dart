@@ -7,11 +7,11 @@ class DynamicFormatParametersForm extends StatelessWidget {
   final void Function(String key, Object? value) onChanged;
 
   const DynamicFormatParametersForm({
-    Key? key,
+    super.key,
     required this.fields,
     required this.values,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,12 +21,12 @@ class DynamicFormatParametersForm extends StatelessWidget {
 
     return Column(
       children: fields.map((field) {
-        return _buildFieldWidget(field);
+        return _buildFieldWidget(context, field);
       }).toList(),
     );
   }
 
-  Widget _buildFieldWidget(FormatParameterFieldDef field) {
+  Widget _buildFieldWidget(BuildContext context, FormatParameterFieldDef field) {
     if (field is BooleanFieldDef) {
       return SwitchListTile(
         title: Text(field.label),
