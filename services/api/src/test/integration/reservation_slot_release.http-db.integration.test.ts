@@ -1,15 +1,11 @@
-import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createApp } from '../../app.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
 import { createTestCategorySV } from '../helpers/test-category.js';
-
-const APP = createApp();
 
 describe.skipIf(!HAS_INTEGRATION_DATABASE)(
   'Liberar el turno de una cancha (HTTP + DB)',
