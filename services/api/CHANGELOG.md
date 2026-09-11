@@ -5,6 +5,27 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.3.1] - 2026-09-11
+
+### Corregido
+
+- **Los presets v1 vuelven a aceptar sus `formatParameters`.** `POST
+  /tournaments` respondía `400 VALIDACION_FALLIDA` a cualquier parámetro
+  —por ejemplo `{ "doubleRound": true }`— enviado contra un preset
+  `AMERICANO`, `ROUND_ROBIN` o `SINGLE_ELIMINATION` v1 creado antes de que
+  existiera la columna `parametersSchema`.
+
+  El validador ahora solo lee el `parametersSchema` del preset. La migración
+  que agregó la columna la dejó en `NULL` y el seed no toca los presets v1 que
+  ya existen, así que en esos presets toda key contaba como extra. La app
+  móvil, que arma el formulario desde ese schema, tampoco mostraba los
+  parámetros.
+
+  La migración `20260911120000_backfill_v1_preset_parameters_schema` completa
+  el schema de esos presets (solo `schemaVersion = 1` y todavía en `NULL`) con
+  los mismos valores que declara el seed. Los presets que ya tienen schema,
+  como Tenis `ROUND_ROBIN` v2, no cambian.
+
 ## [1.3.0] - 2026-09-07
 
 ### Agregado

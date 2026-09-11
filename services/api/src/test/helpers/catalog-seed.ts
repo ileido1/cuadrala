@@ -2,6 +2,7 @@ import {
   RACKET_SPORT_CODES,
   SPORT_NAMES,
 } from '../../domain/services/category/sport_classification_catalog.js';
+import { FORMAT_PRESET_V1_PARAMETERS_SCHEMAS } from '../../domain/services/tournament/format_preset_parameters_catalog.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 
@@ -45,6 +46,9 @@ async function ensurePresetV1SV(
       name: _name,
       schemaVersion: 1,
       defaultParameters: _defaultParameters,
+      //? Same schema the seed declares: without it the validator treats every
+      //? formatParameters key as extra and rejects it.
+      parametersSchema: FORMAT_PRESET_V1_PARAMETERS_SCHEMAS[_code] as Prisma.InputJsonValue,
     },
     select: { id: true },
   });

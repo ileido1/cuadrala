@@ -16,6 +16,7 @@ import {
   RACKET_SPORT_CODES,
   SPORT_NAMES,
 } from '../src/domain/services/category/sport_classification_catalog.js';
+import { FORMAT_PRESET_V1_PARAMETERS_SCHEMAS } from '../src/domain/services/tournament/format_preset_parameters_catalog.js';
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -41,30 +42,26 @@ async function seedCatalogSV(): Promise<void> {
     defaultParameters: Prisma.InputJsonValue;
     parametersSchema?: Prisma.InputJsonValue;
   }> = [
+    //? Schemas come from the domain catalog so the test helper and the backfill
+    //? migration cannot drift from what the seed declares.
     {
       code: 'AMERICANO',
       name: 'Americano',
       defaultParameters: { rounds: 3, courts: 1 },
-      parametersSchema: [
-        { key: 'rounds', type: 'int', label: 'Rondas', required: false, min: 1, max: 50 },
-        { key: 'courts', type: 'int', label: 'Canchas', required: false, min: 1, max: 10 },
-      ],
+      parametersSchema: FORMAT_PRESET_V1_PARAMETERS_SCHEMAS.AMERICANO as Prisma.InputJsonValue,
     },
     {
       code: 'ROUND_ROBIN',
       name: 'Todos contra todos',
       defaultParameters: { doubleRound: false },
-      parametersSchema: [
-        { key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false },
-      ],
+      parametersSchema: FORMAT_PRESET_V1_PARAMETERS_SCHEMAS.ROUND_ROBIN as Prisma.InputJsonValue,
     },
     {
       code: 'SINGLE_ELIMINATION',
       name: 'Eliminación simple',
       defaultParameters: { thirdPlaceMatch: false },
-      parametersSchema: [
-        { key: 'thirdPlaceMatch', type: 'boolean', label: 'Tercer lugar', required: false },
-      ],
+      parametersSchema:
+        FORMAT_PRESET_V1_PARAMETERS_SCHEMAS.SINGLE_ELIMINATION as Prisma.InputJsonValue,
     },
   ];
 
