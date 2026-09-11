@@ -166,6 +166,50 @@ const OPENAPI_CONST = {
       },
     },
     '/api/v1/tournaments': {
+      get: {
+        tags: ['Tournaments'],
+        summary: 'Listar torneos del catálogo público',
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: ['DRAFT', 'OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+            },
+          },
+          { name: 'sportId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'venueId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'startsAtFrom', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+          { name: 'startsAtTo', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+          {
+            name: 'near',
+            in: 'query',
+            required: false,
+            description:
+              'Coordenadas "lat,lng". Filtra por la sede del torneo dentro de radiusKm y habilita distanceKm en cada item; sin este parámetro ningún item lo incluye.',
+            schema: { type: 'string', example: '-34.6,-58.4' },
+          },
+          {
+            name: 'radiusKm',
+            in: 'query',
+            required: false,
+            description: 'Solo aplica junto a near. Default 10 cuando near está presente.',
+            schema: { type: 'number', exclusiveMinimum: 0, maximum: 200, default: 10 },
+          },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        ],
+        responses: {
+          '200': {
+            description:
+              'OK. Cada item de `data.items` incluye `distanceKm` (number, opcional): presente solo cuando se envió `near`.',
+          },
+          '400': { description: 'Validación fallida' },
+        },
+      },
       post: {
         tags: ['Tournaments'],
         summary: 'Crear torneo parametrizado',
