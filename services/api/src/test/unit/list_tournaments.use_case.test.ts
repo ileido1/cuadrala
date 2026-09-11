@@ -112,4 +112,26 @@ describe('ListTournamentsUseCase', () => {
       { page: 1, limit: 20 }
     );
   });
+
+  it('should default radiusKm to 10 when near is given without radiusKm', async () => {
+    mockRepository.listTournamentsSV.mockResolvedValue({ items: [], total: 0 });
+
+    await useCase.executeSV({ page: 1, limit: 20, near: '-34.6,-58.4' });
+
+    expect(mockRepository.listTournamentsSV).toHaveBeenCalledWith(
+      { near: { lat: -34.6, lng: -58.4, radiusKm: 10 } },
+      { page: 1, limit: 20 }
+    );
+  });
+
+  it('should pass the given radiusKm to the repository when provided', async () => {
+    mockRepository.listTournamentsSV.mockResolvedValue({ items: [], total: 0 });
+
+    await useCase.executeSV({ page: 1, limit: 20, near: '-34.6,-58.4', radiusKm: 25 });
+
+    expect(mockRepository.listTournamentsSV).toHaveBeenCalledWith(
+      { near: { lat: -34.6, lng: -58.4, radiusKm: 25 } },
+      { page: 1, limit: 20 }
+    );
+  });
 });

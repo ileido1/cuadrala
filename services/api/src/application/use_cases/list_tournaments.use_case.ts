@@ -13,12 +13,19 @@ export type ListTournamentsUseCaseInput = {
   venueId?: string;
   startsAtFrom?: string;
   startsAtTo?: string;
+  /** Coordenadas "lat,lng"; sin esto no se filtra ni se calcula distanceKm. */
+  near?: string;
+  /** Radio en km cuando `near` está presente. Sin declarar, cae al default del caso de uso. */
+  radiusKm?: number;
   page: number;
   limit: number;
 };
 
 export class ListTournamentsUseCase {
-  constructor(private readonly _tournamentQueryRepository: TournamentQueryRepository) {}
+  constructor(
+    private readonly _tournamentQueryRepository: TournamentQueryRepository,
+    private readonly _defaultRadiusKm: number = 10,
+  ) {}
 
   async executeSV(_input: ListTournamentsUseCaseInput): Promise<{
     items: TournamentListItemDTO[];
@@ -38,10 +45,23 @@ export class ListTournamentsUseCase {
       ...(_input.venueId !== undefined ? { venueId: _input.venueId } : {}),
       ...(_input.startsAtFrom !== undefined ? { startsAtFrom: _input.startsAtFrom } : {}),
       ...(_input.startsAtTo !== undefined ? { startsAtTo: _input.startsAtTo } : {}),
+      ...(_input.near !== undefined ? { near: this._parseNearSV(_input.near, _input.radiusKm) } : {}),
     };
     const PAGE: PageDTO = { page: _input.page, limit: _input.limit };
 
     const { items, total } = await this._tournamentQueryRepository.listTournamentsSV(FILTERS, PAGE);
     return { items, pageInfo: { page: _input.page, limit: _input.limit, total } };
+  }
+
+  private _parseNearSV(
+    _near: string,
+    _radiusKm: number | undefined,
+  ): { lat: number; lng: number; radiusKm: number } {
+    const [LAT_STR, LNG_STR] = _near.split(',');
+    return {
+      lat: Number(LAT_STR),
+      lng: Number(LNG_STR),
+      radiusKm: _radiusKm ?? this._defaultRadiusKm,
+    };
   }
 }

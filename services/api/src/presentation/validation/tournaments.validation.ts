@@ -16,6 +16,15 @@ export const LIST_TOURNAMENTS_QUERY_SCHEMA = z
       .string()
       .datetime({ message: 'startsAtTo debe ser ISO 8601.' })
       .optional(),
+    near: z
+      .string()
+      .regex(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/, 'near debe ser "lat,lng".')
+      .optional(),
+    radiusKm: z.coerce
+      .number()
+      .positive('radiusKm debe ser mayor a 0.')
+      .max(200, 'radiusKm no puede superar 200.')
+      .optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
   })

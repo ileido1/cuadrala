@@ -5,6 +5,19 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-09-11
+
+### Agregado
+
+- **`GET /tournaments` filtra por cercanía.** Acepta `near` ("lat,lng") y
+  `radiusKm` (default 10, máximo 200) y devuelve `distanceKm` en cada item
+  cuando `near` está presente; sin `near` ningún item lo incluye. El filtro
+  mira la sede del torneo (`venue.latitude/longitude`): un torneo sin sede no
+  puede matchear "cerca" y queda afuera.
+
+  Usa el mismo enfoque que `GET /venues` (bounding box en la consulta,
+  haversine exacto en memoria para filtrar y ordenar por distancia real).
+
 ## [1.3.1] - 2026-09-11
 
 ### Corregido

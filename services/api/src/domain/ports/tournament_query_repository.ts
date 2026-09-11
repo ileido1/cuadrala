@@ -28,6 +28,8 @@ export type TournamentListItemDTO = {
   maxSlots: number | null;
   /** Cierre informativo de la inscripción (ISO 8601). */
   registrationClosesAt: string | null;
+  /** Distancia a `near` en km. Ausente (nunca `null`) cuando el listado no se filtró por `near`. */
+  distanceKm?: number;
 };
 
 export type TournamentDetailDTO = TournamentListItemDTO & {
@@ -54,6 +56,8 @@ export type ListTournamentsFiltersDTO = {
   venueId?: string;
   startsAtFrom?: string;
   startsAtTo?: string;
+  /** Filtra por la sede del torneo dentro de `radiusKm` y habilita `distanceKm` en el DTO. */
+  near?: { lat: number; lng: number; radiusKm: number };
 };
 
 export type PageDTO = {

@@ -117,6 +117,46 @@ describe('LIST_TOURNAMENTS_QUERY_SCHEMA', () => {
     expect(result.startsAtFrom).toBe('2026-06-01T00:00:00.000Z');
     expect(result.startsAtTo).toBeUndefined();
   });
+
+  it('should accept a valid near value', () => {
+    const result = LIST_TOURNAMENTS_QUERY_SCHEMA.parse({ near: '-34.6,-58.4' });
+
+    expect(result.near).toBe('-34.6,-58.4');
+  });
+
+  it('should throw on invalid near format', () => {
+    const result = LIST_TOURNAMENTS_QUERY_SCHEMA.safeParse({ near: 'not-a-coordinate' });
+
+    expect(result.success).toBe(false);
+    expect(result.success ? undefined : result.error.issues[0]?.message).toBe(
+      'near debe ser "lat,lng".'
+    );
+  });
+
+  it('should leave radiusKm undefined when not provided', () => {
+    const result = LIST_TOURNAMENTS_QUERY_SCHEMA.parse({ near: '-34.6,-58.4' });
+
+    expect(result.radiusKm).toBeUndefined();
+  });
+
+  it('should coerce a valid radiusKm', () => {
+    const result = LIST_TOURNAMENTS_QUERY_SCHEMA.parse({
+      near: '-34.6,-58.4',
+      radiusKm: '25',
+    });
+
+    expect(result.radiusKm).toBe(25);
+  });
+
+  it('should reject an out-of-range radiusKm with a Spanish message', () => {
+    const zero = LIST_TOURNAMENTS_QUERY_SCHEMA.safeParse({ near: '-34.6,-58.4', radiusKm: '0' });
+    const tooBig = LIST_TOURNAMENTS_QUERY_SCHEMA.safeParse({ near: '-34.6,-58.4', radiusKm: '201' });
+
+    expect(zero.success ? undefined : zero.error.issues[0]?.message).toBe('radiusKm debe ser mayor a 0.');
+    expect(tooBig.success ? undefined : tooBig.error.issues[0]?.message).toBe(
+      'radiusKm no puede superar 200.'
+    );
+  });
 });
 
 describe('TOURNAMENT_ID_PARAM_SCHEMA', () => {

@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (S1)**: `GET /tournaments` now accepts `near`/`radiusKm` and returns `distanceKm` per item, filtering by the tournament's venue location (`services/api` 1.4.0)
 - **Sport-Configurable Format Parameters (SDD Change A)**
   - Backend: Generic tournament format parameter schema system (boolean/int/enum fields)
   - Database: Added `parametersSchema` column to `TournamentFormatPreset` for storing field definitions
