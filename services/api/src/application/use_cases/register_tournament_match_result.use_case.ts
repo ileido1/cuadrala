@@ -1,7 +1,7 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { TournamentQueryRepository } from '../../domain/ports/tournament_query_repository.js';
 import type { TournamentMatchResultRepository } from '../../domain/ports/tournament_match_result_repository.js';
-import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
+import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
 
 export type ScoreEntryDTO = {
   scores: { userId: string; points: number }[];
@@ -23,7 +23,7 @@ export type RegisterTournamentMatchResultOutput = {
 export class RegisterTournamentMatchResultUseCase {
   constructor(
     private readonly _tournamentQueryRepository: TournamentQueryRepository,
-    private readonly _venueStaffRepository: VenueStaffRepository,
+    private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
     private readonly _tournamentMatchResultRepository: TournamentMatchResultRepository,
   ) {}
 
@@ -43,13 +43,14 @@ export class RegisterTournamentMatchResultUseCase {
       throw new AppError('VALIDACION_FALLIDA', 'El torneo no tiene partidos asociados.', 400);
     }
 
-    const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
-      requestingUserId,
-      VENUE_ID,
-    );
-    if (!IS_STAFF) {
-      throw new AppError('ACCESO_DENEGADO', 'No tienes permisos para editar este torneo.', 403);
-    }
+    //? El organizador del torneo también puede cargar resultados, no solo el staff de la sede
+    //? (regla compartida con list_tournament_registrations.use_case.ts — no duplicarla).
+    await this._assertTournamentOrganizerAccess.executeSV({
+      actorUserId: requestingUserId,
+      organizerUserId: TOURNAMENT.organizerUserId,
+      venueId: VENUE_ID,
+      forbiddenMessage: 'No tienes permisos para editar este torneo.',
+    });
 
     const BELONGS = await this._tournamentMatchResultRepository.matchBelongsToTournamentSV(
       matchId,

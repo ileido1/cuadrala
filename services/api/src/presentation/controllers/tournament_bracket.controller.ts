@@ -3,7 +3,10 @@ import type { Request, Response } from 'express';
 import { AppError } from '../../domain/errors/app_error.js';
 import { GET_TOURNAMENT_BRACKET_UC } from '../composition/tournament_bracket.composition.js';
 import { TOURNAMENT_ID_PARAM_SCHEMA } from '../validation/tournaments.validation.js';
-import { MATCH_ID_PARAM_SCHEMA, SCORE_ENTRY_SCHEMA } from '../validation/tournament_bracket.validation.js';
+import {
+  SCORE_ENTRY_SCHEMA,
+  TOURNAMENT_MATCH_RESULT_PARAMS_SCHEMA,
+} from '../validation/tournament_bracket.validation.js';
 import { REGISTER_TOURNAMENT_MATCH_RESULT_UC } from '../composition/tournament_bracket.composition.js';
 
 export async function getTournamentBracketCON(_req: Request, _res: Response): Promise<void> {
@@ -19,8 +22,7 @@ export async function getTournamentBracketCON(_req: Request, _res: Response): Pr
 }
 
 export async function postTournamentMatchResultCON(_req: Request, _res: Response): Promise<void> {
-  const PARAMS = TOURNAMENT_ID_PARAM_SCHEMA.parse(_req.params);
-  const MATCH_PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
+  const PARAMS = TOURNAMENT_MATCH_RESULT_PARAMS_SCHEMA.parse(_req.params);
   const BODY = SCORE_ENTRY_SCHEMA.parse(_req.body);
 
   if (_req.authUser === undefined) {
@@ -29,7 +31,7 @@ export async function postTournamentMatchResultCON(_req: Request, _res: Response
 
   const RESULT = await REGISTER_TOURNAMENT_MATCH_RESULT_UC.executeSV({
     tournamentId: PARAMS.tournamentId,
-    matchId: MATCH_PARAMS.matchId,
+    matchId: PARAMS.matchId,
     matchNumber: 0, // No se usa actualmente pero se requiere en el input
     roundNumber: 0, // No se usa actualmente pero se requiere en el input
     scores: BODY.scores,

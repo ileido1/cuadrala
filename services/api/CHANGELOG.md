@@ -5,6 +5,24 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.8.1] - 2026-09-12
+
+### Corregido
+
+- **`POST /tournaments/:tournamentId/matches/:matchId/results` rechazaba al
+  organizador del torneo.** El guard solo aceptaba staff de la sede
+  (`isUserStaffOfVenueSV`); el organizador del torneo recibía 403
+  `ACCESO_DENEGADO` al intentar cargar un resultado de su propio torneo. Ahora
+  reutiliza `AssertTournamentOrganizerAccessUseCase.executeSV` (organizador O
+  staff de sede), la misma regla ya compartida por
+  `list_tournament_registrations.use_case.ts`.
+- **Bug preexistente descubierto en esta slice**: la ruta nunca funcionó por
+  HTTP para nadie. Express fusiona `tournamentId` y `matchId` en un mismo
+  `_req.params`, pero el controller los validaba con dos schemas Zod
+  `.strict()` separados — cada uno rechazaba la clave del otro como "no
+  reconocida", devolviendo siempre 400 `VALIDACION_FALLIDA`. Se reemplazó por
+  un único schema combinado (`TOURNAMENT_MATCH_RESULT_PARAMS_SCHEMA`).
+
 ## [1.8.0] - 2026-09-12
 
 ### Agregado

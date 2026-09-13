@@ -9,12 +9,9 @@ const mockTournamentQueryRepository = {
   listViewerTournamentsSV: vi.fn(),
 };
 
-const mockVenueStaffRepository = {
-  upsertSV: vi.fn(),
-  isUserStaffOfVenueSV: vi.fn(),
-  findByVenueAndUserSV: vi.fn(),
-  listByUserIdSV: vi.fn(),
-  removeByVenueAndUserSV: vi.fn(),
+const mockAssertTournamentOrganizerAccess = {
+  hasAccessSV: vi.fn(),
+  executeSV: vi.fn(),
 };
 
 const mockTournamentMatchResultRepository = {
@@ -25,12 +22,47 @@ const mockTournamentMatchResultRepository = {
 
 const useCase = new RegisterTournamentMatchResultUseCase(
   mockTournamentQueryRepository,
-  mockVenueStaffRepository,
+  mockAssertTournamentOrganizerAccess as never,
   mockTournamentMatchResultRepository,
 );
 
+const BASE_TOURNAMENT = {
+  id: 'tournament-uuid',
+  name: 'Torneo Test',
+  status: 'IN_PROGRESS',
+  organizerUserId: 'organizer-uuid',
+  organizerName: 'Organizer',
+  sportId: 'sport-uuid',
+  sportName: 'Padel',
+  categoryId: 'cat-uuid',
+  categoryName: 'Masculino',
+  startsAt: '2026-06-01T00:00:00.000Z',
+  registrationCount: 4,
+  venueId: 'venue-uuid',
+  venueName: 'Venue Test',
+  inscriptionPrice: null,
+  maxSlots: null,
+  registrationClosesAt: null,
+  gender: null,
+  formatPresetId: 'preset-uuid',
+  formatPresetName: 'Single Elimination',
+  presetSchemaVersion: 1,
+  formatParameters: null,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+function resetMocksSV(): void {
+  vi.clearAllMocks();
+  mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(BASE_TOURNAMENT);
+  mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
+  mockTournamentMatchResultRepository.matchBelongsToTournamentSV.mockResolvedValue(true);
+  mockAssertTournamentOrganizerAccess.executeSV.mockResolvedValue(undefined);
+}
+
 describe('RegisterTournamentMatchResultUseCase', () => {
   it('should throw TORNEO_NO_ENCONTRADO when tournament does not exist', async () => {
+    resetMocksSV();
     mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(null);
 
     await expect(
@@ -45,26 +77,60 @@ describe('RegisterTournamentMatchResultUseCase', () => {
     ).rejects.toThrow('El torneo indicado no existe.');
   });
 
-  it('should throw ACCESO_DENEGADO when user is not staff of venue', async () => {
-    mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue({
-      id: 'tournament-uuid',
-      name: 'Torneo Test',
-      status: 'IN_PROGRESS',
-      sportId: 'sport-uuid',
-      sportName: 'Padel',
-      categoryId: 'cat-uuid',
-      categoryName: 'Masculino',
-      startsAt: '2026-06-01T00:00:00.000Z',
-      registrationCount: 4,
-      formatPresetId: 'preset-uuid',
-      formatPresetName: 'Single Elimination',
-      presetSchemaVersion: 1,
-      formatParameters: null,
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
+  it('should allow the tournament organizer (not venue staff) to record a result', async () => {
+    resetMocksSV();
+    mockTournamentMatchResultRepository.registerResultSV.mockResolvedValue({
+      resultId: 'result-uuid',
+      recordedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
-    mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
-    mockVenueStaffRepository.isUserStaffOfVenueSV.mockResolvedValue(false);
+
+    const RESULT = await useCase.executeSV({
+      tournamentId: 'tournament-uuid',
+      matchId: 'match-uuid',
+      matchNumber: 1,
+      roundNumber: 1,
+      scores: [{ userId: 'user-1', points: 6 }],
+      requestingUserId: 'organizer-uuid',
+    });
+
+    expect(RESULT.resultId).toBe('result-uuid');
+    expect(mockAssertTournamentOrganizerAccess.executeSV).toHaveBeenCalledWith({
+      actorUserId: 'organizer-uuid',
+      organizerUserId: 'organizer-uuid',
+      venueId: 'venue-uuid',
+      forbiddenMessage: 'No tienes permisos para editar este torneo.',
+    });
+    expect(mockTournamentMatchResultRepository.registerResultSV).toHaveBeenCalledWith({
+      matchId: 'match-uuid',
+      scores: [{ userId: 'user-1', points: 6 }],
+    });
+  });
+
+  it('should allow venue staff to record a result', async () => {
+    resetMocksSV();
+    mockTournamentMatchResultRepository.registerResultSV.mockResolvedValue({
+      resultId: 'result-uuid',
+      recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    const RESULT = await useCase.executeSV({
+      tournamentId: 'tournament-uuid',
+      matchId: 'match-uuid',
+      matchNumber: 1,
+      roundNumber: 1,
+      scores: [{ userId: 'user-1', points: 6 }],
+      requestingUserId: 'staff-uuid',
+    });
+
+    expect(RESULT.resultId).toBe('result-uuid');
+  });
+
+  it('should propagate 403 when the requesting user is neither the organizer nor venue staff', async () => {
+    resetMocksSV();
+    const { AppError } = await import('../../domain/errors/app_error.js');
+    mockAssertTournamentOrganizerAccess.executeSV.mockRejectedValue(
+      new AppError('NO_AUTORIZADO', 'No tienes permisos para editar este torneo.', 403),
+    );
 
     await expect(
       useCase.executeSV({
@@ -73,32 +139,14 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         matchNumber: 1,
         roundNumber: 1,
         scores: [{ userId: 'user-1', points: 6 }],
-        requestingUserId: 'non-staff-user',
+        requestingUserId: 'unrelated-user',
       }),
     ).rejects.toThrow('No tienes permisos para editar este torneo.');
+    expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
   });
 
   it('should throw VALIDACION_FALLIDA when scores array is empty', async () => {
-    mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue({
-      id: 'tournament-uuid',
-      name: 'Torneo Test',
-      status: 'IN_PROGRESS',
-      sportId: 'sport-uuid',
-      sportName: 'Padel',
-      categoryId: 'cat-uuid',
-      categoryName: 'Masculino',
-      startsAt: '2026-06-01T00:00:00.000Z',
-      registrationCount: 4,
-      formatPresetId: 'preset-uuid',
-      formatPresetName: 'Single Elimination',
-      presetSchemaVersion: 1,
-      formatParameters: null,
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    });
-    mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
-    mockVenueStaffRepository.isUserStaffOfVenueSV.mockResolvedValue(true);
-    mockTournamentMatchResultRepository.matchBelongsToTournamentSV.mockResolvedValue(true);
+    resetMocksSV();
 
     await expect(
       useCase.executeSV({
@@ -107,32 +155,13 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         matchNumber: 1,
         roundNumber: 1,
         scores: [],
-        requestingUserId: 'user-staff',
+        requestingUserId: 'organizer-uuid',
       }),
     ).rejects.toThrow('Debe proporcionar al menos un resultado.');
   });
 
   it('should throw VALIDACION_FALLIDA when score has invalid points', async () => {
-    mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue({
-      id: 'tournament-uuid',
-      name: 'Torneo Test',
-      status: 'IN_PROGRESS',
-      sportId: 'sport-uuid',
-      sportName: 'Padel',
-      categoryId: 'cat-uuid',
-      categoryName: 'Masculino',
-      startsAt: '2026-06-01T00:00:00.000Z',
-      registrationCount: 4,
-      formatPresetId: 'preset-uuid',
-      formatPresetName: 'Single Elimination',
-      presetSchemaVersion: 1,
-      formatParameters: null,
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    });
-    mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
-    mockVenueStaffRepository.isUserStaffOfVenueSV.mockResolvedValue(true);
-    mockTournamentMatchResultRepository.matchBelongsToTournamentSV.mockResolvedValue(true);
+    resetMocksSV();
 
     await expect(
       useCase.executeSV({
@@ -141,7 +170,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         matchNumber: 1,
         roundNumber: 1,
         scores: [{ userId: 'user-1', points: -1 }],
-        requestingUserId: 'user-staff',
+        requestingUserId: 'organizer-uuid',
       }),
     ).rejects.toThrow('Cada score debe tener userId y points (número no negativo).');
   });

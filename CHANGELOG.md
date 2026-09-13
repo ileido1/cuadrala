@@ -29,6 +29,7 @@
 - Prisma migration: Added `parametersSchema` column to `TournamentFormatPreset` model
 
 ### Fixed
+- **Tournaments handoff fidelity (S6a)**: `POST /tournaments/:tournamentId/matches/:matchId/results` now accepts the tournament's organizer (not just venue staff), and fixes a pre-existing bug where the route's two path params (`tournamentId`+`matchId`) always failed strict Zod validation, so the route never worked via HTTP for anyone (`services/api` 1.8.1)
 - API 1.3.1: v1 format presets (`AMERICANO`, `ROUND_ROBIN`, `SINGLE_ELIMINATION`) created before the `parametersSchema` column accept their `formatParameters` again; migration `20260911120000_backfill_v1_preset_parameters_schema` fills the missing schema
 - Tournament creation no longer hardcoded to specific sports (Tenis singles/doubles selector)
 - Parameter validation now driven by database configuration, not client code
