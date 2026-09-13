@@ -72,6 +72,23 @@ export type PageDTO = {
   limit: number;
 };
 
+/**
+ * Un torneo desde el punto de vista del usuario que consulta: en que estado
+ * esta su inscripcion (si tiene), si tiene una invitacion pendiente, si es el
+ * organizador, y (solo para el organizador) cuantas inscripciones esperan
+ * confirmacion.
+ */
+export type ViewerTournamentItemDTO = {
+  tournament: TournamentListItemDTO;
+  /** `null` cuando el usuario no tiene inscripcion vigente (PENDING/CONFIRMED) en el torneo. */
+  registrationStatus: 'PENDING' | 'CONFIRMED' | null;
+  /** Id de la invitacion PENDING del usuario a este torneo; `null` si no hay ninguna. */
+  pendingInvitationId: string | null;
+  isOrganizer: boolean;
+  /** Solo tiene valor cuando `isOrganizer` es true; `null` para cualquier otro rol. */
+  pendingRegistrationsCount: number | null;
+};
+
 export interface TournamentQueryRepository {
   listTournamentsSV(
     _filters: ListTournamentsFiltersDTO,
@@ -89,4 +106,11 @@ export interface TournamentQueryRepository {
     _filters: ListTournamentsFiltersDTO,
     _page: PageDTO,
   ): Promise<{ items: TournamentListItemDTO[]; total: number }>;
+
+  /**
+   * Torneos en los que el usuario esta inscripto, invitado (PENDING), o que
+   * organiza. Un torneo puede aparecer una sola vez aunque el usuario cumpla
+   * mas de un rol a la vez (p. ej. organizador que tambien se autoinscribio).
+   */
+  listViewerTournamentsSV(_userId: string): Promise<ViewerTournamentItemDTO[]>;
 }

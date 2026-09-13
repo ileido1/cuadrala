@@ -6,6 +6,7 @@ const mockTournamentQueryRepository = {
   getTournamentByIdSV: vi.fn(),
   listTournamentRegistrationsSV: vi.fn(),
   listTournamentsByVenueSV: vi.fn(),
+  listViewerTournamentsSV: vi.fn(),
 };
 
 const mockVenueStaffRepository = {

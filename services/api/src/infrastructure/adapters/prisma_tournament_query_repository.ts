@@ -10,6 +10,7 @@ import type {
   TournamentDetailDTO,
   TournamentListItemDTO,
   TournamentQueryRepository,
+  ViewerTournamentItemDTO,
 } from '../../domain/ports/tournament_query_repository.js';
 
 import type { Prisma } from '../../generated/prisma/client.js';
@@ -63,6 +64,51 @@ export function toListItemDTO(_row: {
     //? ausencia (no `null`) es lo que el contrato usa para decir "no se pidió".
     ...(_row.distanceKm !== undefined ? { distanceKm: _row.distanceKm } : {}),
   };
+}
+
+/**
+ * @name    :buildViewerTournamentItemsSV
+ * @version :1.0.0
+ * @description :Combina torneos, inscripciones vigentes, invitaciones
+ * pendientes y torneos organizados en un `ViewerTournamentItemDTO` por
+ * torneo. Es una funcion pura para poder probar la logica de combinacion
+ * (roles, conteo solo para organizador) sin tocar Prisma.
+ * @param {object} _input - Torneos y las piezas ya resueltas por el llamador.
+ * @returns {ViewerTournamentItemDTO[]}
+ */
+export function buildViewerTournamentItemsSV(_input: {
+  tournaments: TournamentListItemDTO[];
+  registrations: { tournamentId: string; status: 'PENDING' | 'CONFIRMED' }[];
+  invitations: { tournamentId: string; id: string }[];
+  organizerTournamentIds: string[];
+  pendingRegistrationCounts: { tournamentId: string; count: number }[];
+}): ViewerTournamentItemDTO[] {
+  const REGISTRATION_STATUS_BY_TOURNAMENT_ID = new Map(
+    _input.registrations.map((_r) => [_r.tournamentId, _r.status]),
+  );
+  const PENDING_INVITATION_ID_BY_TOURNAMENT_ID = new Map(
+    _input.invitations.map((_i) => [_i.tournamentId, _i.id]),
+  );
+  const ORGANIZER_TOURNAMENT_IDS = new Set(_input.organizerTournamentIds);
+  const PENDING_COUNT_BY_TOURNAMENT_ID = new Map(
+    _input.pendingRegistrationCounts.map((_c) => [_c.tournamentId, _c.count]),
+  );
+
+  return _input.tournaments.map((_tournament) => {
+    const IS_ORGANIZER = ORGANIZER_TOURNAMENT_IDS.has(_tournament.id);
+
+    return {
+      tournament: _tournament,
+      registrationStatus: REGISTRATION_STATUS_BY_TOURNAMENT_ID.get(_tournament.id) ?? null,
+      pendingInvitationId: PENDING_INVITATION_ID_BY_TOURNAMENT_ID.get(_tournament.id) ?? null,
+      isOrganizer: IS_ORGANIZER,
+      //? El conteo solo tiene sentido para quien administra el torneo: a un
+      //? inscripto o invitado no le corresponde ver cuanta gente espera.
+      pendingRegistrationsCount: IS_ORGANIZER
+        ? PENDING_COUNT_BY_TOURNAMENT_ID.get(_tournament.id) ?? 0
+        : null,
+    };
+  });
 }
 
 const TOURNAMENT_LIST_SELECT = {
@@ -336,5 +382,63 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
     ]);
 
     return { items: ROWS.map(toListItemDTO), total: TOTAL };
+  }
+
+  async listViewerTournamentsSV(_userId: string): Promise<ViewerTournamentItemDTO[]> {
+    const [REGISTRATIONS, INVITATIONS, ORGANIZED_TOURNAMENTS] = await Promise.all([
+      PRISMA.tournamentRegistration.findMany({
+        where: { userId: _userId, status: { in: ['PENDING', 'CONFIRMED'] } },
+        select: { tournamentId: true, status: true },
+      }),
+      PRISMA.tournamentInvitation.findMany({
+        where: { invitedUserId: _userId, status: 'PENDING' },
+        select: { id: true, tournamentId: true },
+      }),
+      PRISMA.tournament.findMany({
+        where: { organizerUserId: _userId },
+        select: { id: true },
+      }),
+    ]);
+
+    const ORGANIZER_TOURNAMENT_IDS = ORGANIZED_TOURNAMENTS.map((_t) => _t.id);
+    //? Un torneo puede llegar por mas de una via (organizador que tambien se
+    //? inscribio); el Set dedupe antes de pedir los detalles.
+    const TOURNAMENT_IDS = [
+      ...new Set([
+        ...REGISTRATIONS.map((_r) => _r.tournamentId),
+        ...INVITATIONS.map((_i) => _i.tournamentId),
+        ...ORGANIZER_TOURNAMENT_IDS,
+      ]),
+    ];
+
+    if (TOURNAMENT_IDS.length === 0) return [];
+
+    const [TOURNAMENT_ROWS, PENDING_COUNTS] = await Promise.all([
+      PRISMA.tournament.findMany({
+        where: { id: { in: TOURNAMENT_IDS } },
+        select: TOURNAMENT_LIST_SELECT,
+      }),
+      ORGANIZER_TOURNAMENT_IDS.length === 0
+        ? Promise.resolve([])
+        : PRISMA.tournamentRegistration.groupBy({
+            by: ['tournamentId'],
+            where: { tournamentId: { in: ORGANIZER_TOURNAMENT_IDS }, status: 'PENDING' },
+            _count: { _all: true },
+          }),
+    ]);
+
+    return buildViewerTournamentItemsSV({
+      tournaments: TOURNAMENT_ROWS.map(toListItemDTO),
+      registrations: REGISTRATIONS.map((_r) => ({
+        tournamentId: _r.tournamentId,
+        status: _r.status as 'PENDING' | 'CONFIRMED',
+      })),
+      invitations: INVITATIONS,
+      organizerTournamentIds: ORGANIZER_TOURNAMENT_IDS,
+      pendingRegistrationCounts: PENDING_COUNTS.map((_c) => ({
+        tournamentId: _c.tournamentId,
+        count: _c._count._all,
+      })),
+    });
   }
 }

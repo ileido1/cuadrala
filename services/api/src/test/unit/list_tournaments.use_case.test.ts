@@ -7,6 +7,7 @@ const mockRepository = {
   getTournamentByIdSV: vi.fn(),
   listTournamentRegistrationsSV: vi.fn(),
   listTournamentsByVenueSV: vi.fn(),
+  listViewerTournamentsSV: vi.fn(),
 };
 
 const useCase = new ListTournamentsUseCase(mockRepository);
