@@ -191,6 +191,8 @@ enum NotificationEventType {
   TOURNAMENT_STARTED
   /// Un partido del cuadro se quedo sin horario: lo rechazaron o vencio su turno.
   TOURNAMENT_MATCH_NEEDS_ATTENTION
+  /// Se cargo el resultado de un partido: avisa a ambos lados con userId.
+  TOURNAMENT_MATCH_RESULT_RECORDED
 }
 
 enum NotificationDeliveryStatus {

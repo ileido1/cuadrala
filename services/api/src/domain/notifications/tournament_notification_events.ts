@@ -18,6 +18,7 @@ export const TOURNAMENT_NOTIFICATION_EVENT_TYPES = [
   //? —"este partido necesita que lo mires"—, asi que comparten evento en vez
   //? de inventar dos notificaciones para el mismo problema.
   'TOURNAMENT_MATCH_NEEDS_ATTENTION',
+  'TOURNAMENT_MATCH_RESULT_RECORDED',
 ] as const;
 
 export type TournamentNotificationEventType =
