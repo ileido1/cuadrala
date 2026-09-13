@@ -329,6 +329,91 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         expect(GUEST_ROW?.guestName).toBe('Marta Invitada');
         expect(GUEST_ROW?.userId).toBeNull();
       });
+
+      //? Requirement `tournament-registrations`: quien no organiza el torneo
+      //? no debe ver el telefono ni el correo de un invitado.
+      it('nulls guest contact fields for a non-organizer, keeping status and name', async () => {
+        const TOURNAMENT = await createTournamentSV('DRAFT');
+        await inviteGuestSV(TOURNAMENT.id, organizerToken, {
+          name: 'Marta Invitada',
+          phone: '+584121230000',
+        });
+
+        const RES = await request(APP)
+          .get(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`)
+          .set('Authorization', `Bearer ${outsiderToken}`);
+
+        expect(RES.status).toBe(200);
+        const GUEST_ROW = (RES.body.data.items as Array<Record<string, unknown>>).find(
+          (_i) => _i.registrationType === 'GUEST',
+        );
+        expect(GUEST_ROW?.status).toBe('PENDING');
+        expect(GUEST_ROW?.guestName).toBe('Marta Invitada');
+        expect(GUEST_ROW?.guestPhone).toBeNull();
+        expect(GUEST_ROW?.guestEmail).toBeNull();
+      });
+
+      it('keeps guest contact fields for the organizer', async () => {
+        const TOURNAMENT = await createTournamentSV('DRAFT');
+        await inviteGuestSV(TOURNAMENT.id, organizerToken, {
+          name: 'Marta Invitada',
+          phone: '+584121230000',
+        });
+
+        const RES = await request(APP)
+          .get(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`)
+          .set('Authorization', `Bearer ${organizerToken}`);
+
+        expect(RES.status).toBe(200);
+        const GUEST_ROW = (RES.body.data.items as Array<Record<string, unknown>>).find(
+          (_i) => _i.registrationType === 'GUEST',
+        );
+        expect(GUEST_ROW?.guestPhone).toBe('+584121230000');
+      });
+
+      it('keeps guest contact fields for venue staff', async () => {
+        const TS = Date.now();
+        const VENUE = await PRISMA.venue.create({ data: { name: `Sede Redaction Test ${TS}` } });
+        const STAFF = await PRISMA.user.create({
+          data: { email: `staff-redaction-${TS}@test.local`, name: 'Staff Redaction' },
+        });
+        await PRISMA.venueStaff.create({ data: { venueId: VENUE.id, userId: STAFF.id, role: 'STAFF' } });
+        const staffToken = signAccessTokenSV(STAFF.id, STAFF.email);
+
+        const TOURNAMENT = await PRISMA.tournament.create({
+          data: {
+            name: `Torneo Guest Venue Staff ${TS}`,
+            categoryId,
+            sportId,
+            formatPresetId: presetAmericanoId,
+            organizerUserId,
+            venueId: VENUE.id,
+            status: 'DRAFT',
+          },
+        });
+        await inviteGuestSV(TOURNAMENT.id, organizerToken, {
+          name: 'Marta Invitada',
+          phone: '+584121230000',
+        });
+
+        const RES = await request(APP)
+          .get(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`)
+          .set('Authorization', `Bearer ${staffToken}`);
+
+        expect(RES.status).toBe(200);
+        const GUEST_ROW = (RES.body.data.items as Array<Record<string, unknown>>).find(
+          (_i) => _i.registrationType === 'GUEST',
+        );
+        expect(GUEST_ROW?.guestPhone).toBe('+584121230000');
+      });
+
+      it('responds 401 when no token is provided', async () => {
+        const TOURNAMENT = await createTournamentSV('DRAFT');
+
+        const RES = await request(APP).get(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`);
+
+        expect(RES.status).toBe(401);
+      });
     });
   },
 );

@@ -47,10 +47,12 @@ export async function postRegisterTournamentParticipantCON(
 }
 
 export async function getTournamentRegistrationsCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const PARAMS = TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
 
   const RESULT = await LIST_TOURNAMENT_REGISTRATIONS_UC.executeSV({
     tournamentId: PARAMS.tournamentId,
+    actorUserId: ACTOR_USER_ID,
   });
 
   _res.status(200).json({

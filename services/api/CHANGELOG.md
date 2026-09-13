@@ -5,6 +5,24 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.1] - 2026-09-12
+
+### Seguridad
+
+- **`GET /tournaments/:id/registrations` ya no expone el contacto de invitados
+  a cualquier autenticado.** Cualquiera con sesión podía ver `guestPhone` y
+  `guestEmail` de los invitados sin cuenta de un torneo ajeno; el controller
+  pasaba el resultado del caso de uso sin filtrar. Ahora, quien no organiza el
+  torneo (ni es staff de su sede) recibe esos dos campos en `null`; `status` y
+  `guestName` no cambian. El organizador y el staff de la sede siguen viendo
+  el contacto completo. La regla de autoridad reutiliza
+  `AssertTournamentOrganizerAccessUseCase.hasAccessSV()`, el mismo chequeo que
+  usan las demás acciones de organizador sobre inscripciones.
+
+  Auditado: ningún cliente de mobile o web renderiza hoy `guestPhone` ni
+  `guestEmail` (el DTO de mobile los parsea pero ninguna pantalla los lee), así
+  que el cambio no rompe consumidores existentes.
+
 ## [1.7.0] - 2026-09-12
 
 ### Agregado

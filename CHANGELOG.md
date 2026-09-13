@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Security
+- **Tournaments handoff fidelity (S4)**: `GET /tournaments/:id/registrations` no longer exposes a guest's `guestPhone`/`guestEmail` to any authenticated caller; only the tournament's organizer or venue staff receive them, everyone else gets `null` while `status` and `guestName` stay intact (`services/api` 1.7.1)
+
 ### Added
 - **Tournaments handoff fidelity (S3b-1)**: new `GET /api/v1/users/me/tournaments` returns the viewer's tournaments across registration, invitation and organizer roles — `registrationStatus`, `pendingInvitationId`, `isOrganizer`, and `pendingRegistrationsCount` (organizer-only); requires authentication (`services/api` 1.7.0)
 - **Tournaments handoff fidelity (S3a)**: `GET /tournaments` and `GET /tournaments/:id` now return `organizerName` (organizer's display name, `null` when unassigned); `GET /tournaments/:id/invitations` now returns `invitedUserName` for each invitation, resolved via join with no schema change (`services/api` 1.6.0)
