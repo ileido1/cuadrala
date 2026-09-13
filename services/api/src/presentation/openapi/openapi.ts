@@ -205,7 +205,7 @@ const OPENAPI_CONST = {
         responses: {
           '200': {
             description:
-              'OK. Cada item de `data.items` incluye `distanceKm` (number, opcional): presente solo cuando se envió `near`; y `gender` ("MALE"|"FEMALE"|"MIXED"|null): `null` cuando el torneo no lo declaró.',
+              'OK. Cada item de `data.items` incluye `distanceKm` (number, opcional): presente solo cuando se envió `near`; `gender` ("MALE"|"FEMALE"|"MIXED"|null): `null` cuando el torneo no lo declaró; y `organizerName` (string|null): nombre del organizador, `null` cuando el torneo no tiene uno asignado.',
           },
           '400': { description: 'Validación fallida' },
         },
