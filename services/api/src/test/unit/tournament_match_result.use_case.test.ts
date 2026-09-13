@@ -20,6 +20,7 @@ const mockTournamentMatchResultRepository = {
   matchHasResultSV: vi.fn(),
   registerResultSV: vi.fn(),
   listTournamentMatchStatesSV: vi.fn(),
+  listMatchParticipantSidesSV: vi.fn(),
 };
 
 const useCase = new RegisterTournamentMatchResultUseCase(
@@ -60,6 +61,7 @@ function resetMocksSV(): void {
   mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
   mockTournamentMatchResultRepository.matchBelongsToTournamentSV.mockResolvedValue(true);
   mockTournamentMatchResultRepository.matchHasResultSV.mockResolvedValue(false);
+  mockTournamentMatchResultRepository.listMatchParticipantSidesSV.mockResolvedValue([]);
   mockAssertTournamentOrganizerAccess.executeSV.mockResolvedValue(undefined);
 }
 
@@ -193,5 +195,133 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         requestingUserId: 'organizer-uuid',
       }),
     ).rejects.toThrow('Cada score debe tener userId y points (número no negativo).');
+  });
+
+  describe('single-elimination tie rejection (side aggregation, req. 4)', () => {
+    const SINGLE_ELIMINATION_TOURNAMENT = {
+      ...BASE_TOURNAMENT,
+      formatPresetName: 'SINGLE_ELIMINATION',
+    };
+
+    it('should reject a doubles tie determined by side sum, not by the highest individual row', async () => {
+      resetMocksSV();
+      mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(
+        SINGLE_ELIMINATION_TOURNAMENT,
+      );
+      //? Lado A = [15,15] (suma 30) vs lado B = [20,10] (suma 30): empate por lado,
+      //? aunque la fila individual más alta (20) sea del lado B.
+      mockTournamentMatchResultRepository.listMatchParticipantSidesSV.mockResolvedValue([
+        { userId: 'a1', teamLabel: 'team-a' },
+        { userId: 'a2', teamLabel: 'team-a' },
+        { userId: 'b1', teamLabel: 'team-b' },
+        { userId: 'b2', teamLabel: 'team-b' },
+      ]);
+
+      await expect(
+        useCase.executeSV({
+          tournamentId: 'tournament-uuid',
+          matchId: 'match-uuid',
+          matchNumber: 1,
+          roundNumber: 1,
+          scores: [
+            { userId: 'a1', points: 15 },
+            { userId: 'a2', points: 15 },
+            { userId: 'b1', points: 20 },
+            { userId: 'b2', points: 10 },
+          ],
+          requestingUserId: 'organizer-uuid',
+        }),
+      ).rejects.toMatchObject({ code: 'VALIDACION_FALLIDA', statusCode: 400 });
+      expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
+    });
+
+    it('should declare the doubles side with the higher sum the winner even when it holds no single highest row', async () => {
+      resetMocksSV();
+      mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(
+        SINGLE_ELIMINATION_TOURNAMENT,
+      );
+      mockTournamentMatchResultRepository.listMatchParticipantSidesSV.mockResolvedValue([
+        { userId: 'a1', teamLabel: 'team-a' },
+        { userId: 'a2', teamLabel: 'team-a' },
+        { userId: 'b1', teamLabel: 'team-b' },
+        { userId: 'b2', teamLabel: 'team-b' },
+      ]);
+      mockTournamentMatchResultRepository.registerResultSV.mockResolvedValue({
+        resultId: 'result-uuid',
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+
+      //? Lado A = [10,9] (suma 19) vs lado B = [15,2] (suma 17): A gana pese a que
+      //? B tiene la fila individual más alta (15).
+      const RESULT = await useCase.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [
+          { userId: 'a1', points: 10 },
+          { userId: 'a2', points: 9 },
+          { userId: 'b1', points: 15 },
+          { userId: 'b2', points: 2 },
+        ],
+        requestingUserId: 'organizer-uuid',
+      });
+
+      expect(RESULT.resultId).toBe('result-uuid');
+      expect(mockTournamentMatchResultRepository.registerResultSV).toHaveBeenCalled();
+    });
+
+    it('should reject a singles tie in single elimination', async () => {
+      resetMocksSV();
+      mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(
+        SINGLE_ELIMINATION_TOURNAMENT,
+      );
+      mockTournamentMatchResultRepository.listMatchParticipantSidesSV.mockResolvedValue([
+        { userId: 'user-1', teamLabel: null },
+        { userId: 'user-2', teamLabel: null },
+      ]);
+
+      await expect(
+        useCase.executeSV({
+          tournamentId: 'tournament-uuid',
+          matchId: 'match-uuid',
+          matchNumber: 1,
+          roundNumber: 1,
+          scores: [
+            { userId: 'user-1', points: 6 },
+            { userId: 'user-2', points: 6 },
+          ],
+          requestingUserId: 'organizer-uuid',
+        }),
+      ).rejects.toMatchObject({ code: 'VALIDACION_FALLIDA', statusCode: 400 });
+      expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
+    });
+
+    it('should not check for ties outside single elimination (round robin accepts a tie)', async () => {
+      resetMocksSV();
+      mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue({
+        ...BASE_TOURNAMENT,
+        formatPresetName: 'ROUND_ROBIN',
+      });
+      mockTournamentMatchResultRepository.registerResultSV.mockResolvedValue({
+        resultId: 'result-uuid',
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+
+      const RESULT = await useCase.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [
+          { userId: 'user-1', points: 6 },
+          { userId: 'user-2', points: 6 },
+        ],
+        requestingUserId: 'organizer-uuid',
+      });
+
+      expect(RESULT.resultId).toBe('result-uuid');
+      expect(mockTournamentMatchResultRepository.listMatchParticipantSidesSV).not.toHaveBeenCalled();
+    });
   });
 });

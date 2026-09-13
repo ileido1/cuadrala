@@ -5,6 +5,20 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.9.2] - 2026-09-13
+
+### Corregido
+
+- **`POST /tournaments/:tournamentId/matches/:matchId/results` rechaza un
+  empate en torneos `SINGLE_ELIMINATION`** con 400 `VALIDACION_FALLIDA`, sin
+  escribir nada. El ganador (y el empate) se determinan sumando puntos por
+  lado (`MatchParticipant.teamLabel ?? userId`) vía el nuevo puerto
+  `listMatchParticipantSidesSV` y la función ya existente
+  `resolveMatchWinningUserIdsSV` — nunca comparando filas individuales de
+  puntaje, lo que en duplas daba el ganador equivocado (ej. lado A=[10,9]
+  suma 19 vs lado B=[15,2] suma 17: la fila más alta es de B, pero A gana
+  por suma). Round robin y americano siguen aceptando empates sin avance.
+
 ## [1.9.1] - 2026-09-13
 
 ### Agregado

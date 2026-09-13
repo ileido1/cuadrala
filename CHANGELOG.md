@@ -5,6 +5,9 @@
 ### Security
 - **Tournaments handoff fidelity (S4)**: `GET /tournaments/:id/registrations` no longer exposes a guest's `guestPhone`/`guestEmail` to any authenticated caller; only the tournament's organizer or venue staff receive them, everyone else gets `null` while `status` and `guestName` stay intact (`services/api` 1.7.1)
 
+### Fixed
+- **Tournaments handoff fidelity (S7b)**: `POST /tournaments/:tournamentId/matches/:matchId/results` now rejects a tied result in single-elimination tournaments (400 `VALIDACION_FALLIDA`, writes nothing), determining winner/tie by summed side points (`MatchParticipant.teamLabel ?? userId`) via the existing `resolveMatchWinningUserIdsSV`, fixing a doubles bug where comparing individual score rows could pick the wrong side (`services/api` 1.9.2)
+
 ### Added
 - **Tournaments handoff fidelity (S7a)**: new pure domain function `resolveSingleEliminationProgressSV` computes single-elimination bracket advancement (next-round pairing from recorded winners, first-round bye auto-advancement, third-place match fed by semifinal losers) with side-opaque `winnerRef`/`loserRef` so a doubles side is never mistaken for a single userId; not yet wired into any use case or endpoint (`services/api` 1.9.1)
 - **Tournaments handoff fidelity (S6b)**: `GET /tournaments/:tournamentId/schedule` now returns `matchId`, `matchStatus`, `decision`, `rejectedByName`, `sides` (grouped by `MatchParticipant.teamLabel ?? userId`) and `scores` per match, resolved from the materialized `Match` rows via `formatParameters.{scheduleKey,roundNumber,matchNumber}` with one query per schedule (`services/api` 1.9.0)

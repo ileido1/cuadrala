@@ -1,4 +1,5 @@
 import type {
+  MatchParticipantSideLookupSV,
   TournamentMatchResultRepository,
   TournamentMatchStateSV,
 } from '../../domain/ports/tournament_match_result_repository.js';
@@ -70,6 +71,14 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
     });
 
     return { resultId: RESULT.id, recordedAt: RESULT.recordedAt };
+  }
+
+  async listMatchParticipantSidesSV(_matchId: string): Promise<MatchParticipantSideLookupSV[]> {
+    const PARTICIPANTS = await PRISMA.matchParticipant.findMany({
+      where: { matchId: _matchId },
+      select: { userId: true, teamLabel: true },
+    });
+    return PARTICIPANTS.map((_p) => ({ userId: _p.userId, teamLabel: _p.teamLabel }));
   }
 
   async listTournamentMatchStatesSV(_input: {

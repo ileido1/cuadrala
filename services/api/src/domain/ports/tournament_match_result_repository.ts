@@ -18,6 +18,11 @@ export type TournamentMatchStateSV = {
   scores: TournamentMatchStateScoreSV[];
 };
 
+export type MatchParticipantSideLookupSV = {
+  userId: string | null;
+  teamLabel: string | null;
+};
+
 export interface TournamentMatchResultRepository {
   getVenueIdForTournamentSV(_tournamentId: string): Promise<string | null>;
   matchBelongsToTournamentSV(_matchId: string, _tournamentId: string): Promise<boolean>;
@@ -27,6 +32,12 @@ export interface TournamentMatchResultRepository {
     matchId: string;
     scores: Array<{ userId: string; points: number }>;
   }): Promise<{ resultId: string; recordedAt: Date }>;
+  /**
+   * `userId` + `MatchParticipant.teamLabel` de cada participante de un partido,
+   * para agrupar los `scores` por lado (`aggregateMatchSideTotalsSV`) antes de
+   * determinar ganador/empate. Nunca compara filas individuales de puntaje.
+   */
+  listMatchParticipantSidesSV(_matchId: string): Promise<MatchParticipantSideLookupSV[]>;
   /**
    * Estado materializado (partido, lados, resultado) de cada `Match` ya
    * creado para un `scheduleKey`, en **una sola consulta** — nunca N+1 por

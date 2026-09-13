@@ -2,6 +2,14 @@ import { AppError } from '../../domain/errors/app_error.js';
 import type { TournamentQueryRepository } from '../../domain/ports/tournament_query_repository.js';
 import type { TournamentMatchResultRepository } from '../../domain/ports/tournament_match_result_repository.js';
 import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
+import {
+  resolveMatchWinningUserIdsSV,
+  type MatchParticipantScoreSV,
+} from '../../domain/tournament/match_side_aggregation.js';
+
+//? Único formato donde un empate es inválido (D13): el bracket necesita un
+//? ganador para avanzar. Round robin/americano aceptan empates sin avance.
+const SINGLE_ELIMINATION_FORMAT_CODE = 'SINGLE_ELIMINATION';
 
 export type ScoreEntryDTO = {
   scores: { userId: string; points: number }[];
@@ -82,6 +90,32 @@ export class RegisterTournamentMatchResultUseCase {
         throw new AppError(
           'VALIDACION_FALLIDA',
           'Cada score debe tener userId y points (número no negativo).',
+          400,
+        );
+      }
+    }
+
+    //? Empate inválido solo en eliminación simple (D13). El agrupamiento por
+    //? lado (teamLabel ?? userId) reutiliza resolveMatchWinningUserIdsSV — nunca
+    //? se reimplementa la comparación de filas individuales (pattern #807).
+    if (TOURNAMENT.formatPresetName === SINGLE_ELIMINATION_FORMAT_CODE) {
+      const PARTICIPANT_SIDES =
+        await this._tournamentMatchResultRepository.listMatchParticipantSidesSV(matchId);
+      const TEAM_LABEL_BY_USER_ID = new Map(
+        PARTICIPANT_SIDES.map((_p) => [_p.userId, _p.teamLabel]),
+      );
+
+      const SIDE_SCORES: MatchParticipantScoreSV[] = scores.map((_score) => ({
+        userId: _score.userId,
+        teamLabel: TEAM_LABEL_BY_USER_ID.get(_score.userId) ?? null,
+        points: _score.points,
+      }));
+
+      const WINNING_USER_IDS = resolveMatchWinningUserIdsSV(SIDE_SCORES);
+      if (WINNING_USER_IDS.length === 0) {
+        throw new AppError(
+          'VALIDACION_FALLIDA',
+          'Un partido de eliminación simple no puede terminar empatado.',
           400,
         );
       }
