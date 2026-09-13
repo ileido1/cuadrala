@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../features/catalog/data/catalog_repository.dart';
 import '../../../features/venues/data/venues_repository.dart';
 import '../../../router/routes.dart';
@@ -57,7 +58,7 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48),
+                  const Icon(AppIcons.warning, size: 48),
                   const SizedBox(height: 16),
                   Text(state.message),
                   const SizedBox(height: 16),
@@ -110,7 +111,7 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                           _CategoryFilterChip(
                             label: 'Cerca',
                             selected: false,
-                            icon: Icons.place_outlined,
+                            icon: AppIcons.pin,
                             onTap: () {},
                           ),
                         ],
@@ -210,7 +211,7 @@ final class _TournamentsHeader extends StatelessWidget {
           ),
           FilledButton.icon(
             onPressed: onCreate,
-            icon: const Icon(Icons.add, size: 18),
+            icon: const Icon(AppIcons.add, size: 18),
             label: const Text('Crear'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(0, 42),
@@ -241,7 +242,7 @@ final class _CategoryFilterChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return OutlinedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon ?? (selected ? Icons.check : Icons.tune), size: 16),
+      icon: Icon(icon ?? (selected ? AppIcons.check : AppIcons.sliders), size: 16),
       label: Text(label),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 38),
@@ -273,7 +274,7 @@ final class _EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.emoji_events_outlined,
+              AppIcons.trophy,
               size: 30,
               color: theme.colorScheme.onSurfaceVariant,
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';
@@ -91,7 +92,7 @@ final class _TournamentInvitationBodyState
           leading: IconButton(
             tooltip: 'Cerrar',
             onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close),
+            icon: const Icon(AppIcons.close),
           ),
           title: const Text('Invitación'),
         ),
@@ -149,7 +150,7 @@ final class _TournamentInvitationBodyState
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.check, size: 19),
+                        : const Icon(AppIcons.check, size: 19),
                     label: const Text('Aceptar'),
                   ),
                 ),
@@ -190,7 +191,7 @@ final class _InvitationBanner extends StatelessWidget {
               color: BrandColors.limeAccent,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.mail_outline, color: scheme.onSurface, size: 19),
+            child: Icon(AppIcons.mail, color: scheme.onSurface, size: 19),
           ),
           const SizedBox(width: 12),
           Expanded(

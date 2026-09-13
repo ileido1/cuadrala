@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../data/models/bracket_dto.dart';
 import '../../data/tournaments_repository.dart';
 
@@ -44,27 +45,27 @@ class _BracketScreenState extends State<BracketScreen> {
             switch (error.code) {
               case 'FORMATO_NO_SOPORTADO':
                 return _EmptyState(
-                  icon: Icons.info_outline,
+                  icon: AppIcons.info,
                   title: 'Este torneo no arma cuadro',
                   subtitle:
                       'El cuadro existe sólo para eliminación simple. Este torneo es round robin: seguí la posición en la tabla.',
                 );
               case 'VALIDACION_FALLIDA':
                 return _EmptyState(
-                  icon: Icons.group,
+                  icon: AppIcons.group,
                   title: 'Todavía no hay cuadro',
                   subtitle: 'Hacen falta al menos 2 inscriptos confirmados.',
                 );
               default:
                 return _EmptyState(
-                  icon: Icons.error_outline,
+                  icon: AppIcons.warning,
                   title: 'Error',
                   subtitle: error.message,
                 );
             }
           }
           return _EmptyState(
-            icon: Icons.error_outline,
+            icon: AppIcons.warning,
             title: 'No se pudo cargar el cuadro',
             subtitle: 'Revisá tu conexión e intentá de nuevo.',
           );
@@ -72,7 +73,7 @@ class _BracketScreenState extends State<BracketScreen> {
 
         if (!snapshot.hasData) {
           return _EmptyState(
-            icon: Icons.info_outline,
+            icon: AppIcons.info,
             title: 'Sin datos',
             subtitle: 'No hay información del cuadro.',
           );
@@ -354,7 +355,7 @@ class _MatchPlayer extends StatelessWidget {
       child: Row(
         children: [
           if (isWinner) ...[
-            Icon(Icons.check_circle, size: 16, color: scheme.primary),
+            Icon(AppIcons.checkCircle, size: 16, color: scheme.primary),
             const SizedBox(width: 4),
           ],
           Expanded(

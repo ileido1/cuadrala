@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/bracket_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/screens/bracket_screen.dart';
@@ -161,7 +162,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget(repository));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(AppIcons.checkCircle), findsOneWidget);
       expect(find.text('6-4'), findsOneWidget);
     });
 
