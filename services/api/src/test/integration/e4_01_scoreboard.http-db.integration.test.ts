@@ -168,13 +168,17 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
 
       // Esperados por tournamentId (sin contar OTHER_TOURNAMENT):
       // Alice: 4+3+3 = 10, gamesPlayed=3, rank=1
+      //   gamesWon: match1 (4>2, gana) + match2 (3=3, empate) + match3 (3, no es el máximo) = 1
       // Bob:   2+5   = 7,  gamesPlayed=2, rank=2
+      //   gamesWon: match1 (2<4, pierde) + match3 (5, máximo) = 1
       // Carol: 3+4   = 7,  gamesPlayed=2, rank=2  (dense)
+      //   gamesWon: match2 (3=3, empate) + match3 (4, no es el máximo) = 0
       const SCOREBOARD = RES.body.data.rows as Array<{
         userId: string;
         name: string;
         points: number;
         gamesPlayed: number;
+        gamesWon: number;
         rank: number;
       }>;
 
@@ -184,6 +188,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         name: 'Alice',
         points: 10,
         gamesPlayed: 3,
+        gamesWon: 1,
         rank: 1,
       });
 
@@ -192,14 +197,15 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         name: _r.name,
         points: _r.points,
         gamesPlayed: _r.gamesPlayed,
+        gamesWon: _r.gamesWon,
         rank: _r.rank,
       }));
 
       expect(TIED).toHaveLength(2);
       expect(TIED).toEqual(
         expect.arrayContaining([
-          { userId: userBId, name: 'Bob', points: 7, gamesPlayed: 2, rank: 2 },
-          { userId: userCId, name: 'Carol', points: 7, gamesPlayed: 2, rank: 2 },
+          { userId: userBId, name: 'Bob', points: 7, gamesPlayed: 2, gamesWon: 1, rank: 2 },
+          { userId: userCId, name: 'Carol', points: 7, gamesPlayed: 2, gamesWon: 0, rank: 2 },
         ]),
       );
     });
@@ -235,6 +241,109 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(RES.body.success).toBe(true);
       expect(Array.isArray(RES.body.data.rows)).toBe(true);
       expect(RES.body.data.rows).toEqual([]);
+    });
+
+    //? Duplas: gamesWon debe sumar por MatchParticipant.teamLabel, nunca comparar
+    //? filas individuales de MatchResultScore (que no tiene columna de lado).
+    it('GET scoreboard aggregates gamesWon by side (teamLabel), not by individual row', async () => {
+      const TS = Date.now();
+      const DOUBLES_TOURNAMENT = await PRISMA.tournament.create({
+        data: {
+          name: `Torneo E4 duplas ${TS}`,
+          categoryId,
+          sportId: sportPadelId,
+          formatPresetId: presetRoundRobinId,
+          presetSchemaVersion: 1,
+          status: 'DRAFT',
+        },
+      });
+
+      const [A1, A2, B1, B2] = await Promise.all([
+        PRISMA.user.create({ data: { email: `e4-a1-${TS}@test.local`, name: 'A1' } }),
+        PRISMA.user.create({ data: { email: `e4-a2-${TS}@test.local`, name: 'A2' } }),
+        PRISMA.user.create({ data: { email: `e4-b1-${TS}@test.local`, name: 'B1' } }),
+        PRISMA.user.create({ data: { email: `e4-b2-${TS}@test.local`, name: 'B2' } }),
+      ]);
+
+      //? Partido 1 — empate por suma de lado: A=[15,15]=30, B=[20,10]=30.
+      //? Ganaría B si se comparara la fila individual más alta (20), pero
+      //? sumado por lado es un empate: nadie gana este partido.
+      const MATCH_1 = await PRISMA.match.create({
+        data: {
+          categoryId,
+          sportId: sportPadelId,
+          tournamentId: DOUBLES_TOURNAMENT.id,
+          organizerUserId: A1.id,
+          type: 'REGULAR',
+          status: 'FINISHED',
+        },
+      });
+      await PRISMA.matchParticipant.createMany({
+        data: [
+          { matchId: MATCH_1.id, userId: A1.id, teamLabel: 'A' },
+          { matchId: MATCH_1.id, userId: A2.id, teamLabel: 'A' },
+          { matchId: MATCH_1.id, userId: B1.id, teamLabel: 'B' },
+          { matchId: MATCH_1.id, userId: B2.id, teamLabel: 'B' },
+        ],
+      });
+      const RESULT_1 = await PRISMA.matchResult.create({ data: { matchId: MATCH_1.id } });
+      await PRISMA.matchResultScore.createMany({
+        data: [
+          { resultId: RESULT_1.id, userId: A1.id, points: 15 },
+          { resultId: RESULT_1.id, userId: A2.id, points: 15 },
+          { resultId: RESULT_1.id, userId: B1.id, points: 20 },
+          { resultId: RESULT_1.id, userId: B2.id, points: 10 },
+        ],
+      });
+
+      //? Partido 2 — A gana por suma de lado: A=[10,9]=19 vs B=[15,2]=17.
+      //? B tiene la fila individual más alta (15) pero pierde por suma.
+      const MATCH_2 = await PRISMA.match.create({
+        data: {
+          categoryId,
+          sportId: sportPadelId,
+          tournamentId: DOUBLES_TOURNAMENT.id,
+          organizerUserId: A1.id,
+          type: 'REGULAR',
+          status: 'FINISHED',
+        },
+      });
+      await PRISMA.matchParticipant.createMany({
+        data: [
+          { matchId: MATCH_2.id, userId: A1.id, teamLabel: 'A' },
+          { matchId: MATCH_2.id, userId: A2.id, teamLabel: 'A' },
+          { matchId: MATCH_2.id, userId: B1.id, teamLabel: 'B' },
+          { matchId: MATCH_2.id, userId: B2.id, teamLabel: 'B' },
+        ],
+      });
+      const RESULT_2 = await PRISMA.matchResult.create({ data: { matchId: MATCH_2.id } });
+      await PRISMA.matchResultScore.createMany({
+        data: [
+          { resultId: RESULT_2.id, userId: A1.id, points: 10 },
+          { resultId: RESULT_2.id, userId: A2.id, points: 9 },
+          { resultId: RESULT_2.id, userId: B1.id, points: 15 },
+          { resultId: RESULT_2.id, userId: B2.id, points: 2 },
+        ],
+      });
+
+      const RES = await request(APP).get(
+        `/api/v1/tournaments/${DOUBLES_TOURNAMENT.id}/scoreboard`,
+      );
+
+      expect(RES.status).toBe(200);
+      const ROWS = RES.body.data.rows as Array<{
+        userId: string;
+        gamesPlayed: number;
+        gamesWon: number;
+      }>;
+      const BY_USER_ID = new Map(ROWS.map((_r) => [_r.userId, _r]));
+
+      // Empate del partido 1 (nadie gana) + partido 2 ganado por el lado A.
+      expect(BY_USER_ID.get(A1.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 1 });
+      expect(BY_USER_ID.get(A2.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 1 });
+      // B pierde el partido 2 pese a la fila individual más alta (15).
+      expect(BY_USER_ID.get(B1.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 0 });
+      expect(BY_USER_ID.get(B2.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 0 });
     });
   },
 );

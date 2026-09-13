@@ -647,6 +647,8 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Tournaments'],
         summary: 'Consultar scoreboard de un torneo',
+        description:
+          '`data.rows` trae `userId/name/points/gamesPlayed/gamesWon/rank`. `gamesWon` suma 1 por partido donde el lado del usuario (agrupado por `MatchParticipant.teamLabel` en duplas, o el propio jugador en singles) sumó estrictamente más puntos que cualquier otro lado; un empate entre lados no le suma a nadie, aunque `gamesPlayed` sí cuenta ese partido para todos.',
         parameters: [
           {
             name: 'tournamentId',

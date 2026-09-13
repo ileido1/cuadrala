@@ -16,6 +16,16 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
   como `resolveSingleEliminationRoundNameSV`, reutilizable). Para cualquier
   otro formato es `null`; el cliente sigue teniendo `roundNumber` para caer a
   "Ronda {n}".
+- **`GET /tournaments/:tournamentId/scoreboard` ahora devuelve `gamesWon`
+  por fila.** Suma 1 por partido donde el lado del jugador ganó por puntos
+  estrictamente más altos que cualquier otro lado. En duplas el lado se
+  agrupa por `MatchParticipant.teamLabel` y se compara la **suma** de puntos
+  del lado, nunca la fila individual más alta — comparar filas individuales
+  daría el ganador equivocado (ej.: lado A=[15,15]=30 vs lado B=[20,10]=30 es
+  empate, aunque B tenga la fila más alta). Un empate entre lados no suma
+  `gamesWon` a nadie, pero `gamesPlayed` sigue contando ese partido para
+  todos los participantes. Nueva función de dominio pura y reutilizable
+  `resolveMatchWinningUserIdsSV` (`domain/tournament/match_side_aggregation.ts`).
 
 ## [1.7.1] - 2026-09-12
 
