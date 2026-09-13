@@ -5,6 +5,12 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.3.2] - 2026-09-13
+
+### Quitado
+
+- **`TournamentFiltersBar`**: widget muerto desde M3a (ya nadie lo referenciaba).
+
 ## [1.3.1] - 2026-09-13
 
 ### Quitado

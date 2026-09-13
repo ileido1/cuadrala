@@ -6,6 +6,7 @@
 - **Tournaments handoff fidelity (M1)**: new shared widgets `CountStepper` (−/+ numeric stepper, disabled at min/max) and `PillToggle` (pill-shaped boolean switch), plus a new `enabled` flag on `SegmentedOption` (disabled options render dimmed and ignore taps) (`apps/mobile` 1.3.0+15)
 
 ### Removed
+- **Tournaments handoff fidelity (M3b)**: deleted the now-unused `TournamentFiltersBar` widget (`apps/mobile` 1.3.2+17)
 - **Tournaments handoff fidelity (M3a)**: the "Más filtros" button is gone from the tournaments home screen (not in the handoff); the "Mi categoría" chip is a temporary no-op until M3c wires it to the viewer's own category (`apps/mobile` 1.3.1+16)
 
 ### Changed
