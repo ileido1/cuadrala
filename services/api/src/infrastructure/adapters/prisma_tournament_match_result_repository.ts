@@ -25,8 +25,12 @@ type PrismaTransactionClientSV = Omit<
 
 export class PrismaTournamentMatchResultRepository implements TournamentMatchResultRepository {
   async getVenueIdForTournamentSV(_tournamentId: string): Promise<string | null> {
+    //? El avance automático de eliminación simple (S7c-1) crea partidos de
+    //? ronda siguiente sin cancha asignada todavía; `findFirst` sin este
+    //? filtro puede agarrar uno de esos y resolver `venueId: null` aunque el
+    //? torneo ya tenga canchas asignadas en su ronda inicial.
     const MATCH = await PRISMA.match.findFirst({
-      where: { tournamentId: _tournamentId },
+      where: { tournamentId: _tournamentId, courtId: { not: null } },
       select: { court: { select: { venueId: true } } },
     });
     return MATCH?.court?.venueId ?? null;

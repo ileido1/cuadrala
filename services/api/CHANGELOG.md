@@ -5,6 +5,21 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.10.1] - 2026-09-13
+
+### Corregido
+
+- **`getVenueIdForTournamentSV` podía resolver la sede de un partido sin
+  cancha asignada**: el guard de acceso de
+  `POST /tournaments/:tournamentId/matches/:matchId/results` buscaba
+  cualquier `Match` del torneo (`findFirst` sin filtrar por `courtId`) para
+  obtener su sede. Los partidos de ronda siguiente creados por el avance
+  automático de eliminación simple (S7c-1) no tienen cancha asignada hasta
+  que se programan, así que si `findFirst` elegía uno de ellos la sede
+  salía `null` y el guard devolvía 400 en vez de la validación real (por
+  ejemplo, el 409 de resultado duplicado). Ahora el filtro exige
+  `courtId: { not: null }`.
+
 ## [1.10.0] - 2026-09-13
 
 ### Agregado

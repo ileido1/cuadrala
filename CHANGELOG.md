@@ -10,6 +10,7 @@
 - **Tournaments handoff fidelity (S7c-1a)**: new pure domain function `resolveSingleEliminationAdvancementParticipantsSV` expands a resolved bracket-advancement ref into its `MatchParticipant` rows, adding the fixed doubles partner when applicable; not yet wired into any use case (`services/api` 1.9.3)
 
 ### Fixed
+- **Tournaments handoff fidelity (S7c-2)**: `getVenueIdForTournamentSV` (the venue guard for `POST /tournaments/:tournamentId/matches/:matchId/results`) could resolve `null` when the tournament's only courtless matches were single-elimination auto-advancement next-round matches, turning a would-be duplicate-result 409 into an incorrect 400; the lookup now requires `courtId: { not: null }` (`services/api` 1.10.1)
 - **Tournaments handoff fidelity (S7b)**: `POST /tournaments/:tournamentId/matches/:matchId/results` now rejects a tied result in single-elimination tournaments (400 `VALIDACION_FALLIDA`, writes nothing), determining winner/tie by summed side points (`MatchParticipant.teamLabel ?? userId`) via the existing `resolveMatchWinningUserIdsSV`, fixing a doubles bug where comparing individual score rows could pick the wrong side (`services/api` 1.9.2)
 
 ### Added
