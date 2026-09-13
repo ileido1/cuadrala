@@ -5,6 +5,18 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.0] - 2026-09-12
+
+### Agregado
+
+- **`GET /api/v1/users/me/tournaments`.** Devuelve los torneos del usuario
+  actual: en los que está inscripto (`registrationStatus`: `PENDING` o
+  `CONFIRMED`), tiene una invitación pendiente (`pendingInvitationId`), o que
+  organiza (`isOrganizer`). `pendingRegistrationsCount` solo tiene valor
+  cuando el usuario organiza el torneo; para cualquier otro rol es `null`.
+  Requiere autenticación (401 sin sesión). Montado en el router de perfil,
+  no en `/tournaments`, para no colisionar con `/tournaments/:tournamentId`.
+
 ## [1.6.0] - 2026-09-12
 
 ### Agregado

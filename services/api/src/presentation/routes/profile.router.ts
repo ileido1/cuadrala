@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { getProfileCON, patchProfileCON } from '../controllers/profile.controller.js';
+import { getMyTournamentsCON } from '../controllers/my_tournaments.controller.js';
 import { searchUsersByDocumentCON } from '../controllers/user_search.controller.js';
 import {
   deleteMyNotificationSubscriptionCON,
@@ -84,6 +85,9 @@ PROFILE_ROUTER.get('/me/availability', requireAuth, asyncHandler(getMyAvailabili
 PROFILE_ROUTER.put('/me/availability', requireAuth, asyncHandler(putMyAvailabilityCON));
 PROFILE_ROUTER.get('/me/location', requireAuth, asyncHandler(getMyLocationCON));
 PROFILE_ROUTER.put('/me/location', requireAuth, asyncHandler(putMyLocationCON));
+
+//? No es /tournaments/mine: colisiona con /tournaments/:tournamentId.
+PROFILE_ROUTER.get('/me/tournaments', requireAuth, asyncHandler(getMyTournamentsCON));
 
 PROFILE_ROUTER.get('/:userId/stats', asyncHandler(getUserStatsCON));
 PROFILE_ROUTER.get('/:userId/ratings', asyncHandler(getUserRatingsCON));

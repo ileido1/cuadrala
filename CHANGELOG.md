@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (S3b-1)**: new `GET /api/v1/users/me/tournaments` returns the viewer's tournaments across registration, invitation and organizer roles — `registrationStatus`, `pendingInvitationId`, `isOrganizer`, and `pendingRegistrationsCount` (organizer-only); requires authentication (`services/api` 1.7.0)
 - **Tournaments handoff fidelity (S3a)**: `GET /tournaments` and `GET /tournaments/:id` now return `organizerName` (organizer's display name, `null` when unassigned); `GET /tournaments/:id/invitations` now returns `invitedUserName` for each invitation, resolved via join with no schema change (`services/api` 1.6.0)
 - **Tournaments handoff fidelity (S2)**: `Tournament.gender` is now an optional nullable field (reuses `MatchGender`); `POST /tournaments` accepts it, existing rows and legacy clients stay `null`, and it is returned on both the tournament detail and listing (`services/api` 1.5.0)
 - **Tournaments handoff fidelity (S1)**: `GET /tournaments` now accepts `near`/`radiusKm` and returns `distanceKm` per item, filtering by the tournament's venue location (`services/api` 1.4.0)
