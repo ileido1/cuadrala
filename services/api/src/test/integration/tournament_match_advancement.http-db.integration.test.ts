@@ -244,6 +244,86 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(await fetchRoundMatchesSV(TOURNAMENT_ID, 2)).toHaveLength(1);
     });
 
+    async function fetchBracketSV(_tournamentId: string) {
+      const RES = await request(APP)
+        .get(`/api/v1/tournaments/${_tournamentId}/bracket`)
+        .set('Authorization', `Bearer ${organizerToken}`);
+      expect(RES.status).toBe(200);
+      return RES.body.data as {
+        rounds: Array<{
+          roundNumber: number;
+          matches: Array<{
+            matchNumber: number;
+            matchId: string | null;
+            status: string;
+            winnerId: string | null;
+            score: Array<{ userId: string; points: number }> | null;
+          }>;
+        }>;
+      };
+    }
+
+    it('reflects real matchId/status/winnerId/score in the bracket once a semifinal is played, keeping the other slot in preview (S8b)', async () => {
+      const TOURNAMENT_ID = await createSingleEliminationTournamentSV('SE Bracket Real State', false);
+      for (let i = 0; i < 4; i += 1) {
+        await createConfirmedSinglesSV(TOURNAMENT_ID, `real-${i}`);
+      }
+      await generateAndStartScheduleSV(TOURNAMENT_ID);
+
+      //? `generateAndStartScheduleSV` ya materializa los Match de ronda 1 al
+      //? pasar a IN_PROGRESS: no hay un estado "sin calendario" que probar acá
+      //? (ver los tests unitarios para ese caso) — lo real de este slot es
+      //? SCHEDULED (bracket: PENDING) con matchId ya asignado, sin ganador.
+      const BEFORE_RESULT = await fetchBracketSV(TOURNAMENT_ID);
+      const BEFORE_ROUND_1 = BEFORE_RESULT.rounds.find((_r) => _r.roundNumber === 1)!;
+      for (const MATCH of BEFORE_ROUND_1.matches) {
+        expect(MATCH.matchId).not.toBeNull();
+        expect(MATCH.status).toBe('PENDING');
+        expect(MATCH.winnerId).toBeNull();
+        expect(MATCH.score).toBeNull();
+      }
+      //? La final todavía no se materializó (ninguna semifinal se jugó): sigue en preview.
+      const BEFORE_ROUND_2 = BEFORE_RESULT.rounds.find((_r) => _r.roundNumber === 2)!;
+      expect(BEFORE_ROUND_2.matches[0]!.matchId).toBeNull();
+      expect(BEFORE_ROUND_2.matches[0]!.status).toBe('PENDING');
+
+      const [SF1, SF2] = await fetchRoundMatchesSV(TOURNAMENT_ID, 1);
+      const SF1_WINNER = SF1!.participants[0]!.userId!;
+      const SF1_LOSER = SF1!.participants[1]!.userId!;
+      const RES1 = await recordResultSV(TOURNAMENT_ID, SF1!.id, [
+        { userId: SF1_WINNER, points: 6 },
+        { userId: SF1_LOSER, points: 2 },
+      ]);
+      expect(RES1.status).toBe(201);
+
+      const SF1_MATCH_NUMBER = (SF1!.formatParameters as { matchNumber: number }).matchNumber;
+      const SF2_MATCH_NUMBER = (SF2!.formatParameters as { matchNumber: number }).matchNumber;
+
+      const AFTER = await fetchBracketSV(TOURNAMENT_ID);
+      const AFTER_ROUND_1 = AFTER.rounds.find((_r) => _r.roundNumber === 1)!;
+      const SF1_SLOT = AFTER_ROUND_1.matches.find((_m) => _m.matchNumber === SF1_MATCH_NUMBER)!;
+      expect(SF1_SLOT.matchId).toBe(SF1!.id);
+      expect(SF1_SLOT.status).toBe('COMPLETED');
+      expect(SF1_SLOT.winnerId).toBe(SF1_WINNER);
+      expect(SF1_SLOT.score).toEqual(
+        expect.arrayContaining([
+          { userId: SF1_WINNER, points: 6 },
+          { userId: SF1_LOSER, points: 2 },
+        ]),
+      );
+
+      const SF2_SLOT = AFTER_ROUND_1.matches.find((_m) => _m.matchNumber === SF2_MATCH_NUMBER)!;
+      expect(SF2_SLOT.matchId).toBe(SF2!.id);
+      expect(SF2_SLOT.status).toBe('PENDING');
+      expect(SF2_SLOT.winnerId).toBeNull();
+      expect(SF2_SLOT.score).toBeNull();
+
+      // La final todavía no se materializó (falta la otra semifinal): sigue en preview.
+      const AFTER_ROUND_2 = AFTER.rounds.find((_r) => _r.roundNumber === 2)!;
+      expect(AFTER_ROUND_2.matches[0]!.matchId).toBeNull();
+      expect(AFTER_ROUND_2.matches[0]!.status).toBe('PENDING');
+    });
+
     it('advances the winning doubles side by point sum, materializing both userIds with a re-derived teamLabel', async () => {
       const TOURNAMENT_ID = await createSingleEliminationTournamentSV('SE Doubles', true);
       for (let i = 0; i < 4; i += 1) {

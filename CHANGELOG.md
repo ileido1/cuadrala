@@ -9,6 +9,9 @@
 - **Tournaments handoff fidelity (S7c-1b)**: `POST /tournaments/:tournamentId/matches/:matchId/results` now automatically advances single-elimination brackets — a clear winner (by summed side points, singles or doubles) creates or fills the next-round match, including the third-place match, in the same database transaction as the result write, via the new `registerResultAndAdvanceSV` port method (replaces `registerResultSV`); a tournament-row lock serializes concurrent advancement so two semifinals resolved at once never create two finals, and retries are idempotent (`services/api` 1.10.0)
 - **Tournaments handoff fidelity (S7c-1a)**: new pure domain function `resolveSingleEliminationAdvancementParticipantsSV` expands a resolved bracket-advancement ref into its `MatchParticipant` rows, adding the fixed doubles partner when applicable; not yet wired into any use case (`services/api` 1.9.3)
 
+### Added
+- **Tournaments handoff fidelity (S8b)**: `GET /tournaments/:tournamentId/bracket` now returns the real `winnerId`, `score`, `status` and `matchId` for each match once its `Match` row is materialized, instead of always `winnerId: null`; slots with no materialized match (including byes) stay in preview, unchanged (`services/api` 1.12.0)
+
 ### Changed
 - **Tournaments handoff fidelity (S8a)**: `POST /tournaments/:tournamentId/schedule:generate` now excludes guest registrations (no `userId`) when building a `SINGLE_ELIMINATION` bracket, matching the handoff copy "Los huéspedes quedan fuera del cuadro."; round-robin and americano generation are unchanged and still include guests (`services/api` 1.11.0)
 

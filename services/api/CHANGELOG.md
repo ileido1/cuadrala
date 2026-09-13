@@ -5,6 +5,19 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.12.0] - 2026-09-13
+
+### Agregado
+
+- **`GET /tournaments/:tournamentId/bracket` refleja el estado real una vez
+  que existe calendario**: cada partido cuyo `Match` ya está materializado
+  ahora devuelve su `matchId`, `status` (`PENDING`/`IN_PROGRESS`/`COMPLETED`,
+  mapeado desde `Match.status`), `score` real y `winnerId` (mismo criterio de
+  suma por lado que S7b/S7c, vía `resolveMatchWinningUserIdsSV`), en vez de
+  `winnerId: null` fijo. Los slots sin `Match` materializado (incluidos los
+  byes, que nunca crean uno) siguen en preview, sin cambios. Reutiliza
+  `listTournamentMatchStatesSV` (S6b) — ninguna consulta nueva a la base.
+
 ## [1.11.0] - 2026-09-13
 
 ### Cambiado
