@@ -5,6 +5,21 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.10.0] - 2026-09-13
+
+### Agregado
+
+- **Avance automático de eliminación simple al cargar un resultado**
+  (`POST /tournaments/:tournamentId/matches/:matchId/results`): un ganador
+  claro (por suma de puntos por lado, singles o duplas) crea o completa el
+  partido de la ronda siguiente — incluido el de 3er puesto — en la misma
+  transacción que el resultado, vía el nuevo puerto
+  `registerResultAndAdvanceSV` (reemplaza a `registerResultSV`). La
+  transacción toma un lock a nivel de torneo (`SELECT ... FOR UPDATE` sobre
+  `Tournament`) para que dos semifinales resueltas a la vez nunca creen dos
+  finales, y es idempotente: reintentar no duplica partidos ya
+  materializados. Round robin y americano no avanzan.
+
 ## [1.9.3] - 2026-09-13
 
 ### Agregado

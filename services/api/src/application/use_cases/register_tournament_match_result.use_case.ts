@@ -26,6 +26,8 @@ export type RegisterTournamentMatchResultInput = {
 export type RegisterTournamentMatchResultOutput = {
   resultId: string;
   recordedAt: Date;
+  /** Partidos de ronda siguiente creados por el avance automático (S7c-1); vacío fuera de SE. */
+  createdMatchIds: string[];
 };
 
 export class RegisterTournamentMatchResultUseCase {
@@ -121,6 +123,10 @@ export class RegisterTournamentMatchResultUseCase {
       }
     }
 
-    return this._tournamentMatchResultRepository.registerResultSV({ matchId, scores });
+    //? La escritura del resultado y el avance automático de eliminación simple
+    //? (S7c-1, D13) ocurren en una única transacción del repositorio — nunca
+    //? se separan, para que un resultado nunca quede guardado sin su avance
+    //? (o viceversa) si falla a mitad de camino.
+    return this._tournamentMatchResultRepository.registerResultAndAdvanceSV({ matchId, scores });
   }
 }

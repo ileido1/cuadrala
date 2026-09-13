@@ -18,7 +18,7 @@ const mockTournamentMatchResultRepository = {
   getVenueIdForTournamentSV: vi.fn(),
   matchBelongsToTournamentSV: vi.fn(),
   matchHasResultSV: vi.fn(),
-  registerResultSV: vi.fn(),
+  registerResultAndAdvanceSV: vi.fn(),
   listTournamentMatchStatesSV: vi.fn(),
   listMatchParticipantSidesSV: vi.fn(),
 };
@@ -84,9 +84,10 @@ describe('RegisterTournamentMatchResultUseCase', () => {
 
   it('should allow the tournament organizer (not venue staff) to record a result', async () => {
     resetMocksSV();
-    mockTournamentMatchResultRepository.registerResultSV.mockResolvedValue({
+    mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
       resultId: 'result-uuid',
       recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+      createdMatchIds: [],
     });
 
     const RESULT = await useCase.executeSV({
@@ -105,7 +106,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       venueId: 'venue-uuid',
       forbiddenMessage: 'No tienes permisos para editar este torneo.',
     });
-    expect(mockTournamentMatchResultRepository.registerResultSV).toHaveBeenCalledWith({
+    expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).toHaveBeenCalledWith({
       matchId: 'match-uuid',
       scores: [{ userId: 'user-1', points: 6 }],
     });
@@ -113,9 +114,10 @@ describe('RegisterTournamentMatchResultUseCase', () => {
 
   it('should allow venue staff to record a result', async () => {
     resetMocksSV();
-    mockTournamentMatchResultRepository.registerResultSV.mockResolvedValue({
+    mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
       resultId: 'result-uuid',
       recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+      createdMatchIds: [],
     });
 
     const RESULT = await useCase.executeSV({
@@ -128,6 +130,25 @@ describe('RegisterTournamentMatchResultUseCase', () => {
     });
 
     expect(RESULT.resultId).toBe('result-uuid');
+  });
+
+  it('should propagate a registerResultAndAdvanceSV rejection (simulated mid-transaction failure) without any further calls', async () => {
+    resetMocksSV();
+    mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockRejectedValue(
+      new Error('conexión perdida a mitad de la transacción'),
+    );
+
+    await expect(
+      useCase.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [{ userId: 'user-1', points: 6 }],
+        requestingUserId: 'organizer-uuid',
+      }),
+    ).rejects.toThrow('conexión perdida a mitad de la transacción');
+    expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).toHaveBeenCalledTimes(1);
   });
 
   it('should propagate 403 when the requesting user is neither the organizer nor venue staff', async () => {
@@ -147,7 +168,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         requestingUserId: 'unrelated-user',
       }),
     ).rejects.toThrow('No tienes permisos para editar este torneo.');
-    expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
+    expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).not.toHaveBeenCalled();
   });
 
   it('should throw RESULTADO_YA_CARGADO with 409 when the match already has a recorded result, writing nothing', async () => {
@@ -164,7 +185,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         requestingUserId: 'organizer-uuid',
       }),
     ).rejects.toMatchObject({ code: 'RESULTADO_YA_CARGADO', statusCode: 409 });
-    expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
+    expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).not.toHaveBeenCalled();
   });
 
   it('should throw VALIDACION_FALLIDA when scores array is empty', async () => {
@@ -232,7 +253,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
           requestingUserId: 'organizer-uuid',
         }),
       ).rejects.toMatchObject({ code: 'VALIDACION_FALLIDA', statusCode: 400 });
-      expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
+      expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).not.toHaveBeenCalled();
     });
 
     it('should declare the doubles side with the higher sum the winner even when it holds no single highest row', async () => {
@@ -246,9 +267,10 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         { userId: 'b1', teamLabel: 'team-b' },
         { userId: 'b2', teamLabel: 'team-b' },
       ]);
-      mockTournamentMatchResultRepository.registerResultSV.mockResolvedValue({
+      mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
         resultId: 'result-uuid',
         recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdMatchIds: [],
       });
 
       //? Lado A = [10,9] (suma 19) vs lado B = [15,2] (suma 17): A gana pese a que
@@ -268,7 +290,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       });
 
       expect(RESULT.resultId).toBe('result-uuid');
-      expect(mockTournamentMatchResultRepository.registerResultSV).toHaveBeenCalled();
+      expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).toHaveBeenCalled();
     });
 
     it('should reject a singles tie in single elimination', async () => {
@@ -294,7 +316,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
           requestingUserId: 'organizer-uuid',
         }),
       ).rejects.toMatchObject({ code: 'VALIDACION_FALLIDA', statusCode: 400 });
-      expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
+      expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).not.toHaveBeenCalled();
     });
 
     it('should not check for ties outside single elimination (round robin accepts a tie)', async () => {
@@ -303,9 +325,10 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         ...BASE_TOURNAMENT,
         formatPresetName: 'ROUND_ROBIN',
       });
-      mockTournamentMatchResultRepository.registerResultSV.mockResolvedValue({
+      mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
         resultId: 'result-uuid',
         recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdMatchIds: [],
       });
 
       const RESULT = await useCase.executeSV({

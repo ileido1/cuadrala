@@ -28,10 +28,19 @@ export interface TournamentMatchResultRepository {
   matchBelongsToTournamentSV(_matchId: string, _tournamentId: string): Promise<boolean>;
   /** `true` cuando el partido ya tiene un `MatchResult` registrado (evita duplicados). */
   matchHasResultSV(_matchId: string): Promise<boolean>;
-  registerResultSV(_input: {
+  /**
+   * Registra el resultado de un partido y, si pertenece a un torneo de
+   * eliminación simple, avanza el cuadro en la misma transacción (D13/S7c-1):
+   * crea o llena el/los partidos de la siguiente ronda (incluido el de 3er
+   * puesto) que ya tengan ambos lados resueltos, sin duplicar bajo
+   * concurrencia (dos semifinales resueltas a la vez crean una sola final) ni
+   * al reintentar (`createdMatchIds` sale vacío en un reintento idempotente).
+   * Round robin/americano no avanzan: `createdMatchIds` siempre vacío.
+   */
+  registerResultAndAdvanceSV(_input: {
     matchId: string;
     scores: Array<{ userId: string; points: number }>;
-  }): Promise<{ resultId: string; recordedAt: Date }>;
+  }): Promise<{ resultId: string; recordedAt: Date; createdMatchIds: string[] }>;
   /**
    * `userId` + `MatchParticipant.teamLabel` de cada participante de un partido,
    * para agrupar los `scores` por lado (`aggregateMatchSideTotalsSV`) antes de
