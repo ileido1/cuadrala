@@ -1632,6 +1632,19 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/users/me/tournaments': {
+      get: {
+        tags: ['Tournaments'],
+        summary: 'Listar los torneos del usuario actual (inscripto, invitado u organizador)',
+        description:
+          'Devuelve, por cada torneo en el que el usuario esta inscripto (registrationStatus), tiene una invitacion pendiente (pendingInvitationId), o que organiza (isOrganizer), un item con esos datos. pendingRegistrationsCount solo tiene valor cuando isOrganizer es true.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
     '/api/v1/users/{userId}/stats': {
       get: {
         tags: ['Profile'],
