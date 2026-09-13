@@ -628,6 +628,8 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Tournaments'],
         summary: 'Consultar calendario generado (genérico)',
+        description:
+          'Cada partido en `data.rounds[].matches` trae `matchId` y `matchStatus` (`null` sin materializar aún), `decision` (`PENDING`/`ACCEPTED`/`REJECTED`, según las respuestas de los jugadores al turno propuesto) con `rejectedByName` cuando fue rechazado, `sides` (agrupados por `MatchParticipant.teamLabel ?? userId`, vacío sin materializar) y `scores` (vacío sin resultado cargado).',
         parameters: [
           {
             name: 'tournamentId',

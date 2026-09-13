@@ -5,6 +5,22 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.9.0] - 2026-09-13
+
+### Agregado
+
+- **`GET /tournaments/:tournamentId/schedule` ahora expone el estado real de
+  cada partido del "Partidos de hoy" del organizador.** Cada partido en
+  `data.rounds[].matches` gana `matchId` y `matchStatus` (`null` cuando el
+  partido aún no fue materializado), `decision` (`PENDING`/`ACCEPTED`/
+  `REJECTED`, según las respuestas de los jugadores al turno propuesto) con
+  `rejectedByName` cuando fue rechazado, `sides` (participantes agrupados por
+  `MatchParticipant.teamLabel ?? userId`, dos jugadores por lado en duplas) y
+  `scores` (los puntajes cargados, vacío sin resultado). El nuevo puerto
+  `listTournamentMatchStatesSV` resuelve cada Match materializado por su
+  `formatParameters.{scheduleKey,roundNumber,matchNumber}` con una sola
+  consulta por calendario, nunca una por partido.
+
 ## [1.8.2] - 2026-09-13
 
 ### Corregido
