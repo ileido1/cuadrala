@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveMatchWinningUserIdsSV } from '../../domain/tournament/match_side_aggregation.js';
+import {
+  groupMatchParticipantsBySideSV,
+  resolveMatchWinningUserIdsSV,
+} from '../../domain/tournament/match_side_aggregation.js';
 
 describe('resolveMatchWinningUserIdsSV', () => {
   //? Singles: sin teamLabel, cada userId es su propio lado.
@@ -46,5 +49,47 @@ describe('resolveMatchWinningUserIdsSV', () => {
     ]);
 
     expect(WINNERS.sort()).toEqual(['a1', 'a2']);
+  });
+});
+
+describe('groupMatchParticipantsBySideSV', () => {
+  //? Singles: sin teamLabel, cada userId es su propio lado (mismo caso base
+  //? que aggregateMatchSideTotalsSV, pero sin puntos).
+  it('should treat each participant as its own side when there is no teamLabel', () => {
+    const SIDES = groupMatchParticipantsBySideSV([
+      { userId: 'user-a', teamLabel: null, tournamentRegistrationId: 'reg-a' },
+      { userId: 'user-b', teamLabel: null, tournamentRegistrationId: 'reg-b' },
+    ]);
+
+    expect(SIDES).toHaveLength(2);
+    expect(SIDES.map((_s) => _s.userIds)).toEqual([['user-a'], ['user-b']]);
+  });
+
+  //? Dupla: dos jugadores por lado, agrupados por teamLabel.
+  it('should group two players per side for a doubles match', () => {
+    const SIDES = groupMatchParticipantsBySideSV([
+      { userId: 'a1', teamLabel: 'A', tournamentRegistrationId: 'reg-a1' },
+      { userId: 'a2', teamLabel: 'A', tournamentRegistrationId: 'reg-a2' },
+      { userId: 'b1', teamLabel: 'B', tournamentRegistrationId: 'reg-b1' },
+      { userId: 'b2', teamLabel: 'B', tournamentRegistrationId: 'reg-b2' },
+    ]);
+
+    expect(SIDES).toHaveLength(2);
+    const A_SIDE = SIDES.find((_s) => _s.sideKey === 'A');
+    expect(A_SIDE?.userIds.sort()).toEqual(['a1', 'a2']);
+    const B_SIDE = SIDES.find((_s) => _s.sideKey === 'B');
+    expect(B_SIDE?.userIds.sort()).toEqual(['b1', 'b2']);
+  });
+
+  //? Huésped en singles: sin teamLabel ni userId, cae a tournamentRegistrationId
+  //? para no colisionar dos huéspedes distintos en el mismo lado.
+  it('should fall back to tournamentRegistrationId for a guest with no userId', () => {
+    const SIDES = groupMatchParticipantsBySideSV([
+      { userId: null, teamLabel: null, tournamentRegistrationId: 'reg-guest-1' },
+      { userId: null, teamLabel: null, tournamentRegistrationId: 'reg-guest-2' },
+    ]);
+
+    expect(SIDES).toHaveLength(2);
+    expect(SIDES.map((_s) => _s.userIds)).toEqual([[null], [null]]);
   });
 });

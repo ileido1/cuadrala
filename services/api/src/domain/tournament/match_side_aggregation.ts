@@ -59,3 +59,41 @@ export function resolveMatchWinningUserIdsSV(_scores: MatchParticipantScoreSV[])
 
   return WINNING_SIDES[0]!.userIds;
 }
+
+/**
+ * Un participante materializado (`MatchParticipant`), tal como lo necesita
+ * `groupMatchParticipantsBySideSV`: sin puntos, porque agrupa el cuadro antes
+ * de que exista un resultado.
+ */
+export type MatchParticipantSideMemberSV = {
+  userId: string | null;
+  teamLabel: string | null;
+  tournamentRegistrationId: string;
+};
+
+export type MatchParticipantSideSV = {
+  /** `teamLabel` cuando existe; si no, el propio `userId`, o la inscripción del huésped. */
+  sideKey: string;
+  userIds: Array<string | null>;
+};
+
+/**
+ * Agrupa participantes de un partido por lado, con la misma regla que
+ * `aggregateMatchSideTotalsSV` (`teamLabel ?? userId`), pero tolerante a
+ * huéspedes sin `userId`: en ese caso cae a `tournamentRegistrationId` para no
+ * juntar dos huéspedes de singles distintos en el mismo lado.
+ */
+export function groupMatchParticipantsBySideSV(
+  _participants: MatchParticipantSideMemberSV[],
+): MatchParticipantSideSV[] {
+  const BY_SIDE = new Map<string, MatchParticipantSideSV>();
+
+  for (const _p of _participants) {
+    const SIDE_KEY = _p.teamLabel ?? _p.userId ?? _p.tournamentRegistrationId;
+    const CURRENT = BY_SIDE.get(SIDE_KEY) ?? { sideKey: SIDE_KEY, userIds: [] };
+    CURRENT.userIds.push(_p.userId);
+    BY_SIDE.set(SIDE_KEY, CURRENT);
+  }
+
+  return [...BY_SIDE.values()];
+}

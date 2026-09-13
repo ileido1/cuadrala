@@ -19,6 +19,7 @@ const mockTournamentMatchResultRepository = {
   matchBelongsToTournamentSV: vi.fn(),
   matchHasResultSV: vi.fn(),
   registerResultSV: vi.fn(),
+  listTournamentMatchStatesSV: vi.fn(),
 };
 
 const useCase = new RegisterTournamentMatchResultUseCase(
