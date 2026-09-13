@@ -1,4 +1,5 @@
 import type { TournamentMatchResultRepository } from '../../domain/ports/tournament_match_result_repository.js';
+import { AppError } from '../../domain/errors/app_error.js';
 import { PRISMA } from '../prisma_client.js';
 
 export class PrismaTournamentMatchResultRepository implements TournamentMatchResultRepository {
@@ -34,6 +35,16 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
     scores: Array<{ userId: string; points: number }>;
   }): Promise<{ resultId: string; recordedAt: Date }> {
     const RESULT = await PRISMA.$transaction(async (_tx) => {
+      await _tx.$executeRaw`SELECT id FROM "Match" WHERE id = ${_input.matchId} FOR UPDATE`;
+
+      const EXISTING = await _tx.matchResult.findFirst({
+        where: { matchId: _input.matchId },
+        select: { id: true },
+      });
+      if (EXISTING !== null) {
+        throw new AppError('RESULTADO_YA_CARGADO', 'Este partido ya tiene un resultado cargado.', 409);
+      }
+
       const CREATED_RESULT = await _tx.matchResult.create({
         data: { matchId: _input.matchId },
       });

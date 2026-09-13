@@ -5,6 +5,21 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.8.2] - 2026-09-13
+
+### Corregido
+
+- **El chequeo de resultado duplicado (1.8.1) no era seguro bajo concurrencia
+  real.** Dos requests simultáneas para el mismo partido podían pasar ambas el
+  chequeo `matchHasResultSV` antes de que cualquiera escribiera, creando dos
+  `MatchResult`. `registerResultSV` ahora toma un lock de fila
+  (`SELECT ... FOR UPDATE` sobre `Match`) y repite el chequeo de existencia
+  dentro de la misma transacción antes de crear el resultado; la segunda
+  request en llegar ve el resultado ya creado por la primera y responde 409
+  `RESULTADO_YA_CARGADO` sin escribir. Cubierto por una integración que dispara
+  dos requests estrictamente simultáneas y verifica exactamente un 201 y un
+  409, con un único `MatchResult` en la base.
+
 ## [1.8.1] - 2026-09-12
 
 ### Corregido

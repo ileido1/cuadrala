@@ -109,5 +109,42 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const SCORE_A = STORED[0]?.scores.find((_s) => _s.userId === playerAId);
       expect(SCORE_A?.points).toBe(6);
     });
+
+    it('handles two strictly simultaneous requests', async () => {
+      const MATCH = await PRISMA.match.create({
+        data: {
+          categoryId,
+          sportId,
+          organizerUserId,
+          type: 'AMERICANO',
+          status: 'IN_PROGRESS',
+          courtId,
+          tournamentId,
+        },
+      });
+
+      const req1 = request(APP)
+        .post(`/api/v1/tournaments/${tournamentId}/matches/${MATCH.id}/results`)
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .send({ scores: [{ userId: playerAId, points: 6 }, { userId: playerBId, points: 2 }] })
+        .set('Content-Type', 'application/json');
+
+      const req2 = request(APP)
+        .post(`/api/v1/tournaments/${tournamentId}/matches/${MATCH.id}/results`)
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .send({ scores: [{ userId: playerAId, points: 6 }, { userId: playerBId, points: 2 }] })
+        .set('Content-Type', 'application/json');
+
+      const [RES1, RES2] = await Promise.all([req1, req2]);
+
+      // One should succeed, one should fail with 409
+      const STATUSES = [RES1.status, RES2.status].sort();
+      expect(STATUSES).toEqual([201, 409]);
+
+      const STORED = await PRISMA.matchResult.findMany({
+        where: { matchId: MATCH.id },
+      });
+      expect(STORED).toHaveLength(1);
+    });
   },
 );
