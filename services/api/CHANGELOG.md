@@ -5,6 +5,18 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.8.0] - 2026-09-12
+
+### Agregado
+
+- **`GET /tournaments/:tournamentId/schedule/my-matches` ahora devuelve
+  `roundName`.** Para torneos de eliminación simple es el nombre cualitativo
+  de la ronda ("Cuartos de final", "Semifinal", "Final", "Tercer puesto"),
+  calculado con la misma lógica de `bracket_generator.ts` (ahora exportada
+  como `resolveSingleEliminationRoundNameSV`, reutilizable). Para cualquier
+  otro formato es `null`; el cliente sigue teniendo `roundNumber` para caer a
+  "Ronda {n}".
+
 ## [1.7.1] - 2026-09-12
 
 ### Seguridad

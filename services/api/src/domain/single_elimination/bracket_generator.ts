@@ -63,8 +63,16 @@ function nextPowerOfTwoSV(_n: number): number {
 
 /**
  * Nombres estándar de rondas según tamaño del bracket.
+ *
+ * Reusado por `list_my_tournament_matches.use_case.ts` (roundName qualitativo
+ * en "Mis partidos") para no duplicar esta lógica: la ronda de un torneo
+ * SINGLE_ELIMINATION siempre se nombra igual, la genere quien la genere.
  */
-function roundNameSV(_roundNumber: number, _totalRounds: number): string {
+export function resolveSingleEliminationRoundNameSV(
+  _roundNumber: number,
+  _totalRounds: number,
+): string {
+  if (_roundNumber > _totalRounds) return 'Tercer puesto';
   const REMAINING = _totalRounds - _roundNumber + 1;
   if (REMAINING === 1) return 'Final';
   if (REMAINING === 2) return 'Semifinal';
@@ -145,7 +153,7 @@ export function generateSingleEliminationScheduleSV(
 
   rounds.push({
     roundNumber: 1,
-    name: roundNameSV(1, TOTAL_ROUNDS),
+    name: resolveSingleEliminationRoundNameSV(1, TOTAL_ROUNDS),
     matches: firstRoundMatches,
   });
 
@@ -164,7 +172,7 @@ export function generateSingleEliminationScheduleSV(
     }
     rounds.push({
       roundNumber: r + 1,
-      name: roundNameSV(r + 1, TOTAL_ROUNDS),
+      name: resolveSingleEliminationRoundNameSV(r + 1, TOTAL_ROUNDS),
       matches: roundMatches,
     });
   }
@@ -173,7 +181,7 @@ export function generateSingleEliminationScheduleSV(
   if (_input.thirdPlaceMatch) {
     rounds.push({
       roundNumber: TOTAL_ROUNDS + 1,
-      name: 'Tercer puesto',
+      name: resolveSingleEliminationRoundNameSV(TOTAL_ROUNDS + 1, TOTAL_ROUNDS),
       matches: [
         {
           matchNumber: 1,

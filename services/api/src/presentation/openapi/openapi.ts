@@ -416,7 +416,7 @@ const OPENAPI_CONST = {
         tags: ['Tournaments'],
         summary: 'Los partidos del jugador en el torneo',
         description:
-          'Día, hora, cancha, compañero y rivales de cada partido del jugador autenticado, en orden de juego. En duplas fijas expande la pareja. Devuelve vacío —no 404— cuando el calendario todavía no se generó: es un estado normal del torneo. `myResponse` es lo que ya contestó y `decision` cómo quedó el partido con las respuestas de todos.',
+          'Día, hora, cancha, compañero y rivales de cada partido del jugador autenticado, en orden de juego. En duplas fijas expande la pareja. Devuelve vacío —no 404— cuando el calendario todavía no se generó: es un estado normal del torneo. `myResponse` es lo que ya contestó y `decision` cómo quedó el partido con las respuestas de todos. `roundName` es el nombre cualitativo de la ronda ("Cuartos de final", "Semifinal", "Final", "Tercer puesto") para torneos de eliminación simple; `null` para cualquier otro formato, donde el cliente debe caer a "Ronda {roundNumber}".',
         security: [{ bearerAuth: [] }],
         parameters: [
           {

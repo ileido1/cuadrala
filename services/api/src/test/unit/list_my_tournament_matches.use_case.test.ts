@@ -116,4 +116,32 @@ describe('ListMyTournamentMatchesUseCase', () => {
 
     expect(R.items).toEqual([]);
   });
+
+  //? La app usa roundName cuando existe y cae a "Ronda {n}" cuando es null.
+  it('should qualitatively name the round for a single-elimination tournament', async () => {
+    scheduleRepo.findByTournamentIdSV.mockResolvedValue({
+      formatCode: 'SINGLE_ELIMINATION',
+      payload: {
+        totalRounds: 3,
+        rounds: [
+          {
+            roundNumber: 1,
+            name: 'Cuartos de final',
+            matches: [{ matchNumber: 1, playerA: 'reg-1', playerB: 'reg-3', bye: false }],
+          },
+        ],
+      },
+      slotPlan: null,
+    });
+
+    const R = await useCase.executeSV(BASE);
+
+    expect(R.items[0]?.roundName).toBe('Cuartos de final');
+  });
+
+  it('should return roundName null for a non-single-elimination tournament', async () => {
+    const R = await useCase.executeSV(BASE);
+
+    expect(R.items[0]?.roundName).toBeNull();
+  });
 });
