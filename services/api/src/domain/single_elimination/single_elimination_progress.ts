@@ -1,3 +1,4 @@
+import { AppError } from '../errors/app_error.js';
 import type { SingleEliminationScheduleDTO } from './bracket_generator.js';
 
 /**
@@ -109,4 +110,67 @@ export function resolveSingleEliminationProgressSV(_input: {
 
 function matchKeySV(_roundNumber: number, _matchNumber: number): string {
   return `${_roundNumber}:${_matchNumber}`;
+}
+
+/**
+ * Inscripción tal como la necesita el avance (S7c-1): su usuario y, si
+ * corresponde, la pareja fija con la que juega. Mismo shape mínimo que usa
+ * `MaterializeTournamentMatchesUseCase` para materializar el cuadro inicial.
+ */
+export type SingleEliminationAdvancementRegistrationSV = {
+  id: string;
+  userId: string | null;
+  partnerRegistrationId: string | null;
+};
+
+export type SingleEliminationAdvancementParticipantSV = {
+  userId: string | null;
+  tournamentRegistrationId: string;
+  teamLabel: string | null;
+};
+
+/**
+ * Expande la ref opaca de un lado ya resuelto (`playerARef`/`playerBRef` de
+ * `resolveSingleEliminationProgressSV`, un `TournamentRegistration.id`) en
+ * sus `MatchParticipant` a materializar en la ronda siguiente.
+ *
+ * En duplas fijas agrega la pareja (`partnerRegistrationId`), con el mismo
+ * `teamLabel` para ambos — igual regla que usa la materialización inicial
+ * del cuadro (`MaterializeTournamentMatchesUseCase`) para no partir una
+ * pareja entre rondas. En singles es un único participante sin lado.
+ */
+export function resolveSingleEliminationAdvancementParticipantsSV(_input: {
+  ref: string;
+  teamLabel: 'A' | 'B';
+  registrationById: Map<string, SingleEliminationAdvancementRegistrationSV>;
+}): SingleEliminationAdvancementParticipantSV[] {
+  const REGISTRATION = _input.registrationById.get(_input.ref);
+  if (REGISTRATION === undefined) {
+    throw new AppError(
+      'CALENDARIO_OBSOLETO',
+      'El calendario está desactualizado; regenera el calendario del torneo.',
+      409,
+    );
+  }
+
+  const PARTNER_ID = REGISTRATION.partnerRegistrationId;
+  if (PARTNER_ID === null) {
+    return [
+      { userId: REGISTRATION.userId, tournamentRegistrationId: REGISTRATION.id, teamLabel: null },
+    ];
+  }
+
+  const PARTNER = _input.registrationById.get(PARTNER_ID);
+  if (PARTNER === undefined) {
+    throw new AppError(
+      'CALENDARIO_OBSOLETO',
+      'El calendario está desactualizado; regenera el calendario del torneo.',
+      409,
+    );
+  }
+
+  return [
+    { userId: REGISTRATION.userId, tournamentRegistrationId: REGISTRATION.id, teamLabel: _input.teamLabel },
+    { userId: PARTNER.userId, tournamentRegistrationId: PARTNER.id, teamLabel: _input.teamLabel },
+  ];
 }

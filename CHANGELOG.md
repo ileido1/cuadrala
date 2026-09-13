@@ -5,6 +5,9 @@
 ### Security
 - **Tournaments handoff fidelity (S4)**: `GET /tournaments/:id/registrations` no longer exposes a guest's `guestPhone`/`guestEmail` to any authenticated caller; only the tournament's organizer or venue staff receive them, everyone else gets `null` while `status` and `guestName` stay intact (`services/api` 1.7.1)
 
+### Added
+- **Tournaments handoff fidelity (S7c-1a)**: new pure domain function `resolveSingleEliminationAdvancementParticipantsSV` expands a resolved bracket-advancement ref into its `MatchParticipant` rows, adding the fixed doubles partner when applicable; not yet wired into any use case (`services/api` 1.9.3)
+
 ### Fixed
 - **Tournaments handoff fidelity (S7b)**: `POST /tournaments/:tournamentId/matches/:matchId/results` now rejects a tied result in single-elimination tournaments (400 `VALIDACION_FALLIDA`, writes nothing), determining winner/tie by summed side points (`MatchParticipant.teamLabel ?? userId`) via the existing `resolveMatchWinningUserIdsSV`, fixing a doubles bug where comparing individual score rows could pick the wrong side (`services/api` 1.9.2)
 

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { generateSingleEliminationScheduleSV } from '../../domain/single_elimination/bracket_generator.js';
-import { resolveSingleEliminationProgressSV } from '../../domain/single_elimination/single_elimination_progress.js';
+import {
+  resolveSingleEliminationAdvancementParticipantsSV,
+  resolveSingleEliminationProgressSV,
+} from '../../domain/single_elimination/single_elimination_progress.js';
 
 describe('resolveSingleEliminationProgressSV', () => {
   //? 4 participantes, sin bye: ronda 1 = 2 semifinales, ronda 2 = final,
@@ -79,5 +82,71 @@ describe('resolveSingleEliminationProgressSV', () => {
 
     const FINAL = PROGRESS.find((_p) => _p.roundNumber === 2 && _p.matchNumber === 1);
     expect(FINAL?.playerARef).toBe(DOUBLES_WINNER_REF);
+  });
+});
+
+describe('resolveSingleEliminationAdvancementParticipantsSV', () => {
+  //? Singles: la ref resuelve a un único participante, sin lado (teamLabel null).
+  it('should resolve a singles ref to a single participant with no team label', () => {
+    const REGISTRATION_BY_ID = new Map([
+      ['reg-1', { id: 'reg-1', userId: 'user-1', partnerRegistrationId: null }],
+    ]);
+
+    const PARTICIPANTS = resolveSingleEliminationAdvancementParticipantsSV({
+      ref: 'reg-1',
+      teamLabel: 'A',
+      registrationById: REGISTRATION_BY_ID,
+    });
+
+    expect(PARTICIPANTS).toEqual([
+      { userId: 'user-1', tournamentRegistrationId: 'reg-1', teamLabel: null },
+    ]);
+  });
+
+  //? Duplas fijas: la ref agrega a la pareja, ambos con el mismo teamLabel —
+  //? nunca se avanza a un jugador de la pareja sin el otro.
+  it('should resolve a doubles ref to both partners sharing the given team label', () => {
+    const REGISTRATION_BY_ID = new Map([
+      ['reg-1', { id: 'reg-1', userId: 'user-1', partnerRegistrationId: 'reg-2' }],
+      ['reg-2', { id: 'reg-2', userId: 'user-2', partnerRegistrationId: 'reg-1' }],
+    ]);
+
+    const PARTICIPANTS = resolveSingleEliminationAdvancementParticipantsSV({
+      ref: 'reg-1',
+      teamLabel: 'B',
+      registrationById: REGISTRATION_BY_ID,
+    });
+
+    expect(PARTICIPANTS).toEqual([
+      { userId: 'user-1', tournamentRegistrationId: 'reg-1', teamLabel: 'B' },
+      { userId: 'user-2', tournamentRegistrationId: 'reg-2', teamLabel: 'B' },
+    ]);
+  });
+
+  //? Un cuadro desactualizado (ref sin inscripción conocida) no debe materializar
+  //? un participante inventado: falla explícito con 409 CALENDARIO_OBSOLETO.
+  it('should throw CALENDARIO_OBSOLETO when the ref does not resolve to a known registration', () => {
+    expect(() =>
+      resolveSingleEliminationAdvancementParticipantsSV({
+        ref: 'reg-unknown',
+        teamLabel: 'A',
+        registrationById: new Map(),
+      }),
+    ).toThrow('El calendario está desactualizado');
+  });
+
+  //? Idem cuando la pareja registrada ya no existe (torneo desactualizado).
+  it('should throw CALENDARIO_OBSOLETO when the partner registration is missing', () => {
+    const REGISTRATION_BY_ID = new Map([
+      ['reg-1', { id: 'reg-1', userId: 'user-1', partnerRegistrationId: 'reg-missing' }],
+    ]);
+
+    expect(() =>
+      resolveSingleEliminationAdvancementParticipantsSV({
+        ref: 'reg-1',
+        teamLabel: 'A',
+        registrationById: REGISTRATION_BY_ID,
+      }),
+    ).toThrow('El calendario está desactualizado');
   });
 });
