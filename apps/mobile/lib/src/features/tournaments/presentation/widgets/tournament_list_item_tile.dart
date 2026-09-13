@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/formatting/money_format.dart';
 import '../../../../core/models/currency_code.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../router/routes.dart';
 import '../../../../shared/widgets/dual_price.dart';
 import '../../data/models/tournament_list_item_dto.dart';
@@ -70,13 +71,13 @@ final class TournamentListItemTile extends StatelessWidget {
                 children: [
                   if (tournament.startsAt != null)
                     _MetaRow(
-                      icon: Icons.calendar_today_outlined,
+                      icon: AppIcons.calendar,
                       label: _formatStartSV(tournament.startsAt!),
                     ),
                   if (tournament.venueName != null)
                     _MetaRow(
                       key: const Key('tournament.card.venue'),
-                      icon: Icons.place_outlined,
+                      icon: AppIcons.pin,
                       label: tournament.venueName!,
                     ),
                 ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../data/models/format_parameter_field_def.dart';
 
 class DynamicFormatParametersForm extends StatelessWidget {
@@ -43,7 +44,7 @@ class DynamicFormatParametersForm extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.remove),
+              icon: const Icon(AppIcons.remove),
               onPressed: () {
                 final newValue = (currentValue - 1);
                 if (field.min == null || newValue >= field.min!) {
@@ -56,7 +57,7 @@ class DynamicFormatParametersForm extends StatelessWidget {
               child: Center(child: Text(currentValue.toString())),
             ),
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: const Icon(AppIcons.add),
               onPressed: () {
                 final newValue = (currentValue + 1);
                 if (field.max == null || newValue <= field.max!) {

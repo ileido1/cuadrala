@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../../data/models/tournament_registration_dto.dart';
 import '../tournament_roster_grouping.dart';
 
@@ -137,7 +138,7 @@ class _PairTile extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            confirmed ? Icons.check_circle : Icons.hourglass_top,
+            confirmed ? AppIcons.checkCircle : AppIcons.pending,
             size: 18,
             color: confirmed ? Colors.green : Colors.orange,
           ),
@@ -202,7 +203,7 @@ class _UnpairedTile extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              selected ? Icons.check_circle : Icons.person_outline,
+              selected ? AppIcons.checkCircle : AppIcons.person,
               size: 18,
               color: selected ? scheme.primary : scheme.onSurfaceVariant,
             ),

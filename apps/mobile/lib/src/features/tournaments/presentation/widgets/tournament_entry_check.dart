@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/formatting/money_format.dart';
 import '../../../../core/models/currency_code.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/brand_colors.dart';
 
 /// Por qué el jugador puede o no puede entrar al torneo.
@@ -55,7 +56,7 @@ class TournamentEntryCheck extends StatelessWidget {
 
     final rows = <Widget>[
       _EntryRow(
-        icon: Icons.workspace_premium_outlined,
+        icon: AppIcons.star,
         label: 'NIVEL',
         value: categoryName,
         sub: _levelSubSV(),
@@ -63,14 +64,14 @@ class TournamentEntryCheck extends StatelessWidget {
         trailing: eligibility == TournamentEligibility.wrongCategory
             ? Icon(
                 key: const Key('entry.level.locked'),
-                Icons.lock_outline,
+                AppIcons.lock,
                 size: 18,
                 color: BrandColors.dangerRed,
               )
             : null,
       ),
       _EntryRow(
-        icon: Icons.payments_outlined,
+        icon: AppIcons.payments,
         label: 'INSCRIPCIÓN',
         value: inscriptionPrice == null
             ? 'Precio por confirmar'
@@ -80,7 +81,7 @@ class TournamentEntryCheck extends StatelessWidget {
         sub: 'Por jugador, se paga al confirmar',
       ),
       _EntryRow(
-        icon: Icons.event_outlined,
+        icon: AppIcons.calendar,
         label: 'CUÁNDO',
         value: startsAt == null
             ? 'Fecha por confirmar'
@@ -90,7 +91,7 @@ class TournamentEntryCheck extends StatelessWidget {
             : 'Inscripción hasta ${_formatDateTimeSV(registrationClosesAt!)}',
       ),
       _EntryRow(
-        icon: Icons.place_outlined,
+        icon: AppIcons.pin,
         label: 'DÓNDE',
         value: venueName ?? 'Sede por confirmar',
         sub: venueName == null ? 'La sede todavía no fue declarada' : null,
