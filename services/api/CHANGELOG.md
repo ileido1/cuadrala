@@ -5,6 +5,21 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.9.1] - 2026-09-13
+
+### Agregado
+
+- **Nuevo dominio puro `resolveSingleEliminationProgressSV`** (sin efectos de
+  lado, sin DB) para el avance de un cuadro de eliminación simple: el
+  partido `m` de la ronda `r+1` se completa con los ganadores registrados de
+  los partidos `2m-1` y `2m` de la ronda `r`; un bye de primera ronda avanza
+  al único jugador sin resultado registrado; y el partido por el 3er puesto
+  (cuando existe) se completa con los perdedores de las dos semifinales, no
+  con sus ganadores. `winnerRef`/`loserRef` son identificadores opacos de
+  lado (nunca se inspeccionan), para no asumir singles y perder un lado de
+  duplas. Todavía no está conectado a ningún caso de uso ni endpoint: es la
+  base para el avance automático que se conecta en el siguiente slice.
+
 ## [1.9.0] - 2026-09-13
 
 ### Agregado
