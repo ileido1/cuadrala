@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- **Tournaments handoff fidelity (M0)**: split the tournament detail screen's ~3,100-line implementation file into 7 files via Dart `part`/`part of` (move-only, no behavior change) (`apps/mobile` 1.2.1+14)
+
 ### Security
 - **Tournaments handoff fidelity (S4)**: `GET /tournaments/:id/registrations` no longer exposes a guest's `guestPhone`/`guestEmail` to any authenticated caller; only the tournament's organizer or venue staff receive them, everyone else gets `null` while `status` and `guestName` stay intact (`services/api` 1.7.1)
 

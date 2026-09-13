@@ -5,6 +5,13 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.2.1] - 2026-09-13
+
+### Cambiado
+
+- **Refactor interno**: se separó `tournament_detail_screen.dart` en archivos
+  `part` más chicos por sección de la pantalla, sin cambios de comportamiento.
+
 ## [1.2.0] - 2026-09-10
 
 ### Agregado
