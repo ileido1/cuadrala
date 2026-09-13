@@ -42,6 +42,8 @@ abstract final class AppIcons {
   static const fire = PhosphorIconsLight.fire;
   static const work = PhosphorIconsLight.briefcase;
   static const wifiOff = PhosphorIconsLight.wifiSlash;
+  static const pending = PhosphorIconsLight.hourglassMedium;
+  static const public = PhosphorIconsLight.globe;
 
   // ─── Tiempo / calendario ───────────────────────────────────────────────────
   static const clock = PhosphorIconsLight.clock;
