@@ -7,6 +7,7 @@ import { PrismaMatchCrudRepository } from '../../infrastructure/adapters/prisma_
 import { PrismaTournamentMatchResultRepository } from '../../infrastructure/adapters/prisma_tournament_match_result_repository.js';
 import { PrismaTournamentScheduleRepository } from '../../infrastructure/adapters/prisma_tournament_schedule_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
 
 const TOURNAMENT_QUERY_REPOSITORY = new PrismaTournamentQueryRepository();
 const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
@@ -28,4 +29,5 @@ export const REGISTER_TOURNAMENT_MATCH_RESULT_UC = new RegisterTournamentMatchRe
   TOURNAMENT_QUERY_REPOSITORY,
   ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
   TOURNAMENT_MATCH_RESULT_REPOSITORY,
+  CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
 );

@@ -2,6 +2,7 @@ import { AppError } from '../../domain/errors/app_error.js';
 import type { TournamentQueryRepository } from '../../domain/ports/tournament_query_repository.js';
 import type { TournamentMatchResultRepository } from '../../domain/ports/tournament_match_result_repository.js';
 import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
+import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
 import {
   resolveMatchWinningUserIdsSV,
   type MatchParticipantScoreSV,
@@ -35,6 +36,7 @@ export class RegisterTournamentMatchResultUseCase {
     private readonly _tournamentQueryRepository: TournamentQueryRepository,
     private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
     private readonly _tournamentMatchResultRepository: TournamentMatchResultRepository,
+    private readonly _createTournamentNotificationEvent: CreateTournamentNotificationEventUseCase | null = null,
   ) {}
 
   async executeSV(
@@ -127,6 +129,29 @@ export class RegisterTournamentMatchResultUseCase {
     //? (S7c-1, D13) ocurren en una única transacción del repositorio — nunca
     //? se separan, para que un resultado nunca quede guardado sin su avance
     //? (o viceversa) si falla a mitad de camino.
-    return this._tournamentMatchResultRepository.registerResultAndAdvanceSV({ matchId, scores });
+    const RESULT = await this._tournamentMatchResultRepository.registerResultAndAdvanceSV({
+      matchId,
+      scores,
+    });
+
+    //? Mejor esfuerzo, después del commit (S9): una notificación fallida nunca
+    //? tira abajo un resultado ya guardado. `MatchResultScore.userId` es NOT
+    //? NULL en el schema, así que un lado huésped nunca aparece en `scores` —
+    //? no hace falta distinguirlo aparte ni consultar participantes.
+    if (this._createTournamentNotificationEvent !== null) {
+      try {
+        await this._createTournamentNotificationEvent.executeSV({
+          type: 'TOURNAMENT_MATCH_RESULT_RECORDED',
+          tournamentId,
+          categoryId: TOURNAMENT.categoryId,
+          payload: { tournamentName: TOURNAMENT.name },
+          userIds: [...new Set(scores.map((_s) => _s.userId))],
+        });
+      } catch {
+        // No bloquear ni revertir el resultado si falla la notificación.
+      }
+    }
+
+    return RESULT;
   }
 }

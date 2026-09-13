@@ -10,6 +10,7 @@
 - **Tournaments handoff fidelity (S7c-1a)**: new pure domain function `resolveSingleEliminationAdvancementParticipantsSV` expands a resolved bracket-advancement ref into its `MatchParticipant` rows, adding the fixed doubles partner when applicable; not yet wired into any use case (`services/api` 1.9.3)
 
 ### Added
+- **Tournaments handoff fidelity (S9)**: `POST /tournaments/:tournamentId/matches/:matchId/results` now dispatches a `TOURNAMENT_MATCH_RESULT_RECORDED` notification (exact handoff copy "Resultado cargado") to every `userId` present in the recorded scores, across every format; a guest side never appears in scores (`MatchResultScore.userId` is required) so it's naturally skipped; dispatch happens after the result is saved and is non-blocking (`services/api` 1.13.0)
 - **Tournaments handoff fidelity (S8b)**: `GET /tournaments/:tournamentId/bracket` now returns the real `winnerId`, `score`, `status` and `matchId` for each match once its `Match` row is materialized, instead of always `winnerId: null`; slots with no materialized match (including byes) stay in preview, unchanged (`services/api` 1.12.0)
 
 ### Changed

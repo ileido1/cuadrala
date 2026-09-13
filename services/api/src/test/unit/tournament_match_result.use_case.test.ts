@@ -23,10 +23,15 @@ const mockTournamentMatchResultRepository = {
   listMatchParticipantSidesSV: vi.fn(),
 };
 
+const mockCreateTournamentNotificationEvent = {
+  executeSV: vi.fn(),
+};
+
 const useCase = new RegisterTournamentMatchResultUseCase(
   mockTournamentQueryRepository,
   mockAssertTournamentOrganizerAccess as never,
   mockTournamentMatchResultRepository,
+  mockCreateTournamentNotificationEvent as never,
 );
 
 const BASE_TOURNAMENT = {
@@ -63,6 +68,10 @@ function resetMocksSV(): void {
   mockTournamentMatchResultRepository.matchHasResultSV.mockResolvedValue(false);
   mockTournamentMatchResultRepository.listMatchParticipantSidesSV.mockResolvedValue([]);
   mockAssertTournamentOrganizerAccess.executeSV.mockResolvedValue(undefined);
+  mockCreateTournamentNotificationEvent.executeSV.mockResolvedValue({
+    eventId: 'event-uuid',
+    createdDeliveries: 0,
+  });
 }
 
 describe('RegisterTournamentMatchResultUseCase', () => {
@@ -345,6 +354,140 @@ describe('RegisterTournamentMatchResultUseCase', () => {
 
       expect(RESULT.resultId).toBe('result-uuid');
       expect(mockTournamentMatchResultRepository.listMatchParticipantSidesSV).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('result notification (S9)', () => {
+    it('notifies every unique userId present in the recorded scores, with the exact handoff copy', async () => {
+      resetMocksSV();
+      mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
+        resultId: 'result-uuid',
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdMatchIds: [],
+      });
+
+      await useCase.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [
+          { userId: 'user-1', points: 6 },
+          { userId: 'user-2', points: 2 },
+        ],
+        requestingUserId: 'organizer-uuid',
+      });
+
+      expect(mockCreateTournamentNotificationEvent.executeSV).toHaveBeenCalledWith({
+        type: 'TOURNAMENT_MATCH_RESULT_RECORDED',
+        tournamentId: 'tournament-uuid',
+        categoryId: 'cat-uuid',
+        payload: { tournamentName: 'Torneo Test' },
+        userIds: ['user-1', 'user-2'],
+      });
+    });
+
+    //? MatchResultScore.userId es NOT NULL en el schema: un lado huésped nunca
+    //? aparece en `scores`, así que basta con derivar los destinatarios de ahí
+    //? — sin consultar participantes ni distinguir huésped explícitamente.
+    it('skips a guest side because it never appears in the recorded scores', async () => {
+      resetMocksSV();
+      mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
+        resultId: 'result-uuid',
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdMatchIds: [],
+      });
+
+      await useCase.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [{ userId: 'user-1', points: 6 }],
+        requestingUserId: 'organizer-uuid',
+      });
+
+      expect(mockCreateTournamentNotificationEvent.executeSV).toHaveBeenCalledWith(
+        expect.objectContaining({ userIds: ['user-1'] }),
+      );
+    });
+
+    it('applies to every format, not just single elimination', async () => {
+      resetMocksSV();
+      mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue({
+        ...BASE_TOURNAMENT,
+        formatPresetName: 'ROUND_ROBIN',
+      });
+      mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
+        resultId: 'result-uuid',
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdMatchIds: [],
+      });
+
+      await useCase.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [
+          { userId: 'user-1', points: 6 },
+          { userId: 'user-2', points: 6 },
+        ],
+        requestingUserId: 'organizer-uuid',
+      });
+
+      expect(mockCreateTournamentNotificationEvent.executeSV).toHaveBeenCalled();
+    });
+
+    it('still returns the saved result when the notification dispatch fails (non-blocking)', async () => {
+      resetMocksSV();
+      mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
+        resultId: 'result-uuid',
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdMatchIds: [],
+      });
+      mockCreateTournamentNotificationEvent.executeSV.mockRejectedValue(
+        new Error('proveedor de notificaciones caído'),
+      );
+
+      const RESULT = await useCase.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [{ userId: 'user-1', points: 6 }],
+        requestingUserId: 'organizer-uuid',
+      });
+
+      expect(RESULT.resultId).toBe('result-uuid');
+    });
+
+    it('does not dispatch a notification when no collaborator is configured', async () => {
+      const { RegisterTournamentMatchResultUseCase: RegisterTournamentMatchResultUseCaseCtor } =
+        await import('../../application/use_cases/register_tournament_match_result.use_case.js');
+      resetMocksSV();
+      mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({
+        resultId: 'result-uuid',
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdMatchIds: [],
+      });
+      const USE_CASE_WITHOUT_NOTIFICATIONS = new RegisterTournamentMatchResultUseCaseCtor(
+        mockTournamentQueryRepository,
+        mockAssertTournamentOrganizerAccess as never,
+        mockTournamentMatchResultRepository,
+      );
+
+      const RESULT = await USE_CASE_WITHOUT_NOTIFICATIONS.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [{ userId: 'user-1', points: 6 }],
+        requestingUserId: 'organizer-uuid',
+      });
+
+      expect(RESULT.resultId).toBe('result-uuid');
+      expect(mockCreateTournamentNotificationEvent.executeSV).not.toHaveBeenCalled();
     });
   });
 });

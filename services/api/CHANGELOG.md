@@ -5,6 +5,19 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.13.0] - 2026-09-13
+
+### Agregado
+
+- **Notificación al cargar un resultado**: `POST /tournaments/:tournamentId/matches/:matchId/results`
+  ahora dispara `TOURNAMENT_MATCH_RESULT_RECORDED` a cada `userId` presente
+  en los `scores` cargados, en cualquier formato (no solo eliminación
+  simple). Los destinatarios se derivan directamente de `scores` — un lado
+  huésped nunca aparece ahí (`MatchResultScore.userId` es `NOT NULL`), así
+  que se excluye sin necesidad de una consulta aparte. El despacho ocurre
+  después de guardar el resultado y es de mejor esfuerzo: si falla, el
+  resultado ya guardado no se revierte ni la respuesta falla.
+
 ## [1.12.0] - 2026-09-13
 
 ### Agregado

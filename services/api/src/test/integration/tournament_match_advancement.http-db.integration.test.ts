@@ -400,6 +400,34 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(await fetchRoundMatchesSV(TOURNAMENT_ID, 2)).toHaveLength(1);
     });
 
+    it('notifies both userId sides through the existing outbox when a result is recorded (S9)', async () => {
+      const TOURNAMENT_ID = await createSingleEliminationTournamentSV('SE Notify', false);
+      for (let i = 0; i < 2; i += 1) {
+        await createConfirmedSinglesSV(TOURNAMENT_ID, `notify-${i}`);
+      }
+      await generateAndStartScheduleSV(TOURNAMENT_ID);
+
+      const [MATCH] = await fetchRoundMatchesSV(TOURNAMENT_ID, 1);
+      const WINNER_ID = MATCH!.participants[0]!.userId!;
+      const LOSER_ID = MATCH!.participants[1]!.userId!;
+
+      const RES = await recordResultSV(TOURNAMENT_ID, MATCH!.id, [
+        { userId: WINNER_ID, points: 6 },
+        { userId: LOSER_ID, points: 2 },
+      ]);
+      expect(RES.status).toBe(201);
+
+      const EVENT = await PRISMA.notificationEvent.findFirst({
+        where: { tournamentId: TOURNAMENT_ID, type: 'TOURNAMENT_MATCH_RESULT_RECORDED' },
+        include: { deliveries: true },
+      });
+      expect(EVENT).not.toBeNull();
+      expect(EVENT!.deliveries.map((_d) => _d.userId).sort()).toEqual(
+        [WINNER_ID, LOSER_ID].sort(),
+      );
+      expect(EVENT!.deliveries.every((_d) => _d.status === 'PENDING')).toBe(true);
+    });
+
     it('auto-advances a bye without a recorded result once the other semifinal is played', async () => {
       const TOURNAMENT_ID = await createSingleEliminationTournamentSV('SE Bye', false);
       for (let i = 0; i < 3; i += 1) {
