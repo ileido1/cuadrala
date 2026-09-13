@@ -10,7 +10,6 @@ import '../data/tournaments_repository.dart';
 import '../data/models/tournament_list_item_dto.dart';
 import 'cubit/tournaments_list_cubit.dart';
 import 'cubit/tournaments_list_state.dart';
-import 'widgets/tournament_filters_bar.dart';
 import 'widgets/tournament_list_item_tile.dart';
 import '../../../shared/widgets/segmented_control.dart';
 
@@ -72,7 +71,6 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
             );
           }
           if (state is TournamentsListLoaded) {
-            final cubit = context.read<TournamentsListCubit>();
             final items = _section == 'Abiertos'
                 ? state.items.where((item) => item.status == 'OPEN').toList()
                 : const <TournamentListItemDto>[];
@@ -104,7 +102,9 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                           _CategoryFilterChip(
                             label: 'Mi categoría',
                             selected: state.filters.categoryId != null,
-                            onTap: () => _openFilters(context, cubit, state),
+                            //? Temporal: M3c conecta este toggle a la
+                            //? categoría propia del visor (default-on).
+                            onTap: () {},
                           ),
                           const SizedBox(width: 8),
                           _CategoryFilterChip(
@@ -112,13 +112,6 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                             selected: false,
                             icon: Icons.place_outlined,
                             onTap: () {},
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            tooltip: 'Más filtros',
-                            onPressed: () =>
-                                _openFilters(context, cubit, state),
-                            icon: const Icon(Icons.tune),
                           ),
                         ],
                       ),
@@ -174,33 +167,6 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
           }
           return const SizedBox.shrink();
         },
-      ),
-    );
-  }
-
-  Future<void> _openFilters(
-    BuildContext context,
-    TournamentsListCubit cubit,
-    TournamentsListLoaded state,
-  ) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: TournamentFiltersBar(
-            filters: state.filters,
-            onApply: (filters) {
-              Navigator.pop(context);
-              cubit.applyFilters(filters);
-            },
-            sports: cubit.sports,
-            categories: cubit.categories,
-            venues: cubit.venues,
-            onSportChanged: cubit.loadCategoriesForSport,
-          ),
-        ),
       ),
     );
   }

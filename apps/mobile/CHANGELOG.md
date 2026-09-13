@@ -5,6 +5,14 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.3.1] - 2026-09-13
+
+### Quitado
+
+- **Botón "Más filtros"**: se sacó de la pantalla de torneos (no existe en el
+  handoff). El chip "Mi categoría" queda temporalmente sin acción hasta que
+  M3c lo conecte a la categoría propia del visor.
+
 ## [1.3.0] - 2026-09-13
 
 ### Agregado
