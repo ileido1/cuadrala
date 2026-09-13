@@ -22,6 +22,12 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
   `.strict()` separados — cada uno rechazaba la clave del otro como "no
   reconocida", devolviendo siempre 400 `VALIDACION_FALLIDA`. Se reemplazó por
   un único schema combinado (`TOURNAMENT_MATCH_RESULT_PARAMS_SCHEMA`).
+- **Cargar el mismo resultado dos veces duplicaba el marcador.** El endpoint no
+  verificaba si el partido ya tenía un `MatchResult`; ahora responde 409
+  `RESULTADO_YA_CARGADO` y no escribe nada cuando ya existe uno. El chequeo es
+  a nivel de aplicación (no atómico bajo concurrencia real): la garantía
+  transaccional completa (`SELECT ... FOR UPDATE`) queda para
+  `registerResultAndAdvanceSV` en S7c-1.
 
 ## [1.8.0] - 2026-09-12
 

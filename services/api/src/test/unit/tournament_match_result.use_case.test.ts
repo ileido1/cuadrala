@@ -17,6 +17,7 @@ const mockAssertTournamentOrganizerAccess = {
 const mockTournamentMatchResultRepository = {
   getVenueIdForTournamentSV: vi.fn(),
   matchBelongsToTournamentSV: vi.fn(),
+  matchHasResultSV: vi.fn(),
   registerResultSV: vi.fn(),
 };
 
@@ -57,6 +58,7 @@ function resetMocksSV(): void {
   mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(BASE_TOURNAMENT);
   mockTournamentMatchResultRepository.getVenueIdForTournamentSV.mockResolvedValue('venue-uuid');
   mockTournamentMatchResultRepository.matchBelongsToTournamentSV.mockResolvedValue(true);
+  mockTournamentMatchResultRepository.matchHasResultSV.mockResolvedValue(false);
   mockAssertTournamentOrganizerAccess.executeSV.mockResolvedValue(undefined);
 }
 
@@ -142,6 +144,23 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         requestingUserId: 'unrelated-user',
       }),
     ).rejects.toThrow('No tienes permisos para editar este torneo.');
+    expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
+  });
+
+  it('should throw RESULTADO_YA_CARGADO with 409 when the match already has a recorded result, writing nothing', async () => {
+    resetMocksSV();
+    mockTournamentMatchResultRepository.matchHasResultSV.mockResolvedValue(true);
+
+    await expect(
+      useCase.executeSV({
+        tournamentId: 'tournament-uuid',
+        matchId: 'match-uuid',
+        matchNumber: 1,
+        roundNumber: 1,
+        scores: [{ userId: 'user-1', points: 6 }],
+        requestingUserId: 'organizer-uuid',
+      }),
+    ).rejects.toMatchObject({ code: 'RESULTADO_YA_CARGADO', statusCode: 409 });
     expect(mockTournamentMatchResultRepository.registerResultSV).not.toHaveBeenCalled();
   });
 

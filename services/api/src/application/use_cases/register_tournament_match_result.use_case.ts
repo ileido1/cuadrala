@@ -60,6 +60,19 @@ export class RegisterTournamentMatchResultUseCase {
       throw new AppError('VALIDACION_FALLIDA', 'El partido no pertenece a este torneo.', 400);
     }
 
+    //? Un partido ya resuelto no admite un segundo resultado (evita duplicar el marcador).
+    //? Chequeo a nivel de aplicación, no atómico bajo concurrencia real: la garantía
+    //? transaccional (SELECT ... FOR UPDATE) queda para S7c-1, que ya construye
+    //? registerResultAndAdvanceSV como una única transacción.
+    const HAS_RESULT = await this._tournamentMatchResultRepository.matchHasResultSV(matchId);
+    if (HAS_RESULT) {
+      throw new AppError(
+        'RESULTADO_YA_CARGADO',
+        'Este partido ya tiene un resultado cargado.',
+        409,
+      );
+    }
+
     if (!Array.isArray(scores) || scores.length === 0) {
       throw new AppError('VALIDACION_FALLIDA', 'Debe proporcionar al menos un resultado.', 400);
     }

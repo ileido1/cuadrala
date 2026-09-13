@@ -21,6 +21,14 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
     return MATCH !== null;
   }
 
+  async matchHasResultSV(_matchId: string): Promise<boolean> {
+    const EXISTING = await PRISMA.matchResult.findFirst({
+      where: { matchId: _matchId },
+      select: { id: true },
+    });
+    return EXISTING !== null;
+  }
+
   async registerResultSV(_input: {
     matchId: string;
     scores: Array<{ userId: string; points: number }>;
