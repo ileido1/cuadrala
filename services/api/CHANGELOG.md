@@ -5,6 +5,19 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.11.0] - 2026-09-13
+
+### Cambiado
+
+- **Los huéspedes quedan fuera del cuadro de eliminación simple**: al
+  generar el calendario (`POST /tournaments/:tournamentId/schedule:generate`),
+  las inscripciones `GUEST` (`userId` nulo) ahora se excluyen antes de armar
+  el cuadro de `SINGLE_ELIMINATION`. Round robin y americano no cambian, los
+  huéspedes se siguen incluyendo. En torneos de duplas fijas, si el filtro
+  deja a un inscripto sin su compañero, se dispara el mismo
+  `DUPLAS_INCOMPLETAS` que ya existía para cualquier pareja incompleta — no
+  se agregó un error nuevo para este caso.
+
 ## [1.10.1] - 2026-09-13
 
 ### Corregido
