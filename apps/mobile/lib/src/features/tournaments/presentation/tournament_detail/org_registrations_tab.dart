@@ -150,7 +150,7 @@ final class _RegistrationsTab extends StatelessWidget {
                         minimumSize: const Size(0, 40),
                       ),
                       onPressed: () => showInviteGuestSheet(context),
-                      icon: const Icon(Icons.person_add_alt_1),
+                      icon: const Icon(AppIcons.personAdd),
                       label: const Text('Invitar jugador'),
                     ),
                 ],
@@ -375,7 +375,7 @@ final class _OrganizerRosterHeader extends StatelessWidget {
         const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: busy ? null : onConfirmAll,
-          icon: const Icon(Icons.check, size: 19),
+          icon: const Icon(AppIcons.check, size: 19),
           label: Text(
             pending > 0 ? 'Confirmar $pending pendientes' : 'Todos confirmados',
           ),
@@ -621,7 +621,7 @@ final class _RegistrationTile extends StatelessWidget {
                 IconButton(
                   key: Key('tournament.confirmRegistration.${registration.id}'),
                   tooltip: 'Confirmar',
-                  icon: const Icon(Icons.check_circle_outline),
+                  icon: const Icon(AppIcons.checkCircle),
                   onPressed: () => context
                       .read<TournamentRegistrationsCubit>()
                       .confirmRegistration(registration.id),
@@ -629,7 +629,7 @@ final class _RegistrationTile extends StatelessWidget {
               IconButton(
                 key: Key('tournament.removeRegistration.${registration.id}'),
                 tooltip: 'Eliminar',
-                icon: const Icon(Icons.delete_outline),
+                icon: const Icon(AppIcons.delete),
                 onPressed: () => _confirmRemoveSV(context),
               ),
             ],

@@ -121,7 +121,7 @@ final class _OrganizerGenerateCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
             ),
             child: Icon(
-              Icons.emoji_events_outlined,
+              AppIcons.trophy,
               color: scheme.primary,
               size: 26,
             ),
@@ -144,7 +144,7 @@ final class _OrganizerGenerateCard extends StatelessWidget {
           const SizedBox(height: 14),
           FilledButton.icon(
             onPressed: canGenerate ? onGenerate : null,
-            icon: const Icon(Icons.auto_awesome, size: 19),
+            icon: const Icon(AppIcons.sparkle, size: 19),
             label: const Text('Generar cuadro y horarios'),
           ),
         ],
@@ -211,7 +211,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
                     ),
                   ),
                 ),
-                icon: const Icon(Icons.emoji_events_outlined, size: 17),
+                icon: const Icon(AppIcons.trophy, size: 17),
                 label: const Text('Ver cuadro'),
               ),
             ),
@@ -219,7 +219,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
             Expanded(
               child: FilledButton.icon(
                 onPressed: null,
-                icon: const Icon(Icons.add, size: 17),
+                icon: const Icon(AppIcons.add, size: 17),
                 label: const Text('Cargar resultado'),
               ),
             ),

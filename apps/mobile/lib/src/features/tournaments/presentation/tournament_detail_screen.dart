@@ -301,7 +301,7 @@ final class TournamentDetailBody extends StatelessWidget {
                 expandedHeight: 112,
                 pinned: true,
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back),
+                  icon: const Icon(AppIcons.arrowBack),
                   onPressed: () {
                     //? Si entramos vía context.go (p. ej. tras crear el torneo)
                     //? no hay historial que hacer pop; caemos al home de torneos.

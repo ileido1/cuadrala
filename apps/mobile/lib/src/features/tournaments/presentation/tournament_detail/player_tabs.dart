@@ -126,7 +126,7 @@ final class _ScheduleTab extends StatelessWidget {
                         ),
                         onPressed: () =>
                             context.read<TournamentScheduleCubit>().load(),
-                        icon: const Icon(Icons.calendar_view_week_outlined),
+                        icon: const Icon(AppIcons.calendar),
                         label: const Text('Ver calendario'),
                       ),
                     ),
@@ -138,7 +138,7 @@ final class _ScheduleTab extends StatelessWidget {
                         ),
                         onPressed: () =>
                             context.read<TournamentScheduleCubit>().generate(),
-                        icon: const Icon(Icons.refresh),
+                        icon: const Icon(AppIcons.refresh),
                         label: const Text('Regenerar'),
                       ),
                     ),
@@ -308,7 +308,7 @@ final class _ScoreboardTab extends StatelessWidget {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.table_chart),
+                  icon: const Icon(AppIcons.scoreboard),
                   label: const Text('Ver el cuadro completo'),
                 ),
               ],

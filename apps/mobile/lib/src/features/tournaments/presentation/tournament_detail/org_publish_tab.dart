@@ -381,12 +381,12 @@ final class _VisibilityControlState extends State<_VisibilityControl> {
                     ButtonSegment(
                       value: 'PUBLIC',
                       label: Text('Público'),
-                      icon: Icon(Icons.public, size: 16),
+                      icon: Icon(AppIcons.public, size: 16),
                     ),
                     ButtonSegment(
                       value: 'PRIVATE',
                       label: Text('Privado'),
-                      icon: Icon(Icons.lock_outline, size: 16),
+                      icon: Icon(AppIcons.lock, size: 16),
                     ),
                   ],
                   selected: {widget.currentVisibility},

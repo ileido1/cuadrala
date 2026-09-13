@@ -247,7 +247,7 @@ final class _StatusBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            tone == _BannerTone.success ? Icons.check : Icons.schedule,
+            tone == _BannerTone.success ? AppIcons.check : AppIcons.clock,
             color: color,
           ),
           const SizedBox(width: 10),

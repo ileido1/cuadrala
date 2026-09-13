@@ -208,7 +208,7 @@ final class _TournamentFooter extends StatelessWidget {
           footer.add(
             FilledButton.icon(
               onPressed: () => DefaultTabController.of(context).animateTo(1),
-              icon: const Icon(Icons.calendar_today_outlined, size: 19),
+              icon: const Icon(AppIcons.calendar, size: 19),
               label: const Text('Ver cuándo y dónde juego'),
             ),
           );
@@ -216,7 +216,7 @@ final class _TournamentFooter extends StatelessWidget {
           footer.add(
             OutlinedButton.icon(
               onPressed: null,
-              icon: const Icon(Icons.schedule_outlined),
+              icon: const Icon(AppIcons.clock),
               label: const Text('Inscripción cerrada'),
             ),
           );
@@ -225,7 +225,7 @@ final class _TournamentFooter extends StatelessWidget {
           footer.add(
             OutlinedButton.icon(
               onPressed: null,
-              icon: const Icon(Icons.lock_outline),
+              icon: const Icon(AppIcons.lock),
               label: Text('Es categoría ${tournament!.categoryName}'),
             ),
           );
@@ -277,7 +277,7 @@ final class _TournamentFooter extends StatelessWidget {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.check, size: 20),
+                      : const Icon(AppIcons.check, size: 20),
                   label: const Text('Inscribirme'),
                 ),
               ],
