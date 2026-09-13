@@ -10,6 +10,7 @@
 - **Tournaments handoff fidelity (M3a)**: the "Más filtros" button is gone from the tournaments home screen (not in the handoff); the "Mi categoría" chip is a temporary no-op until M3c wires it to the viewer's own category (`apps/mobile` 1.3.1+16)
 
 ### Changed
+- **Tournaments handoff fidelity (M2)**: migrated every Material `Icons.*` reference under the tournaments feature (~46 usages, 16 files) to the semantic `AppIcons` catalog, guarded by a new regression test asserting zero raw `Icons.*` matches (`apps/mobile` 1.4.0+18)
 - **Tournaments handoff fidelity (M0)**: split the tournament detail screen's ~3,100-line implementation file into 7 files via Dart `part`/`part of` (move-only, no behavior change) (`apps/mobile` 1.2.1+14)
 
 ### Security

@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-09-13
+
+### Cambiado
+
+- **Migración a `AppIcons`**: los ~46 usos de `Icons.*` (Material) bajo
+  `lib/src/features/tournaments/` ahora pasan por el catálogo semántico
+  `AppIcons`, incluidos dos íconos nuevos (`pending`, `public`). Nuevo test
+  `tournaments_icons_audit_test.dart` guarda contra regresiones: falla si
+  aparece cualquier `Icons.*` bajo esa carpeta.
+
 ## [1.3.2] - 2026-09-13
 
 ### Quitado
