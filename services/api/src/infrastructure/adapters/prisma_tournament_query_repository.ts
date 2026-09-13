@@ -21,6 +21,7 @@ export function toListItemDTO(_row: {
   status: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   visibility: 'PUBLIC' | 'PRIVATE';
   organizerUserId: string | null;
+  organizer: { name: string } | null;
   sportId: string;
   sport: { name: string };
   categoryId: string;
@@ -41,6 +42,7 @@ export function toListItemDTO(_row: {
     status: _row.status,
     visibility: _row.visibility,
     organizerUserId: _row.organizerUserId,
+    organizerName: _row.organizer?.name ?? null,
     sportId: _row.sportId,
     sportName: _row.sport.name,
     categoryId: _row.categoryId,
@@ -69,6 +71,7 @@ const TOURNAMENT_LIST_SELECT = {
   status: true,
   visibility: true,
   organizerUserId: true,
+  organizer: { select: { name: true } },
   sportId: true,
   sport: { select: { name: true } },
   categoryId: true,
@@ -217,6 +220,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
         status: true,
         visibility: true,
         organizerUserId: true,
+        organizer: { select: { name: true } },
         sportId: true,
         sport: { select: { name: true } },
         categoryId: true,
@@ -314,6 +318,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           status: true,
           visibility: true,
           organizerUserId: true,
+          organizer: { select: { name: true } },
           sportId: true,
           sport: { select: { name: true } },
           categoryId: true,

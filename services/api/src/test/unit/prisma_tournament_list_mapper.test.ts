@@ -7,7 +7,7 @@ const ROW = {
   organizerUserId: null, sportId: 's', sport: { name: 'Padel' }, categoryId: 'c',
   category: { name: 'Masculino' }, startsAt: null, venueId: null, venue: null,
   inscriptionPrice: null, maxSlots: null, registrationClosesAt: null,
-  gender: null,
+  gender: null, organizer: null,
   _count: { registrations: 0 },
 };
 
@@ -28,5 +28,17 @@ describe('toListItemDTO — gender', () => {
 
   it('passes through the declared MatchGender', () => {
     expect(toListItemDTO({ ...ROW, gender: 'MIXED' as const }).gender).toBe('MIXED');
+  });
+});
+
+describe('toListItemDTO — organizerName', () => {
+  it('returns null when the tournament has no organizer', () => {
+    expect(toListItemDTO(ROW).organizerName).toBeNull();
+  });
+
+  it("returns the organizer's display name when present", () => {
+    expect(
+      toListItemDTO({ ...ROW, organizer: { name: 'Carlos Hernández' } }).organizerName,
+    ).toBe('Carlos Hernández');
   });
 });

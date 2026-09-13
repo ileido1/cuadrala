@@ -5,6 +5,17 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.6.0] - 2026-09-12
+
+### Agregado
+
+- **`organizerName` en torneos e `invitedUserName` en invitaciones.**
+  `GET /tournaments` y `GET /tournaments/:id` devuelven `organizerName`
+  (string|null) con el nombre del organizador; `null` cuando el torneo no
+  tiene uno asignado. Las invitaciones (`GET /tournaments/:id/invitations`)
+  devuelven `invitedUserName` (string|null) con el nombre del invitado. No
+  hay cambio de schema: ambos se resuelven vía join.
+
 ## [1.5.0] - 2026-09-12
 
 ### Agregado

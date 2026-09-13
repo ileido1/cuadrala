@@ -2,6 +2,8 @@ export type TournamentInvitationDTO = {
   id: string;
   tournamentId: string;
   invitedUserId: string;
+  /** Nombre del invitado; `null` cuando no hay usuario asociado (sin invitados guest hoy). */
+  invitedUserName: string | null;
   createdByUserId: string;
   status: string;
   createdAt: Date;

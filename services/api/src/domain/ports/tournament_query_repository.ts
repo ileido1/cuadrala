@@ -16,6 +16,8 @@ export type TournamentListItemDTO = {
   status: TournamentStatus;
   visibility: TournamentVisibility;
   organizerUserId: string | null;
+  /** Nombre del organizador; `null` cuando el torneo no tiene uno asignado. */
+  organizerName: string | null;
   sportId: string;
   sportName: string;
   categoryId: string;
