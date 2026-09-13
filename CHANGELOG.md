@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Tournaments handoff fidelity (M1)**: new shared widgets `CountStepper` (−/+ numeric stepper, disabled at min/max) and `PillToggle` (pill-shaped boolean switch), plus a new `enabled` flag on `SegmentedOption` (disabled options render dimmed and ignore taps) (`apps/mobile` 1.3.0+15)
+
 ### Changed
 - **Tournaments handoff fidelity (M0)**: split the tournament detail screen's ~3,100-line implementation file into 7 files via Dart `part`/`part of` (move-only, no behavior change) (`apps/mobile` 1.2.1+14)
 

@@ -5,6 +5,21 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-09-13
+
+### Agregado
+
+- **`CountStepper`** (`shared/widgets/count_stepper.dart`): selector numérico
+  −/+ compartido, botones 38x38 con ícono 18px; un botón en `min`/`max` se
+  apaga (`onSurface.withValues(alpha: 0.38)`, mismo precedente de
+  `SelectableChip`) e ignora toques en vez de desaparecer.
+- **`PillToggle`** (`shared/widgets/pill_toggle.dart`): interruptor tipo
+  píldora compartido; pista verde con thumb al final cuando está ON, `line-strong`
+  con thumb al inicio cuando está OFF.
+- **`SegmentedOption.enabled`**: nuevo flag (default `true`) en
+  `shared/widgets/segmented_control.dart`; una opción con `enabled: false` se
+  dibuja apagada e ignora toques, mismo precedente de deshabilitado.
+
 ## [1.2.1] - 2026-09-13
 
 ### Cambiado
