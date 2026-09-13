@@ -5,6 +5,17 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.5.0] - 2026-09-12
+
+### Agregado
+
+- **`Tournament.gender` es opcional.** `POST /tournaments` acepta un `gender`
+  ("MALE"/"FEMALE"/"MIXED", reusa `MatchGender`) opcional; los torneos
+  existentes y los clientes legacy que no lo mandan quedan en `null`, sin
+  backfill. Un valor inválido responde `400 VALIDACION_FALLIDA` con un mensaje
+  en español. El campo se devuelve en el detalle (`GET /tournaments/:id`) y en
+  cada item del listado (`GET /tournaments`).
+
 ## [1.4.0] - 2026-09-11
 
 ### Agregado

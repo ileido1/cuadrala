@@ -704,6 +704,10 @@ model Tournament {
   /// Es informativo para el cliente ("cierra VIE"): la ventana real la sigue
   /// gobernando `status` (DRAFT/OPEN), no esta fecha.
   registrationClosesAt DateTime?
+  /// Genero del torneo (reusa MatchGender). null = sin declarar; las filas
+  /// existentes y los clientes legacy que no lo mandan quedan en null, sin
+  /// backfill.
+  gender              MatchGender?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 

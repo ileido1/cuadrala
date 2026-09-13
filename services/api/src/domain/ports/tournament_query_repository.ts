@@ -7,6 +7,9 @@ export type TournamentVisibility = 'PUBLIC' | 'PRIVATE';
 
 export type RegistrationStatus = 'PENDING' | 'CONFIRMED' | 'WITHDRAWN';
 
+/** Reusa `MatchGender` (schema.prisma). `null` = sin declarar. */
+export type TournamentGender = 'MALE' | 'FEMALE' | 'MIXED';
+
 export type TournamentListItemDTO = {
   id: string;
   name: string;
@@ -28,6 +31,8 @@ export type TournamentListItemDTO = {
   maxSlots: number | null;
   /** Cierre informativo de la inscripción (ISO 8601). */
   registrationClosesAt: string | null;
+  /** Reusa `MatchGender`; `null` = sin declarar. */
+  gender: TournamentGender | null;
   /** Distancia a `near` en km. Ausente (nunca `null`) cuando el listado no se filtró por `near`. */
   distanceKm?: number;
 };

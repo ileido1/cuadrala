@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (S2)**: `Tournament.gender` is now an optional nullable field (reuses `MatchGender`); `POST /tournaments` accepts it, existing rows and legacy clients stay `null`, and it is returned on both the tournament detail and listing (`services/api` 1.5.0)
 - **Tournaments handoff fidelity (S1)**: `GET /tournaments` now accepts `near`/`radiusKm` and returns `distanceKm` per item, filtering by the tournament's venue location (`services/api` 1.4.0)
 - **Sport-Configurable Format Parameters (SDD Change A)**
   - Backend: Generic tournament format parameter schema system (boolean/int/enum fields)

@@ -43,6 +43,9 @@ export async function postParametrizedTournamentCON(_req: Request, _res: Respons
   if (BODY.registrationClosesAt !== undefined) {
     INPUT.registrationClosesAt = new Date(BODY.registrationClosesAt);
   }
+  if (BODY.gender !== undefined) {
+    INPUT.gender = BODY.gender;
+  }
 
   const RESULT = await CREATE_PARAMETRIZED_TOURNAMENT_UC.executeSV(INPUT);
 

@@ -96,4 +96,30 @@ describe('CreateParametrizedTournamentUseCase', () => {
     expect(CALL_ARGS).not.toHaveProperty('organizerUserId');
     expect(CALL_ARGS).not.toHaveProperty('visibility');
   });
+
+  it('should propagate gender to the repository when provided', async () => {
+    await useCase.executeSV({
+      name: 'Torneo de Otoño',
+      categoryId: 'category-1',
+      sportId: 'sport-1',
+      formatPresetId: 'preset-1',
+      gender: 'FEMALE',
+    });
+
+    expect(mockTournamentRepository.createTournamentSV).toHaveBeenCalledWith(
+      expect.objectContaining({ gender: 'FEMALE' }),
+    );
+  });
+
+  it('should omit gender when not provided (legacy clients)', async () => {
+    await useCase.executeSV({
+      name: 'Torneo de Otoño',
+      categoryId: 'category-1',
+      sportId: 'sport-1',
+      formatPresetId: 'preset-1',
+    });
+
+    const CALL_ARGS = mockTournamentRepository.createTournamentSV.mock.calls[0]![0];
+    expect(CALL_ARGS).not.toHaveProperty('gender');
+  });
 });
