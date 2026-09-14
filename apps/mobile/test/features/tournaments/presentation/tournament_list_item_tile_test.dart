@@ -5,6 +5,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/tournament_list_item_tile.dart';
 
+import '../handoff_copy.dart' as handoff_copy;
+
 TournamentListItemDto tournamentSV({
   String status = 'OPEN',
   String? venueName,
@@ -14,6 +16,7 @@ TournamentListItemDto tournamentSV({
   int registrationCount = 11,
   String categoryId = 'cat-1',
   double? distanceKm,
+  String? organizerName,
 }) =>
     TournamentListItemDto(
       id: 'tournament-1',
@@ -29,15 +32,25 @@ TournamentListItemDto tournamentSV({
       maxSlots: maxSlots,
       registrationClosesAt: registrationClosesAt,
       distanceKm: distanceKm,
+      organizerName: organizerName,
     );
 
 void main() {
   setUpAll(() async => initializeDateFormatting('es_ES'));
 
-  Future<void> pump(WidgetTester tester, TournamentListItemDto t) async {
+  Future<void> pump(
+    WidgetTester tester,
+    TournamentListItemDto t, {
+    String? pendingInvitationId,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: TournamentListItemTile(tournament: t)),
+        home: Scaffold(
+          body: TournamentListItemTile(
+            tournament: t,
+            pendingInvitationId: pendingInvitationId,
+          ),
+        ),
       ),
     );
   }
@@ -144,6 +157,55 @@ void main() {
       await pump(tester, tournamentSV(venueName: 'Club Cuádrala'));
 
       expect(find.textContaining(' km'), findsNothing);
+    });
+
+    //? {org} = venueName, cayendo al nombre del organizador sin sede
+    //? (spec "Listado — invitation banner and organizer row"; D7).
+    group('invitation banner', () {
+      testWidgets(
+          'should show "{venueName} te invitó" and the Ver invitación action '
+          'when there is a pending invitation and a venue', (tester) async {
+        await pump(
+          tester,
+          tournamentSV(venueName: 'Club Cuádrala'),
+          pendingInvitationId: 'invitation-1',
+        );
+
+        expect(
+          find.text(handoff_copy.invitationBannerTitle('Club Cuádrala')),
+          findsOneWidget,
+        );
+        expect(
+          find.text(handoff_copy.invitationBannerAction),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets(
+          "should fall back to the organizer's display name when there is "
+          'no venue', (tester) async {
+        await pump(
+          tester,
+          tournamentSV(organizerName: 'Padel Country'),
+          pendingInvitationId: 'invitation-1',
+        );
+
+        expect(
+          find.text(handoff_copy.invitationBannerTitle('Padel Country')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('should omit the banner without a pending invitation',
+          (tester) async {
+        await pump(tester, tournamentSV(venueName: 'Club Cuádrala'));
+
+        expect(find.textContaining('te invitó'), findsNothing);
+        expect(
+          find.text(handoff_copy.invitationBannerAction),
+          findsNothing,
+        );
+      });
     });
   });
 }

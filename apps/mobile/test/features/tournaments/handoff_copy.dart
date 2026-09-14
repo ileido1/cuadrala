@@ -17,3 +17,12 @@ String miCategoriaLabel(String categoryLabel) => 'Mi categoría $categoryLabel';
 /// torneos" card: `'Adentro'` when CONFIRMED, `'Pendiente'` otherwise.
 String viewerRegistrationStatusLabel(String registrationStatus) =>
     registrationStatus == 'CONFIRMED' ? 'Adentro' : 'Pendiente';
+
+/// `cuadrala-torneo-org.jsx:359` — `` `${t.org} te invitó` ``. `org` resolves
+/// to `venueName`, falling back to the organizer's display name when there is
+/// no venue (spec "Listado — invitation banner and organizer row"; design D7).
+String invitationBannerTitle(String org) => '$org te invitó';
+
+/// `cuadrala-torneos.jsx:172`, `README.md:51` — `` `${action} →` `` link on
+/// the invitation banner.
+const String invitationBannerAction = 'Ver invitación →';

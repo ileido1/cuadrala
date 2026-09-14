@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.1] - 2026-09-14
+
+### Agregado
+
+- **Banner de invitación en la tarjeta de torneo (M4b-1)**: `TournamentListItemTile`
+  acepta un `pendingInvitationId` opcional y, cuando está presente, muestra el
+  banner lime "{org} te invitó" con el link "Ver invitación →"; `{org}` es el
+  nombre de la sede o, si el torneo no tiene sede, el nombre del organizador.
+  Aún no conectado a ninguna pantalla.
+
 ## [1.7.0] - 2026-09-14
 
 ### Agregado

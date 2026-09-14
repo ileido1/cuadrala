@@ -21,6 +21,8 @@ final class TournamentListItemDto extends Equatable {
     this.maxSlots,
     this.registrationClosesAt,
     this.distanceKm,
+    this.gender,
+    this.organizerName,
   });
 
   final String id;
@@ -68,6 +70,14 @@ final class TournamentListItemDto extends Equatable {
   /// no manda el campo y la tarjeta no debe inventar una distancia.
   final double? distanceKm;
 
+  /// `MALE`/`FEMALE`/`MIXED` (`MatchGender`, S2). `null` en torneos viejos
+  /// que no lo declararon — todavía sin renderizar en la tarjeta (M4b-2).
+  final String? gender;
+
+  /// Nombre del organizador (S3a). Resuelve `{org}` del banner de invitación
+  /// y la fila de organizador (M4b-1) cuando el torneo no tiene sede.
+  final String? organizerName;
+
   factory TournamentListItemDto.fromJson(Map<String, Object?> json) {
     return TournamentListItemDto(
       id: json['id'] as String,
@@ -107,6 +117,9 @@ final class TournamentListItemDto extends Equatable {
         json['distanceKm'],
         json['distance_km'],
       ),
+      gender: json['gender'] as String?,
+      organizerName:
+          json['organizerName'] as String? ?? json['organizer_name'] as String?,
     );
   }
 
@@ -146,5 +159,7 @@ final class TournamentListItemDto extends Equatable {
         maxSlots,
         registrationClosesAt,
         distanceKm,
+        gender,
+        organizerName,
       ];
 }

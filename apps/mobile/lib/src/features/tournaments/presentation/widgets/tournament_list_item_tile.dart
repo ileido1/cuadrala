@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/formatting/money_format.dart';
 import '../../../../core/models/currency_code.dart';
 import '../../../../core/theme/app_icons.dart';
+import '../../../../core/theme/brand_colors.dart';
 import '../../../../router/routes.dart';
 import '../../../../shared/widgets/dual_price.dart';
 import '../../data/models/tournament_list_item_dto.dart';
@@ -24,9 +25,28 @@ String _occupancyLabel(int count, int? max) {
 /// que el organizador no declaró **no se inventan**: la fila desaparece en vez
 /// de mostrarse vacía o con un placeholder.
 final class TournamentListItemTile extends StatelessWidget {
-  const TournamentListItemTile({super.key, required this.tournament});
+  const TournamentListItemTile({
+    super.key,
+    required this.tournament,
+    this.pendingInvitationId,
+    this.onViewInvitation,
+  });
 
   final TournamentListItemDto tournament;
+
+  /// Id de la invitación PENDING del visor a este torneo (`ViewerTournamentDto
+  /// .pendingInvitationId`, M4a); `null` cuando no hay ninguna. Dispara el
+  /// banner "{org} te invitó" (spec "Listado — invitation banner and
+  /// organizer row").
+  final String? pendingInvitationId;
+
+  /// Toque en "Ver invitación →". `null` deja el link sin acción (la
+  /// navegación se resuelve en la pantalla que arma la tarjeta).
+  final VoidCallback? onViewInvitation;
+
+  /// `{org}`: `venueName`, cayendo al nombre del organizador sin sede
+  /// declarada (D7). Nunca el nombre del propio torneo.
+  String? get _invitationOrg => tournament.venueName ?? tournament.organizerName;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +63,13 @@ final class TournamentListItemTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (pendingInvitationId != null && _invitationOrg != null) ...[
+                _InvitationBanner(
+                  org: _invitationOrg!,
+                  onTap: onViewInvitation,
+                ),
+                const SizedBox(height: 10),
+              ],
               Row(
                 children: [
                   TournamentStatusPill(status: tournament.status),
@@ -277,6 +304,74 @@ final class _Price extends StatelessWidget {
     return DualPrice(
       primaryLabel: formatMoneyFromMajor(amount, CurrencyCode.usd),
       suffix: 'p/p',
+    );
+  }
+}
+
+/// Banner lime "{org} te invitó" (`cuadrala-torneo-org.jsx:359`,
+/// `README.md:51`): el visor tiene una invitación PENDING a este torneo.
+/// `{org}` nunca es el nombre del torneo (D7).
+final class _InvitationBanner extends StatelessWidget {
+  const _InvitationBanner({required this.org, this.onTap});
+
+  final String org;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('tournament.card.invitationBanner'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: BrandColors.limeAccent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: BrandColors.limeAccent.withValues(alpha: 0.45),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: BrandColors.limeAccent,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(AppIcons.mail, size: 16, color: BrandColors.onLime),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$org te invitó',
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: onTap,
+                  child: Text(
+                    'Ver invitación →',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

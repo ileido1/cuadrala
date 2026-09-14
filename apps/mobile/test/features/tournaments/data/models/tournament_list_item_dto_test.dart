@@ -82,5 +82,25 @@ void main() {
 
       expect(dto.distanceKm, isNull);
     });
+
+    //? Necesarios para resolver `{org}` del banner de invitación y la fila de
+    //? organizador (M4b-1): `organizerName` viene de S3a, `gender` de S2.
+    test('should read gender and organizerName from the API', () {
+      final dto = TournamentListItemDto.fromJson(jsonSV(extra: {
+        'gender': 'MIXED',
+        'organizerName': 'Padel Country',
+      }));
+
+      expect(dto.gender, 'MIXED');
+      expect(dto.organizerName, 'Padel Country');
+    });
+
+    test('should leave gender and organizerName null when the API omits them',
+        () {
+      final dto = TournamentListItemDto.fromJson(jsonSV());
+
+      expect(dto.gender, isNull);
+      expect(dto.organizerName, isNull);
+    });
   });
 }
