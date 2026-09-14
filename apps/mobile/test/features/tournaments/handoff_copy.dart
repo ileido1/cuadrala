@@ -30,3 +30,16 @@ const String invitationBannerAction = 'Ver invitación →';
 /// `cuadrala-torneos.jsx:179` — `` `Organizás ${t.name}` `` on the lime
 /// shield organizer row.
 String organizerRowTitle(String tournamentName) => 'Organizás $tournamentName';
+
+/// `cuadrala-torneos.jsx:7,10,13,16,117` — the gender tag rendered next to
+/// the category chip on the tournament card. `MALE`/`FEMALE`/`MIXED`
+/// (`MatchGender`, S2) map to the same Spanish labels already used by
+/// `discover_matches_screen.dart` and `venue_booking_form.dart`. An
+/// unrecognized code returns `null` — the tag hides rather than showing the
+/// raw enum (same fail-closed rule as `tournamentStatusLabel`).
+String? genderTagLabel(String gender) => switch (gender) {
+      'MALE' => 'Masculino',
+      'FEMALE' => 'Femenino',
+      'MIXED' => 'Mixto',
+      _ => null,
+    };

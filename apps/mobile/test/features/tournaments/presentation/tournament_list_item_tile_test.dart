@@ -17,6 +17,7 @@ TournamentListItemDto tournamentSV({
   String categoryId = 'cat-1',
   double? distanceKm,
   String? organizerName,
+  String? gender,
 }) =>
     TournamentListItemDto(
       id: 'tournament-1',
@@ -33,6 +34,7 @@ TournamentListItemDto tournamentSV({
       registrationClosesAt: registrationClosesAt,
       distanceKm: distanceKm,
       organizerName: organizerName,
+      gender: gender,
     );
 
 void main() {
@@ -207,6 +209,38 @@ void main() {
           find.text(handoff_copy.invitationBannerAction),
           findsNothing,
         );
+      });
+    });
+
+    //? `gender` llegó al DTO en M4b-1 (S2) pero quedó sin renderizar a
+    //? propósito ("todavía sin renderizar en la tarjeta (M4b-2)") — esta
+    //? tarjeta es la última pieza de fidelidad pendiente en el listado.
+    group('gender tag', () {
+      testWidgets('should show the Spanish gender label next to the category',
+          (tester) async {
+        await pump(tester, tournamentSV(gender: 'MIXED'));
+
+        expect(
+          find.text(handoff_copy.genderTagLabel('MIXED')!),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('should never show the raw gender enum', (tester) async {
+        for (final gender in ['MALE', 'FEMALE', 'MIXED']) {
+          await pump(tester, tournamentSV(gender: gender));
+
+          expect(find.text(gender), findsNothing, reason: '$gender salió crudo');
+        }
+      });
+
+      testWidgets('should omit the tag when no gender was declared',
+          (tester) async {
+        await pump(tester, tournamentSV());
+
+        expect(find.text('Masculino'), findsNothing);
+        expect(find.text('Femenino'), findsNothing);
+        expect(find.text('Mixto'), findsNothing);
       });
     });
 

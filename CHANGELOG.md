@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (M4b-2)**: tournament cards now render a gender tag ("Masculino"/"Femenino"/"Mixto") next to the category chip when the tournament declared one; `TournamentStatusPill` gains explicit `DRAFT`/`COMPLETED` branches (both gray, matching the handoff) instead of relying on the unknown-status fallback; "Mis torneos" now wires `pendingInvitationId`/`isOrganizer` (M4a) into `TournamentListItemTile`, so the M4b-1 invitation banner and organizer row actually render. Closes Phase 3 (mobile listing screen) of the tournaments handoff fidelity change (`apps/mobile` 1.7.3+26)
 - **Tournaments handoff fidelity (M4b-1b)**: `TournamentListItemTile` gains an optional `isOrganizer` flag and renders the lime shield row "Organizás {torneo}" with a chevron when set; not yet wired into any screen (`apps/mobile` 1.7.2+25)
 - **Tournaments handoff fidelity (M4b-1a)**: `TournamentListItemTile` gains an optional `pendingInvitationId` and renders the lime invitation banner "{org} te invitó" / "Ver invitación →" when set; `{org}` resolves to the venue name, falling back to the organizer's display name when there is no venue; not yet wired into any screen (`apps/mobile` 1.7.1+24)
 - **Tournaments handoff fidelity (M4a-2)**: "Mis torneos" now lists the viewer's real registrations/invitations, showing each card's registration status ("Adentro" for CONFIRMED, "Pendiente" otherwise) instead of a hardcoded empty list (`apps/mobile` 1.7.0+23)

@@ -19,9 +19,18 @@ class TournamentStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    //? "En juego" es el único que va sobre lima; el resto son tintes al 15%
-    //? sobre la superficie, para que la pill no compita con el nombre.
+    //? Mapeo 1:1 con TSTATUS (`design_handoff_torneos/cuadrala-torneos.jsx:
+    //? 21-27`, `README.md:58`): DRAFT/COMPLETED van en gris (`--muted` sobre
+    //? `--surface-2`), OPEN en verde al 15% (`--green`/`--green-bg`),
+    //? IN_PROGRESS es el único sobre lima, CANCELLED en rojo al 16%. DRAFT y
+    //? COMPLETED comparten rama a propósito, no por caer en el `default`: un
+    //? estado desconocido usa el mismo gris como resguardo, nunca el enum
+    //? crudo.
     final (Color bg, Color fg) = switch (status?.toUpperCase()) {
+      'DRAFT' || 'COMPLETED' => (
+          scheme.surfaceContainerHighest,
+          scheme.onSurfaceVariant,
+        ),
       'OPEN' => (scheme.primary.withValues(alpha: 0.15), scheme.primary),
       'IN_PROGRESS' => (BrandColors.limeAccent, BrandColors.onLime),
       'CANCELLED' => (

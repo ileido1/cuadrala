@@ -71,7 +71,8 @@ final class TournamentListItemDto extends Equatable {
   final double? distanceKm;
 
   /// `MALE`/`FEMALE`/`MIXED` (`MatchGender`, S2). `null` en torneos viejos
-  /// que no lo declararon — todavía sin renderizar en la tarjeta (M4b-2).
+  /// que no lo declararon; la tarjeta del listado lo muestra como etiqueta
+  /// junto a la categoría (M4b-2).
   final String? gender;
 
   /// Nombre del organizador (S3a). Resuelve `{org}` del banner de invitación

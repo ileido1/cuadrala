@@ -5,6 +5,19 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.3] - 2026-09-14
+
+### Agregado
+
+- **Fidelidad final de la tarjeta de torneo (M4b-2)**: la tarjeta muestra la
+  etiqueta de género ("Masculino"/"Femenino"/"Mixto") junto a la categoría
+  cuando el torneo la declaró; el pill de estado ahora distingue
+  explícitamente `DRAFT` y `COMPLETED` (gris) del resto en vez de depender
+  del caso por defecto. La pantalla de "Mis torneos" conecta
+  `pendingInvitationId`/`isOrganizer` (M4a) con el banner de invitación y la
+  fila de organizador (M4b-1), que hasta ahora quedaban sin usarse. Cierra la
+  Fase 3 (listado) del rediseño de torneos.
+
 ## [1.7.2] - 2026-09-14
 
 ### Agregado

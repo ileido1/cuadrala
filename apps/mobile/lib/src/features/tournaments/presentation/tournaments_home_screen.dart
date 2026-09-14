@@ -327,7 +327,16 @@ final class _ViewerTournamentTile extends StatelessWidget {
     final label = _viewerStatusLabelSV(item);
     return Stack(
       children: [
-        TournamentListItemTile(tournament: item.tournament),
+        //? `pendingInvitationId`/`isOrganizer` venían de M4a en el DTO pero
+        //? sin cruzar a la tarjeta (M4b-1 los agregó al tile a propósito sin
+        //? tocar esta pantalla, ver apply-progress); acá se cierra ese
+        //? cableado para que el banner/fila lime de M4b-1 dejen de ser
+        //? código muerto.
+        TournamentListItemTile(
+          tournament: item.tournament,
+          pendingInvitationId: item.pendingInvitationId,
+          isOrganizer: item.isOrganizer,
+        ),
         if (label != null)
           Positioned(
             top: 22,

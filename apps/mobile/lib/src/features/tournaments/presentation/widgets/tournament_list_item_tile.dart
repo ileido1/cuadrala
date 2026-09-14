@@ -18,6 +18,18 @@ String _occupancyLabel(int count, int? max) {
   return '$count/$max inscriptos';
 }
 
+/// `MALE`/`FEMALE`/`MIXED` (`MatchGender`, S2) → la etiqueta en español del
+/// handoff (`cuadrala-torneos.jsx:7,10,13,16`), la misma que ya usan
+/// `discover_matches_screen.dart` y `venue_booking_form.dart`. Un código
+/// desconocido no se inventa: la etiqueta desaparece en vez de mostrar el
+/// enum crudo (mismo criterio que `tournamentStatusLabel`).
+String? _genderTagLabel(String gender) => switch (gender) {
+      'MALE' => 'Masculino',
+      'FEMALE' => 'Femenino',
+      'MIXED' => 'Mixto',
+      _ => null,
+    };
+
 /// Tarjeta de torneo del listado (rediseño).
 ///
 /// Responde la primera pregunta del jugador —¿puedo entrar?— sin abrir nada:
@@ -93,6 +105,11 @@ final class TournamentListItemTile extends StatelessWidget {
                   Flexible(
                     child: _CategoryChip(label: tournament.categoryName),
                   ),
+                  if (tournament.gender != null &&
+                      _genderTagLabel(tournament.gender!) != null) ...[
+                    const SizedBox(width: 8),
+                    _GenderTag(label: _genderTagLabel(tournament.gender!)!),
+                  ],
                 ],
               ),
               const SizedBox(height: 10),
@@ -180,6 +197,35 @@ final class _CategoryChip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.3,
+          color: scheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+/// Etiqueta de género junto a la chip de categoría (`tagStyle`,
+/// `cuadrala-screens.jsx:113`; uso en tarjeta `cuadrala-torneos.jsx:117`).
+final class _GenderTag extends StatelessWidget {
+  const _GenderTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
           color: scheme.onSurfaceVariant,
         ),
       ),

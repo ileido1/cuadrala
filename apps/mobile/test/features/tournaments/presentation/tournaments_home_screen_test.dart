@@ -247,4 +247,82 @@ void main() {
       },
     );
   });
+
+  //? M4b-1 agregó `pendingInvitationId`/`isOrganizer` a `TournamentListItemTile`
+  //? pero dejó la pantalla sin tocar a propósito (ver apply-progress); esta es
+  //? la pieza de wiring que M4b-2 cierra: sin esto, esos parámetros del tile
+  //? son código muerto desde la perspectiva de la app corriendo.
+  group('M4b-2 — invitation/organizer wiring', () {
+    const invitedTournament = ViewerTournamentDto(
+      tournament: TournamentListItemDto(
+        id: 't-3',
+        name: 'Liga Base Aérea',
+        status: 'OPEN',
+        sportName: 'Padel',
+        categoryName: '7ma',
+        categoryId: 'cat-1',
+        startsAt: null,
+        registrationCount: 6,
+        venueName: 'Base Aérea Padel',
+      ),
+      registrationStatus: null,
+      pendingInvitationId: 'invitation-1',
+      isOrganizer: false,
+      pendingRegistrationsCount: null,
+    );
+    const organizedTournament = ViewerTournamentDto(
+      tournament: TournamentListItemDto(
+        id: 't-4',
+        name: 'Interclubes Caracas',
+        status: 'OPEN',
+        sportName: 'Padel',
+        categoryName: '6ta',
+        categoryId: 'cat-1',
+        startsAt: null,
+        registrationCount: 16,
+      ),
+      registrationStatus: null,
+      pendingInvitationId: null,
+      isOrganizer: true,
+      pendingRegistrationsCount: 4,
+    );
+
+    testWidgets(
+      'renders the invitation banner on a "Mis torneos" card with a pending invitation',
+      (tester) async {
+        when(() => tournamentsRepository.listMyTournaments())
+            .thenAnswer((_) async => [invitedTournament]);
+
+        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Mis torneos'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(invitationBannerTitle('Base Aérea Padel')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'renders the organizer row on a "Mis torneos" card the viewer organizes',
+      (tester) async {
+        when(() => tournamentsRepository.listMyTournaments())
+            .thenAnswer((_) async => [organizedTournament]);
+
+        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Mis torneos'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(organizerRowTitle('Interclubes Caracas')),
+          findsOneWidget,
+        );
+      },
+    );
+  });
 }
