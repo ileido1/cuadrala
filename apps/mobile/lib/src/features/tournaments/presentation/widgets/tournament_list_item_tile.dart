@@ -29,7 +29,9 @@ final class TournamentListItemTile extends StatelessWidget {
     super.key,
     required this.tournament,
     this.pendingInvitationId,
+    this.isOrganizer = false,
     this.onViewInvitation,
+    this.onOrganizerTap,
   });
 
   final TournamentListItemDto tournament;
@@ -40,9 +42,16 @@ final class TournamentListItemTile extends StatelessWidget {
   /// organizer row").
   final String? pendingInvitationId;
 
+  /// `true` cuando el visor organiza este torneo (`ViewerTournamentDto
+  /// .isOrganizer`, M4a). Dispara la fila lime "Organizás {torneo}".
+  final bool isOrganizer;
+
   /// Toque en "Ver invitación →". `null` deja el link sin acción (la
   /// navegación se resuelve en la pantalla que arma la tarjeta).
   final VoidCallback? onViewInvitation;
+
+  /// Toque en la fila de organizador. `null` la deja sin acción.
+  final VoidCallback? onOrganizerTap;
 
   /// `{org}`: `venueName`, cayendo al nombre del organizador sin sede
   /// declarada (D7). Nunca el nombre del propio torneo.
@@ -67,6 +76,13 @@ final class TournamentListItemTile extends StatelessWidget {
                 _InvitationBanner(
                   org: _invitationOrg!,
                   onTap: onViewInvitation,
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (isOrganizer) ...[
+                _OrganizerRow(
+                  tournamentName: tournament.name,
+                  onTap: onOrganizerTap,
                 ),
                 const SizedBox(height: 10),
               ],
@@ -371,6 +387,61 @@ final class _InvitationBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Fila lime con escudo "Organizás {torneo}" (`cuadrala-torneos.jsx:175-184`):
+/// el visor organiza este torneo.
+final class _OrganizerRow extends StatelessWidget {
+  const _OrganizerRow({required this.tournamentName, this.onTap});
+
+  final String tournamentName;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      key: const Key('tournament.card.organizerRow'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: scheme.outlineVariant, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: BrandColors.limeAccent,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(AppIcons.shield, size: 16, color: BrandColors.onLime),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Organizás $tournamentName',
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Icon(
+              AppIcons.chevronRight,
+              size: 18,
+              color: scheme.onSurfaceVariant,
+            ),
+          ],
+        ),
       ),
     );
   }

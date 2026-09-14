@@ -69,6 +69,7 @@ abstract final class AppIcons {
   static const camera = PhosphorIconsLight.camera;
   static const cake = PhosphorIconsLight.cake;
   static const badge = PhosphorIconsLight.identificationBadge;
+  static const shield = PhosphorIconsLight.shield;
 
   // ─── Dinero / pagos ────────────────────────────────────────────────────────
   static const payments = PhosphorIconsLight.money;

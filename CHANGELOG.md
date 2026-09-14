@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (M4b-1b)**: `TournamentListItemTile` gains an optional `isOrganizer` flag and renders the lime shield row "Organizás {torneo}" with a chevron when set; not yet wired into any screen (`apps/mobile` 1.7.2+25)
 - **Tournaments handoff fidelity (M4b-1a)**: `TournamentListItemTile` gains an optional `pendingInvitationId` and renders the lime invitation banner "{org} te invitó" / "Ver invitación →" when set; `{org}` resolves to the venue name, falling back to the organizer's display name when there is no venue; not yet wired into any screen (`apps/mobile` 1.7.1+24)
 - **Tournaments handoff fidelity (M4a-2)**: "Mis torneos" now lists the viewer's real registrations/invitations, showing each card's registration status ("Adentro" for CONFIRMED, "Pendiente" otherwise) instead of a hardcoded empty list (`apps/mobile` 1.7.0+23)
 - **Tournaments handoff fidelity (M4a-1)**: new `ViewerTournamentDto` and `TournamentsRepository.listMyTournaments()` mapping `GET /api/v1/users/me/tournaments`, not yet wired into any screen (`apps/mobile` 1.6.1+22)

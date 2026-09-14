@@ -42,6 +42,7 @@ void main() {
     WidgetTester tester,
     TournamentListItemDto t, {
     String? pendingInvitationId,
+    bool isOrganizer = false,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -49,6 +50,7 @@ void main() {
           body: TournamentListItemTile(
             tournament: t,
             pendingInvitationId: pendingInvitationId,
+            isOrganizer: isOrganizer,
           ),
         ),
       ),
@@ -203,6 +205,33 @@ void main() {
         expect(find.textContaining('te invitó'), findsNothing);
         expect(
           find.text(handoff_copy.invitationBannerAction),
+          findsNothing,
+        );
+      });
+    });
+
+    group('organizer row', () {
+      testWidgets(
+          'should show the lime shield organizer row with a chevron when '
+          'the viewer organizes the tournament', (tester) async {
+        await pump(tester, tournamentSV(), isOrganizer: true);
+
+        expect(
+          find.text(handoff_copy.organizerRowTitle('Copa Cuádrala')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('tournament.card.organizerRow')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('should omit the organizer row when the viewer does not '
+          'organize the tournament', (tester) async {
+        await pump(tester, tournamentSV());
+
+        expect(
+          find.byKey(const Key('tournament.card.organizerRow')),
           findsNothing,
         );
       });

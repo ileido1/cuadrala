@@ -26,3 +26,7 @@ String invitationBannerTitle(String org) => '$org te invitó';
 /// `cuadrala-torneos.jsx:172`, `README.md:51` — `` `${action} →` `` link on
 /// the invitation banner.
 const String invitationBannerAction = 'Ver invitación →';
+
+/// `cuadrala-torneos.jsx:179` — `` `Organizás ${t.name}` `` on the lime
+/// shield organizer row.
+String organizerRowTitle(String tournamentName) => 'Organizás $tournamentName';

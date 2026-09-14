@@ -5,6 +5,15 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.2] - 2026-09-14
+
+### Agregado
+
+- **Fila de organizador en la tarjeta de torneo (M4b-1)**: `TournamentListItemTile`
+  acepta un `isOrganizer` opcional y, cuando es `true`, muestra la fila lime
+  con escudo "Organizás {torneo}" y chevron. Aún no conectada a ninguna
+  pantalla.
+
 ## [1.7.1] - 2026-09-14
 
 ### Agregado
