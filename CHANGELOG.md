@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Tournaments handoff fidelity (M6a)**: `TournamentEntryCheck`'s level row now shows a 17px green check icon when the player is eligible or invited, matching the handoff's `tone === 'ok'` treatment (previously only the wrong-category lock ever rendered a trailing icon); the invited subtitle now substitutes the player's own category ("Te invitaron: entrás aunque juegues {cat}.") instead of a fixed phrase, and the wrong-category subtitle now names the tournament's category ("Jugás {cat}. Este torneo es para {cat}."); the Inscripción row now renders its price through the shared `DualPrice` widget instead of a bare `Text` (`apps/mobile` 1.7.6+29)
+
 ### Changed
 - **Tournaments handoff fidelity (M5b)**: the tournament detail screen's Material `TabBar` (Info/Mis partidos/Tabla for players, Inscriptos/Cuadro/Publicar for organizers) is now the shared `SegmentedControl`, tap-only (no swipe), matching the handoff. Fixes a pre-existing bug where a viewer of an organizerless tournament's empty schedule tab saw an infinite loading spinner, and the registration footer expanded to cover the full screen instead of staying pinned to the bottom — together they blocked every tap on the screen for that scenario. Closes M5 and Phase 4's first slice (`apps/mobile` 1.7.5+28)
 - **Tournaments handoff fidelity (M5a)**: the tournament detail screen no longer uses a collapsing `SliverAppBar`; it now renders the shared static `AppHeader` (title, "{venue} · {gender} {categoría}" subtitle, back action, ORG badge), so scrolling the tab content never resizes or hides the header. Starts Phase 4 (mobile detail screen) of the tournaments handoff fidelity change (`apps/mobile` 1.7.4+27)

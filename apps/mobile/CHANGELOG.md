@@ -5,6 +5,20 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.6] - 2026-09-14
+
+### Corregido
+
+- **Fidelidad de `TournamentEntryCheck` (M6a)**: la fila de Nivel ahora
+  muestra un check verde de 17px cuando el jugador es elegible o fue
+  invitado (antes sólo se dibujaba el candado de categoría incorrecta); el
+  subtítulo de invitado sustituye la categoría real del jugador
+  ("Te invitaron: entrás aunque juegues {categoría}.") en vez de una frase
+  fija, y el subtítulo de categoría incorrecta nombra la del torneo
+  ("Jugás {categoría}. Este torneo es para {categoría del torneo}."); la
+  fila de Inscripción ahora usa el widget compartido `DualPrice` en vez de
+  un `Text` a mano.
+
 ## [1.7.5] - 2026-09-14
 
 ### Cambiado
