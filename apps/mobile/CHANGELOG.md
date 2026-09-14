@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.7] - 2026-09-14
+
+### Agregado
+
+- **Mapper de formato de torneo (M6b-1)**: nueva función `tournamentFormatLabel`
+  que traduce el CODE del preset de formato (`SINGLE_ELIMINATION`,
+  `ROUND_ROBIN`) a la etiqueta en español del handoff ("Eliminación
+  simple", "Round robin"); un preset sin mapeo conocido muestra su nombre
+  crudo en vez de esconderse. Todavía no está conectada a ninguna pantalla.
+
 ## [1.7.6] - 2026-09-14
 
 ### Corregido

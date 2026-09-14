@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Tournaments handoff fidelity (M6b-1)**: new `tournamentFormatLabel` mapper translates a tournament's `formatPresetName` preset code (e.g. `SINGLE_ELIMINATION`) into the handoff's Spanish label ("Eliminación simple"); an unmapped code shows its raw name instead of hiding. Not yet wired into any screen (`apps/mobile` 1.7.7+30)
+
 ### Fixed
 - **Tournaments handoff fidelity (M6a)**: `TournamentEntryCheck`'s level row now shows a 17px green check icon when the player is eligible or invited, matching the handoff's `tone === 'ok'` treatment (previously only the wrong-category lock ever rendered a trailing icon); the invited subtitle now substitutes the player's own category ("Te invitaron: entrás aunque juegues {cat}.") instead of a fixed phrase, and the wrong-category subtitle now names the tournament's category ("Jugás {cat}. Este torneo es para {cat}."); the Inscripción row now renders its price through the shared `DualPrice` widget instead of a bare `Text` (`apps/mobile` 1.7.6+29)
 

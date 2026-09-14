@@ -1,0 +1,21 @@
+/// Etiqueta en español para `TournamentListItemDto.formatPresetName`.
+///
+/// `formatPresetName` no es un nombre listo para mostrar: es el CODE del
+/// preset (`SINGLE_ELIMINATION`, `ROUND_ROBIN`, ...), el mismo valor que
+/// `get_tournament_bracket.use_case.ts:97` compara para decidir si un
+/// torneo tiene cuadro. La tarjeta "Formato" del handoff
+/// (`cuadrala-torneos.jsx:268`) espera texto legible ("Eliminación
+/// simple"), nunca el nombre del deporte ni el code crudo de un preset
+/// conocido.
+///
+/// A diferencia de `tournamentStatusLabel` (que falla cerrado a "Estado
+/// desconocido"), un preset sin mapeo muestra su nombre tal cual: el
+/// diseño lo pide así ("other codes show the raw name", `design` D17)
+/// porque un preset nuevo sigue siendo información útil, no un estado
+/// inválido que haya que esconder.
+String tournamentFormatLabel(String? presetCode) => switch (presetCode) {
+  'SINGLE_ELIMINATION' => 'Eliminación simple',
+  'ROUND_ROBIN' => 'Round robin',
+  null => '',
+  final other => other,
+};
