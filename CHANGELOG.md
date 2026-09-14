@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (M6b-3b-1)**: new `TournamentRosterSheet` widget — a read-only, redaction-safe bottom sheet listing tournament registrants, grouped into pairs + "Sin pareja" for fixed-doubles tournaments or one flat list for individual ones (reusing `groupRosterIntoPairs`); only ever reads `displayName`/`status`, never guest phone/email. Not yet wired into any screen (`apps/mobile` 1.7.10+33)
 - **Tournaments handoff fidelity (M6b-3a)**: the detail screen's Inscriptos summary now shows "{N} confirmados" / "{M} esperando al organizador" (the latter only when M>0) derived from `TournamentRegistrationsLoaded.items` confirmed/pending counts, replacing the raw `registrationCount`; the section stays hidden until registrations finish loading. The chevron is drawn but not yet interactive (`apps/mobile` 1.7.9+32)
 
 ### Fixed

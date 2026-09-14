@@ -5,6 +5,17 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.10] - 2026-09-14
+
+### Agregado
+
+- **Widget `TournamentRosterSheet` (M6b-3b-1)**: nuevo bottom sheet de sólo
+  lectura que lista a los inscriptos, agrupados en duplas + "Sin pareja"
+  para torneos de pareja fija o en una sola lista para torneos
+  individuales (reutiliza `groupRosterIntoPairs`); nunca lee el
+  teléfono/email de un huésped, sólo nombre y estado. Todavía no está
+  conectado a ninguna pantalla.
+
 ## [1.7.9] - 2026-09-14
 
 ### Agregado
