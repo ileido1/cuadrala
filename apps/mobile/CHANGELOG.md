@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.14] - 2026-09-14
+
+### Corregido
+
+- **Fidelidad de fila y caption de la Tabla (M8)**: la fila del jugador ahora
+  muestra columnas `# / Jugador / PJ / PG / Pts`; la fila del jugador
+  resalta con fondo verde, el nombre en 800 y sufijo "· vos"; las
+  posiciones 1 y 2 se pintan en verde; se agregó el caption "Se actualiza
+  sola al cargarse cada resultado" sobre la tabla.
+
 ## [1.7.13] - 2026-09-14
 
 ### Corregido

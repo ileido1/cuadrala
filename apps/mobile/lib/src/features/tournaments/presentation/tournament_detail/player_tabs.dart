@@ -296,7 +296,12 @@ final class _ScoreboardTab extends StatelessWidget {
             TournamentScoreboardSuccess(:final scoreboard) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _ScoreboardTable(scoreboard: scoreboard),
+                _ScoreboardTable(
+                  scoreboard: scoreboard,
+                  currentUserId: context
+                      .read<TournamentRegistrationsCubit>()
+                      .currentUserId,
+                ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () {
@@ -433,9 +438,10 @@ final class _MatchTile extends StatelessWidget {
 }
 
 final class _ScoreboardTable extends StatelessWidget {
-  const _ScoreboardTable({required this.scoreboard});
+  const _ScoreboardTable({required this.scoreboard, this.currentUserId});
 
   final TournamentScoreboardDto scoreboard;
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -444,32 +450,98 @@ final class _ScoreboardTable extends StatelessWidget {
     if (rows.isEmpty) {
       return const _InfoBox(message: 'Aún no hay tabla para este torneo.');
     }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Equipo')),
-          DataColumn(label: Text('Pts')),
-        ],
-        rows: rows
-            .map(
-              (r) => DataRow(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Se actualiza sola al cargarse cada resultado',
+              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columns: const [
+              DataColumn(label: Text('#')),
+              DataColumn(label: Text('Jugador')),
+              DataColumn(label: Text('PJ')),
+              DataColumn(label: Text('PG')),
+              DataColumn(label: Text('Pts')),
+            ],
+            rows: rows.map((r) {
+              final isViewerRow =
+                  currentUserId != null && r.userId == currentUserId;
+              final isTopTwo = r.rank <= 2;
+              return DataRow(
+                color: isViewerRow
+                    ? WidgetStatePropertyAll(
+                        scheme.primaryContainer.withValues(alpha: 0.35),
+                      )
+                    : null,
                 cells: [
-                  DataCell(Text(r.teamName.isEmpty ? r.teamId : r.teamName)),
                   DataCell(
                     Text(
-                      '${r.points}',
+                      '${r.rank}',
                       style: TextStyle(
-                        color: scheme.primary,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
+                        color: isTopTwo
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
                       ),
                     ),
                   ),
+                  DataCell(
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: r.name.isEmpty ? r.userId : r.name,
+                            style: TextStyle(
+                              fontWeight: isViewerRow
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                          if (isViewerRow)
+                            TextSpan(
+                              text: ' · vos',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: scheme.primary,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(Text('${r.gamesPlayed}')),
+                  DataCell(Text('${r.gamesWon}')),
+                  DataCell(
+                    Text(
+                      '${r.points}',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
                 ],
-              ),
-            )
-            .toList(),
-      ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }

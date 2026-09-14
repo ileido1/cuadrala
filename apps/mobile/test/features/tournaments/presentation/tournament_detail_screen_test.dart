@@ -10,6 +10,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_registration_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_schedule_dto.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_scoreboard_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_registrations_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_registrations_state.dart';
@@ -803,6 +804,121 @@ void main() {
       );
     },
   );
+
+  group('Tabla — row styling and caption (M8)', () {
+    TournamentScoreboardDto scoreboard() => const TournamentScoreboardDto(
+      rows: [
+        //? Valores numéricos elegidos para no colisionar entre sí (ni con
+        //? `rank`), así `find.text('1'/'2'/'3')` sólo matchea la celda `#`.
+        TournamentScoreboardRowDto(
+          userId: 'user-1',
+          name: 'Yo Jugador',
+          points: 20,
+          gamesPlayed: 7,
+          gamesWon: 6,
+          rank: 1,
+        ),
+        TournamentScoreboardRowDto(
+          userId: 'user-2',
+          name: 'Rival Uno',
+          points: 15,
+          gamesPlayed: 7,
+          gamesWon: 5,
+          rank: 2,
+        ),
+        TournamentScoreboardRowDto(
+          userId: 'user-3',
+          name: 'Rival Dos',
+          points: 10,
+          gamesPlayed: 7,
+          gamesWon: 4,
+          rank: 3,
+        ),
+      ],
+    );
+
+    Future<void> pumpTabla(WidgetTester tester) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [_authRegistration(userId: 'user-1')],
+          total: 1,
+          invitations: const [],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
+      when(
+        () => scoreboardCubit.state,
+      ).thenReturn(TournamentScoreboardSuccess(scoreboard: scoreboard()));
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(organizerUserId: null),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tabla'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows the "Se actualiza sola..." caption', (tester) async {
+      await pumpTabla(tester);
+
+      expect(
+        find.text('Se actualiza sola al cargarse cada resultado'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'highlights the viewer own row with green background, bold name and "· vos" suffix',
+      (tester) async {
+        await pumpTabla(tester);
+
+        final scheme = Theme.of(
+          tester.element(find.byType(DataTable)),
+        ).colorScheme;
+
+        //? El nombre propio se pinta con Text.rich para poder anexar el
+        //? sufijo "· vos" con un estilo distinto dentro del mismo texto.
+        final nameCell = tester.widget<Text>(
+          find.textContaining('Yo Jugador'),
+        );
+        expect(nameCell.textSpan?.toPlainText(), contains('· vos'));
+
+        //? `DataRow` no es un Widget de árbol: viene de la lista
+        //? `DataTable.rows`, se inspecciona ahí en vez de con `find`.
+        final table = tester.widget<DataTable>(find.byType(DataTable));
+        final highlighted = table.rows.where(
+          (row) => row.color?.resolve(<WidgetState>{}) != null,
+        );
+        expect(highlighted.length, 1);
+        expect(
+          highlighted.single.color?.resolve(<WidgetState>{}),
+          scheme.primaryContainer.withValues(alpha: 0.35),
+        );
+      },
+    );
+
+    testWidgets('colors rank 1 and 2 green, rank 3 muted', (tester) async {
+      await pumpTabla(tester);
+
+      final scheme = Theme.of(tester.element(find.byType(DataTable))).colorScheme;
+
+      final rankOne = tester.widget<Text>(find.text('1'));
+      final rankTwo = tester.widget<Text>(find.text('2'));
+      final rankThree = tester.widget<Text>(find.text('3'));
+
+      expect(rankOne.style?.color, scheme.primary);
+      expect(rankTwo.style?.color, scheme.primary);
+      expect(rankThree.style?.color, scheme.onSurfaceVariant);
+    });
+  });
 
   group('Cómo se juega tiles (M6b-2)', () {
     Future<void> pumpInfoTab(
