@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Tournaments handoff fidelity (M7)**: the "Mis partidos" match card now uses the API's qualitative round name (S5) instead of a hardcoded "Ronda N · Partido M" label, falling back to "Ronda {n}" only when the format has none (e.g. round robin); a proposed schedule now shows "El organizador propuso este horario. ¿Te sirve?" above the "Me sirve"/"No puedo" buttons (reordered to match the handoff, primary first) and hides them once the player already answered; declining now shows "Avisamos al organizador. Va a reprogramar el partido y te llega el horario nuevo."; a match with no materialized slot now reads "Depende del cuadro" instead of "Sin cancha" (`apps/mobile` 1.7.12+35)
+
 ### Added
 - **Tournaments handoff fidelity (M6b-3b-2)**: the Inscriptos summary's chevron now opens `TournamentRosterSheet`, listing the tournament's registrants — closes M6b (Phase 4's Detail B2 slice) (`apps/mobile` 1.7.11+34)
 - **Tournaments handoff fidelity (M6b-3b-1)**: new `TournamentRosterSheet` widget — a read-only, redaction-safe bottom sheet listing tournament registrants, grouped into pairs + "Sin pareja" for fixed-doubles tournaments or one flat list for individual ones (reusing `groupRosterIntoPairs`); only ever reads `displayName`/`status`, never guest phone/email. Not yet wired into any screen (`apps/mobile` 1.7.10+33)

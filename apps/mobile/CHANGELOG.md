@@ -5,6 +5,21 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.12] - 2026-09-14
+
+### Corregido
+
+- **Fidelidad de la tarjeta "Mis partidos" (M7)**: la ronda ahora muestra el
+  nombre cualitativo que manda la API (S5, ej. "Octavos") en vez de
+  "Ronda N · Partido M"; sólo cae a "Ronda {n}" cuando el formato no tiene
+  nombre de ronda (round robin). Un horario propuesto muestra "El
+  organizador propuso este horario. ¿Te sirve?" antes de los botones
+  **Me sirve** (primario, ahora primero) / **No puedo** (secundario), y los
+  oculta una vez que el jugador ya contestó. Rechazar muestra "Avisamos al
+  organizador. Va a reprogramar el partido y te llega el horario nuevo.".
+  Un partido sin cancha materializada ahora dice "Depende del cuadro" en
+  vez de "Sin cancha".
+
 ## [1.7.11] - 2026-09-14
 
 ### Agregado
