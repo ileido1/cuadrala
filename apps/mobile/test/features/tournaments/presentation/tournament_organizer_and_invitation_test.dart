@@ -17,6 +17,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_invitation_screen.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 class _MockRegistrationsCubit extends MockCubit<TournamentRegistrationsState>
     implements TournamentRegistrationsCubit {}
@@ -101,17 +102,18 @@ void main() {
 
     expect(
       find.descendant(
-        of: find.byType(TabBar),
+        //? M5b reemplazó el `TabBar` de Material por `SegmentedControl`.
+        of: find.byType(SegmentedControl<int>),
         matching: find.text('Inscriptos'),
       ),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: find.byType(TabBar), matching: find.text('Cuadro')),
+      find.descendant(of: find.byType(SegmentedControl<int>), matching: find.text('Cuadro')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: find.byType(TabBar), matching: find.text('Publicar')),
+      find.descendant(of: find.byType(SegmentedControl<int>), matching: find.text('Publicar')),
       findsOneWidget,
     );
     expect(find.text('Confirmar 1 pendientes'), findsOneWidget);

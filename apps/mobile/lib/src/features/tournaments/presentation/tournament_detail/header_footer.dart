@@ -249,7 +249,13 @@ final class _TournamentFooter extends StatelessWidget {
             border: Border(top: BorderSide(color: scheme.outlineVariant)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(children: footer),
+          //? Sin `mainAxisSize: min` esta Column se expande a toda la
+          //? altura disponible (el Scaffold le da una constraint suelta
+          //? como `bottomNavigationBar`), tapando el resto de la pantalla
+          //? y absorbiendo los toques de todo lo que está arriba (M5b lo
+          //? expuso: bloqueaba el tap en la SegmentedControl para un
+          //? usuario con inscripción CONFIRMED).
+          child: Column(mainAxisSize: MainAxisSize.min, children: footer),
         );
       },
     );

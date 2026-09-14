@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- **Tournaments handoff fidelity (M5b)**: the tournament detail screen's Material `TabBar` (Info/Mis partidos/Tabla for players, Inscriptos/Cuadro/Publicar for organizers) is now the shared `SegmentedControl`, tap-only (no swipe), matching the handoff. Fixes a pre-existing bug where a viewer of an organizerless tournament's empty schedule tab saw an infinite loading spinner, and the registration footer expanded to cover the full screen instead of staying pinned to the bottom — together they blocked every tap on the screen for that scenario. Closes M5 and Phase 4's first slice (`apps/mobile` 1.7.5+28)
 - **Tournaments handoff fidelity (M5a)**: the tournament detail screen no longer uses a collapsing `SliverAppBar`; it now renders the shared static `AppHeader` (title, "{venue} · {gender} {categoría}" subtitle, back action, ORG badge), so scrolling the tab content never resizes or hides the header. Starts Phase 4 (mobile detail screen) of the tournaments handoff fidelity change (`apps/mobile` 1.7.4+27)
 
 ### Added

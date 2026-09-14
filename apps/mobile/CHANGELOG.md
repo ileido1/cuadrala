@@ -5,6 +5,25 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.5] - 2026-09-14
+
+### Cambiado
+
+- **`SegmentedControl` en el detalle del torneo (M5b)**: el `TabBar` de
+  Material entre Info/Mis partidos/Tabla (y Inscriptos/Cuadro/Publicar del
+  organizador) ahora usa el `SegmentedControl` compartido, sin swipe —el
+  cambio de pestaña es sólo por toque, igual que el handoff.
+
+### Corregido
+
+- **El pie de "inscribirme" tapaba toda la pantalla para un torneo sin
+  organizador**: cuando un jugador ve el detalle de un torneo cuya lista de
+  partidos aún no tiene calendario, un spinner que debía indicar "todavía no
+  cargó el torneo" en realidad se mostraba para siempre en cualquier torneo
+  sin organizador asignado, y el pie de inscripción se expandía a toda la
+  altura de la pantalla en vez de quedarse pegado abajo —entre los dos,
+  ningún toque en la pantalla llegaba a destino.
+
 ## [1.7.4] - 2026-09-14
 
 ### Cambiado

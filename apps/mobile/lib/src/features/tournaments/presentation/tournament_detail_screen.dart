@@ -11,6 +11,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../../../shared/widgets/segmented_control.dart';
 import '../../profile/data/models/user_rating_dto.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/models/tournament_invitation_dto.dart';
@@ -391,21 +392,44 @@ final class TournamentDetailBody extends StatelessWidget {
                 ),
               ),
 
-            // The player tabs only appear after confirmation or once the tournament is running.
+            // Tab switcher (M5b): replaces the Material `TabBar` with the
+            // shared `SegmentedControl`, matching the handoff's tap-only
+            // `Segmented` (`cuadrala-torneos.jsx:220`) instead of a
+            // swipeable strip. `AnimatedBuilder` rebuilds it whenever the
+            // (still shared) `TabController` index changes.
             Container(
               color: Theme.of(context).colorScheme.surface,
-              child: TabBar(
-                labelColor: Theme.of(context).colorScheme.primary,
-                unselectedLabelColor: Theme.of(
-                  context,
-                ).colorScheme.onSurfaceVariant,
-                indicatorColor: Theme.of(context).colorScheme.primary,
-                tabs: [for (final label in tabs) Tab(text: label)],
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              //? `Builder` para obtener el `TabController` desde un contexto
+              //? descendiente del `DefaultTabController` de más abajo: el
+              //? `context` del `build()` de este widget es ancestro del
+              //? `DefaultTabController` que retorna, no descendiente.
+              child: Builder(
+                builder: (context) {
+                  final tabController = DefaultTabController.of(context);
+                  return AnimatedBuilder(
+                    animation: tabController,
+                    builder: (context, _) => SegmentedControl<int>(
+                      options: [
+                        for (var i = 0; i < tabs.length; i++)
+                          SegmentedOption(value: i, label: tabs[i]),
+                      ],
+                      value: tabController.index,
+                      //? Salto directo de índice (sin animar): igual al
+                      //? `Segmented` del handoff, que sólo cambia de estado
+                      //? al tocar, sin swipe.
+                      onChanged: (index) => tabController.index = index,
+                    ),
+                  );
+                },
               ),
             ),
 
             Expanded(
               child: TabBarView(
+                //? Sin swipe: el handoff cambia de pestaña únicamente con el
+                //? `Segmented` de arriba (`cuadrala-torneos.jsx:220`).
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
                   if (isOrganizer) ...[
                     _RegistrationsTab(

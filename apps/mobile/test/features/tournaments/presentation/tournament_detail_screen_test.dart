@@ -19,6 +19,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -385,13 +386,14 @@ void main() {
         ),
       );
       await tester.pump();
-      //? El guard busca "Inscriptos" ya acotado al `TabBar` (no un
+      //? El guard busca "Inscriptos" ya acotado al `SegmentedControl` (no un
       //? `find.text` suelto): el mismo texto también encabeza una sección
       //? del tab "Info" del jugador, y con el header estático (M5) esa
       //? sección ya no queda offstage por defecto — un guard sin acotar
-      //? confundía esa sección con la pestaña del organizador.
+      //? confundía esa sección con la pestaña del organizador. M5b (`TabBar`
+      //? → `SegmentedControl`) mueve la búsqueda al widget nuevo.
       final organizerTab = find.descendant(
-        of: find.byType(TabBar),
+        of: find.byType(SegmentedControl<int>),
         matching: find.text('Inscriptos'),
       );
       if (organizerTab.evaluate().isNotEmpty) {
@@ -692,6 +694,102 @@ void main() {
 
           final afterRect = tester.getRect(headerFinder);
           expect(afterRect, beforeRect);
+        },
+      );
+    },
+  );
+
+  group(
+    'Detail tabs (M5b) — SegmentedControl replaces TabBar',
+    () {
+      Future<void> pumpPlayerTabs(WidgetTester tester) async {
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [_authRegistration(userId: 'user-1')],
+            total: 1,
+            invitations: const [],
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            registrationsCubit: registrationsCubit,
+            scheduleCubit: scheduleCubit,
+            scoreboardCubit: scoreboardCubit,
+            tournament: _tournament(organizerUserId: null),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets(
+        'renders a SegmentedControl with the three tab labels instead of a Material TabBar',
+        (tester) async {
+          await pumpPlayerTabs(tester);
+
+          expect(find.byType(TabBar), findsNothing);
+          expect(find.text('Info'), findsOneWidget);
+          expect(find.text('Mis partidos'), findsOneWidget);
+          expect(find.text('Tabla'), findsOneWidget);
+          //? Info es la pestaña por defecto (índice 0).
+          expect(find.text('Cómo se juega'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'tapping the "Mis partidos" segment switches to the schedule tab content',
+        (tester) async {
+          await pumpPlayerTabs(tester);
+
+          await tester.tap(find.text('Mis partidos'));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(
+              'El organizador debe generar el calendario cuando haya al menos 2 participantes.',
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'tapping the "Tabla" segment switches to the scoreboard tab content',
+        (tester) async {
+          await pumpPlayerTabs(tester);
+
+          await tester.tap(find.text('Tabla'));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(
+              'La clasificación estará disponible cuando comience el torneo.',
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'swiping the tab content does not change the selected segment (tap-only, per handoff)',
+        (tester) async {
+          await pumpPlayerTabs(tester);
+
+          //? El handoff (`cuadrala-torneos.jsx:220`) sólo cambia de pestaña
+          //? con el Segmented: sin swipe. `NeverScrollableScrollPhysics` en
+          //? el `TabBarView` corta el gesto antes de que mueva el índice.
+          await tester.drag(
+            find.byType(TabBarView),
+            const Offset(-400, 0),
+            warnIfMissed: false,
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Cómo se juega'), findsOneWidget);
         },
       );
     },

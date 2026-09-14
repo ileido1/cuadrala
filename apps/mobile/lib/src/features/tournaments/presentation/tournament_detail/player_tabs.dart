@@ -173,12 +173,16 @@ final class _ScheduleTab extends StatelessWidget {
                       final cubit = context
                           .read<TournamentRegistrationsCubit>();
 
-                      // Si organizerUserId es null, aún no cargaron los datos del torneo
-                      if (organizerUserId == null) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
+                      //? `organizerUserId` es un campo `required` no
+                      //? opcional-por-carga: `null` significa que el torneo
+                      //? no tiene organizador asignado (DTO nullable per
+                      //? S3a), nunca "todavía no cargó". Un spinner infinito
+                      //? acá bloqueaba (via `pumpAndSettle`) cualquier
+                      //? interacción para un torneo sin organizador — la
+                      //? igualdad de abajo ya da `false` correctamente
+                      //? cuando es `null`, sin necesitar este caso especial.
                       final isOrganizer =
+                          organizerUserId != null &&
                           cubit.currentUserId == organizerUserId;
 
                       // Solo el organizador puede generar el calendario
