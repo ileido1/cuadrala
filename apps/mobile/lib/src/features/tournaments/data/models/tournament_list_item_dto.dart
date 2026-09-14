@@ -23,6 +23,7 @@ final class TournamentListItemDto extends Equatable {
     this.distanceKm,
     this.gender,
     this.organizerName,
+    this.formatPresetName,
   });
 
   final String id;
@@ -79,6 +80,13 @@ final class TournamentListItemDto extends Equatable {
   /// y la fila de organizador (M4b-1) cuando el torneo no tiene sede.
   final String? organizerName;
 
+  /// CODE del preset de formato (`SINGLE_ELIMINATION`, `ROUND_ROBIN`, ...),
+  /// no un nombre listo para mostrar — usar `tournamentFormatLabel` para
+  /// traducirlo. Sólo `GET /tournaments/:id` (detalle) lo manda
+  /// (`tournament_query_repository.ts:44`); el listado no lo trae, por eso
+  /// es `null` en una tarjeta de `GET /tournaments`.
+  final String? formatPresetName;
+
   factory TournamentListItemDto.fromJson(Map<String, Object?> json) {
     return TournamentListItemDto(
       id: json['id'] as String,
@@ -121,6 +129,8 @@ final class TournamentListItemDto extends Equatable {
       gender: json['gender'] as String?,
       organizerName:
           json['organizerName'] as String? ?? json['organizer_name'] as String?,
+      formatPresetName: json['formatPresetName'] as String? ??
+          json['format_preset_name'] as String?,
     );
   }
 
@@ -162,5 +172,6 @@ final class TournamentListItemDto extends Equatable {
         distanceKm,
         gender,
         organizerName,
+        formatPresetName,
       ];
 }

@@ -18,6 +18,7 @@ import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';
 import '../data/models/my_tournament_match_dto.dart';
 import '../domain/tournament_eligibility_resolver.dart';
+import 'tournament_format_label.dart';
 import '../data/models/tournament_registration_dto.dart';
 import '../data/models/tournament_schedule_dto.dart';
 import '../data/models/tournament_scoreboard_dto.dart';

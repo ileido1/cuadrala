@@ -5,6 +5,17 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.8] - 2026-09-14
+
+### Corregido
+
+- **Fidelidad de las tarjetas "Cómo se juega" (M6b-2)**: la tarjeta
+  "Formato" ahora muestra el formato real del torneo (mapeado con
+  `tournamentFormatLabel`) en vez del nombre del deporte; la tarjeta
+  "Cuadro" muestra "{maxSlots} jugadores" cuando el organizador declaró un
+  cupo máximo, y se omite por completo (no un placeholder "Cupos no
+  declarados") cuando no lo declaró.
+
 ## [1.7.7] - 2026-09-14
 
 ### Agregado

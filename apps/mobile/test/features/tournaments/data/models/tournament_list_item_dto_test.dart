@@ -102,5 +102,22 @@ void main() {
       expect(dto.gender, isNull);
       expect(dto.organizerName, isNull);
     });
+
+    //? Sólo `GET /tournaments/:id` (detalle) manda `formatPresetName`
+    //? (`tournament_query_repository.ts:44`); el listado no lo trae, así que
+    //? el campo tiene que ser opcional en vez de reventar el parseo.
+    test('should read formatPresetName when the API includes it', () {
+      final dto = TournamentListItemDto.fromJson(
+        jsonSV(extra: {'formatPresetName': 'SINGLE_ELIMINATION'}),
+      );
+
+      expect(dto.formatPresetName, 'SINGLE_ELIMINATION');
+    });
+
+    test('should leave formatPresetName null when the API omits it', () {
+      final dto = TournamentListItemDto.fromJson(jsonSV());
+
+      expect(dto.formatPresetName, isNull);
+    });
   });
 }

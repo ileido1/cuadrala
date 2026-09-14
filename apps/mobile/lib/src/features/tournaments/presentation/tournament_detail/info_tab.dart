@@ -178,27 +178,7 @@ final class _InfoTab extends StatelessWidget {
             style: _sectionStyle(Theme.of(context).colorScheme),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _InfoTile(
-                  label: 'Formato',
-                  value: tournament!.sportName,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _InfoTile(label: 'Cuadro', value: 'Cupos no declarados'),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _InfoTile(
-                  label: 'Anotados',
-                  value: '${tournament!.registrationCount}',
-                ),
-              ),
-            ],
-          ),
+          _ComoSeJuegaTiles(tournament: tournament!),
           const SizedBox(height: 20),
           Text(
             'Inscriptos',
@@ -283,6 +263,45 @@ final class _StatusBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Cómo se juega": Formato/Cuadro/Anotados (`cuadrala-torneos.jsx:268`).
+///
+/// "Formato" siempre muestra el preset (`formatPresetName` mapeado por
+/// `tournamentFormatLabel`), nunca `sportName`. "Cuadro" muestra
+/// `maxSlots` cuando el organizador lo declaró; sin eso no hay
+/// denominador que mostrar, así que la tarjeta entera se omite en vez de
+/// inventar un placeholder ("Cupos no declarados") como hacía antes.
+final class _ComoSeJuegaTiles extends StatelessWidget {
+  const _ComoSeJuegaTiles({required this.tournament});
+
+  final TournamentListItemDto tournament;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxSlots = tournament.maxSlots;
+    final tiles = <_InfoTile>[
+      _InfoTile(
+        label: 'Formato',
+        value: tournamentFormatLabel(tournament.formatPresetName),
+      ),
+      if (maxSlots != null)
+        _InfoTile(label: 'Cuadro', value: '$maxSlots jugadores'),
+      _InfoTile(
+        label: 'Anotados',
+        value: '${tournament.registrationCount}',
+      ),
+    ];
+
+    return Row(
+      children: [
+        for (var i = 0; i < tiles.length; i++) ...[
+          if (i > 0) const SizedBox(width: 10),
+          Expanded(child: tiles[i]),
+        ],
+      ],
     );
   }
 }

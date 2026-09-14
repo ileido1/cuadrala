@@ -54,6 +54,10 @@ TournamentInvitationDto _pendingInvite({String invitedUserId = 'user-1'}) =>
 TournamentListItemDto _tournament({
   String? organizerUserId = 'user-1',
   String status = 'OPEN',
+  String? formatPresetName,
+  int? maxSlots,
+  int registrationCount = 0,
+  bool pairedRegistration = false,
 }) => TournamentListItemDto(
   id: 't-1',
   name: 'Torneo Test',
@@ -62,8 +66,11 @@ TournamentListItemDto _tournament({
   categoryName: 'Mixto',
   categoryId: 'cat-1',
   startsAt: null,
-  registrationCount: 0,
+  registrationCount: registrationCount,
   organizerUserId: organizerUserId,
+  formatPresetName: formatPresetName,
+  maxSlots: maxSlots,
+  pairedRegistration: pairedRegistration,
 );
 
 TournamentRegistrationDto _authRegistration({String userId = 'user-2'}) =>
@@ -794,4 +801,89 @@ void main() {
       );
     },
   );
+
+  group('Cómo se juega tiles (M6b-2)', () {
+    Future<void> pumpInfoTab(
+      WidgetTester tester, {
+      String? formatPresetName,
+      int? maxSlots,
+      int registrationCount = 0,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsLoaded(items: [], total: 0),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(
+            organizerUserId: null,
+            formatPresetName: formatPresetName,
+            maxSlots: maxSlots,
+            registrationCount: registrationCount,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    //? El "Formato" del handoff (`cuadrala-torneos.jsx:268`) es el preset del
+    //? torneo, nunca el deporte: antes de este fix la tarjeta mostraba
+    //? `sportName` ("Pádel") en vez de "Eliminación simple".
+    testWidgets(
+      'shows the mapped formatPresetName label, never the sport name',
+      (tester) async {
+        await pumpInfoTab(tester, formatPresetName: 'SINGLE_ELIMINATION');
+
+        expect(find.text('Eliminación simple'), findsOneWidget);
+        expect(find.text('Pádel'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'shows maxSlots as "{n} jugadores" on the Cuadro tile when declared',
+      (tester) async {
+        await pumpInfoTab(
+          tester,
+          formatPresetName: 'SINGLE_ELIMINATION',
+          maxSlots: 16,
+        );
+
+        expect(find.text('Cuadro'), findsOneWidget);
+        expect(find.text('16 jugadores'), findsOneWidget);
+      },
+    );
+
+    //? El diseño prohíbe explícitamente un placeholder inventado ("Cupos no
+    //? declarados"): sin `maxSlots` la tarjeta entera se omite.
+    testWidgets(
+      'omits the Cuadro tile entirely when maxSlots is null',
+      (tester) async {
+        await pumpInfoTab(tester, formatPresetName: 'SINGLE_ELIMINATION');
+
+        expect(find.text('Cuadro'), findsNothing);
+        expect(find.textContaining('Cupos no declarados'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'still shows Formato and Anotados when Cuadro is omitted',
+      (tester) async {
+        await pumpInfoTab(
+          tester,
+          formatPresetName: 'ROUND_ROBIN',
+          registrationCount: 5,
+        );
+
+        expect(find.text('Round robin'), findsOneWidget);
+        expect(find.text('5'), findsOneWidget);
+      },
+    );
+  });
 }
