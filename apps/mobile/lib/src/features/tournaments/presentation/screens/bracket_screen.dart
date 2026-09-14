@@ -316,20 +316,28 @@ class _BracketMatchCard extends StatelessWidget {
     };
   }
 
-  String _formatScore(List<Map<String, Object?>> score) {
-    return score
-        .map((scoreMap) {
-          final playerAScore = scoreMap['playerAScore'] ?? '0';
-          final playerBScore = scoreMap['playerBScore'] ?? '0';
-          return '$playerAScore-$playerBScore';
-        })
-        .join(' ');
+  //? `score` trae un puntaje por participante (`{userId, points}`,
+  //? `get_tournament_bracket.use_case.ts:18-27`), no un arreglo de sets con
+  //? claves `playerAScore`/`playerBScore` — esas claves nunca existieron en
+  //? la respuesta real (ver `bracket_dto.dart`).
+  int? _pointsForUser(List<BracketScoreEntryDto>? score, String? userId) {
+    if (score == null || userId == null) return null;
+    for (final entry in score) {
+      if (entry.userId == userId) return entry.points;
+    }
+    return null;
   }
 
-  String? _scoreForPlayer(List<Map<String, Object?>>? score, bool playerA) {
-    if (score == null || score.isEmpty) return null;
-    final key = playerA ? 'playerAScore' : 'playerBScore';
-    return score.map((set) => set[key]?.toString() ?? '0').join(' · ');
+  String _formatScore(List<BracketScoreEntryDto> score) {
+    final playerAPoints = _pointsForUser(score, match.playerA?.userId) ?? 0;
+    final playerBPoints = _pointsForUser(score, match.playerB?.userId) ?? 0;
+    return '$playerAPoints-$playerBPoints';
+  }
+
+  String? _scoreForPlayer(List<BracketScoreEntryDto>? score, bool playerA) {
+    final userId = playerA ? match.playerA?.userId : match.playerB?.userId;
+    final points = _pointsForUser(score, userId);
+    return points?.toString();
   }
 }
 

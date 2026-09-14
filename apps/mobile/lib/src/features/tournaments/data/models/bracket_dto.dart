@@ -23,6 +23,27 @@ final class BracketPlayerDto {
   }
 }
 
+/// Un puntaje individual dentro de `BracketMatchDto.score`.
+///
+/// El contrato real de `GET /tournaments/:id/bracket`
+/// (`get_tournament_bracket.use_case.ts:18-27`) manda un puntaje por
+/// participante (`{userId, points}`), no un arreglo de sets con claves
+/// `playerAScore`/`playerBScore` — esas claves nunca existieron en la
+/// respuesta real.
+final class BracketScoreEntryDto {
+  const BracketScoreEntryDto({required this.userId, required this.points});
+
+  final String userId;
+  final int points;
+
+  static BracketScoreEntryDto fromJson(Map<String, Object?> json) {
+    return BracketScoreEntryDto(
+      userId: json['userId'] as String,
+      points: (json['points'] as num).toInt(),
+    );
+  }
+}
+
 /// Un partido individual en el bracket.
 final class BracketMatchDto {
   const BracketMatchDto({
@@ -41,7 +62,7 @@ final class BracketMatchDto {
   final BracketPlayerDto? playerA;
   final BracketPlayerDto? playerB;
   final String? winnerId;
-  final List<Map<String, Object?>>? score;
+  final List<BracketScoreEntryDto>? score;
   final String status; // 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'BYE'
   final String? matchId;
 
@@ -57,6 +78,7 @@ final class BracketMatchDto {
       score: json['score'] is List
           ? (json['score'] as List)
               .whereType<Map<String, Object?>>()
+              .map(BracketScoreEntryDto.fromJson)
               .toList()
           : null,
       status: json['status'] as String? ?? 'PENDING',

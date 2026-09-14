@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.15] - 2026-09-14
+
+### Corregido
+
+- **Contrato del score del cuadro alineado con la API (M9a)**:
+  `BracketMatchDto.score` ahora lee un puntaje por participante
+  (`{userId, points}`, contrato real de `GET /tournaments/:id/bracket`) en
+  vez de un arreglo de sets con claves `playerAScore`/`playerBScore`, que
+  nunca existieron en la respuesta y siempre resolvían a "0".
+
 ## [1.7.14] - 2026-09-14
 
 ### Corregido

@@ -144,8 +144,13 @@ void main() {
                   seedPosition: 2,
                 ),
                 winnerId: 'u-1',
+                //? `score` es un puntaje por participante ({userId, points}),
+                //? no un arreglo de sets con claves playerAScore/playerBScore
+                //? (esas claves nunca existieron en la respuesta real de
+                //? `GET /tournaments/:id/bracket`).
                 score: [
-                  {'playerAScore': '6', 'playerBScore': '4'},
+                  BracketScoreEntryDto(userId: 'u-1', points: 6),
+                  BracketScoreEntryDto(userId: 'u-2', points: 4),
                 ],
                 status: 'COMPLETED',
                 matchId: 'm-1',
