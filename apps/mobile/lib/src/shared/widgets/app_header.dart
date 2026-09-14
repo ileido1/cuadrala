@@ -10,12 +10,18 @@ final class AppHeader extends StatelessWidget {
     this.subtitle,
     this.showBack = false,
     this.rightAction,
+    this.onBack,
   });
 
   final String title;
   final String? subtitle;
   final bool showBack;
   final Widget? rightAction;
+
+  /// Overrides the default `context.pop()` when the back button is tapped.
+  /// Screens with a fallback destination (e.g. no navigation history to pop)
+  /// pass their own handler here instead of duplicating this widget.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +47,7 @@ final class AppHeader extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: showBack
                       ? IconButton(
-                          onPressed: () => context.pop(),
+                          onPressed: onBack ?? () => context.pop(),
                           icon: const Icon(AppIcons.chevronLeft, size: 28),
                         )
                       : null,

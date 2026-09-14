@@ -1,47 +1,5 @@
 part of '../tournament_detail_screen.dart';
 
-final class _TournamentHeaderBg extends StatelessWidget {
-  const _TournamentHeaderBg({required this.tournament, this.organizer = false});
-  final TournamentListItemDto? tournament;
-  final bool organizer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: tournament != null
-          ? Align(
-              alignment: Alignment.bottomLeft,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      tournament!.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      organizer
-                          ? 'Vos organizás este torneo'
-                          : '${tournament!.sportName} · ${tournament!.categoryName}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : const SizedBox.shrink(),
-    );
-  }
-}
-
 final class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.status});
   final String status;

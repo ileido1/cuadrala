@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.4] - 2026-09-14
+
+### Cambiado
+
+- **Header estático en el detalle del torneo (M5a)**: la pantalla de detalle ya
+  no usa un `SliverAppBar` que se encoge al scrollear; ahora usa el `AppHeader`
+  compartido (título, subtítulo "{sede} · {género} {categoría}", volver, badge
+  ORG), fijo sin importar cuánto se scrollee el contenido de las pestañas.
+  Arranca la Fase 4 (detalle) del rediseño de torneos.
+
 ## [1.7.3] - 2026-09-14
 
 ### Agregado

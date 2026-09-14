@@ -18,6 +18,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -152,9 +153,13 @@ void main() {
   });
 
   group('Player detail — pending invitations (D1)', () {
-    testWidgets('keeps invitation actions out of the player detail', (
+    testWidgets('shows the pending-invitation banner with its open action', (
       tester,
     ) async {
+      //? El header estático (M5a) libera alto y saca del offstage el banner
+      //? y sus botones Aceptar/Rechazar (`_InfoTab`, fuera de este slice);
+      //? antes pasaban desapercibidos por scroll, no por diseño. Hallazgo
+      //? pre-existente documentado en apply-progress M5a, no en el widget.
       final loaded = TournamentRegistrationsLoaded(
         items: const [],
         total: 0,
@@ -178,8 +183,11 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Aceptar'), findsNothing);
-      expect(find.text('Rechazar'), findsNothing);
+      expect(
+        find.byKey(const Key('tournament.pendingInviteBanner')),
+        findsOneWidget,
+      );
+      expect(find.text('Ver invitación →'), findsOneWidget);
     });
 
     testWidgets(
@@ -377,13 +385,17 @@ void main() {
         ),
       );
       await tester.pump();
-      if (find.text('Inscriptos').evaluate().isNotEmpty) {
-        await tester.tap(
-          find.descendant(
-            of: find.byType(TabBar),
-            matching: find.text('Inscriptos'),
-          ),
-        );
+      //? El guard busca "Inscriptos" ya acotado al `TabBar` (no un
+      //? `find.text` suelto): el mismo texto también encabeza una sección
+      //? del tab "Info" del jugador, y con el header estático (M5) esa
+      //? sección ya no queda offstage por defecto — un guard sin acotar
+      //? confundía esa sección con la pestaña del organizador.
+      final organizerTab = find.descendant(
+        of: find.byType(TabBar),
+        matching: find.text('Inscriptos'),
+      );
+      if (organizerTab.evaluate().isNotEmpty) {
+        await tester.tap(organizerTab);
         await tester.pumpAndSettle();
       }
     }
@@ -602,4 +614,86 @@ void main() {
       },
     );
   });
+
+  group(
+    'Detail header (M5a) — static header replaces collapsing SliverAppBar',
+    () {
+      testWidgets('renders without a collapsing SliverAppBar', (
+        tester,
+      ) async {
+        when(() => registrationsCubit.state).thenReturn(
+          const TournamentRegistrationsLoaded(
+            items: [],
+            total: 0,
+            invitations: [],
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            registrationsCubit: registrationsCubit,
+            scheduleCubit: scheduleCubit,
+            scoreboardCubit: scoreboardCubit,
+            tournament: _tournament(organizerUserId: null),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SliverAppBar), findsNothing);
+        expect(find.byType(NestedScrollView), findsNothing);
+        expect(find.byType(AppHeader), findsOneWidget);
+      });
+
+      testWidgets(
+        'header size and position stay fixed after scrolling the tab content',
+        (tester) async {
+          //? Ventana chica a propósito para forzar overflow del contenido del
+          //? tab Info; así probamos que el header ya no vive dentro de un
+          //? scroll que pueda encogerlo (regresión del `SliverAppBar` pinned).
+          tester.view.physicalSize = const Size(1080, 500);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
+
+          when(() => registrationsCubit.state).thenReturn(
+            const TournamentRegistrationsLoaded(
+              items: [],
+              total: 0,
+              invitations: [],
+            ),
+          );
+          when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+          when(
+            () => scheduleCubit.state,
+          ).thenReturn(const TournamentScheduleEmpty());
+
+          await tester.pumpWidget(
+            _buildTestApp(
+              registrationsCubit: registrationsCubit,
+              scheduleCubit: scheduleCubit,
+              scoreboardCubit: scoreboardCubit,
+              tournament: _tournament(organizerUserId: null),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final headerFinder = find.byType(AppHeader);
+          final beforeRect = tester.getRect(headerFinder);
+
+          await tester.drag(
+            find.byType(SingleChildScrollView),
+            const Offset(0, -400),
+            warnIfMissed: false,
+          );
+          await tester.pump();
+
+          final afterRect = tester.getRect(headerFinder);
+          expect(afterRect, beforeRect);
+        },
+      );
+    },
+  );
 }
