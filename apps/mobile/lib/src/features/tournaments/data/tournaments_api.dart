@@ -194,6 +194,10 @@ abstract interface class TournamentsApi {
   Future<Map<String, Object?>> getTournamentBracketEnvelope({
     required String tournamentId,
   });
+
+  /// Los torneos del usuario actual: en los que está inscripto, invitado, o
+  /// que organiza ("Mis torneos", M4a).
+  Future<Map<String, Object?>> getMyTournamentsEnvelope();
 }
 
 final class DioTournamentsApi implements TournamentsApi {
@@ -481,5 +485,10 @@ final class DioTournamentsApi implements TournamentsApi {
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/tournaments/$tournamentId/bracket',
     );
+  }
+
+  @override
+  Future<Map<String, Object?>> getMyTournamentsEnvelope() {
+    return _apiClient.getEnvelopeDataMap('/api/v1/users/me/tournaments');
   }
 }

@@ -11,6 +11,7 @@ import 'models/tournament_registration_dto.dart';
 import 'models/my_tournament_match_dto.dart';
 import 'models/tournament_schedule_dto.dart';
 import 'models/tournament_scoreboard_dto.dart';
+import 'models/viewer_tournament_dto.dart';
 import 'tournaments_api.dart';
 
 class TournamentsRepository {
@@ -369,5 +370,18 @@ class TournamentsRepository {
       tournamentId: tournamentId,
     );
     return BracketDto.fromJson(data);
+  }
+
+  /// "Mis torneos" (M4a): torneos en los que el visor está inscripto,
+  /// invitado, o que organiza, con su estado por torneo.
+  Future<List<ViewerTournamentDto>> listMyTournaments() async {
+    final data = await _tournamentsApi.getMyTournamentsEnvelope();
+    final raw = data['items'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, Object?>.from(e))
+        .map(ViewerTournamentDto.fromJson)
+        .toList(growable: false);
   }
 }

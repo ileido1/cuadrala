@@ -290,6 +290,52 @@ void main() {
         throwsA(predicate((e) => e is AppFailure && e.code == 'TORNEO_CERRADO')),
       );
     });
+
+    test('listMyTournaments parses items from GET /api/v1/users/me/tournaments (M4a)',
+        () async {
+      final api = _MockTournamentsApi();
+      final repo = TournamentsRepository(tournamentsApi: api);
+
+      when(() => api.getMyTournamentsEnvelope()).thenAnswer(
+        (_) async => {
+          'items': [
+            {
+              'tournament': {
+                'id': 't-1',
+                'name': 'Copa Cuádrala',
+                'status': 'OPEN',
+                'sportName': 'Padel',
+                'categoryId': 'cat-1',
+                'categoryName': '7ma',
+                'startsAt': null,
+                'registrationCount': 8,
+              },
+              'registrationStatus': 'CONFIRMED',
+              'pendingInvitationId': null,
+              'isOrganizer': false,
+              'pendingRegistrationsCount': null,
+            },
+          ],
+        },
+      );
+
+      final result = await repo.listMyTournaments();
+
+      expect(result, hasLength(1));
+      expect(result.single.tournament.id, 't-1');
+      expect(result.single.registrationStatus, 'CONFIRMED');
+    });
+
+    test('listMyTournaments devuelve vacío cuando la API no manda "items"', () async {
+      final api = _MockTournamentsApi();
+      final repo = TournamentsRepository(tournamentsApi: api);
+
+      when(() => api.getMyTournamentsEnvelope()).thenAnswer((_) async => {});
+
+      final result = await repo.listMyTournaments();
+
+      expect(result, isEmpty);
+    });
   });
 }
 

@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (M4a-1)**: new `ViewerTournamentDto` and `TournamentsRepository.listMyTournaments()` mapping `GET /api/v1/users/me/tournaments`, not yet wired into any screen (`apps/mobile` 1.6.1+22)
 - **Tournaments handoff fidelity (M3d)**: the "Cerca" chip resolves the viewer's saved location (`OnboardingRepository.getLocation()`), falling back to GPS, and applies `near`/`radiusKm: 10` through the cubit's existing `applyFilters`; the chip stays inactive when neither location resolves. Tournament cards now show `distanceKm` next to the venue when the API returns it (`apps/mobile` 1.6.0+21)
 - **Tournaments handoff fidelity (M3c-2)**: the "Mi categoría" chip now renders (only when the viewer has a primary category) with the handoff's verbatim copy, and toggling it applies/clears the category filter through the cubit's existing `applyFilters` (`apps/mobile` 1.5.0+20)
 - **Tournaments handoff fidelity (M3c-1)**: `TournamentsListCubit` now defaults its category filter to the viewer's own primary-rating category on first load, exposing `hasOwnCategory` on the loaded state; a filter the user already touched is never overridden on a later refresh (`apps/mobile` 1.4.1+19)

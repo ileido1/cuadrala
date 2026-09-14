@@ -5,6 +5,14 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.6.1] - 2026-09-14
+
+### Agregado
+
+- **`ViewerTournamentDto` y `TournamentsRepository.listMyTournaments` (M4a-1)**:
+  nuevo DTO y llamada al repositorio para `GET /api/v1/users/me/tournaments`,
+  aún no conectados a ninguna pantalla.
+
 ## [1.6.0] - 2026-09-14
 
 ### Agregado
