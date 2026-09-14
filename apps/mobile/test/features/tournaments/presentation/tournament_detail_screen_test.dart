@@ -973,5 +973,30 @@ void main() {
         expect(find.text('Inscriptos'), findsNothing);
       },
     );
+
+    testWidgets(
+      'tapping the summary opens a roster sheet listing registrant names',
+      (tester) async {
+        await pumpInscriptos(
+          tester,
+          state: TournamentRegistrationsLoaded(
+            items: [
+              _authRegistration(userId: 'p1'),
+              _guestRegistration(id: 'g1', status: 'PENDING'),
+            ],
+            total: 2,
+          ),
+        );
+
+        //? La tarjeta vive debajo del fold del área de 800x600 del test.
+        final summaryFinder = find.text(inscriptosConfirmedLabel(1));
+        await tester.ensureVisible(summaryFinder);
+        await tester.tap(summaryFinder);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('tournament.rosterSheet')), findsOneWidget);
+        expect(find.text('Carlos'), findsOneWidget);
+      },
+    );
   });
 }

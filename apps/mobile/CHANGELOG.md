@@ -5,6 +5,14 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.11] - 2026-09-14
+
+### Agregado
+
+- **Chevron de Inscriptos abre el roster (M6b-3b-2)**: tocar la tarjeta de
+  Inscriptos ahora abre `TournamentRosterSheet` con la lista de
+  inscriptos. Cierra M6b (Detail B2 de la Fase 4).
+
 ## [1.7.10] - 2026-09-14
 
 ### Agregado

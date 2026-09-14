@@ -37,6 +37,7 @@ import 'tournament_roster_grouping.dart';
 import 'tournament_roster_summary.dart';
 import 'widgets/tournament_entry_check.dart';
 import 'widgets/tournament_pairing_section.dart';
+import 'widgets/tournament_roster_sheet.dart';
 import 'screens/bracket_screen.dart';
 import 'tournament_invitation_screen.dart';
 import 'widgets/invite_guest_sheet.dart';

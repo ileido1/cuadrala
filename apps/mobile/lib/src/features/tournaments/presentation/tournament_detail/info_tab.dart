@@ -324,15 +324,12 @@ final class _ComoSeJuegaTiles extends StatelessWidget {
 }
 
 /// Resumen de Inscriptos (`cuadrala-torneos.jsx:277-285`): `AvatarStack` +
-/// "{N} confirmados" / "{M} esperando al organizador" (design D17).
+/// "{N} confirmados" / "{M} esperando al organizador" + chevron que abre el
+/// roster (design D17, assumption A2).
 ///
 /// Los conteos salen de `TournamentRegistrationsLoaded.items` (excluyendo
 /// WITHDRAWN vía `summarizeRoster`), nunca del `registrationCount` crudo del
 /// torneo: ese número no distingue confirmados de pendientes.
-///
-/// El chevron todavía no abre nada (llega en M6b-3b, el roster sheet de
-/// assumption A2): se dibuja porque el handoff lo muestra
-/// (`cuadrala-torneos.jsx:284`), pero por ahora es sólo visual.
 final class _InscriptosSummary extends StatelessWidget {
   const _InscriptosSummary({
     required this.registrationsState,
@@ -351,43 +348,51 @@ final class _InscriptosSummary extends StatelessWidget {
     );
     final filled = math.min(6, summary.confirmed);
 
-    return Container(
+    return InkWell(
       key: const Key('tournament.inscriptosSummary'),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => showTournamentRosterSheet(
+        context,
+        registrations: registrationsState.items,
+        pairedRegistration: pairedRegistration,
       ),
-      child: Row(
-        children: [
-          AvatarStack(filledCount: filled, emptySpots: 6 - filled),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _inscriptosConfirmedLabel(summary.confirmed),
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (summary.pending > 0)
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: scheme.outlineVariant, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            AvatarStack(filledCount: filled, emptySpots: 6 - filled),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    _inscriptosPendingLabel(summary.pending),
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: scheme.onSurfaceVariant,
+                    _inscriptosConfirmedLabel(summary.confirmed),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-              ],
+                  if (summary.pending > 0)
+                    Text(
+                      _inscriptosPendingLabel(summary.pending),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          Icon(AppIcons.chevronRight, size: 18, color: scheme.outline),
-        ],
+            Icon(AppIcons.chevronRight, size: 18, color: scheme.outline),
+          ],
+        ),
       ),
     );
   }
