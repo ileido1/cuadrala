@@ -315,7 +315,9 @@ void main() {
           const TournamentsListLoading(),
           isA<TournamentsListLoaded>()
               .having((s) => s.filters.categoryId, 'filters.categoryId', 'cat-own')
-              .having((s) => s.hasOwnCategory, 'hasOwnCategory', true),
+              .having((s) => s.hasOwnCategory, 'hasOwnCategory', true)
+              .having((s) => s.ownCategoryId, 'ownCategoryId', 'cat-own')
+              .having((s) => s.ownCategoryLabel, 'ownCategoryLabel', 'Cuarta'),
         ],
       );
 
@@ -340,7 +342,9 @@ void main() {
           const TournamentsListLoading(),
           isA<TournamentsListLoaded>()
               .having((s) => s.filters.categoryId, 'filters.categoryId', null)
-              .having((s) => s.hasOwnCategory, 'hasOwnCategory', false),
+              .having((s) => s.hasOwnCategory, 'hasOwnCategory', false)
+              .having((s) => s.ownCategoryId, 'ownCategoryId', null)
+              .having((s) => s.ownCategoryLabel, 'ownCategoryLabel', null),
         ],
       );
 

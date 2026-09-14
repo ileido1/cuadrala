@@ -7,9 +7,12 @@ import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dar
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_page.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_api.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournaments_home_screen.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
+
+import '../handoff_copy.dart';
 
 class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
 
@@ -18,6 +21,19 @@ class _MockCatalogRepository extends Mock implements CatalogRepository {}
 class _MockVenuesRepository extends Mock implements VenuesRepository {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+const _meWithCategory = UserMeDto(
+  id: 'user-2',
+  email: 'user2@test.local',
+  name: 'Jugadora',
+  subscriptionType: 'FREE',
+  primaryRating: UserPrimaryRatingDto(
+    categoryId: 'cat-own',
+    categoryName: 'Cuarta',
+    sportId: 'sport-1',
+    rating: 3.5,
+  ),
+);
 
 Future<void> _setupGetIt(
   _MockTournamentsRepository tournamentsRepository,
@@ -79,5 +95,85 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Más filtros'), findsNothing);
+  });
+
+  group('Mi categoría chip (M3c-2)', () {
+    testWidgets(
+      'renders "Mi categoría {N}" selected by default when the viewer has a category',
+      (tester) async {
+        when(() => profileRepository.getMe()).thenAnswer((_) async => _meWithCategory);
+
+        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpAndSettle();
+
+        expect(find.text(miCategoriaLabel('Cuarta')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'hides the chip when the viewer has no category',
+      (tester) async {
+        // setUp() ya deja profileRepository.getMe() sin primaryRating.
+        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Mi categoría'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'toggling the chip clears and re-applies the category filter through applyFilters',
+      (tester) async {
+        when(() => profileRepository.getMe()).thenAnswer((_) async => _meWithCategory);
+
+        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => tournamentsRepository.listTournaments(
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            filters: any(
+              named: 'filters',
+              that: predicate<TournamentListFilters?>(
+                (f) => f?.categoryId == 'cat-own',
+              ),
+            ),
+          ),
+        ).called(1);
+
+        await tester.tap(find.text(miCategoriaLabel('Cuarta')));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => tournamentsRepository.listTournaments(
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            filters: any(
+              named: 'filters',
+              that: predicate<TournamentListFilters?>(
+                (f) => f?.categoryId == null,
+              ),
+            ),
+          ),
+        ).called(1);
+
+        await tester.tap(find.text(miCategoriaLabel('Cuarta')));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => tournamentsRepository.listTournaments(
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            filters: any(
+              named: 'filters',
+              that: predicate<TournamentListFilters?>(
+                (f) => f?.categoryId == 'cat-own',
+              ),
+            ),
+          ),
+        ).called(1);
+      },
+    );
   });
 }

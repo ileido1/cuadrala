@@ -28,6 +28,8 @@ final class TournamentsListLoaded extends TournamentsListState {
     required this.hasReachedEnd,
     required this.filters,
     this.hasOwnCategory = false,
+    this.ownCategoryId,
+    this.ownCategoryLabel,
   });
 
   final List<TournamentListItemDto> items;
@@ -43,6 +45,15 @@ final class TournamentsListLoaded extends TournamentsListState {
   /// filtrar por default.
   final bool hasOwnCategory;
 
+  /// `categoryId` del rating primario del visor. `null` cuando
+  /// [hasOwnCategory] es `false`. Usado para reaplicar el filtro al
+  /// re-seleccionar el chip "Mi categoría" tras haberlo destildado.
+  final String? ownCategoryId;
+
+  /// Nombre de la categoría propia del visor (ej. "7ma"), usado para
+  /// renderizar el copy verbatim "Mi categoría {N}" (`cuadrala-torneos.jsx:188`).
+  final String? ownCategoryLabel;
+
   TournamentsListLoaded copyWith({
     List<TournamentListItemDto>? items,
     int? page,
@@ -52,6 +63,8 @@ final class TournamentsListLoaded extends TournamentsListState {
     bool? hasReachedEnd,
     TournamentListFilters? filters,
     bool? hasOwnCategory,
+    String? ownCategoryId,
+    String? ownCategoryLabel,
   }) {
     return TournamentsListLoaded(
       items: items ?? this.items,
@@ -62,6 +75,8 @@ final class TournamentsListLoaded extends TournamentsListState {
       hasReachedEnd: hasReachedEnd ?? this.hasReachedEnd,
       filters: filters ?? this.filters,
       hasOwnCategory: hasOwnCategory ?? this.hasOwnCategory,
+      ownCategoryId: ownCategoryId ?? this.ownCategoryId,
+      ownCategoryLabel: ownCategoryLabel ?? this.ownCategoryLabel,
     );
   }
 
@@ -75,6 +90,8 @@ final class TournamentsListLoaded extends TournamentsListState {
         hasReachedEnd,
         filters,
         hasOwnCategory,
+        ownCategoryId,
+        ownCategoryLabel,
       ];
 }
 

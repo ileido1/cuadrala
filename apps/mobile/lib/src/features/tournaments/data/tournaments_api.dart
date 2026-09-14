@@ -21,14 +21,17 @@ final class TournamentListFilters extends Equatable {
   final String? sportId;
   final String? categoryId;
 
-  TournamentListFilters copyWith({String? categoryId}) {
+  TournamentListFilters copyWith({
+    String? categoryId,
+    bool clearCategoryId = false,
+  }) {
     return TournamentListFilters(
       venueId: venueId,
       startsAtFrom: startsAtFrom,
       startsAtTo: startsAtTo,
       status: status,
       sportId: sportId,
-      categoryId: categoryId ?? this.categoryId,
+      categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
     );
   }
 

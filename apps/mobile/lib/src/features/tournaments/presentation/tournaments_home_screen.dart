@@ -102,14 +102,35 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                       child: Row(
                         children: [
-                          _CategoryFilterChip(
-                            label: 'Mi categoría',
-                            selected: state.filters.categoryId != null,
-                            //? Temporal: M3c conecta este toggle a la
-                            //? categoría propia del visor (default-on).
-                            onTap: () {},
-                          ),
-                          const SizedBox(width: 8),
+                          //? "Mi categoría {N}" (cuadrala-torneos.jsx:188):
+                          //? sólo se dibuja cuando el visor tiene categoría
+                          //? propia (M3c-1's hasOwnCategory). Tocarlo alterna
+                          //? el filtro de categoría vía el applyFilters ya
+                          //? existente del cubit, sin reinventar esa lógica.
+                          if (state.hasOwnCategory)
+                            _CategoryFilterChip(
+                              label:
+                                  'Mi categoría ${state.ownCategoryLabel}',
+                              selected: state.filters.categoryId != null,
+                              onTap: () {
+                                final cubit =
+                                    context.read<TournamentsListCubit>();
+                                if (state.filters.categoryId != null) {
+                                  cubit.applyFilters(
+                                    state.filters.copyWith(
+                                      clearCategoryId: true,
+                                    ),
+                                  );
+                                } else {
+                                  cubit.applyFilters(
+                                    state.filters.copyWith(
+                                      categoryId: state.ownCategoryId,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          if (state.hasOwnCategory) const SizedBox(width: 8),
                           _CategoryFilterChip(
                             label: 'Cerca',
                             selected: false,

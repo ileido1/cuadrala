@@ -34,6 +34,8 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
   List<CategoryDto> _categories = [];
   List<VenueDto> _venues = [];
   bool _hasOwnCategory = false;
+  String? _ownCategoryId;
+  String? _ownCategoryLabel;
   bool _appliedOwnCategoryDefault = false;
   static const _pageLimit = 20;
 
@@ -49,6 +51,8 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
       final me = await _profileRepository.getMe();
       final categoryId = me.primaryRating?.categoryId;
       _hasOwnCategory = categoryId != null;
+      _ownCategoryId = categoryId;
+      _ownCategoryLabel = me.primaryRating?.categoryName;
       if (categoryId != null && _currentFilters.categoryId == null) {
         _currentFilters = _currentFilters.copyWith(categoryId: categoryId);
       }
@@ -75,6 +79,8 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         hasReachedEnd: page.hasReachedEnd,
         filters: _currentFilters,
         hasOwnCategory: _hasOwnCategory,
+        ownCategoryId: _ownCategoryId,
+        ownCategoryLabel: _ownCategoryLabel,
       ));
     } on AppFailure catch (e) {
       emit(TournamentsListFailure(message: e.message));
@@ -139,6 +145,8 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         hasReachedEnd: page.hasReachedEnd,
         filters: filters,
         hasOwnCategory: _hasOwnCategory,
+        ownCategoryId: _ownCategoryId,
+        ownCategoryLabel: _ownCategoryLabel,
       ));
     } on AppFailure catch (e) {
       emit(TournamentsListFailure(message: e.message));

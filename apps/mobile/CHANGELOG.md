@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.5.0] - 2026-09-14
+
+### Agregado
+
+- **Chip "Mi categoría"**: el chip de filtro (agregado en la slice anterior
+  con el toggle deshabilitado) ahora se renderiza sólo cuando el visor tiene
+  categoría propia (`hasOwnCategory`), con el copy verbatim del handoff
+  ("Mi categoría {categoría}"). Tocarlo alterna el filtro de categoría
+  reutilizando `applyFilters` del cubit — sin lógica nueva de filtrado.
+
 ## [1.4.1] - 2026-09-13
 
 ### Agregado
