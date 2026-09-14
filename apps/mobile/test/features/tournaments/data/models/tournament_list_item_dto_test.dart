@@ -66,5 +66,21 @@ void main() {
 
       expect(dto.inscriptionPrice, 15.0);
     });
+
+    //? `distanceKm` sólo viene cuando el listado se filtró con `near`
+    //? (chip "Cerca", M3d); no se inventa cuando el filtro no se aplicó.
+    test('should read distanceKm when the listing was filtered by near', () {
+      final dto = TournamentListItemDto.fromJson(
+        jsonSV(extra: {'distanceKm': 2.5}),
+      );
+
+      expect(dto.distanceKm, 2.5);
+    });
+
+    test('should leave distanceKm null when near was not applied', () {
+      final dto = TournamentListItemDto.fromJson(jsonSV());
+
+      expect(dto.distanceKm, isNull);
+    });
   });
 }

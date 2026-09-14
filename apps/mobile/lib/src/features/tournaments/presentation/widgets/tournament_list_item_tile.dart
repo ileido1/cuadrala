@@ -78,7 +78,12 @@ final class TournamentListItemTile extends StatelessWidget {
                     _MetaRow(
                       key: const Key('tournament.card.venue'),
                       icon: AppIcons.pin,
-                      label: tournament.venueName!,
+                      //? "Cerca" (M3d): `distanceKm` sólo viene cuando el
+                      //? listado se filtró por cercanía (cuadrala-torneos.jsx:128,
+                      //? `{venue} · {dist}`); sin ese filtro no se inventa.
+                      label: tournament.distanceKm != null
+                          ? '${tournament.venueName} · ${tournament.distanceKm!.toStringAsFixed(1)} km'
+                          : tournament.venueName!,
                     ),
                 ],
               ),

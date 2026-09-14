@@ -20,6 +20,7 @@ final class TournamentListItemDto extends Equatable {
     this.inscriptionPrice,
     this.maxSlots,
     this.registrationClosesAt,
+    this.distanceKm,
   });
 
   final String id;
@@ -62,6 +63,11 @@ final class TournamentListItemDto extends Equatable {
   /// la API sigue aceptando altas mientras el torneo esté en DRAFT u OPEN.
   final DateTime? registrationClosesAt;
 
+  /// Distancia en km al venue del torneo. Sólo viene cuando el listado se
+  /// filtró con `near` (chip "Cerca", M3d); si no se aplicó el filtro, la API
+  /// no manda el campo y la tarjeta no debe inventar una distancia.
+  final double? distanceKm;
+
   factory TournamentListItemDto.fromJson(Map<String, Object?> json) {
     return TournamentListItemDto(
       id: json['id'] as String,
@@ -96,6 +102,10 @@ final class TournamentListItemDto extends Equatable {
       registrationClosesAt: _parseDateTimeFieldSV(
         json['registrationClosesAt'],
         json['registration_closes_at'],
+      ),
+      distanceKm: _parseNumericFieldSV(
+        json['distanceKm'],
+        json['distance_km'],
       ),
     );
   }
@@ -135,5 +145,6 @@ final class TournamentListItemDto extends Equatable {
         inscriptionPrice,
         maxSlots,
         registrationClosesAt,
+        distanceKm,
       ];
 }

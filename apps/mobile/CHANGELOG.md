@@ -5,6 +5,18 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.6.0] - 2026-09-14
+
+### Agregado
+
+- **Chip "Cerca" y distancia en la tarjeta**: el chip resuelve la ubicación
+  del visor en este orden: guardada (`OnboardingRepository.getLocation()`) y,
+  si no hay, GPS (`LocationService.getCurrentLocation()`); manda `near` con
+  `radiusKm: 10` al activarse. Si ninguna ubicación resuelve, el chip queda
+  inactivo — no se manda un filtro roto. La tarjeta del listado ahora muestra
+  `distanceKm` junto a la sede ("{sede} · {distancia} km") sólo cuando la API
+  lo devuelve.
+
 ## [1.5.0] - 2026-09-14
 
 ### Agregado

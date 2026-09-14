@@ -13,6 +13,7 @@ TournamentListItemDto tournamentSV({
   DateTime? registrationClosesAt,
   int registrationCount = 11,
   String categoryId = 'cat-1',
+  double? distanceKm,
 }) =>
     TournamentListItemDto(
       id: 'tournament-1',
@@ -27,6 +28,7 @@ TournamentListItemDto tournamentSV({
       inscriptionPrice: inscriptionPrice,
       maxSlots: maxSlots,
       registrationClosesAt: registrationClosesAt,
+      distanceKm: distanceKm,
     );
 
 void main() {
@@ -123,6 +125,25 @@ void main() {
       );
 
       expect(find.textContaining('cierra'), findsOneWidget);
+    });
+
+    //? "Cerca" (M3d): la tarjeta sólo muestra distancia cuando la API la
+    //? mandó — eso implica que el listado se filtró con `near`.
+    testWidgets('should show the distance next to the venue when the API returned it',
+        (tester) async {
+      await pump(
+        tester,
+        tournamentSV(venueName: 'Club Cuádrala', distanceKm: 2.5),
+      );
+
+      expect(find.text('Club Cuádrala · 2.5 km'), findsOneWidget);
+    });
+
+    testWidgets('should omit the distance when the API did not return it',
+        (tester) async {
+      await pump(tester, tournamentSV(venueName: 'Club Cuádrala'));
+
+      expect(find.textContaining(' km'), findsNothing);
     });
   });
 }
