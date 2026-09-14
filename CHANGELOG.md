@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Tournaments handoff fidelity (M6b-3a)**: the detail screen's Inscriptos summary now shows "{N} confirmados" / "{M} esperando al organizador" (the latter only when M>0) derived from `TournamentRegistrationsLoaded.items` confirmed/pending counts, replacing the raw `registrationCount`; the section stays hidden until registrations finish loading. The chevron is drawn but not yet interactive (`apps/mobile` 1.7.9+32)
+
 ### Fixed
 - **Tournaments handoff fidelity (M6b-2)**: the detail screen's "Cómo se juega" tiles now show the tournament's actual format (via the new `tournamentFormatLabel` mapper) on "Formato" instead of the sport name, and "Cuadro" shows "{maxSlots} jugadores" when the organizer declared a cap — the tile is omitted entirely (not a "Cupos no declarados" placeholder) when `maxSlots` is unset (`apps/mobile` 1.7.8+31)
 

@@ -80,6 +80,7 @@ final class _InfoTab extends StatelessWidget {
     required this.tournament,
     required this.playerRatings,
     required this.registration,
+    required this.registrationsState,
     required this.invited,
     this.invitation,
     this.onOpenInvitation,
@@ -88,6 +89,12 @@ final class _InfoTab extends StatelessWidget {
   final TournamentListItemDto? tournament;
   final List<UserRatingDto>? playerRatings;
   final TournamentRegistrationDto? registration;
+
+  /// Fuente de los confirmados/pendientes del resumen de Inscriptos
+  /// (diseño D17): la sección se oculta hasta que este estado sea
+  /// [TournamentRegistrationsLoaded], para no mostrar un conteo a medio
+  /// cargar.
+  final TournamentRegistrationsState registrationsState;
   final bool invited;
   final TournamentInvitationDto? invitation;
   final VoidCallback? onOpenInvitation;
@@ -108,6 +115,11 @@ final class _InfoTab extends StatelessWidget {
       playerRatings: ratingsMap,
       playerIsInvited: invited,
     );
+
+    //? Variable local para que el analizador promueva el tipo dentro del
+    //? `if` de la lista de hijos más abajo (un campo `final` no siempre se
+    //? promueve igual que una variable local).
+    final loadedRegistrations = registrationsState;
 
     //? Buscar la categoría del torneo en los ratings del jugador
     UserRatingDto? playerTournamentRating;
@@ -179,16 +191,21 @@ final class _InfoTab extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _ComoSeJuegaTiles(tournament: tournament!),
-          const SizedBox(height: 20),
-          Text(
-            'Inscriptos',
-            style: _sectionStyle(Theme.of(context).colorScheme),
-          ),
-          const SizedBox(height: 10),
-          _InfoBox(
-            message:
-                '${tournament!.registrationCount} confirmados${registration?.status == 'PENDING' ? '\nTu inscripción espera al organizador.' : ''}',
-          ),
+          //? D17: la sección se oculta hasta que los inscriptos terminen de
+          //? cargar — mostrar un conteo a medio cargar sería peor que no
+          //? mostrar nada.
+          if (loadedRegistrations is TournamentRegistrationsLoaded) ...[
+            const SizedBox(height: 20),
+            Text(
+              'Inscriptos',
+              style: _sectionStyle(Theme.of(context).colorScheme),
+            ),
+            const SizedBox(height: 10),
+            _InscriptosSummary(
+              registrationsState: loadedRegistrations,
+              pairedRegistration: tournament!.pairedRegistration,
+            ),
+          ],
         ],
       ),
     );
@@ -305,6 +322,84 @@ final class _ComoSeJuegaTiles extends StatelessWidget {
     );
   }
 }
+
+/// Resumen de Inscriptos (`cuadrala-torneos.jsx:277-285`): `AvatarStack` +
+/// "{N} confirmados" / "{M} esperando al organizador" (design D17).
+///
+/// Los conteos salen de `TournamentRegistrationsLoaded.items` (excluyendo
+/// WITHDRAWN vía `summarizeRoster`), nunca del `registrationCount` crudo del
+/// torneo: ese número no distingue confirmados de pendientes.
+///
+/// El chevron todavía no abre nada (llega en M6b-3b, el roster sheet de
+/// assumption A2): se dibuja porque el handoff lo muestra
+/// (`cuadrala-torneos.jsx:284`), pero por ahora es sólo visual.
+final class _InscriptosSummary extends StatelessWidget {
+  const _InscriptosSummary({
+    required this.registrationsState,
+    required this.pairedRegistration,
+  });
+
+  final TournamentRegistrationsLoaded registrationsState;
+  final bool pairedRegistration;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final summary = summarizeRoster(
+      registrations: registrationsState.items,
+      paired: pairedRegistration,
+    );
+    final filled = math.min(6, summary.confirmed);
+
+    return Container(
+      key: const Key('tournament.inscriptosSummary'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          AvatarStack(filledCount: filled, emptySpots: 6 - filled),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _inscriptosConfirmedLabel(summary.confirmed),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (summary.pending > 0)
+                  Text(
+                    _inscriptosPendingLabel(summary.pending),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Icon(AppIcons.chevronRight, size: 18, color: scheme.outline),
+        ],
+      ),
+    );
+  }
+}
+
+/// "{N} confirmados" (`cuadrala-torneos.jsx:281`).
+String _inscriptosConfirmedLabel(int confirmed) => '$confirmed confirmados';
+
+/// "{M} esperando al organizador" (`cuadrala-torneos.jsx:282`), sólo
+/// renderizado cuando `pending > 0`.
+String _inscriptosPendingLabel(int pending) =>
+    '$pending esperando al organizador';
 
 final class _InfoTile extends StatelessWidget {
   const _InfoTile({required this.label, required this.value});

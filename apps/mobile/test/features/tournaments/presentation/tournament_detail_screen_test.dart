@@ -21,6 +21,8 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament
 import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
+import '../handoff_copy.dart';
+
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
@@ -883,6 +885,92 @@ void main() {
 
         expect(find.text('Round robin'), findsOneWidget);
         expect(find.text('5'), findsOneWidget);
+      },
+    );
+  });
+
+  group('Inscriptos summary (M6b-3)', () {
+    Future<void> pumpInscriptos(
+      WidgetTester tester, {
+      required TournamentRegistrationsState state,
+      bool pairedRegistration = false,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(state);
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(
+            organizerUserId: null,
+            //? El total de "Anotados" no debe filtrarse con confirmados: son
+            //? dos números del handoff (`cuadrala-torneos.jsx:268,281`).
+            registrationCount: 99,
+            pairedRegistration: pairedRegistration,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    //? El resumen usa confirmados/pendientes de `items`, no el
+    //? `registrationCount` crudo del torneo (que en este fixture es 99: el
+    //? mismo número sigue apareciendo, sin cambios, en la tarjeta
+    //? "Anotados" — lo que no debe pasar es que el resumen de Inscriptos lo
+    //? reutilice como si fueran confirmados).
+    testWidgets(
+      'shows confirmed and pending counts from registrations items, not registrationCount',
+      (tester) async {
+        await pumpInscriptos(
+          tester,
+          state: TournamentRegistrationsLoaded(
+            items: [
+              _authRegistration(userId: 'p1'),
+              _authRegistration(userId: 'p2'),
+              _guestRegistration(id: 'g1', status: 'PENDING'),
+            ],
+            total: 3,
+          ),
+        );
+
+        expect(find.text(inscriptosConfirmedLabel(2)), findsOneWidget);
+        expect(find.text(inscriptosPendingLabel(1)), findsOneWidget);
+        expect(find.text(inscriptosConfirmedLabel(99)), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'omits the pending line when nobody is waiting on the organizer',
+      (tester) async {
+        await pumpInscriptos(
+          tester,
+          state: TournamentRegistrationsLoaded(
+            items: [_authRegistration(userId: 'p1')],
+            total: 1,
+          ),
+        );
+
+        expect(find.text(inscriptosConfirmedLabel(1)), findsOneWidget);
+        expect(find.textContaining('esperando al organizador'), findsNothing);
+      },
+    );
+
+    //? Diseño D17: "The section is hidden until the registrations are
+    //? Loaded" — antes de eso no hay confirmados/pendientes que mostrar.
+    testWidgets(
+      'hides the Inscriptos section before registrations finish loading',
+      (tester) async {
+        await pumpInscriptos(
+          tester,
+          state: const TournamentRegistrationsLoading(),
+        );
+
+        expect(find.text('Inscriptos'), findsNothing);
       },
     );
   });

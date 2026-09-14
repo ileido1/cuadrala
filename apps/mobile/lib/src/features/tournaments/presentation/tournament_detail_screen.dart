@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/app_header.dart';
+import '../../../shared/widgets/avatar_stack.dart';
 import '../../../shared/widgets/segmented_control.dart';
 import '../../profile/data/models/user_rating_dto.dart';
 import '../../profile/data/profile_repository.dart';
@@ -455,6 +458,7 @@ final class TournamentDetailBody extends StatelessWidget {
                       tournament: tournament,
                       playerRatings: playerRatings,
                       registration: currentRegistration,
+                      registrationsState: registrationsState,
                       invited: invited,
                       invitation: pendingInvitation,
                       onOpenInvitation: pendingInvitation == null

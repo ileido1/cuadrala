@@ -31,6 +31,19 @@ const String invitationBannerAction = 'Ver invitación →';
 /// shield organizer row.
 String organizerRowTitle(String tournamentName) => 'Organizás $tournamentName';
 
+/// `cuadrala-torneos.jsx:281` — `` `${t.confirmed} confirmados` `` on the
+/// Inscriptos summary row.
+String inscriptosConfirmedLabel(int confirmed) => '$confirmed confirmados';
+
+/// `cuadrala-torneos.jsx:282` — `` `${t.pending} esperando al organizador` ``,
+/// only rendered when `t.pending > 0`.
+String inscriptosPendingLabel(int pending) =>
+    '$pending esperando al organizador';
+
+/// `cuadrala-torneos.jsx:268` — `` `${t.size} jugadores` `` on the "Cuadro"
+/// tile.
+String cuadroTileValue(int maxSlots) => '$maxSlots jugadores';
+
 /// `cuadrala-torneos.jsx:7,10,13,16,117` — the gender tag rendered next to
 /// the category chip on the tournament card. `MALE`/`FEMALE`/`MIXED`
 /// (`MatchGender`, S2) map to the same Spanish labels already used by

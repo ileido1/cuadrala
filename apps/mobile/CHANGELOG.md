@@ -5,6 +5,18 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.9] - 2026-09-14
+
+### Agregado
+
+- **Resumen de Inscriptos con conteos reales (M6b-3a)**: la tarjeta de
+  Inscriptos del detalle ahora muestra "{N} confirmados" / "{M} esperando
+  al organizador" (esto último sólo si M>0), calculados a partir de los
+  inscriptos ya cargados, en vez del `registrationCount` crudo del
+  torneo; la sección se oculta hasta que los inscriptos terminan de
+  cargar. El chevron se dibuja pero todavía no hace nada (llega en
+  M6b-3b).
+
 ## [1.7.8] - 2026-09-14
 
 ### Corregido
