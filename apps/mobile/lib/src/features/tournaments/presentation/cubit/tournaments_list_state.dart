@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../data/models/tournament_list_item_dto.dart';
+import '../../data/models/viewer_tournament_dto.dart';
 import '../../data/tournaments_api.dart';
 
 sealed class TournamentsListState extends Equatable {
@@ -30,6 +31,7 @@ final class TournamentsListLoaded extends TournamentsListState {
     this.hasOwnCategory = false,
     this.ownCategoryId,
     this.ownCategoryLabel,
+    this.myTournaments = const [],
   });
 
   final List<TournamentListItemDto> items;
@@ -54,6 +56,11 @@ final class TournamentsListLoaded extends TournamentsListState {
   /// renderizar el copy verbatim "Mi categoría {N}" (`cuadrala-torneos.jsx:188`).
   final String? ownCategoryLabel;
 
+  /// "Mis torneos" (M4a): torneos donde el visor está inscripto, invitado, o
+  /// que organiza, sourced de `GET /api/v1/users/me/tournaments`. Vacío
+  /// mientras carga o si la llamada falla — nunca inventado.
+  final List<ViewerTournamentDto> myTournaments;
+
   TournamentsListLoaded copyWith({
     List<TournamentListItemDto>? items,
     int? page,
@@ -65,6 +72,7 @@ final class TournamentsListLoaded extends TournamentsListState {
     bool? hasOwnCategory,
     String? ownCategoryId,
     String? ownCategoryLabel,
+    List<ViewerTournamentDto>? myTournaments,
   }) {
     return TournamentsListLoaded(
       items: items ?? this.items,
@@ -77,6 +85,7 @@ final class TournamentsListLoaded extends TournamentsListState {
       hasOwnCategory: hasOwnCategory ?? this.hasOwnCategory,
       ownCategoryId: ownCategoryId ?? this.ownCategoryId,
       ownCategoryLabel: ownCategoryLabel ?? this.ownCategoryLabel,
+      myTournaments: myTournaments ?? this.myTournaments,
     );
   }
 
@@ -92,6 +101,7 @@ final class TournamentsListLoaded extends TournamentsListState {
         hasOwnCategory,
         ownCategoryId,
         ownCategoryLabel,
+        myTournaments,
       ];
 }
 

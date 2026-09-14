@@ -12,3 +12,8 @@ library;
 /// `USER.cat` is the viewer's category label (e.g. `"7ma"`), not a raw
 /// integer — mirrors `UserPrimaryRatingDto.categoryName`.
 String miCategoriaLabel(String categoryLabel) => 'Mi categoría $categoryLabel';
+
+/// `cuadrala-torneos.jsx:118-122` — inline registration badge on a "Mis
+/// torneos" card: `'Adentro'` when CONFIRMED, `'Pendiente'` otherwise.
+String viewerRegistrationStatusLabel(String registrationStatus) =>
+    registrationStatus == 'CONFIRMED' ? 'Adentro' : 'Pendiente';

@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.0] - 2026-09-14
+
+### Agregado
+
+- **"Mis torneos" con datos reales (M4a-2)**: la sección "Mis torneos" del
+  listado ya no muestra una lista vacía hardcodeada — se llena con los datos
+  de `TournamentsListCubit.listMyTournaments`, y cada tarjeta muestra el
+  estado real de inscripción del visor ("Adentro" para CONFIRMED, "Pendiente"
+  para cualquier otro estado vigente).
+
 ## [1.6.1] - 2026-09-14
 
 ### Agregado

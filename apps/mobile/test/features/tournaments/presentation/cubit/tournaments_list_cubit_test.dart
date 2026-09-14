@@ -11,6 +11,7 @@ import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dar
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_page.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/viewer_tournament_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_api.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournaments_list_cubit.dart';
@@ -70,6 +71,9 @@ void main() {
           )).thenAnswer((_) async => []);
       // Default: sin rating primario. Los tests de M3c-1 pisan esto puntualmente.
       when(() => profileRepository.getMe()).thenAnswer((_) async => _meNoCategory);
+      // Default: "Mis torneos" vacío. Los tests de M4a pisan esto puntualmente.
+      when(() => tournamentsRepository.listMyTournaments())
+          .thenAnswer((_) async => const []);
     });
 
     final testPage = TournamentListPage(
@@ -525,6 +529,88 @@ void main() {
           isA<TournamentsListLoaded>()
               .having((s) => s.filters.near, 'near after second toggle', null)
               .having((s) => s.filters.radiusKm, 'radiusKm after clear', null),
+        ],
+      );
+    });
+
+    group('Mis torneos (M4a)', () {
+      final viewerTournamentA = ViewerTournamentDto(
+        tournament: testPage.items.first,
+        registrationStatus: 'CONFIRMED',
+        pendingInvitationId: null,
+        isOrganizer: false,
+        pendingRegistrationsCount: null,
+      );
+      const viewerTournamentB = ViewerTournamentDto(
+        tournament: TournamentListItemDto(
+          id: 't-invited',
+          name: 'Nocturno Chacao',
+          status: 'OPEN',
+          sportName: 'Padel',
+          categoryName: '5ta',
+          categoryId: 'cat-5',
+          startsAt: null,
+          registrationCount: 4,
+        ),
+        registrationStatus: null,
+        pendingInvitationId: 'inv-1',
+        isOrganizer: false,
+        pendingRegistrationsCount: null,
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'load populates myTournaments from GET /api/v1/users/me/tournaments',
+        setUp: () {
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+          when(() => tournamentsRepository.listMyTournaments()).thenAnswer(
+            (_) async => [viewerTournamentA, viewerTournamentB],
+          );
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>().having(
+            (s) => s.myTournaments,
+            'myTournaments',
+            [viewerTournamentA, viewerTournamentB],
+          ),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'keeps myTournaments empty when the repository call fails, without breaking the main list',
+        setUp: () {
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+          when(() => tournamentsRepository.listMyTournaments()).thenThrow(
+            const AppFailure(code: 'HTTP_500', message: 'Error del servidor.'),
+          );
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.myTournaments, 'myTournaments', const <ViewerTournamentDto>[])
+              .having((s) => s.items.length, 'items.length still loads', 1),
         ],
       );
     });

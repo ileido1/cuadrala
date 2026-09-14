@@ -6,7 +6,9 @@ import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_page.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/viewer_tournament_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_api.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournaments_home_screen.dart';
@@ -84,6 +86,8 @@ void main() {
         subscriptionType: 'FREE',
       ),
     );
+    when(() => tournamentsRepository.listMyTournaments())
+        .thenAnswer((_) async => const []);
 
     await _setupGetIt(tournamentsRepository, catalogRepository, venuesRepository, profileRepository);
   });
@@ -173,6 +177,73 @@ void main() {
             ),
           ),
         ).called(1);
+      },
+    );
+  });
+
+  group('Mis torneos (M4a)', () {
+    const viewerTournamentA = ViewerTournamentDto(
+      tournament: TournamentListItemDto(
+        id: 't-1',
+        name: 'Copa Cuádrala',
+        status: 'OPEN',
+        sportName: 'Padel',
+        categoryName: '7ma',
+        categoryId: 'cat-1',
+        startsAt: null,
+        registrationCount: 8,
+      ),
+      registrationStatus: 'CONFIRMED',
+      pendingInvitationId: null,
+      isOrganizer: false,
+      pendingRegistrationsCount: null,
+    );
+    const viewerTournamentB = ViewerTournamentDto(
+      tournament: TournamentListItemDto(
+        id: 't-2',
+        name: 'Nocturno Chacao',
+        status: 'OPEN',
+        sportName: 'Padel',
+        categoryName: '5ta',
+        categoryId: 'cat-2',
+        startsAt: null,
+        registrationCount: 4,
+      ),
+      registrationStatus: 'PENDING',
+      pendingInvitationId: null,
+      isOrganizer: false,
+      pendingRegistrationsCount: null,
+    );
+
+    testWidgets(
+      'renders both tournaments the viewer is registered in, with real data instead of a hardcoded empty list',
+      (tester) async {
+        when(() => tournamentsRepository.listMyTournaments())
+            .thenAnswer((_) async => [viewerTournamentA, viewerTournamentB]);
+
+        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Mis torneos'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Copa Cuádrala'), findsOneWidget);
+        expect(find.text('Nocturno Chacao'), findsOneWidget);
+        expect(find.text(viewerRegistrationStatusLabel('CONFIRMED')), findsOneWidget);
+        expect(find.text(viewerRegistrationStatusLabel('PENDING')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'shows the "Mis torneos" empty state when the viewer has none',
+      (tester) async {
+        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Mis torneos'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Todavía no te anotaste a ninguno'), findsOneWidget);
       },
     );
   });

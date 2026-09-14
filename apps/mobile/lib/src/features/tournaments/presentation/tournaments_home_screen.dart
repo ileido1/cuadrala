@@ -11,7 +11,7 @@ import '../../../features/profile/data/profile_repository.dart';
 import '../../../features/venues/data/venues_repository.dart';
 import '../../../router/routes.dart';
 import '../data/tournaments_repository.dart';
-import '../data/models/tournament_list_item_dto.dart';
+import '../data/models/viewer_tournament_dto.dart';
 import 'cubit/tournaments_list_cubit.dart';
 import 'cubit/tournaments_list_state.dart';
 import 'widgets/tournament_list_item_tile.dart';
@@ -84,9 +84,13 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
             );
           }
           if (state is TournamentsListLoaded) {
-            final items = _section == 'Abiertos'
-                ? state.items.where((item) => item.status == 'OPEN').toList()
-                : const <TournamentListItemDto>[];
+            //? "Mis torneos" (M4a, cuadrala-torneos.jsx:150): real data desde
+            //? GET /api/v1/users/me/tournaments — ya no una lista hardcodeada.
+            final isMine = _section == 'Mis torneos';
+            final openItems =
+                state.items.where((item) => item.status == 'OPEN').toList();
+            final mineItems = state.myTournaments;
+            final isEmpty = isMine ? mineItems.isEmpty : openItems.isEmpty;
             return SafeArea(
               child: Column(
                 children: [
@@ -107,7 +111,7 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                       onChanged: (value) => setState(() => _section = value),
                     ),
                   ),
-                  if (_section == 'Abiertos')
+                  if (!isMine)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                       child: Row(
@@ -157,11 +161,12 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                       ),
                     ),
                   Expanded(
-                    child: items.isEmpty
-                        ? _EmptyState(mine: _section == 'Mis torneos')
+                    child: isEmpty
+                        ? _EmptyState(mine: isMine)
                         : NotificationListener<ScrollNotification>(
                             onNotification: (notification) {
-                              if (notification is ScrollEndNotification &&
+                              if (!isMine &&
+                                  notification is ScrollEndNotification &&
                                   notification.metrics.pixels >=
                                       notification.metrics.maxScrollExtent -
                                           100) {
@@ -179,11 +184,17 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                                   16,
                                   24,
                                 ),
-                                itemCount:
-                                    items.length +
-                                    (state.isLoadingMore ? 1 : 0),
+                                itemCount: isMine
+                                    ? mineItems.length
+                                    : openItems.length +
+                                        (state.isLoadingMore ? 1 : 0),
                                 itemBuilder: (ctx, index) {
-                                  if (index == items.length) {
+                                  if (isMine) {
+                                    return _ViewerTournamentTile(
+                                      item: mineItems[index],
+                                    );
+                                  }
+                                  if (index == openItems.length) {
                                     return const Padding(
                                       padding: EdgeInsets.symmetric(
                                         vertical: 16,
@@ -194,7 +205,7 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                                     );
                                   }
                                   return TournamentListItemTile(
-                                    tournament: items[index],
+                                    tournament: openItems[index],
                                   );
                                 },
                               ),
@@ -295,6 +306,55 @@ final class _CategoryFilterChip extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Tarjeta de "Mis torneos" (M4a): la tarjeta estándar del listado más el
+/// estado de inscripción del visor, sourced de `GET
+/// /api/v1/users/me/tournaments` — nunca inventado.
+///
+/// La fidelidad completa de la insignia (posición, invitaciones, fila de
+/// organizador) llega en M4b; acá sólo se muestra el estado real para que
+/// "Mis torneos" deje de estar hardcodeado a una lista vacía.
+final class _ViewerTournamentTile extends StatelessWidget {
+  const _ViewerTournamentTile({required this.item});
+
+  final ViewerTournamentDto item;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final label = _viewerStatusLabelSV(item);
+    return Stack(
+      children: [
+        TournamentListItemTile(tournament: item.tournament),
+        if (label != null)
+          Positioned(
+            top: 22,
+            right: 26,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: item.registrationStatus == 'CONFIRMED'
+                    ? scheme.primary
+                    : scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  //? cuadrala-torneos.jsx:118-122 — insignia inline: "Adentro" para
+  //? CONFIRMED, "Pendiente" para cualquier otro estado de inscripción
+  //? vigente. Sin inscripción vigente (sólo invitado u organizador) no se
+  //? dibuja nada acá — esos casos tienen su propia UI dedicada en M4b.
+  static String? _viewerStatusLabelSV(ViewerTournamentDto item) {
+    final status = item.registrationStatus;
+    if (status == null) return null;
+    return status == 'CONFIRMED' ? 'Adentro' : 'Pendiente';
   }
 }
 

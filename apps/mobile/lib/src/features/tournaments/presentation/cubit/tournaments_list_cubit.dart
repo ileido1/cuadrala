@@ -9,6 +9,7 @@ import '../../../onboarding/data/onboarding_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../venues/data/models/venue_dto.dart';
 import '../../../venues/data/venues_repository.dart';
+import '../../data/models/viewer_tournament_dto.dart';
 import '../../data/tournaments_api.dart';
 import '../../data/tournaments_repository.dart';
 import 'tournaments_list_state.dart';
@@ -57,6 +58,11 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
   bool _appliedOwnCategoryDefault = false;
   static const _pageLimit = 20;
 
+  /// "Mis torneos" (M4a): torneos donde el visor está inscripto, invitado, o
+  /// que organiza. Se recarga en cada [load] (incluye pull-to-refresh); una
+  /// falla la deja vacía sin romper el resto del listado.
+  List<ViewerTournamentDto> _myTournaments = [];
+
   /// Primera vez que se carga: si el visor tiene categoría propia (rating
   /// primario) y todavía no hay un filtro de categoría explícito, la usa
   /// como default. Una sola vez por cubit — nunca pisa un filtro que el
@@ -79,8 +85,19 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
     }
   }
 
+  /// "Mis torneos" (M4a): trae los torneos del visor. Una falla los deja
+  /// vacíos — el listado principal ("Abiertos") funciona igual sin esto.
+  Future<void> _loadMyTournamentsSV() async {
+    try {
+      _myTournaments = await _tournamentsRepository.listMyTournaments();
+    } catch (_) {
+      _myTournaments = [];
+    }
+  }
+
   Future<void> load() async {
     await _applyOwnCategoryDefaultIfNeededSV();
+    await _loadMyTournamentsSV();
     emit(const TournamentsListLoading());
     try {
       final page = await _tournamentsRepository.listTournaments(
@@ -99,6 +116,7 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         hasOwnCategory: _hasOwnCategory,
         ownCategoryId: _ownCategoryId,
         ownCategoryLabel: _ownCategoryLabel,
+        myTournaments: _myTournaments,
       ));
     } on AppFailure catch (e) {
       emit(TournamentsListFailure(message: e.message));
@@ -165,6 +183,7 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         hasOwnCategory: _hasOwnCategory,
         ownCategoryId: _ownCategoryId,
         ownCategoryLabel: _ownCategoryLabel,
+        myTournaments: _myTournaments,
       ));
     } on AppFailure catch (e) {
       emit(TournamentsListFailure(message: e.message));
