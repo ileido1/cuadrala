@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (M3c-1)**: `TournamentsListCubit` now defaults its category filter to the viewer's own primary-rating category on first load, exposing `hasOwnCategory` on the loaded state; a filter the user already touched is never overridden on a later refresh (`apps/mobile` 1.4.1+19)
 - **Tournaments handoff fidelity (M1)**: new shared widgets `CountStepper` (−/+ numeric stepper, disabled at min/max) and `PillToggle` (pill-shaped boolean switch), plus a new `enabled` flag on `SegmentedOption` (disabled options render dimmed and ignore taps) (`apps/mobile` 1.3.0+15)
 
 ### Removed

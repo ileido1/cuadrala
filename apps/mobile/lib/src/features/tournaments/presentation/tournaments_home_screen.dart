@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../features/catalog/data/catalog_repository.dart';
+import '../../../features/profile/data/profile_repository.dart';
 import '../../../features/venues/data/venues_repository.dart';
 import '../../../router/routes.dart';
 import '../data/tournaments_repository.dart';
@@ -25,6 +26,7 @@ final class TournamentsHomeScreen extends StatelessWidget {
               tournamentsRepository: getIt<TournamentsRepository>(),
               catalogRepository: getIt<CatalogRepository>(),
               venuesRepository: getIt<VenuesRepository>(),
+              profileRepository: getIt<ProfileRepository>(),
             )
             ..loadSportsAndCategories()
             ..loadVenues()

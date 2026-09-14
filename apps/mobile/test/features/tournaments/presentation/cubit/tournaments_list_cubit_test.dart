@@ -4,6 +4,8 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_page.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_api.dart';
@@ -15,17 +17,40 @@ import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart'
 class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
 class _MockVenuesRepository extends Mock implements VenuesRepository {}
+class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+const _meNoCategory = UserMeDto(
+  id: 'user-1',
+  email: 'user@test.local',
+  name: 'Jugador',
+  subscriptionType: 'FREE',
+);
+
+const _meWithCategory = UserMeDto(
+  id: 'user-2',
+  email: 'user2@test.local',
+  name: 'Jugadora',
+  subscriptionType: 'FREE',
+  primaryRating: UserPrimaryRatingDto(
+    categoryId: 'cat-own',
+    categoryName: 'Cuarta',
+    sportId: 'sport-1',
+    rating: 3.5,
+  ),
+);
 
 void main() {
   group('TournamentsListCubit', () {
     late _MockTournamentsRepository tournamentsRepository;
     late _MockCatalogRepository catalogRepository;
     late _MockVenuesRepository venuesRepository;
+    late _MockProfileRepository profileRepository;
 
     setUp(() {
       tournamentsRepository = _MockTournamentsRepository();
       catalogRepository = _MockCatalogRepository();
       venuesRepository = _MockVenuesRepository();
+      profileRepository = _MockProfileRepository();
       // Default: loading sports/categories/venues returns empty (silent fail for tests)
       when(() => catalogRepository.listSports())
           .thenAnswer((_) async => []);
@@ -38,6 +63,8 @@ void main() {
             radiusKm: any(named: 'radiusKm'),
             sportType: any(named: 'sportType'),
           )).thenAnswer((_) async => []);
+      // Default: sin rating primario. Los tests de M3c-1 pisan esto puntualmente.
+      when(() => profileRepository.getMe()).thenAnswer((_) async => _meNoCategory);
     });
 
     final testPage = TournamentListPage(
@@ -70,6 +97,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -95,6 +123,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -136,6 +165,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) async {
@@ -172,6 +202,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) async {
@@ -210,6 +241,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) async {
@@ -244,6 +276,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) async {
@@ -259,5 +292,96 @@ void main() {
             .having((s) => s.filters.status, 'after refresh still FINISHED', 'FINISHED'),
       ],
     );
+
+    group('Mi categoría default-on (M3c-1)', () {
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        "defaults categoryId to the viewer's primary category on first load",
+        setUp: () {
+          when(() => profileRepository.getMe()).thenAnswer((_) async => _meWithCategory);
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'filters.categoryId', 'cat-own')
+              .having((s) => s.hasOwnCategory, 'hasOwnCategory', true),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'never surfaces a category default when the viewer has none',
+        setUp: () {
+          when(() => profileRepository.getMe()).thenAnswer((_) async => _meNoCategory);
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'filters.categoryId', null)
+              .having((s) => s.hasOwnCategory, 'hasOwnCategory', false),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'does not re-derive or clobber a category the caller already cleared, on a later refresh',
+        setUp: () {
+          when(() => profileRepository.getMe()).thenAnswer((_) async => _meWithCategory);
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) async {
+          await cubit.load();
+          cubit.clearFilters();
+          await Future.delayed(Duration.zero);
+          await cubit.load(); // refresh
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'defaulted', 'cat-own'),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'cleared by the user', null),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'still cleared after refresh', null),
+        ],
+        verify: (_) {
+          // getMe() sólo se llama una vez por cubit, nunca en cada load().
+          verify(() => profileRepository.getMe()).called(1);
+        },
+      );
+    });
   });
 }

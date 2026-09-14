@@ -5,6 +5,18 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.4.1] - 2026-09-13
+
+### Agregado
+
+- **"Mi categoría" default-on**: `TournamentsListCubit` ahora usa la
+  categoría del rating primario del visor (`getMe().primaryRating`) como
+  filtro de categoría por default en la primera carga, sin que el usuario
+  toque nada. Nuevo `hasOwnCategory` en `TournamentsListLoaded` (el chip
+  correspondiente, en la próxima slice, se oculta cuando es `false`). Un
+  filtro que el usuario ya tocó explícitamente nunca se pisa en cargas
+  posteriores.
+
 ## [1.4.0] - 2026-09-13
 
 ### Cambiado

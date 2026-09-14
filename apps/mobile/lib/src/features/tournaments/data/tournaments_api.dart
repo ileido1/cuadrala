@@ -21,6 +21,17 @@ final class TournamentListFilters extends Equatable {
   final String? sportId;
   final String? categoryId;
 
+  TournamentListFilters copyWith({String? categoryId}) {
+    return TournamentListFilters(
+      venueId: venueId,
+      startsAtFrom: startsAtFrom,
+      startsAtTo: startsAtTo,
+      status: status,
+      sportId: sportId,
+      categoryId: categoryId ?? this.categoryId,
+    );
+  }
+
   @override
   List<Object?> get props =>
       [venueId, startsAtFrom, startsAtTo, status, sportId, categoryId];

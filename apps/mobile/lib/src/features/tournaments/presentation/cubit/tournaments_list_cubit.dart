@@ -4,6 +4,7 @@ import '../../../../core/failures/app_failure.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../../catalog/data/models/category_dto.dart';
 import '../../../catalog/data/models/sport_dto.dart';
+import '../../../profile/data/profile_repository.dart';
 import '../../../venues/data/models/venue_dto.dart';
 import '../../../venues/data/venues_repository.dart';
 import '../../data/tournaments_api.dart';
@@ -15,23 +16,49 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
     required TournamentsRepository tournamentsRepository,
     required CatalogRepository catalogRepository,
     required VenuesRepository venuesRepository,
+    required ProfileRepository profileRepository,
     TournamentListFilters? initialFilters,
   })  : _tournamentsRepository = tournamentsRepository,
         _catalogRepository = catalogRepository,
         _venuesRepository = venuesRepository,
+        _profileRepository = profileRepository,
         _currentFilters = initialFilters ?? const TournamentListFilters(),
         super(const TournamentsListInitial());
 
   final TournamentsRepository _tournamentsRepository;
   final CatalogRepository _catalogRepository;
   final VenuesRepository _venuesRepository;
+  final ProfileRepository _profileRepository;
   TournamentListFilters _currentFilters;
   List<SportDto> _sports = [];
   List<CategoryDto> _categories = [];
   List<VenueDto> _venues = [];
+  bool _hasOwnCategory = false;
+  bool _appliedOwnCategoryDefault = false;
   static const _pageLimit = 20;
 
+  /// Primera vez que se carga: si el visor tiene categoría propia (rating
+  /// primario) y todavía no hay un filtro de categoría explícito, la usa
+  /// como default. Una sola vez por cubit — nunca pisa un filtro que el
+  /// usuario ya tocó a mano (`applyFilters`/`clearFilters`) en una carga
+  /// posterior.
+  Future<void> _applyOwnCategoryDefaultIfNeededSV() async {
+    if (_appliedOwnCategoryDefault) return;
+    _appliedOwnCategoryDefault = true;
+    try {
+      final me = await _profileRepository.getMe();
+      final categoryId = me.primaryRating?.categoryId;
+      _hasOwnCategory = categoryId != null;
+      if (categoryId != null && _currentFilters.categoryId == null) {
+        _currentFilters = _currentFilters.copyWith(categoryId: categoryId);
+      }
+    } catch (_) {
+      // Silently fail - el listado funciona igual sin default de categoría.
+    }
+  }
+
   Future<void> load() async {
+    await _applyOwnCategoryDefaultIfNeededSV();
     emit(const TournamentsListLoading());
     try {
       final page = await _tournamentsRepository.listTournaments(
@@ -47,6 +74,7 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         isLoadingMore: false,
         hasReachedEnd: page.hasReachedEnd,
         filters: _currentFilters,
+        hasOwnCategory: _hasOwnCategory,
       ));
     } on AppFailure catch (e) {
       emit(TournamentsListFailure(message: e.message));
@@ -110,6 +138,7 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         isLoadingMore: false,
         hasReachedEnd: page.hasReachedEnd,
         filters: filters,
+        hasOwnCategory: _hasOwnCategory,
       ));
     } on AppFailure catch (e) {
       emit(TournamentsListFailure(message: e.message));
