@@ -45,8 +45,8 @@ void main() {
           (_) async => const TournamentScoreboardDto(
             rows: [
               TournamentScoreboardRowDto(
-                teamId: 'team-1',
-                teamName: 'Equipo 1',
+                userId: 'user-1',
+                name: 'Jugador 1',
                 points: 3,
               ),
             ],

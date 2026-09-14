@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **Tournaments handoff fidelity (M8a)**: `TournamentScoreboardRowDto` now reads `userId/name/gamesPlayed/gamesWon/rank` per the real `GET /tournaments/:id/scoreboard` contract (D5), instead of the stale `teamId/teamName` shape (`apps/mobile` 1.7.13+36)
 - **Tournaments handoff fidelity (M7)**: the "Mis partidos" match card now uses the API's qualitative round name (S5) instead of a hardcoded "Ronda N · Partido M" label, falling back to "Ronda {n}" only when the format has none (e.g. round robin); a proposed schedule now shows "El organizador propuso este horario. ¿Te sirve?" above the "Me sirve"/"No puedo" buttons (reordered to match the handoff, primary first) and hides them once the player already answered; declining now shows "Avisamos al organizador. Va a reprogramar el partido y te llega el horario nuevo."; a match with no materialized slot now reads "Depende del cuadro" instead of "Sin cancha" (`apps/mobile` 1.7.12+35)
 
 ### Added

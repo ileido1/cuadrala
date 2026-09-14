@@ -27,30 +27,42 @@ final class TournamentScoreboardDto extends Equatable {
 
 final class TournamentScoreboardRowDto extends Equatable {
   const TournamentScoreboardRowDto({
-    required this.teamId,
-    required this.teamName,
+    required this.userId,
+    required this.name,
     required this.points,
+    this.gamesPlayed = 0,
+    this.gamesWon = 0,
+    this.rank = 0,
   });
 
-  final String teamId;
-  final String teamName;
+  final String userId;
+  final String name;
   final int points;
+  final int gamesPlayed;
+  final int gamesWon;
+  final int rank;
 
   factory TournamentScoreboardRowDto.fromJson(Map<String, Object?> json) {
     return TournamentScoreboardRowDto(
-      teamId: (json['teamId'] ?? '').toString(),
-      teamName: (json['teamName'] ?? '').toString(),
+      userId: (json['userId'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
       points: (json['points'] as num?)?.toInt() ?? 0,
+      gamesPlayed: (json['gamesPlayed'] as num?)?.toInt() ?? 0,
+      gamesWon: (json['gamesWon'] as num?)?.toInt() ?? 0,
+      rank: (json['rank'] as num?)?.toInt() ?? 0,
     );
   }
 
   Map<String, Object?> toJson() => {
-        'teamId': teamId,
-        'teamName': teamName,
+        'userId': userId,
+        'name': name,
         'points': points,
+        'gamesPlayed': gamesPlayed,
+        'gamesWon': gamesWon,
+        'rank': rank,
       };
 
   @override
-  List<Object?> get props => [teamId, teamName, points];
+  List<Object?> get props => [userId, name, points, gamesPlayed, gamesWon, rank];
 }
 

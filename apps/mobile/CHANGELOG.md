@@ -5,6 +5,15 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.13] - 2026-09-14
+
+### Corregido
+
+- **Contrato de la Tabla alineado con la API (M8)**: `TournamentScoreboardRowDto`
+  ahora lee `userId/name/gamesPlayed/gamesWon/rank` — los campos reales que
+  manda `GET /tournaments/:id/scoreboard` (D5) — en vez de `teamId/teamName`,
+  que ya no existían en la respuesta.
+
 ## [1.7.12] - 2026-09-14
 
 ### Corregido
