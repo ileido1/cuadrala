@@ -3,7 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
+import 'package:cuadrala_mobile/src/core/location/location_service.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/models/user_location_dto.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/onboarding_repository.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
@@ -18,6 +21,8 @@ class _MockTournamentsRepository extends Mock implements TournamentsRepository {
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
 class _MockVenuesRepository extends Mock implements VenuesRepository {}
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+class _MockOnboardingRepository extends Mock implements OnboardingRepository {}
+class _MockLocationService extends Mock implements LocationService {}
 
 const _meNoCategory = UserMeDto(
   id: 'user-1',
@@ -385,6 +390,142 @@ void main() {
           // getMe() sólo se llama una vez por cubit, nunca en cada load().
           verify(() => profileRepository.getMe()).called(1);
         },
+      );
+    });
+
+    group('Cerca (M3d)', () {
+      late _MockOnboardingRepository onboardingRepository;
+      late _MockLocationService locationService;
+
+      setUp(() {
+        onboardingRepository = _MockOnboardingRepository();
+        locationService = _MockLocationService();
+        when(() => tournamentsRepository.listTournaments(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              filters: any(named: 'filters'),
+            )).thenAnswer((_) async => testPage);
+      });
+
+      TournamentsListCubit buildCubit() => TournamentsListCubit(
+            tournamentsRepository: tournamentsRepository,
+            catalogRepository: catalogRepository,
+            venuesRepository: venuesRepository,
+            profileRepository: profileRepository,
+            onboardingRepository: onboardingRepository,
+            locationService: locationService,
+          );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'applies near from the saved location, without touching the GPS',
+        setUp: () {
+          when(() => onboardingRepository.getLocation()).thenAnswer(
+            (_) async => const UserLocationDto(
+              label: 'Casa',
+              latitude: -10.5,
+              longitude: -66.9,
+              radiusKm: 20,
+            ),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.toggleNear();
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near before toggle', null),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near', '-10.5,-66.9')
+              .having((s) => s.filters.radiusKm, 'radiusKm', 10),
+        ],
+        verify: (_) {
+          verify(() => onboardingRepository.getLocation()).called(1);
+          verifyNever(() => locationService.getCurrentLocation());
+        },
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'falls back to GPS when there is no saved location',
+        setUp: () {
+          when(() => onboardingRepository.getLocation())
+              .thenAnswer((_) async => null);
+          when(() => locationService.getCurrentLocation()).thenAnswer(
+            (_) async =>
+                const DeviceLocation(latitude: -10.4, longitude: -66.8),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.toggleNear();
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>(),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near', '-10.4,-66.8')
+              .having((s) => s.filters.radiusKm, 'radiusKm', 10),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'stays inactive when neither the saved location nor GPS resolve',
+        setUp: () {
+          when(() => onboardingRepository.getLocation())
+              .thenAnswer((_) async => null);
+          when(() => locationService.getCurrentLocation()).thenThrow(
+            const LocationFailure(
+              code: 'LOCATION_DENIED',
+              message: 'Necesitamos permiso de ubicación.',
+            ),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.toggleNear();
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near stays null', null),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'toggling again clears the near filter',
+        setUp: () {
+          when(() => onboardingRepository.getLocation()).thenAnswer(
+            (_) async => const UserLocationDto(
+              label: null,
+              latitude: -10.5,
+              longitude: -66.9,
+              radiusKm: 20,
+            ),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.toggleNear();
+          await cubit.toggleNear();
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>(),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near after first toggle', '-10.5,-66.9'),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near after second toggle', null)
+              .having((s) => s.filters.radiusKm, 'radiusKm after clear', null),
+        ],
       );
     });
   });

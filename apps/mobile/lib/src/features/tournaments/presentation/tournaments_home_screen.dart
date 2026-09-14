@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../features/catalog/data/catalog_repository.dart';
+import '../../../features/onboarding/data/onboarding_repository.dart';
 import '../../../features/profile/data/profile_repository.dart';
 import '../../../features/venues/data/venues_repository.dart';
 import '../../../router/routes.dart';
@@ -27,6 +29,14 @@ final class TournamentsHomeScreen extends StatelessWidget {
               catalogRepository: getIt<CatalogRepository>(),
               venuesRepository: getIt<VenuesRepository>(),
               profileRepository: getIt<ProfileRepository>(),
+              //? Opcionales: en tests que no registran estos dos en getIt,
+              //? el chip "Cerca" simplemente no resuelve ubicación (M3d).
+              onboardingRepository: getIt.isRegistered<OnboardingRepository>()
+                  ? getIt<OnboardingRepository>()
+                  : null,
+              locationService: getIt.isRegistered<LocationService>()
+                  ? getIt<LocationService>()
+                  : null,
             )
             ..loadSportsAndCategories()
             ..loadVenues()
@@ -131,11 +141,17 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                               },
                             ),
                           if (state.hasOwnCategory) const SizedBox(width: 8),
+                          //? "Cerca" (M3d, cuadrala-torneos.jsx:189): activo
+                          //? sólo cuando `near` se resolvió (ubicación
+                          //? guardada u GPS); si ninguna resuelve el chip se
+                          //? queda inactivo, sin filtro roto.
                           _CategoryFilterChip(
                             label: 'Cerca',
-                            selected: false,
+                            selected: state.filters.near != null,
                             icon: AppIcons.pin,
-                            onTap: () {},
+                            onTap: () => context
+                                .read<TournamentsListCubit>()
+                                .toggleNear(),
                           ),
                         ],
                       ),

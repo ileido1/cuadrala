@@ -1,9 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../../catalog/data/models/category_dto.dart';
 import '../../../catalog/data/models/sport_dto.dart';
+import '../../../onboarding/data/onboarding_repository.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../../venues/data/models/venue_dto.dart';
 import '../../../venues/data/venues_repository.dart';
@@ -17,11 +19,15 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
     required CatalogRepository catalogRepository,
     required VenuesRepository venuesRepository,
     required ProfileRepository profileRepository,
+    OnboardingRepository? onboardingRepository,
+    LocationService? locationService,
     TournamentListFilters? initialFilters,
   })  : _tournamentsRepository = tournamentsRepository,
         _catalogRepository = catalogRepository,
         _venuesRepository = venuesRepository,
         _profileRepository = profileRepository,
+        _onboardingRepository = onboardingRepository,
+        _locationService = locationService,
         _currentFilters = initialFilters ?? const TournamentListFilters(),
         super(const TournamentsListInitial());
 
@@ -29,7 +35,19 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
   final CatalogRepository _catalogRepository;
   final VenuesRepository _venuesRepository;
   final ProfileRepository _profileRepository;
+
+  /// Ubicación guardada del visor (`OnboardingRepository.getLocation()`,
+  /// premisa (c) del design). `null` cuando la screen no la inyectó — el
+  /// chip "Cerca" cae directo al fallback de GPS en ese caso.
+  final OnboardingRepository? _onboardingRepository;
+
+  /// Fallback de GPS cuando no hay ubicación guardada. `null` con el mismo
+  /// criterio que [_onboardingRepository].
+  final LocationService? _locationService;
   TournamentListFilters _currentFilters;
+
+  /// Radio fijo del chip "Cerca" (M3d, `sdd/tournaments-handoff-fidelity`).
+  static const _nearRadiusKm = 10;
   List<SportDto> _sports = [];
   List<CategoryDto> _categories = [];
   List<VenueDto> _venues = [];
@@ -158,6 +176,53 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
 
   void clearFilters() {
     applyFilters(const TournamentListFilters());
+  }
+
+  /// Chip "Cerca": activa/desactiva el filtro `near`/`radiusKm`.
+  ///
+  /// Al activar, resuelve la ubicación en este orden: guardada
+  /// (`OnboardingRepository.getLocation()`) y, si no hay, GPS
+  /// (`LocationService.getCurrentLocation()`). Si ninguna resuelve, el chip
+  /// queda inactivo — no se manda un filtro roto ni se inventa una posición.
+  Future<void> toggleNear() async {
+    final current = state;
+    if (current is! TournamentsListLoaded) return;
+
+    if (current.filters.near != null) {
+      await applyFilters(current.filters.copyWith(clearNear: true));
+      return;
+    }
+
+    final near = await _resolveNearParamSV();
+    if (near == null) return;
+
+    await applyFilters(
+      current.filters.copyWith(near: near, radiusKm: _nearRadiusKm),
+    );
+  }
+
+  Future<String?> _resolveNearParamSV() async {
+    if (_onboardingRepository != null) {
+      try {
+        final saved = await _onboardingRepository.getLocation();
+        if (saved != null) {
+          return '${saved.latitude},${saved.longitude}';
+        }
+      } catch (_) {
+        // Silently fail - cae al GPS.
+      }
+    }
+
+    if (_locationService != null) {
+      try {
+        final pos = await _locationService.getCurrentLocation();
+        return '${pos.latitude},${pos.longitude}';
+      } catch (_) {
+        // Silently fail - ni ubicación guardada ni GPS: el chip queda inactivo.
+      }
+    }
+
+    return null;
   }
 
   List<SportDto> get sports => _sports;

@@ -276,6 +276,8 @@ Future<void> setupDependencies() async {
       catalogRepository: getIt<CatalogRepository>(),
       venuesRepository: getIt<VenuesRepository>(),
       profileRepository: getIt<ProfileRepository>(),
+      onboardingRepository: getIt<OnboardingRepository>(),
+      locationService: getIt<LocationService>(),
     ),
   );
   getIt.registerFactory<TournamentPresetsCubit>(
