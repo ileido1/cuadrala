@@ -5,11 +5,13 @@ final class _OrganizerPublishTab extends StatelessWidget {
     required this.tournament,
     required this.tournamentId,
     required this.organizerUserId,
+    required this.tournamentsRepository,
   });
 
   final TournamentListItemDto? tournament;
   final String tournamentId;
   final String? organizerUserId;
+  final TournamentsRepository tournamentsRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -19,58 +21,78 @@ final class _OrganizerPublishTab extends StatelessWidget {
       children: [
         Text('Quién lo ve', style: _sectionStyle(scheme)),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: scheme.outlineVariant, width: 1.5),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
+        if (tournament != null)
+          BlocProvider(
+            create: (_) => TournamentPublishCubit(
+              tournamentsRepository: tournamentsRepository,
+              tournamentId: tournamentId,
+              status: tournament!.status,
+              visibility: tournament!.visibility,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: scheme.outlineVariant, width: 1.5),
+              ),
+              child:
+                  BlocBuilder<TournamentPublishCubit, TournamentPublishState>(
+                    builder: (context, state) => Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Torneo público',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Torneo público',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    state.visibility == 'PUBLIC'
+                                        ? 'Aparece en el listado de la app'
+                                        : 'Sólo lo ven los que invitás',
+                                    style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IgnorePointer(
+                              ignoring: state.submitting,
+                              child: PillToggle(
+                                key: const Key('tournament.visibilityControl'),
+                                value: state.visibility == 'PUBLIC',
+                                onChanged: (isPublic) => context
+                                    .read<TournamentPublishCubit>()
+                                    .setVisibility(
+                                      isPublic ? 'PUBLIC' : 'PRIVATE',
+                                    ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          tournament?.visibility == 'PUBLIC'
-                              ? 'Aparece en el listado de la app'
-                              : 'Sólo lo ven los que invitás',
-                          style: TextStyle(
-                            color: scheme.onSurfaceVariant,
-                            fontSize: 12.5,
+                        if (state.error != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            state.error!,
+                            style: TextStyle(color: scheme.error, fontSize: 12),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
-                  Switch(
-                    value: tournament?.visibility == 'PUBLIC',
-                    onChanged: null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              if (tournament != null && organizerUserId != null)
-                _VisibilityControl(
-                  tournamentId: tournamentId,
-                  organizerUserId: organizerUserId!,
-                  currentVisibility: tournament!.visibility,
-                  onVisibilityChanged: () {},
-                ),
-            ],
+            ),
           ),
-        ),
         const SizedBox(height: 20),
         Text('Estado de la inscripción', style: _sectionStyle(scheme)),
         const SizedBox(height: 10),
@@ -287,119 +309,3 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
     );
   }
 }
-
-/// Organizer-only visibility toggle (PUBLIC/PRIVATE). Like
-/// [OrganizerStatusControl], only rendered for the tournament organizer.
-final class _VisibilityControl extends StatefulWidget {
-  const _VisibilityControl({
-    required this.tournamentId,
-    required this.organizerUserId,
-    required this.currentVisibility,
-    required this.onVisibilityChanged,
-  });
-
-  final String tournamentId;
-  final String organizerUserId;
-  final String currentVisibility;
-  final VoidCallback onVisibilityChanged;
-
-  @override
-  State<_VisibilityControl> createState() => _VisibilityControlState();
-}
-
-final class _VisibilityControlState extends State<_VisibilityControl> {
-  bool _submitting = false;
-  String? _error;
-
-  Future<void> _updateSV(String visibility) async {
-    if (visibility == widget.currentVisibility) return;
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-    try {
-      await getIt<TournamentsRepository>().updateTournamentVisibility(
-        tournamentId: widget.tournamentId,
-        visibility: visibility,
-      );
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      // Notificar al padre para que actualice el estado del torneo
-      widget.onVisibilityChanged();
-    } on AppFailure catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error = e.message;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error = 'No se pudo cambiar la visibilidad del torneo.';
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<
-      TournamentRegistrationsCubit,
-      TournamentRegistrationsState
-    >(
-      builder: (context, state) {
-        final cubit = context.read<TournamentRegistrationsCubit>();
-        if (cubit.currentUserId == null ||
-            cubit.currentUserId != widget.organizerUserId) {
-          return const SizedBox.shrink();
-        }
-
-        final scheme = Theme.of(context).colorScheme;
-        return Column(
-          key: const Key('tournament.visibilityControl'),
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_error != null) ...[
-              Text(
-                _error!,
-                style: TextStyle(color: scheme.error, fontSize: 12),
-              ),
-              const SizedBox(height: 4),
-            ],
-            Row(
-              children: [
-                Text(
-                  'Visibilidad',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Spacer(),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'PUBLIC',
-                      label: Text('Público'),
-                      icon: Icon(AppIcons.public, size: 16),
-                    ),
-                    ButtonSegment(
-                      value: 'PRIVATE',
-                      label: Text('Privado'),
-                      icon: Icon(AppIcons.lock, size: 16),
-                    ),
-                  ],
-                  selected: {widget.currentVisibility},
-                  onSelectionChanged: _submitting
-                      ? null
-                      : (selection) => _updateSV(selection.first),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-

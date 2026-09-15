@@ -14,6 +14,7 @@ import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/avatar_stack.dart';
+import '../../../shared/widgets/pill_toggle.dart';
 import '../../../shared/widgets/segmented_control.dart';
 import '../../profile/data/models/user_rating_dto.dart';
 import '../../profile/data/profile_repository.dart';
@@ -29,6 +30,8 @@ import '../data/models/tournament_scoreboard_dto.dart';
 import '../data/tournaments_repository.dart';
 import 'cubit/tournament_registrations_cubit.dart';
 import 'cubit/tournament_registrations_state.dart';
+import 'cubit/tournament_publish_cubit.dart';
+import 'cubit/tournament_publish_state.dart';
 import 'cubit/tournament_schedule_cubit.dart';
 import 'cubit/tournament_schedule_state.dart';
 import 'cubit/tournament_scoreboard_cubit.dart';
@@ -368,38 +371,6 @@ final class TournamentDetailBody extends StatelessWidget {
               ),
             ),
 
-            // Organizer-only status transition control
-            if (isOrganizer && tournament?.organizerUserId != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: OrganizerStatusControl(
-                  tournamentId: tournamentId,
-                  organizerUserId: tournament!.organizerUserId!,
-                  currentStatus: tournament!.status,
-                  onStatusChanged: () {
-                    // Recargar el torneo para actualizar la UI
-                    context.read<TournamentScheduleCubit>().load();
-                    context.read<TournamentRegistrationsCubit>().load();
-                  },
-                ),
-              ),
-
-            // Organizer-only visibility control (PUBLIC/PRIVATE)
-            if (isOrganizer && tournament?.organizerUserId != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: _VisibilityControl(
-                  tournamentId: tournamentId,
-                  organizerUserId: tournament!.organizerUserId!,
-                  currentVisibility: tournament?.visibility ?? 'PUBLIC',
-                  onVisibilityChanged: () {
-                    // Recargar el torneo para actualizar la UI
-                    context.read<TournamentScheduleCubit>().load();
-                    context.read<TournamentRegistrationsCubit>().load();
-                  },
-                ),
-              ),
-
             // Tab switcher (M5b): replaces the Material `TabBar` with the
             // shared `SegmentedControl`, matching the handoff's tap-only
             // `Segmented` (`cuadrala-torneos.jsx:220`) instead of a
@@ -458,6 +429,7 @@ final class TournamentDetailBody extends StatelessWidget {
                       tournament: tournament,
                       tournamentId: tournamentId,
                       organizerUserId: tournament?.organizerUserId,
+                      tournamentsRepository: tournamentsRepository,
                     ),
                   ] else ...[
                     _InfoTab(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_invitation_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_registration_dto.dart';
@@ -20,6 +23,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/pill_toggle.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 import '../handoff_copy.dart';
@@ -61,6 +65,7 @@ TournamentListItemDto _tournament({
   int? maxSlots,
   int registrationCount = 0,
   bool pairedRegistration = false,
+  String visibility = 'PUBLIC',
 }) => TournamentListItemDto(
   id: 't-1',
   name: 'Torneo Test',
@@ -71,6 +76,7 @@ TournamentListItemDto _tournament({
   startsAt: null,
   registrationCount: registrationCount,
   organizerUserId: organizerUserId,
+  visibility: visibility,
   formatPresetName: formatPresetName,
   maxSlots: maxSlots,
   pairedRegistration: pairedRegistration,
@@ -423,6 +429,111 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  group('Organizer visibility control (M12b)', () {
+    Future<void> pumpOrganizerPublishTab(
+      WidgetTester tester, {
+      required TournamentsRepository tournamentsRepository,
+      required String visibility,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(
+            organizerUserId: 'organizer-1',
+            visibility: visibility,
+          ),
+          tournamentsRepository: tournamentsRepository,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SegmentedControl<int>),
+          matching: find.text('Publicar'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'shows exactly one shared visibility toggle and no Material Switch',
+      (tester) async {
+        await pumpOrganizerPublishTab(
+          tester,
+          tournamentsRepository: _MockTournamentsRepository(),
+          visibility: 'PRIVATE',
+        );
+
+        expect(
+          find.byKey(const Key('tournament.visibilityControl')),
+          findsOneWidget,
+        );
+        expect(find.byType(PillToggle), findsOneWidget);
+        expect(find.byType(Switch), findsNothing);
+        expect(find.text('Sólo lo ven los que invitás'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'optimistically changes the toggle and rolls it back when the request fails',
+      (tester) async {
+        final repository = _MockTournamentsRepository();
+        final request = Completer<void>();
+        when(
+          () => repository.updateTournamentVisibility(
+            tournamentId: 't-1',
+            visibility: 'PUBLIC',
+          ),
+        ).thenAnswer((_) => request.future);
+
+        await pumpOrganizerPublishTab(
+          tester,
+          tournamentsRepository: repository,
+          visibility: 'PRIVATE',
+        );
+
+        await tester.tap(
+          find.byKey(const Key('tournament.visibilityControl')),
+        );
+        await tester.pump();
+
+        expect(
+          tester.widget<PillToggle>(
+            find.byKey(const Key('tournament.visibilityControl')),
+          ).value,
+          isTrue,
+        );
+        expect(find.text('Aparece en el listado de la app'), findsOneWidget);
+
+        request.completeError(
+          const AppFailure(code: 'HTTP_500', message: 'No se pudo guardar.'),
+        );
+        await tester.pump();
+
+        expect(
+          tester.widget<PillToggle>(
+            find.byKey(const Key('tournament.visibilityControl')),
+          ).value,
+          isFalse,
+        );
+        expect(find.text('No se pudo guardar.'), findsOneWidget);
+        expect(find.text('Sólo lo ven los que invitás'), findsOneWidget);
+      },
+    );
   });
 
   group('Guest registrations (Slice 1: tournament-guest-registration)', () {
