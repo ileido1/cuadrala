@@ -9,6 +9,7 @@ final class CreateTournamentRequest extends Equatable {
     this.formatParameters,
     this.startsAt,
     this.visibility = 'PUBLIC',
+    this.publishOnCreate = false,
   });
 
   final String sportId;
@@ -21,25 +22,28 @@ final class CreateTournamentRequest extends Equatable {
   /// `PUBLIC` (aparece en el catálogo) o `PRIVATE` (solo por link).
   final String visibility;
 
+  /// Determines whether the newly created draft must be opened immediately.
+  final bool publishOnCreate;
+
   Map<String, Object?> toJson() => {
-        'sportId': sportId,
-        'categoryId': categoryId,
-        'name': name,
-        'formatPresetId': formatPresetId,
-        'visibility': visibility,
-        if (formatParameters != null) 'formatParameters': formatParameters,
-        if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
-      };
+    'sportId': sportId,
+    'categoryId': categoryId,
+    'name': name,
+    'formatPresetId': formatPresetId,
+    'visibility': visibility,
+    if (formatParameters != null) 'formatParameters': formatParameters,
+    if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
+  };
 
   @override
   List<Object?> get props => [
-        sportId,
-        categoryId,
-        name,
-        formatPresetId,
-        formatParameters,
-        startsAt,
-        visibility,
-      ];
+    sportId,
+    categoryId,
+    name,
+    formatPresetId,
+    formatParameters,
+    startsAt,
+    visibility,
+    publishOnCreate,
+  ];
 }
-

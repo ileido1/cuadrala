@@ -9,7 +9,8 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_reposi
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/create_tournament_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/create_tournament_state.dart';
 
-class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockTournamentsRepository extends Mock
+    implements TournamentsRepository {}
 
 const _validRequest = CreateTournamentRequest(
   sportId: 'padel',
@@ -28,7 +29,8 @@ void main() {
 
     blocTest<CreateTournamentCubit, CreateTournamentState>(
       'submit (inválido) emite error de validación sin llamar repo',
-      build: () => CreateTournamentCubit(tournamentsRepository: tournamentsRepository),
+      build: () =>
+          CreateTournamentCubit(tournamentsRepository: tournamentsRepository),
       act: (cubit) => cubit.submit(
         const CreateTournamentRequest(
           sportId: 'padel',
@@ -38,8 +40,11 @@ void main() {
         ),
       ),
       expect: () => [
-        isA<CreateTournamentError>()
-            .having((s) => s.message, 'message', isNotEmpty),
+        isA<CreateTournamentError>().having(
+          (s) => s.message,
+          'message',
+          isNotEmpty,
+        ),
       ],
       verify: (_) {
         verifyNever(
@@ -51,7 +56,7 @@ void main() {
     );
 
     blocTest<CreateTournamentCubit, CreateTournamentState>(
-      'submit (ok) emite submitting→success con id',
+      'submit (Publicar al crear ON) creates then opens the tournament',
       build: () {
         when(
           () => tournamentsRepository.createTournament(
@@ -60,14 +65,77 @@ void main() {
         ).thenAnswer(
           (_) async => const CreateTournamentResponse(tournamentId: 't-1'),
         );
-        return CreateTournamentCubit(tournamentsRepository: tournamentsRepository);
+        when(
+          () => tournamentsRepository.updateTournamentStatus(
+            tournamentId: 't-1',
+            status: 'OPEN',
+          ),
+        ).thenAnswer((_) async {});
+        return CreateTournamentCubit(
+          tournamentsRepository: tournamentsRepository,
+        );
+      },
+      act: (cubit) => cubit.submit(
+        const CreateTournamentRequest(
+          sportId: 'padel',
+          categoryId: 'cat-1',
+          name: 'Torneo Apertura',
+          formatPresetId: 'preset-1',
+          publishOnCreate: true,
+        ),
+      ),
+      expect: () => [
+        const CreateTournamentSubmitting(),
+        isA<CreateTournamentSuccess>().having(
+          (s) => s.tournamentId,
+          'tournamentId',
+          't-1',
+        ),
+      ],
+      verify: (_) {
+        verifyInOrder([
+          () => tournamentsRepository.createTournament(
+            request: any(named: 'request'),
+          ),
+          () => tournamentsRepository.updateTournamentStatus(
+            tournamentId: 't-1',
+            status: 'OPEN',
+          ),
+        ]);
+      },
+    );
+
+    blocTest<CreateTournamentCubit, CreateTournamentState>(
+      'submit (Publicar al crear OFF) only creates the tournament',
+      build: () {
+        when(
+          () => tournamentsRepository.createTournament(
+            request: any(named: 'request'),
+          ),
+        ).thenAnswer(
+          (_) async => const CreateTournamentResponse(tournamentId: 't-1'),
+        );
+        return CreateTournamentCubit(
+          tournamentsRepository: tournamentsRepository,
+        );
       },
       act: (cubit) => cubit.submit(_validRequest),
       expect: () => [
         const CreateTournamentSubmitting(),
-        isA<CreateTournamentSuccess>()
-            .having((s) => s.tournamentId, 'tournamentId', 't-1'),
+        isA<CreateTournamentSuccess>().having(
+          (s) => s.tournamentId,
+          'tournamentId',
+          't-1',
+        ),
       ],
+      verify: (_) {
+        verifyNever(
+          () => tournamentsRepository.updateTournamentStatus(
+            tournamentId: any(named: 'tournamentId'),
+            status: any(named: 'status'),
+          ),
+        );
+      },
     );
 
     blocTest<CreateTournamentCubit, CreateTournamentState>(
@@ -80,7 +148,9 @@ void main() {
         ).thenThrow(
           const AppFailure(code: 'HTTP_400', message: 'Datos inválidos.'),
         );
-        return CreateTournamentCubit(tournamentsRepository: tournamentsRepository);
+        return CreateTournamentCubit(
+          tournamentsRepository: tournamentsRepository,
+        );
       },
       act: (cubit) => cubit.submit(
         const CreateTournamentRequest(
@@ -92,8 +162,11 @@ void main() {
       ),
       expect: () => [
         const CreateTournamentSubmitting(),
-        isA<CreateTournamentError>()
-            .having((s) => s.message, 'message', 'Datos inválidos.'),
+        isA<CreateTournamentError>().having(
+          (s) => s.message,
+          'message',
+          'Datos inválidos.',
+        ),
       ],
     );
   });

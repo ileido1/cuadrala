@@ -7,8 +7,8 @@ import 'create_tournament_state.dart';
 
 final class CreateTournamentCubit extends Cubit<CreateTournamentState> {
   CreateTournamentCubit({required TournamentsRepository tournamentsRepository})
-      : _tournamentsRepository = tournamentsRepository,
-        super(const CreateTournamentInitial());
+    : _tournamentsRepository = tournamentsRepository,
+      super(const CreateTournamentInitial());
 
   final TournamentsRepository _tournamentsRepository;
 
@@ -21,19 +21,29 @@ final class CreateTournamentCubit extends Cubit<CreateTournamentState> {
 
     emit(const CreateTournamentSubmitting());
     try {
-      final res = await _tournamentsRepository.createTournament(request: request);
+      final res = await _tournamentsRepository.createTournament(
+        request: request,
+      );
       if (res.tournamentId.isEmpty) {
-        emit(const CreateTournamentError(
-          message: 'El servidor no retornó un ID válido para el torneo.',
-        ));
+        emit(
+          const CreateTournamentError(
+            message: 'El servidor no retornó un ID válido para el torneo.',
+          ),
+        );
       } else {
+        if (request.publishOnCreate) {
+          await _tournamentsRepository.updateTournamentStatus(
+            tournamentId: res.tournamentId,
+            status: 'OPEN',
+          );
+        }
         emit(CreateTournamentSuccess(tournamentId: res.tournamentId));
       }
     } catch (e) {
-      final message =
-          e is AppFailure ? e.message : 'No se pudo crear el torneo.';
+      final message = e is AppFailure
+          ? e.message
+          : 'No se pudo crear el torneo.';
       emit(CreateTournamentError(message: message));
     }
   }
 }
-
