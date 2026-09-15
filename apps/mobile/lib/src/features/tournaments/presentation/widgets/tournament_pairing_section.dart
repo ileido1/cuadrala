@@ -32,7 +32,8 @@ class TournamentPairingSection extends StatefulWidget {
   final void Function(String registrationId) onUnpair;
 
   @override
-  State<TournamentPairingSection> createState() => _TournamentPairingSectionState();
+  State<TournamentPairingSection> createState() =>
+      _TournamentPairingSectionState();
 }
 
 class _TournamentPairingSectionState extends State<TournamentPairingSection> {
@@ -58,52 +59,114 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
     final unpaired = widget.roster.unpaired;
 
     return Column(
+      key: const Key('tournament.pairingSection'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final pair in widget.roster.pairs)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _PairTile(
-              pair: pair,
-              canManage: widget.canManage,
-              busy: widget.busyRegistrationId == pair.first.id ||
-                  widget.busyRegistrationId == pair.second.id,
-              onUnpair: () => widget.onUnpair(pair.first.id),
-            ),
-          ),
-        if (unpaired.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            'Sin pareja (${unpaired.length})',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'DUPLAS',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w800,
-                  color: scheme.onSurfaceVariant,
+                  letterSpacing: .5,
                 ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            widget.canManage
-                ? _selectedId == null
-                    ? 'Tocá dos jugadores para armar la dupla.'
-                    : 'Ahora tocá a su compañero.'
-                : 'Todavía esperan compañero.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(height: 8),
-          for (final reg in unpaired)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _UnpairedTile(
-                key: Key('tournament.unpaired.${reg.id}'),
-                registration: reg,
-                selected: _selectedId == reg.id,
-                enabled: widget.canManage && widget.busyRegistrationId == null,
-                onTap: () => _tapSV(reg),
               ),
             ),
-        ],
+            if (widget.canManage)
+              TextButton(
+                key: const Key('tournament.pairing.arm'),
+                onPressed: () => setState(() => _selectedId = null),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  minimumSize: const Size(0, 36),
+                ),
+                child: const Text('Armar dupla'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          key: const Key('tournament.pairing.card'),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: scheme.outlineVariant, width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final pair in widget.roster.pairs)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _PairTile(
+                    pair: pair,
+                    canManage: widget.canManage,
+                    busy:
+                        widget.busyRegistrationId == pair.first.id ||
+                        widget.busyRegistrationId == pair.second.id,
+                    onUnpair: () => widget.onUnpair(pair.first.id),
+                  ),
+                ),
+              if (widget.roster.pairs.isEmpty && unpaired.isEmpty)
+                Text(
+                  'Todavía no hay duplas armadas.',
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 12.5,
+                  ),
+                ),
+              if (unpaired.isNotEmpty) ...[
+                if (widget.roster.pairs.isNotEmpty) const SizedBox(height: 4),
+                Text(
+                  'Sin pareja (${unpaired.length})',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.canManage
+                      ? _selectedId == null
+                            ? 'Tocá dos jugadores para armar la dupla.'
+                            : 'Ahora tocá a su compañero.'
+                      : 'Todavía esperan compañero.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (final reg in unpaired)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _UnpairedTile(
+                      key: Key('tournament.unpaired.${reg.id}'),
+                      registration: reg,
+                      selected: _selectedId == reg.id,
+                      enabled:
+                          widget.canManage && widget.busyRegistrationId == null,
+                      onTap: () => _tapSV(reg),
+                    ),
+                  ),
+              ],
+              if (widget.roster.pairs.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    'Las duplas las armás vos. Confirmar a uno confirma también a su compañero.',
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 12,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -124,46 +187,60 @@ class _PairTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     //? La dupla entra al cuadro solo si sus dos mitades están confirmadas.
-    final confirmed = pair.isConfirmed;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            confirmed ? AppIcons.checkCircle : AppIcons.pending,
-            size: 18,
-            color: confirmed ? Colors.green : Colors.orange,
+    return Row(
+      children: [
+        _PairAvatar(registration: pair.first),
+        Transform.translate(
+          offset: const Offset(-8, 0),
+          child: _PairAvatar(registration: pair.second),
+        ),
+        const SizedBox(width: 2),
+        Expanded(
+          child: Text(
+            pair.label,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              pair.label,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (canManage)
-            busy
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : TextButton(
-                    key: Key('tournament.unpair.${pair.first.id}'),
-                    onPressed: onUnpair,
-                    child: const Text('Deshacer'),
-                  ),
-        ],
+        ),
+        if (canManage)
+          busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : TextButton(
+                  key: Key('tournament.unpair.${pair.first.id}'),
+                  onPressed: onUnpair,
+                  child: const Text('Deshacer'),
+                ),
+      ],
+    );
+  }
+}
+
+final class _PairAvatar extends StatelessWidget {
+  const _PairAvatar({required this.registration});
+
+  final TournamentRegistrationDto registration;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final label = registration.displayName;
+    return CircleAvatar(
+      radius: 14,
+      backgroundColor: scheme.primaryContainer,
+      child: Text(
+        label.substring(0, 1).toUpperCase(),
+        style: TextStyle(
+          color: scheme.onPrimaryContainer,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -193,7 +270,9 @@ class _UnpairedTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? scheme.primary.withValues(alpha: .10) : scheme.surface,
+          color: selected
+              ? scheme.primary.withValues(alpha: .10)
+              : scheme.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? scheme.primary : scheme.outlineVariant,
@@ -211,7 +290,10 @@ class _UnpairedTile extends StatelessWidget {
             Expanded(
               child: Text(
                 registration.displayName,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

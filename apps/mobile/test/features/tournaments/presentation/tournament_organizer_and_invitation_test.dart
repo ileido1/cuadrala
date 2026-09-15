@@ -17,6 +17,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_invitation_screen.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/invite_guest_sheet.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 import '../handoff_copy.dart';
@@ -72,16 +73,16 @@ void main() {
       final scheduleCubit = _MockScheduleCubit();
       final scoreboardCubit = _MockScoreboardCubit();
 
-      when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsInitial(),
-      );
+      when(
+        () => registrationsCubit.state,
+      ).thenReturn(const TournamentRegistrationsInitial());
       when(() => registrationsCubit.currentUserId).thenReturn(null);
-      when(() => scheduleCubit.state).thenReturn(
-        const TournamentScheduleInitial(),
-      );
-      when(() => scoreboardCubit.state).thenReturn(
-        const TournamentScoreboardEmpty(),
-      );
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleInitial());
+      when(
+        () => scoreboardCubit.state,
+      ).thenReturn(const TournamentScoreboardEmpty());
 
       await tester.pumpWidget(
         MaterialApp(
@@ -172,16 +173,145 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: find.byType(SegmentedControl<int>), matching: find.text('Cuadro')),
+      find.descendant(
+        of: find.byType(SegmentedControl<int>),
+        matching: find.text('Cuadro'),
+      ),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: find.byType(SegmentedControl<int>), matching: find.text('Publicar')),
+      find.descendant(
+        of: find.byType(SegmentedControl<int>),
+        matching: find.text('Publicar'),
+      ),
       findsOneWidget,
     );
     expect(find.text('Confirmar 1 pendientes'), findsOneWidget);
     expect(find.text('Pendientes'), findsOneWidget);
   });
+
+  testWidgets(
+    'renders roster stats and only shows the green pending CTA when needed',
+    (tester) async {
+      final registrationsCubit = _MockRegistrationsCubit();
+      final scheduleCubit = _MockScheduleCubit();
+      final scoreboardCubit = _MockScoreboardCubit();
+
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [
+            _registration(),
+            TournamentRegistrationDto(
+              id: 'r-2',
+              tournamentId: 't-1',
+              userId: 'player-2',
+              userName: 'Ana López',
+              status: 'CONFIRMED',
+              createdAt: DateTime(2026),
+            ),
+          ],
+          total: 2,
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleInitial());
+      when(
+        () => scoreboardCubit.state,
+      ).thenReturn(const TournamentScoreboardEmpty());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<TournamentRegistrationsCubit>.value(
+                value: registrationsCubit,
+              ),
+              BlocProvider<TournamentScheduleCubit>.value(value: scheduleCubit),
+              BlocProvider<TournamentScoreboardCubit>.value(
+                value: scoreboardCubit,
+              ),
+            ],
+            child: TournamentDetailBody(
+              tournamentId: 't-1',
+              tournament: _tournament(organizerUserId: 'organizer-1'),
+              tournamentsRepository: _MockTournamentsRepository(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('tournament.organizer.stats.total')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('tournament.organizer.stats.confirmed')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('tournament.organizer.stats.pending')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('tournament.confirmPendingButton')),
+        findsOneWidget,
+      );
+      expect(find.text('PENDIENTES'), findsOneWidget);
+      expect(find.text('CONFIRMADOS'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'player invite sheet keeps the real user id and exposes the visual CTA',
+    (tester) async {
+      final registrationsCubit = _MockRegistrationsCubit();
+      when(
+        () => registrationsCubit.state,
+      ).thenReturn(const TournamentRegistrationsLoaded(items: [], total: 0));
+      when(() => registrationsCubit.invite(any())).thenAnswer((_) async {});
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<TournamentRegistrationsCubit>.value(
+            value: registrationsCubit,
+            child: const Scaffold(body: InvitePlayerSheet()),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('tournament.invitePlayerSheet.title')),
+        findsOneWidget,
+      );
+      expect(find.text('Le llega y decide él'), findsOneWidget);
+      expect(
+        find.byKey(const Key('tournament.invitePlayerSheet.submit')),
+        findsOneWidget,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('tournament.invitePlayerSheet.search')),
+        'user-42',
+      );
+      await tester.pump();
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('tournament.invitePlayerSheet.result')),
+          matching: find.text('user-42'),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const Key('tournament.invitePlayerSheet.submit')),
+      );
+
+      verify(() => registrationsCubit.invite('user-42')).called(1);
+    },
+  );
 
   testWidgets(
     'renders the invitation sheet content with available tournament data',
@@ -330,9 +460,7 @@ void main() {
               BlocProvider<TournamentRegistrationsCubit>.value(
                 value: registrationsCubit,
               ),
-              BlocProvider<TournamentScheduleCubit>.value(
-                value: scheduleCubit,
-              ),
+              BlocProvider<TournamentScheduleCubit>.value(value: scheduleCubit),
               BlocProvider<TournamentScoreboardCubit>.value(
                 value: scoreboardCubit,
               ),

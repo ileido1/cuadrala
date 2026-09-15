@@ -35,7 +35,10 @@ void main() {
         home: Scaffold(
           body: SingleChildScrollView(
             child: TournamentPairingSection(
-              roster: groupRosterIntoPairs(registrations: registrations, paired: true),
+              roster: groupRosterIntoPairs(
+                registrations: registrations,
+                paired: true,
+              ),
               canManage: canManage,
               busyRegistrationId: null,
               onPair: (a, b) => paired.add([a, b]),
@@ -51,13 +54,18 @@ void main() {
     testWidgets('should show a formed pair as a single row', (tester) async {
       await pump(tester, [regSV('a', partner: 'b'), regSV('b', partner: 'a')]);
 
+      expect(find.byKey(const Key('tournament.pairing.card')), findsOneWidget);
+      expect(find.text('DUPLAS'), findsOneWidget);
+      expect(find.text('Armar dupla'), findsOneWidget);
       expect(find.text('Jugador a · Jugador b'), findsOneWidget);
       expect(find.textContaining('Sin pareja'), findsNothing);
     });
 
     //? Es lo que el organizador necesita ver: una inscripción sin dupla frena
     //? la generación del cuadro.
-    testWidgets('should count the players still without a partner', (tester) async {
+    testWidgets('should count the players still without a partner', (
+      tester,
+    ) async {
       await pump(tester, [regSV('a'), regSV('b'), regSV('c')]);
 
       expect(find.text('Sin pareja (3)'), findsOneWidget);
@@ -89,7 +97,10 @@ void main() {
       await tester.pump();
 
       expect(paired, isEmpty);
-      expect(find.text('Tocá dos jugadores para armar la dupla.'), findsOneWidget);
+      expect(
+        find.text('Tocá dos jugadores para armar la dupla.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('should let the organizer undo a pair', (tester) async {
@@ -102,13 +113,14 @@ void main() {
     });
 
     //? El emparejamiento es del organizador; el resto solo mira.
-    testWidgets('should not offer any pairing action to a non-organizer',
-        (tester) async {
-      await pump(
-        tester,
-        [regSV('a', partner: 'b'), regSV('b', partner: 'a'), regSV('c')],
-        canManage: false,
-      );
+    testWidgets('should not offer any pairing action to a non-organizer', (
+      tester,
+    ) async {
+      await pump(tester, [
+        regSV('a', partner: 'b'),
+        regSV('b', partner: 'a'),
+        regSV('c'),
+      ], canManage: false);
 
       expect(find.byKey(const Key('tournament.unpair.a')), findsNothing);
       expect(find.text('Todavía esperan compañero.'), findsOneWidget);

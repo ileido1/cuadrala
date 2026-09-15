@@ -183,11 +183,7 @@ void main() {
     TournamentsRepository? tournamentsRepository,
   }) async {
     when(() => registrationsCubit.state).thenReturn(
-      const TournamentRegistrationsLoaded(
-        items: [],
-        total: 0,
-        invitations: [],
-      ),
+      const TournamentRegistrationsLoaded(items: [], total: 0, invitations: []),
     );
     when(() => registrationsCubit.currentUserId).thenReturn('user-1');
     when(
@@ -508,15 +504,15 @@ void main() {
           visibility: 'PRIVATE',
         );
 
-        await tester.tap(
-          find.byKey(const Key('tournament.visibilityControl')),
-        );
+        await tester.tap(find.byKey(const Key('tournament.visibilityControl')));
         await tester.pump();
 
         expect(
-          tester.widget<PillToggle>(
-            find.byKey(const Key('tournament.visibilityControl')),
-          ).value,
+          tester
+              .widget<PillToggle>(
+                find.byKey(const Key('tournament.visibilityControl')),
+              )
+              .value,
           isTrue,
         );
         expect(find.text('Aparece en el listado de la app'), findsOneWidget);
@@ -527,9 +523,11 @@ void main() {
         await tester.pump();
 
         expect(
-          tester.widget<PillToggle>(
-            find.byKey(const Key('tournament.visibilityControl')),
-          ).value,
+          tester
+              .widget<PillToggle>(
+                find.byKey(const Key('tournament.visibilityControl')),
+              )
+              .value,
           isFalse,
         );
         expect(find.text('No se pudo guardar.'), findsOneWidget);
@@ -575,7 +573,9 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('removes Cancelar torneo from a draft tournament', (tester) async {
+    testWidgets('removes Cancelar torneo from a draft tournament', (
+      tester,
+    ) async {
       await pumpOrganizerPublishTab(
         tester,
         tournamentsRepository: _MockTournamentsRepository(),
@@ -769,10 +769,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Se enviaron 4 horarios'), findsOneWidget);
-      expect(
-        find.text('Los jugadores aceptan o piden cambio'),
-        findsOneWidget,
-      );
+      expect(find.text('Los jugadores aceptan o piden cambio'), findsOneWidget);
       expect(find.text('2 invitaciones sin responder'), findsOneWidget);
       expect(find.text('Carlos M. y Nicolás P.'), findsOneWidget);
       await tester.drag(find.byType(ListView).last, const Offset(0, -300));
@@ -1000,6 +997,15 @@ void main() {
         find.byKey(const Key('tournament.inviteGuestSheet.name')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const Key('tournament.inviteGuestSheet.title')),
+        findsOneWidget,
+      );
+      expect(find.text('Alguien sin cuenta en la app'), findsOneWidget);
+      expect(
+        find.byKey(const Key('tournament.inviteGuestSheet.submit')),
+        findsOneWidget,
+      );
     });
 
     testWidgets(
@@ -1121,9 +1127,7 @@ void main() {
   group(
     'Detail header (M5a) — static header replaces collapsing SliverAppBar',
     () {
-      testWidgets('renders without a collapsing SliverAppBar', (
-        tester,
-      ) async {
+      testWidgets('renders without a collapsing SliverAppBar', (tester) async {
         when(() => registrationsCubit.state).thenReturn(
           const TournamentRegistrationsLoaded(
             items: [],
@@ -1200,101 +1204,98 @@ void main() {
     },
   );
 
-  group(
-    'Detail tabs (M5b) — SegmentedControl replaces TabBar',
-    () {
-      Future<void> pumpPlayerTabs(WidgetTester tester) async {
-        when(() => registrationsCubit.state).thenReturn(
-          TournamentRegistrationsLoaded(
-            items: [_authRegistration(userId: 'user-1')],
-            total: 1,
-            invitations: const [],
-          ),
-        );
-        when(() => registrationsCubit.currentUserId).thenReturn('user-1');
-        when(
-          () => scheduleCubit.state,
-        ).thenReturn(const TournamentScheduleEmpty());
+  group('Detail tabs (M5b) — SegmentedControl replaces TabBar', () {
+    Future<void> pumpPlayerTabs(WidgetTester tester) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [_authRegistration(userId: 'user-1')],
+          total: 1,
+          invitations: const [],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
 
-        await tester.pumpWidget(
-          _buildTestApp(
-            registrationsCubit: registrationsCubit,
-            scheduleCubit: scheduleCubit,
-            scoreboardCubit: scoreboardCubit,
-            tournament: _tournament(organizerUserId: null),
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(organizerUserId: null),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'renders a SegmentedControl with the three tab labels instead of a Material TabBar',
+      (tester) async {
+        await pumpPlayerTabs(tester);
+
+        expect(find.byType(TabBar), findsNothing);
+        expect(find.text('Info'), findsOneWidget);
+        expect(find.text('Mis partidos'), findsOneWidget);
+        expect(find.text('Tabla'), findsOneWidget);
+        //? Info es la pestaña por defecto (índice 0).
+        expect(find.text('Cómo se juega'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'tapping the "Mis partidos" segment switches to the schedule tab content',
+      (tester) async {
+        await pumpPlayerTabs(tester);
+
+        await tester.tap(find.text('Mis partidos'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'El organizador debe generar el calendario cuando haya al menos 2 participantes.',
           ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'tapping the "Tabla" segment switches to the scoreboard tab content',
+      (tester) async {
+        await pumpPlayerTabs(tester);
+
+        await tester.tap(find.text('Tabla'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'La clasificación estará disponible cuando comience el torneo.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'swiping the tab content does not change the selected segment (tap-only, per handoff)',
+      (tester) async {
+        await pumpPlayerTabs(tester);
+
+        //? El handoff (`cuadrala-torneos.jsx:220`) sólo cambia de pestaña
+        //? con el Segmented: sin swipe. `NeverScrollableScrollPhysics` en
+        //? el `TabBarView` corta el gesto antes de que mueva el índice.
+        await tester.drag(
+          find.byType(TabBarView),
+          const Offset(-400, 0),
+          warnIfMissed: false,
         );
         await tester.pumpAndSettle();
-      }
 
-      testWidgets(
-        'renders a SegmentedControl with the three tab labels instead of a Material TabBar',
-        (tester) async {
-          await pumpPlayerTabs(tester);
-
-          expect(find.byType(TabBar), findsNothing);
-          expect(find.text('Info'), findsOneWidget);
-          expect(find.text('Mis partidos'), findsOneWidget);
-          expect(find.text('Tabla'), findsOneWidget);
-          //? Info es la pestaña por defecto (índice 0).
-          expect(find.text('Cómo se juega'), findsOneWidget);
-        },
-      );
-
-      testWidgets(
-        'tapping the "Mis partidos" segment switches to the schedule tab content',
-        (tester) async {
-          await pumpPlayerTabs(tester);
-
-          await tester.tap(find.text('Mis partidos'));
-          await tester.pumpAndSettle();
-
-          expect(
-            find.text(
-              'El organizador debe generar el calendario cuando haya al menos 2 participantes.',
-            ),
-            findsOneWidget,
-          );
-        },
-      );
-
-      testWidgets(
-        'tapping the "Tabla" segment switches to the scoreboard tab content',
-        (tester) async {
-          await pumpPlayerTabs(tester);
-
-          await tester.tap(find.text('Tabla'));
-          await tester.pumpAndSettle();
-
-          expect(
-            find.text(
-              'La clasificación estará disponible cuando comience el torneo.',
-            ),
-            findsOneWidget,
-          );
-        },
-      );
-
-      testWidgets(
-        'swiping the tab content does not change the selected segment (tap-only, per handoff)',
-        (tester) async {
-          await pumpPlayerTabs(tester);
-
-          //? El handoff (`cuadrala-torneos.jsx:220`) sólo cambia de pestaña
-          //? con el Segmented: sin swipe. `NeverScrollableScrollPhysics` en
-          //? el `TabBarView` corta el gesto antes de que mueva el índice.
-          await tester.drag(
-            find.byType(TabBarView),
-            const Offset(-400, 0),
-            warnIfMissed: false,
-          );
-          await tester.pumpAndSettle();
-
-          expect(find.text('Cómo se juega'), findsOneWidget);
-        },
-      );
-    },
-  );
+        expect(find.text('Cómo se juega'), findsOneWidget);
+      },
+    );
+  });
 
   group('Tabla — row styling and caption (M8)', () {
     TournamentScoreboardDto scoreboard() => const TournamentScoreboardDto(
@@ -1377,9 +1378,7 @@ void main() {
 
         //? El nombre propio se pinta con Text.rich para poder anexar el
         //? sufijo "· vos" con un estilo distinto dentro del mismo texto.
-        final nameCell = tester.widget<Text>(
-          find.textContaining('Yo Jugador'),
-        );
+        final nameCell = tester.widget<Text>(find.textContaining('Yo Jugador'));
         expect(nameCell.textSpan?.toPlainText(), contains('· vos'));
 
         //? `DataRow` no es un Widget de árbol: viene de la lista
@@ -1399,7 +1398,9 @@ void main() {
     testWidgets('colors rank 1 and 2 green, rank 3 muted', (tester) async {
       await pumpTabla(tester);
 
-      final scheme = Theme.of(tester.element(find.byType(DataTable))).colorScheme;
+      final scheme = Theme.of(
+        tester.element(find.byType(DataTable)),
+      ).colorScheme;
 
       final rankOne = tester.widget<Text>(find.text('1'));
       final rankTwo = tester.widget<Text>(find.text('2'));
@@ -1418,9 +1419,9 @@ void main() {
       int? maxSlots,
       int registrationCount = 0,
     }) async {
-      when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsLoaded(items: [], total: 0),
-      );
+      when(
+        () => registrationsCubit.state,
+      ).thenReturn(const TournamentRegistrationsLoaded(items: [], total: 0));
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
       when(
         () => scheduleCubit.state,
@@ -1471,29 +1472,27 @@ void main() {
 
     //? El diseño prohíbe explícitamente un placeholder inventado ("Cupos no
     //? declarados"): sin `maxSlots` la tarjeta entera se omite.
-    testWidgets(
-      'omits the Cuadro tile entirely when maxSlots is null',
-      (tester) async {
-        await pumpInfoTab(tester, formatPresetName: 'SINGLE_ELIMINATION');
+    testWidgets('omits the Cuadro tile entirely when maxSlots is null', (
+      tester,
+    ) async {
+      await pumpInfoTab(tester, formatPresetName: 'SINGLE_ELIMINATION');
 
-        expect(find.text('Cuadro'), findsNothing);
-        expect(find.textContaining('Cupos no declarados'), findsNothing);
-      },
-    );
+      expect(find.text('Cuadro'), findsNothing);
+      expect(find.textContaining('Cupos no declarados'), findsNothing);
+    });
 
-    testWidgets(
-      'still shows Formato and Anotados when Cuadro is omitted',
-      (tester) async {
-        await pumpInfoTab(
-          tester,
-          formatPresetName: 'ROUND_ROBIN',
-          registrationCount: 5,
-        );
+    testWidgets('still shows Formato and Anotados when Cuadro is omitted', (
+      tester,
+    ) async {
+      await pumpInfoTab(
+        tester,
+        formatPresetName: 'ROUND_ROBIN',
+        registrationCount: 5,
+      );
 
-        expect(find.text('Round robin'), findsOneWidget);
-        expect(find.text('5'), findsOneWidget);
-      },
-    );
+      expect(find.text('Round robin'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+    });
   });
 
   group('Inscriptos summary (M6b-3)', () {
@@ -1623,14 +1622,8 @@ void main() {
                 matchId: 'match-1',
                 matchStatus: 'FINISHED',
                 sides: [
-                  TournamentScheduleMatchSideDto(
-                    sideKey: 'a',
-                    userIds: ['u1'],
-                  ),
-                  TournamentScheduleMatchSideDto(
-                    sideKey: 'b',
-                    userIds: ['u2'],
-                  ),
+                  TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
+                  TournamentScheduleMatchSideDto(sideKey: 'b', userIds: ['u2']),
                 ],
                 scores: [
                   TournamentScheduleMatchScoreDto(userId: 'u1', points: 6),
@@ -1704,46 +1697,48 @@ void main() {
       },
     );
 
-    testWidgets('shows round name and label for a scheduled, not-yet-live match', (
-      tester,
-    ) async {
-      final schedule = TournamentScheduleDto(
-        rounds: [
-          TournamentScheduleRoundDto(
-            name: 'Cuartos de final',
-            matches: [
-              TournamentScheduleMatchDto(
-                id: 'sched-4',
-                label: 'Luis P. vs Jorge Á.',
-                status: '',
-                scheduledAt: DateTime(2024, 1, 1, 9),
-                courtName: 'Cancha 2',
-              ),
-            ],
-          ),
-        ],
-      );
+    testWidgets(
+      'shows round name and label for a scheduled, not-yet-live match',
+      (tester) async {
+        final schedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Cuartos de final',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'sched-4',
+                  label: 'Luis P. vs Jorge Á.',
+                  status: '',
+                  scheduledAt: DateTime(2024, 1, 1, 9),
+                  courtName: 'Cancha 2',
+                ),
+              ],
+            ),
+          ],
+        );
 
-      await pumpAndOpenBracketTab(tester, schedule: schedule);
+        await pumpAndOpenBracketTab(tester, schedule: schedule);
 
-      expect(find.text('CUARTOS DE FINAL'), findsOneWidget);
-      expect(find.text('Luis P. vs Jorge Á.'), findsOneWidget);
-      expect(find.text('09:00 · Cancha 2'), findsOneWidget);
-    });
+        expect(find.text('CUARTOS DE FINAL'), findsOneWidget);
+        expect(find.text('Luis P. vs Jorge Á.'), findsOneWidget);
+        expect(find.text('09:00 · Cancha 2'), findsOneWidget);
+      },
+    );
   });
 
   group('_OrganizerBracketTab — SE-only advancement caption (M11c)', () {
-    testWidgets('shows the caption verbatim for a single-elimination tournament', (
-      tester,
-    ) async {
-      await pumpAndOpenBracketTab(
-        tester,
-        schedule: const TournamentScheduleDto(rounds: []),
-        tournament: _tournament(formatPresetName: 'SINGLE_ELIMINATION'),
-      );
+    testWidgets(
+      'shows the caption verbatim for a single-elimination tournament',
+      (tester) async {
+        await pumpAndOpenBracketTab(
+          tester,
+          schedule: const TournamentScheduleDto(rounds: []),
+          tournament: _tournament(formatPresetName: 'SINGLE_ELIMINATION'),
+        );
 
-      expect(find.text(seAdvancementCaption), findsOneWidget);
-    });
+        expect(find.text(seAdvancementCaption), findsOneWidget);
+      },
+    );
 
     testWidgets('hides the caption for a round-robin tournament', (
       tester,
@@ -1757,9 +1752,7 @@ void main() {
       expect(find.text(seAdvancementCaption), findsNothing);
     });
 
-    testWidgets('hides the caption when the format is unknown', (
-      tester,
-    ) async {
+    testWidgets('hides the caption when the format is unknown', (tester) async {
       await pumpAndOpenBracketTab(
         tester,
         schedule: const TournamentScheduleDto(rounds: []),
@@ -1788,8 +1781,14 @@ void main() {
                   scheduledAt: DateTime(2024, 1, 1, 11, 30),
                   courtName: 'Central',
                   sides: const [
-                    TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
-                    TournamentScheduleMatchSideDto(sideKey: 'b', userIds: [null]),
+                    TournamentScheduleMatchSideDto(
+                      sideKey: 'a',
+                      userIds: ['u1'],
+                    ),
+                    TournamentScheduleMatchSideDto(
+                      sideKey: 'b',
+                      userIds: [null],
+                    ),
                   ],
                 ),
               ],
@@ -1823,8 +1822,14 @@ void main() {
                   scheduledAt: DateTime(2024, 1, 1, 11, 30),
                   courtName: 'Central',
                   sides: const [
-                    TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
-                    TournamentScheduleMatchSideDto(sideKey: 'b', userIds: ['u2']),
+                    TournamentScheduleMatchSideDto(
+                      sideKey: 'a',
+                      userIds: ['u1'],
+                    ),
+                    TournamentScheduleMatchSideDto(
+                      sideKey: 'b',
+                      userIds: ['u2'],
+                    ),
                   ],
                 ),
               ],
@@ -1867,8 +1872,14 @@ void main() {
                   scheduledAt: DateTime(2024, 1, 1, 11, 30),
                   courtName: 'Central',
                   sides: const [
-                    TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
-                    TournamentScheduleMatchSideDto(sideKey: 'b', userIds: ['u2']),
+                    TournamentScheduleMatchSideDto(
+                      sideKey: 'a',
+                      userIds: ['u1'],
+                    ),
+                    TournamentScheduleMatchSideDto(
+                      sideKey: 'b',
+                      userIds: ['u2'],
+                    ),
                   ],
                 ),
               ],

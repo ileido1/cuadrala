@@ -11,326 +11,303 @@ final class _RegistrationsTab extends StatelessWidget {
   final String tournamentId;
   final String? organizerUserId;
   final String? tournamentStatus;
-
-  /// `true` en torneos de duplas fijas: el roster se muestra por pareja y el
-  /// organizador puede emparejar. En torneo individual no cambia nada.
   final bool pairedRegistration;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-      child: BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
-        builder: (context, state) {
-          if (state is TournamentRegistrationsLoading ||
-              state is TournamentRegistrationsInitial) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is TournamentRegistrationsFailure) {
-            return _ErrorBox(
-              message: state.message,
-              onRetry: () =>
-                  context.read<TournamentRegistrationsCubit>().load(),
-            );
-          }
+      child:
+          BlocBuilder<
+            TournamentRegistrationsCubit,
+            TournamentRegistrationsState
+          >(
+            builder: (context, state) {
+              if (state is TournamentRegistrationsLoading ||
+                  state is TournamentRegistrationsInitial) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (state is TournamentRegistrationsFailure) {
+                return _ErrorBox(
+                  message: state.message,
+                  onRetry: () =>
+                      context.read<TournamentRegistrationsCubit>().load(),
+                );
+              }
 
-          final loaded = state as TournamentRegistrationsLoaded;
-          final activeItems = loaded.items
-              .where((r) => r.status != 'WITHDRAWN')
-              .toList();
-          // Org Inscriptos groups by status, not by guest/authenticated
-          // (spec "Org Inscriptos — grouping and per-row actions"): guests
-          // and authenticated players interleave inside the same "Pendientes"
-          // / "Confirmados" sections.
-          final pendingItems = activeItems
-              .where((r) => r.status == 'PENDING')
-              .toList();
-          final confirmedItems = activeItems
-              .where((r) => r.status == 'CONFIRMED')
-              .toList();
-          final cubit = context.read<TournamentRegistrationsCubit>();
-          final currentUserId = cubit.currentUserId;
-          final myPendingInvite = currentUserId != null
-              ? loaded.pendingInvitationFor(currentUserId)
-              : null;
+              final loaded = state as TournamentRegistrationsLoaded;
+              final activeItems = loaded.items
+                  .where((registration) => registration.status != 'WITHDRAWN')
+                  .toList();
+              final pendingItems = activeItems
+                  .where((registration) => registration.status == 'PENDING')
+                  .toList();
+              final confirmedItems = activeItems
+                  .where((registration) => registration.status == 'CONFIRMED')
+                  .toList();
+              final cubit = context.read<TournamentRegistrationsCubit>();
+              final currentUserId = cubit.currentUserId;
+              final myPendingInvite = currentUserId != null
+                  ? loaded.pendingInvitationFor(currentUserId)
+                  : null;
+              final isOrganizer = _isOrganizer(organizerUserId, currentUserId);
+              final guestActionsAllowed =
+                  tournamentStatus == null ||
+                  _kOrganizerManageableStatuses.contains(tournamentStatus);
+              final canManageGuests = isOrganizer && guestActionsAllowed;
+              final canInvitePlayers =
+                  isOrganizer && loaded.canManageInvitations;
 
-          // Organizer-only affordance; the backend enforces the real guard
-          // independently (see `assertTournamentOrganizerAccess` on every
-          // guest-management use case).
-          final isOrganizer = _isOrganizer(organizerUserId, currentUserId);
-          // Mirrors the backend's DRAFT/OPEN guard on invite-guest, PATCH
-          // confirm, and DELETE (Slice 1: tournament-guest-registration).
-          // Defaults to allowed when the tournament's status isn't known
-          // here (e.g. navigated to directly, without list-item `extra`).
-          final guestActionsAllowed =
-              tournamentStatus == null ||
-              _kOrganizerManageableStatuses.contains(tournamentStatus);
-          final canManageGuests = isOrganizer && guestActionsAllowed;
-          final pendingCount = pendingItems.length;
-          final confirmedCount = confirmedItems.length;
-
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 24),
-            children: [
-              if (canManageGuests) ...[
-                _OrganizerRosterHeader(
-                  total: activeItems.length,
-                  confirmed: confirmedCount,
-                  pending: pendingCount,
-                  busy: loaded.busyRegistrationId != null,
-                  onConfirmAll: pendingCount == 0
-                      ? null
-                      : () => cubit.confirmPendingRegistrations(),
-                ),
-                const SizedBox(height: 16),
-              ],
-              //? Error messages centralizadas arriba
-              if (loaded.registerError != null ||
-                  loaded.invitationError != null ||
-                  loaded.registrationActionError != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.errorContainer.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.error.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Text(
-                    loaded.registerError ??
-                        loaded.invitationError ??
-                        loaded.registrationActionError!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              //? Pending invite banner si existe
-              if (myPendingInvite != null) ...[
-                _PendingInviteBanner(
-                  invitation: myPendingInvite,
-                  responding: loaded.responding,
-                  onAccept: () => cubit.acceptInvitation(myPendingInvite.id),
-                  onReject: () => cubit.rejectInvitation(myPendingInvite.id),
-                ),
-                const SizedBox(height: 12),
-              ],
-              //? Invitaciones organizador al TOP (antes de lista de participantes)
-              if (loaded.canManageInvitations) ...[
-                _OrganizerInvitationsSection(
-                  tournamentId: tournamentId,
-                  //? Rejected invitations render with a "Rechazó" label
-                  //? instead of being filtered out (spec "Org Inscriptos —
-                  //? grouping and per-row actions"; M10b). Accepted ones
-                  //? became a registration already; cancelled ones are gone.
-                  invitations: loaded.invitations
-                      .where((i) => i.isPending || i.isRejected)
-                      .toList(),
-                  busy: loaded.inviting,
-                ),
-                const SizedBox(height: 12),
-              ],
-              //? Header de participantes
-              Row(
+              return ListView(
+                padding: const EdgeInsets.only(bottom: 24),
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${activeItems.length} ${activeItems.length == 1 ? 'inscripto' : 'inscriptos'}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
+                  if (canManageGuests) ...[
+                    _OrganizerRosterHeader(
+                      total: activeItems.length,
+                      confirmed: confirmedItems.length,
+                      pending: pendingItems.length,
+                      busy: loaded.busyRegistrationId != null,
+                      onConfirmAll: pendingItems.isEmpty
+                          ? null
+                          : () => cubit.confirmPendingRegistrations(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (loaded.registerError != null ||
+                      loaded.invitationError != null ||
+                      loaded.registrationActionError != null) ...[
+                    _RosterError(
+                      message:
+                          loaded.registerError ??
+                          loaded.invitationError ??
+                          loaded.registrationActionError!,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (myPendingInvite != null) ...[
+                    _PendingInviteBanner(
+                      invitation: myPendingInvite,
+                      responding: loaded.responding,
+                      onAccept: () =>
+                          cubit.acceptInvitation(myPendingInvite.id),
+                      onReject: () =>
+                          cubit.rejectInvitation(myPendingInvite.id),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (organizerUserId != null &&
+                      !activeItems.any(
+                        (registration) =>
+                            registration.userId == organizerUserId,
+                      )) ...[
+                    _OrganizerRosterOwner(userId: organizerUserId!),
+                    const SizedBox(height: 12),
+                  ],
+                  if (activeItems.isEmpty)
+                    const _InfoBox(
+                      message:
+                          'Aún no hay participantes. ¡Compartí el torneo para que más jugadores se inscriban!',
+                    )
+                  else if (pairedRegistration)
+                    TournamentPairingSection(
+                      roster: groupRosterIntoPairs(
+                        registrations: activeItems,
+                        paired: true,
                       ),
+                      canManage: canManageGuests,
+                      busyRegistrationId: loaded.busyRegistrationId,
+                      onPair: (first, second) =>
+                          cubit.pairRegistrations(first, second),
+                      onUnpair: cubit.unpairRegistration,
+                    )
+                  else ...[
+                    _OrganizerRosterCard(
+                      pendingItems: pendingItems,
+                      confirmedItems: confirmedItems,
+                      canManage: canManageGuests,
+                      busyRegistrationId: loaded.busyRegistrationId,
                     ),
-                  ),
-                  if (canManageGuests)
-                    FilledButton.icon(
-                      key: const Key('tournament.inviteGuestButton'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 40),
-                      ),
-                      onPressed: () => showInviteGuestSheet(context),
-                      icon: const Icon(AppIcons.personAdd),
-                      label: const Text('Invitar jugador'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              //? Mostrar organizador al principio si no está en la lista de participantes
-              if (organizerUserId != null &&
-                  !activeItems.any((r) => r.userId == organizerUserId)) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Row(
+                  ],
+                  if (canManageGuests) ...[
+                    const SizedBox(height: 14),
+                    Row(
                       children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          child: Text(
-                            '👤',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Organizador',
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                organizerUserId ?? 'Desconocido',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                          child: OutlinedButton.icon(
+                            key: const Key('tournament.inviteGuestButton'),
+                            onPressed: () => showInviteGuestSheet(context),
+                            icon: const Icon(AppIcons.add, size: 18),
+                            label: const Text('Huésped'),
                           ),
                         ),
+                        const SizedBox(width: 10),
+                        if (canInvitePlayers)
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              key: const Key('tournament.invitePlayerButton'),
+                              onPressed: () => showInvitePlayerSheet(context),
+                              icon: const Icon(AppIcons.mail, size: 18),
+                              label: const Text('Invitar'),
+                            ),
+                          )
+                        else
+                          const Spacer(),
                       ],
                     ),
-                  ),
-                ),
-              ],
-              //? El calendario se arma solo con los confirmados. Enterarse de
-              //? que falta gente al recibir el error es tarde: el aviso va
-              //? antes, con el boton que lo resuelve al lado.
-              if (canManageGuests && activeItems.isNotEmpty) ...[
-                Builder(
-                  builder: (context) {
-                    final summary = summarizeRoster(
-                      registrations: activeItems,
-                      paired: pairedRegistration,
-                    );
-                    final warning = summary.warning;
-                    if (warning == null) return const SizedBox.shrink();
+                  ],
+                  if (pairedRegistration &&
+                      activeItems.isNotEmpty &&
+                      canManageGuests)
+                    const SizedBox(height: 0),
+                  if (loaded.canManageInvitations) ...[
+                    const SizedBox(height: 22),
+                    _OrganizerInvitationsSection(
+                      invitations: loaded.invitations
+                          .where(
+                            (invitation) =>
+                                invitation.isPending || invitation.isRejected,
+                          )
+                          .toList(),
+                      busy: loaded.inviting,
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+    );
+  }
+}
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _InfoBox(message: warning),
-                          if (summary.pending > 0) ...[
-                            const SizedBox(height: 8),
-                            FilledButton.icon(
-                              key: const Key('tournament.confirmPendingButton'),
-                              onPressed: loaded.busyRegistrationId != null
-                                  ? null
-                                  : () => context
-                                        .read<TournamentRegistrationsCubit>()
-                                        .confirmPendingRegistrations(),
-                              icon: const Icon(AppIcons.checkCircle, size: 18),
-                              label: Text(
-                                'Confirmar a los ${summary.pending} pendientes',
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
+final class _RosterError extends StatelessWidget {
+  const _RosterError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.error.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(color: scheme.error, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+final class _OrganizerRosterOwner extends StatelessWidget {
+  const _OrganizerRosterOwner({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 19,
+            backgroundColor: scheme.primary,
+            child: Icon(AppIcons.person, color: scheme.onPrimary, size: 19),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              userId,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          Text(
+            'Organizador',
+            style: TextStyle(
+              color: scheme.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _OrganizerRosterCard extends StatelessWidget {
+  const _OrganizerRosterCard({
+    required this.pendingItems,
+    required this.confirmedItems,
+    required this.canManage,
+    required this.busyRegistrationId,
+  });
+
+  final List<TournamentRegistrationDto> pendingItems;
+  final List<TournamentRegistrationDto> confirmedItems;
+  final bool canManage;
+  final String? busyRegistrationId;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('tournament.registrationsCard'),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (pendingItems.isNotEmpty) ...[
+            _RegistrationsGroupHeader(
+              key: const Key('tournament.registrationsGroup.pending'),
+              label: 'PENDIENTES',
+            ),
+            for (final registration in pendingItems)
+              _RegistrationTile(
+                registration: registration,
+                canManage: canManage,
+                busy: busyRegistrationId == registration.id,
+              ),
+          ],
+          _RegistrationsGroupHeader(
+            key: const Key('tournament.registrationsGroup.confirmed'),
+            label: 'CONFIRMADOS',
+          ),
+          if (confirmedItems.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Text(
+                'Todavía no hay confirmados.',
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: 12.5,
                 ),
-              ],
-              if (activeItems.isEmpty)
-                const _InfoBox(
-                  message:
-                      'Aún no hay participantes. ¡Compartí el torneo para que más jugadores se inscriban!',
-                )
-              //? Torneo de duplas fijas: el roster se lee por pareja, no por
-              //? persona. Cuatro filas sueltas no dicen quien juega con quien, y
-              //? el organizador necesita ver a quien le falta companero antes de
-              //? generar el cuadro.
-              else if (pairedRegistration)
-                TournamentPairingSection(
-                  roster: groupRosterIntoPairs(
-                    registrations: activeItems,
-                    paired: true,
-                  ),
-                  canManage: canManageGuests,
-                  busyRegistrationId: loaded.busyRegistrationId,
-                  onPair: (first, second) => context
-                      .read<TournamentRegistrationsCubit>()
-                      .pairRegistrations(first, second),
-                  onUnpair: (id) => context
-                      .read<TournamentRegistrationsCubit>()
-                      .unpairRegistration(id),
-                )
-              //? Agrupa por status (Pendientes primero, Confirmados después),
-              //? guests y jugadores autenticados intercalados: cada fila
-              //? PENDING (guest o autenticada) muestra las mismas acciones
-              //? ✕/✓, así el organizador ve todo lo que le falta resolver
-              //? arriba de lo que ya está resuelto.
-              else ...[
-                if (pendingItems.isNotEmpty) ...[
-                  const _RegistrationsGroupHeader(
-                    key: Key('tournament.registrationsGroup.pending'),
-                    label: 'Pendientes',
-                  ),
-                  const SizedBox(height: 6),
-                  for (final reg in pendingItems)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _RegistrationTile(
-                        registration: reg,
-                        canManage: canManageGuests,
-                        busy: loaded.busyRegistrationId == reg.id,
-                      ),
-                    ),
-                ],
-                if (confirmedItems.isNotEmpty) ...[
-                  if (pendingItems.isNotEmpty) const SizedBox(height: 4),
-                  const _RegistrationsGroupHeader(
-                    key: Key('tournament.registrationsGroup.confirmed'),
-                    label: 'Confirmados',
-                  ),
-                  const SizedBox(height: 6),
-                  for (final reg in confirmedItems)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _RegistrationTile(
-                        registration: reg,
-                        canManage: canManageGuests,
-                        busy: loaded.busyRegistrationId == reg.id,
-                      ),
-                    ),
-                ],
-              ],
-            ],
-          );
-        },
+              ),
+            )
+          else
+            for (final registration in confirmedItems)
+              _RegistrationTile(
+                registration: registration,
+                canManage: canManage,
+                busy: busyRegistrationId == registration.id,
+              ),
+        ],
       ),
     );
   }
@@ -343,11 +320,17 @@ final class _RegistrationsGroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-        fontWeight: FontWeight.w800,
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      color: scheme.surfaceContainerHighest,
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w800,
+          letterSpacing: .5,
+        ),
       ),
     );
   }
@@ -377,15 +360,24 @@ final class _OrganizerRosterHeader extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _OrganizerCount(label: 'Inscriptos', value: total),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _OrganizerCount(label: 'Confirmados', value: confirmed),
+              child: _OrganizerCount(
+                key: const Key('tournament.organizer.stats.total'),
+                label: 'Inscriptos',
+                value: total,
+              ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _OrganizerCount(
+                key: const Key('tournament.organizer.stats.confirmed'),
+                label: 'Confirmados',
+                value: confirmed,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _OrganizerCount(
+                key: const Key('tournament.organizer.stats.pending'),
                 label: 'Pendientes',
                 value: pending,
                 accent: pending > 0 ? scheme.primary : null,
@@ -394,13 +386,13 @@ final class _OrganizerRosterHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        FilledButton.icon(
-          onPressed: busy ? null : onConfirmAll,
-          icon: const Icon(AppIcons.check, size: 19),
-          label: Text(
-            pending > 0 ? 'Confirmar $pending pendientes' : 'Todos confirmados',
+        if (pending > 0)
+          FilledButton.icon(
+            key: const Key('tournament.confirmPendingButton'),
+            onPressed: busy ? null : onConfirmAll,
+            icon: const Icon(AppIcons.check, size: 19),
+            label: Text('Confirmar $pending pendientes'),
           ),
-        ),
         const SizedBox(height: 6),
         Text(
           pending > 0
@@ -419,6 +411,7 @@ final class _OrganizerRosterHeader extends StatelessWidget {
 
 final class _OrganizerCount extends StatelessWidget {
   const _OrganizerCount({
+    super.key,
     required this.label,
     required this.value,
     this.accent,
@@ -459,23 +452,7 @@ final class _OrganizerCount extends StatelessWidget {
   }
 }
 
-/// Translates registration status for display in Spanish.
-String _registrationStatusLabel(String status) {
-  switch (status) {
-    case 'PENDING':
-      return 'Pendiente';
-    case 'CONFIRMED':
-      return 'Confirmado';
-    case 'WITHDRAWN':
-      return 'Retirado';
-    default:
-      return status;
-  }
-}
-
-/// A single roster row. For guests with [canManage] true, shows a confirm
-/// action (PENDING only) and a remove action (any status), both organizer-
-/// only and hidden once the tournament closes for guest management.
+/// A compact roster row shared by guest and authenticated registrations.
 final class _RegistrationTile extends StatelessWidget {
   const _RegistrationTile({
     required this.registration,
@@ -508,126 +485,138 @@ final class _RegistrationTile extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) {
-      cubit.removeRegistration(registration.id);
+    if (confirmed == true) cubit.removeRegistration(registration.id);
+  }
+
+  String _subtitle() {
+    if (registration.isGuest) {
+      return registration.guestPhone?.trim().isNotEmpty == true
+          ? registration.guestPhone!
+          : 'Invitado sin teléfono';
     }
+    return registration.hasPartner
+        ? 'Jugador · en dupla'
+        : 'Jugador registrado';
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final label = registration.displayName;
-    final statusLabel = _registrationStatusLabel(registration.status);
     final avatarLabel = label
         .substring(0, label.length >= 2 ? 2 : label.length)
         .toUpperCase();
-
-    //? Color del badge según status
-    Color statusColorSV(String status) {
-      switch (status) {
-        case 'PENDING':
-          return Colors.orange;
-        case 'CONFIRMED':
-          return Colors.green;
-        default:
-          return Colors.grey;
-      }
-    }
-
-    //? Highlight si es invitado pendiente
-    final isPendingGuest =
-        registration.isGuest && registration.status == 'PENDING';
-    final scheme = Theme.of(context).colorScheme;
+    final isPending = registration.status == 'PENDING';
 
     return Container(
       key: Key('tournament.registrationTile.${registration.id}'),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color: isPendingGuest
-            ? scheme.primaryContainer.withValues(alpha: 0.15)
-            : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: isPendingGuest
-            ? Border.all(color: scheme.primary.withValues(alpha: 0.3))
-            : null,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
       ),
       child: Row(
         children: [
           CircleAvatar(
+            radius: 19,
             backgroundColor: registration.isGuest
-                ? Colors.amber.withValues(alpha: 0.3)
+                ? Colors.amber.withValues(alpha: .22)
                 : scheme.primaryContainer,
             child: Text(
               avatarLabel,
               style: TextStyle(
                 color: registration.isGuest
-                    ? Colors.amber[700]
+                    ? Colors.amber.shade300
                     : scheme.onPrimaryContainer,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Expanded(
+                    Flexible(
                       child: Text(
                         label,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                    //? Status badge con color
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColorSV(
-                          registration.status,
-                        ).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        statusLabel,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: statusColorSV(registration.status),
+                    if (registration.isGuest) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
                         ),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text(
+                          'HUESPED',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 6),
+                    Text(
+                      registration.status == 'PENDING'
+                          ? 'Pendiente'
+                          : 'Confirmado',
+                      style: TextStyle(
+                        color: registration.status == 'PENDING'
+                            ? scheme.onSurfaceVariant
+                            : scheme.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
-                if (isPendingGuest) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '⚠️ Requiere confirmación',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                const SizedBox(height: 2),
+                Text(
+                  _subtitle(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 12.5,
                   ),
-                ] else
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      registration.isGuest ? 'Invitado' : 'Participante',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          if (!isPending && registration.status == 'CONFIRMED')
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(AppIcons.check, size: 16, color: scheme.primary),
+                const SizedBox(width: 3),
+                Text(
+                  'Adentro',
+                  style: TextStyle(
+                    color: scheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
           if (canManage) ...[
+            if (!isPending) const SizedBox(width: 6),
             if (busy)
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
@@ -638,34 +627,21 @@ final class _RegistrationTile extends StatelessWidget {
                 ),
               )
             else ...[
-              //? 38px por fila: mismo tamaño para el ✓ de PENDING (guest o
-              //? autenticada) y el ✕ que aplica a cualquier status, así el
-              //? organizador resuelve todo el roster con el mismo gesto.
-              if (registration.status == 'PENDING')
+              if (isPending)
                 IconButton(
                   key: Key('tournament.confirmRegistration.${registration.id}'),
                   tooltip: 'Confirmar',
                   icon: const Icon(AppIcons.check, size: 18),
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(38, 38),
-                    fixedSize: const Size(38, 38),
-                    padding: EdgeInsets.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
+                  style: _rosterActionStyle(scheme.primary),
                   onPressed: () => context
                       .read<TournamentRegistrationsCubit>()
                       .confirmRegistration(registration.id),
                 ),
               IconButton(
                 key: Key('tournament.removeRegistration.${registration.id}'),
-                tooltip: 'Eliminar',
+                tooltip: isPending ? 'Rechazar' : 'Eliminar',
                 icon: const Icon(AppIcons.close, size: 18),
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(38, 38),
-                  fixedSize: const Size(38, 38),
-                  padding: EdgeInsets.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
+                style: _rosterActionStyle(scheme.surfaceContainerHighest),
                 onPressed: () => _confirmRemoveSV(context),
               ),
             ],
@@ -674,6 +650,18 @@ final class _RegistrationTile extends StatelessWidget {
       ),
     );
   }
+}
+
+ButtonStyle _rosterActionStyle(Color background) {
+  return IconButton.styleFrom(
+    backgroundColor: background,
+    foregroundColor: Colors.white,
+    minimumSize: const Size(38, 38),
+    fixedSize: const Size(38, 38),
+    padding: EdgeInsets.zero,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+  );
 }
 
 /// Banner shown to a player with a PENDING invitation for this tournament,
@@ -755,131 +743,138 @@ final class _PendingInviteBanner extends StatelessWidget {
   }
 }
 
-/// Organizer-only invitation management: send a new invite and cancel
-/// pending ones. Only rendered when the invitations read succeeded with
-/// organizer privileges (`TournamentRegistrationsLoaded.canManageInvitations`).
-final class _OrganizerInvitationsSection extends StatefulWidget {
+/// Organizer-only list of sent invitations. The invite action itself lives in
+/// [InvitePlayerSheet], keeping this section focused on delivery status.
+final class _OrganizerInvitationsSection extends StatelessWidget {
   const _OrganizerInvitationsSection({
-    required this.tournamentId,
     required this.invitations,
     required this.busy,
   });
 
-  final String tournamentId;
   final List<TournamentInvitationDto> invitations;
   final bool busy;
-
-  @override
-  State<_OrganizerInvitationsSection> createState() =>
-      _OrganizerInvitationsSectionState();
-}
-
-final class _OrganizerInvitationsSectionState
-    extends State<_OrganizerInvitationsSection> {
-  final _userIdController = TextEditingController();
-
-  @override
-  void dispose() {
-    _userIdController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final cubit = context.read<TournamentRegistrationsCubit>();
 
-    return Container(
+    return Column(
       key: const Key('tournament.organizerInvitations'),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Invitar jugador',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'INVITACIONES ENVIADAS',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .5,
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _userIdController,
-                  decoration: const InputDecoration(
-                    hintText: 'Nombre o ID del jugador',
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                //? Ancho acotado (dentro de un Row).
-                style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
-                onPressed: widget.busy
-                    ? null
-                    : () {
-                        final userId = _userIdController.text.trim();
-                        if (userId.isEmpty) return;
-                        cubit.invite(userId);
-                        _userIdController.clear();
-                      },
-                child: const Text('Invitar'),
-              ),
-            ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: scheme.outlineVariant, width: 1.5),
           ),
-          if (widget.invitations.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Invitaciones enviadas',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            for (final invitation in widget.invitations)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    //? Invitee display name from S3a's `invitedUserName`,
-                    //? falling back to the raw id when it's unavailable.
-                    Expanded(child: Text(invitation.invitedDisplayName)),
-                    const SizedBox(width: 8),
-                    //? "Sin responder" while PENDING, "Rechazó" once
-                    //? REJECTED — rejected invitations are shown here
-                    //? instead of being filtered out (M10b).
-                    Text(
-                      invitation.isPending ? 'Sin responder' : 'Rechazó',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: invitation.isPending
-                            ? scheme.onSurfaceVariant
-                            : scheme.error,
-                      ),
+          child: invitations.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Text(
+                    'Todavía no enviaste invitaciones.',
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 12.5,
                     ),
-                    if (invitation.isPending)
-                      TextButton(
-                        onPressed: widget.busy
-                            ? null
-                            : () => cubit.cancelInvitation(invitation.id),
-                        child: const Text('Cancelar'),
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (var index = 0; index < invitations.length; index++)
+                      _SentInvitationTile(
+                        invitation: invitations[index],
+                        busy: busy,
+                        showDivider: index < invitations.length - 1,
+                        onCancel: () =>
+                            cubit.cancelInvitation(invitations[index].id),
                       ),
                   ],
                 ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _SentInvitationTile extends StatelessWidget {
+  const _SentInvitationTile({
+    required this.invitation,
+    required this.busy,
+    required this.showDivider,
+    required this.onCancel,
+  });
+
+  final TournamentInvitationDto invitation;
+  final bool busy;
+  final bool showDivider;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final name = invitation.invitedDisplayName;
+    return Container(
+      key: Key('tournament.sentInvitation.${invitation.id}'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        border: showDivider
+            ? Border(bottom: BorderSide(color: scheme.outlineVariant))
+            : null,
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: scheme.primaryContainer,
+            child: Text(
+              name.substring(0, 1).toUpperCase(),
+              style: TextStyle(
+                color: scheme.onPrimaryContainer,
+                fontWeight: FontWeight.w800,
               ),
-          ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            invitation.isPending ? 'Sin responder' : 'Rechazó',
+            style: TextStyle(
+              color: invitation.isPending
+                  ? scheme.onSurfaceVariant
+                  : scheme.error,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if (invitation.isPending)
+            IconButton(
+              tooltip: 'Cancelar',
+              onPressed: busy ? null : onCancel,
+              icon: const Icon(AppIcons.close, size: 16),
+              visualDensity: VisualDensity.compact,
+            ),
         ],
       ),
     );
   }
 }
-
