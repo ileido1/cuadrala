@@ -23,6 +23,7 @@ import 'package:cuadrala_mobile/src/shared/widgets/count_stepper.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/date_strip.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/dual_price.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/pill_toggle.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/selectable_chip.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
@@ -225,7 +226,7 @@ void main() {
       await _enterName(tester);
       await _selectPreset(tester, 'Liga');
 
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Dobles'));
+      await tester.tap(find.text('Dobles'));
       await tester.pumpAndSettle();
 
       expect(_submitButton(tester).onPressed, isNotNull);
@@ -239,7 +240,7 @@ void main() {
       await _pumpScreen(tester);
       await _enterName(tester);
       await _selectPreset(tester, 'Liga');
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Dobles'));
+      await tester.tap(find.text('Dobles'));
       await tester.pumpAndSettle();
       await tester.tap(_inForm(find.byIcon(AppIcons.add)));
       await tester.pumpAndSettle();
@@ -329,11 +330,11 @@ void main() {
     await _pumpScreen(tester);
     await _enterName(tester);
     await _selectPreset(tester, 'Liga');
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Dobles'));
+    await tester.tap(find.text('Dobles'));
     await tester.pumpAndSettle();
     expect(_submitButton(tester).onPressed, isNotNull);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Tenis'));
+    await tester.tap(find.widgetWithText(SelectableChip, 'Tenis'));
     await tester.pumpAndSettle();
 
     //? Preset cleared: no form, submit disabled.
@@ -343,11 +344,24 @@ void main() {
     //? Re-selecting the same preset shows no previous value: the enum chip is
     //? unselected and the required field blocks submit again.
     await _selectPreset(tester, 'Liga');
-    expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Dobles')).selected, isFalse);
+    expect(tester.widget<SegmentedControl<String>>(find.byWidgetPredicate((widget) => widget is SegmentedControl<String> && widget.options.any((option) => option.label == 'Dobles'))).value, isNull);
     expect(_submitButton(tester).onPressed, isNull);
   });
 
   group('create handoff fields', () {
+    testWidgets('should use shared sport selectors and preserve the handoff footer', (tester) async {
+      await _pumpScreen(tester);
+
+      expect(find.byType(SelectableChip), findsNWidgets(2));
+      expect(find.byType(RadioListTile), findsNothing);
+      await tester.tap(find.widgetWithText(SelectableChip, 'Tenis'));
+      await tester.tap(find.text('Pádel Centro'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pádel Centro · Tenis Libre Masculino · 16 cupos'), findsOneWidget);
+      expect(find.descendant(of: find.byType(SafeArea), matching: find.text(r'US$15')), findsOneWidget);
+    });
+
     testWidgets('should render DateStrip and selectable venue cards instead of unavailable venue field', (tester) async {
       await _pumpScreen(tester);
 
@@ -367,7 +381,7 @@ void main() {
 
     testWidgets('should default gender to Masculino and send the selected API value', (tester) async {
       await _pumpScreen(tester);
-      expect(tester.widget<SegmentedControl<String>>(find.byType(SegmentedControl<String>)).value, 'MALE');
+      expect(tester.widget<SegmentedControl<String>>(find.byWidgetPredicate((widget) => widget is SegmentedControl<String> && widget.options.any((option) => option.label == 'Masculino'))).value, 'MALE');
 
       await tester.tap(find.text('Femenino'));
       await tester.tap(find.text('Pádel Centro'));

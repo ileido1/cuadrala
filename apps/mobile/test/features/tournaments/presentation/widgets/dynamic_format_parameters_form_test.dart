@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/format_parameter_field_def.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/dynamic_format_parameters_form.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/selectable_chip.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 /// Records every onChanged call so tests can assert on key/value pairs.
 final class _ChangeRecorder {
@@ -48,10 +50,10 @@ void main() {
   group('BooleanFieldDef', () {
     const field = BooleanFieldDef(key: 'thirdPlaceMatch', label: 'Tercer puesto');
 
-    testWidgets('should render a switch with the field label', (tester) async {
+    testWidgets('should render a SelectableChip with the field label', (tester) async {
       await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
 
-      expect(find.widgetWithText(SwitchListTile, 'Tercer puesto'), findsOneWidget);
+      expect(find.widgetWithText(SelectableChip, 'Tercer puesto'), findsOneWidget);
     });
 
     testWidgets('should call onChanged with true when the switch is toggled on', (
@@ -59,7 +61,7 @@ void main() {
     ) async {
       await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
 
-      await tester.tap(find.byType(SwitchListTile));
+      await tester.tap(find.widgetWithText(SelectableChip, 'Tercer puesto'));
 
       expect(recorder.calls.single.key, 'thirdPlaceMatch');
       expect(recorder.calls.single.value, true);
@@ -103,6 +105,18 @@ void main() {
 
       expect(recorder.calls, isEmpty);
     });
+
+    testWidgets('should preserve unbounded values without artificial limits', (tester) async {
+      const unbounded = IntFieldDef(key: 'wins', label: 'Victorias');
+      await tester.pumpWidget(_buildForm(fields: const [unbounded], values: const {'wins': 0}, recorder: recorder));
+
+      await tester.tap(_inForm(find.byIcon(AppIcons.remove)));
+      await tester.tap(_inForm(find.byIcon(AppIcons.add)));
+
+      expect(recorder.calls, hasLength(2));
+      expect(recorder.calls[0].value, -1);
+      expect(recorder.calls[1].value, 1);
+    });
   });
 
   group('EnumFieldDef', () {
@@ -116,12 +130,11 @@ void main() {
       ],
     );
 
-    testWidgets('should render one chip per option', (tester) async {
+    testWidgets('should render options with a shared SegmentedControl', (tester) async {
       await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
 
-      expect(find.byType(ChoiceChip), findsNWidgets(2));
-      expect(find.widgetWithText(ChoiceChip, 'Singles'), findsOneWidget);
-      expect(find.widgetWithText(ChoiceChip, 'Dobles'), findsOneWidget);
+      expect(find.byType(SegmentedControl<String>), findsOneWidget);
+      expect(find.byType(ChoiceChip), findsNothing);
     });
 
     testWidgets('should call onChanged with the option value when a chip is tapped', (
@@ -129,7 +142,7 @@ void main() {
     ) async {
       await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
 
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Dobles'));
+      await tester.tap(find.text('Dobles'));
 
       expect(recorder.calls.single.key, 'modality');
       expect(recorder.calls.single.value, 'DOUBLES');

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../data/models/format_parameter_field_def.dart';
+import '../../../../shared/widgets/selectable_chip.dart';
+import '../../../../shared/widgets/segmented_control.dart';
 
 class DynamicFormatParametersForm extends StatelessWidget {
   final List<FormatParameterFieldDef> fields;
@@ -27,13 +29,19 @@ class DynamicFormatParametersForm extends StatelessWidget {
     );
   }
 
-  Widget _buildFieldWidget(BuildContext context, FormatParameterFieldDef field) {
+  Widget _buildFieldWidget(
+    BuildContext context,
+    FormatParameterFieldDef field,
+  ) {
     if (field is BooleanFieldDef) {
-      return SwitchListTile(
-        title: Text(field.label),
-        subtitle: field.required == true ? const Text('Requerido') : null,
-        value: (values[field.key] as bool?) ?? field.defaultValue,
-        onChanged: (value) => onChanged(field.key, value),
+      final currentValue = (values[field.key] as bool?) ?? field.defaultValue;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: SelectableChip(
+          label: field.label,
+          selected: currentValue,
+          onTap: () => onChanged(field.key, !currentValue),
+        ),
       );
     } else if (field is IntFieldDef) {
       final currentValue = (values[field.key] as int?) ?? field.defaultValue;
@@ -82,28 +90,19 @@ class DynamicFormatParametersForm extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 if (field.required == true)
-                  const Text(
-                    ' *',
-                    style: TextStyle(color: Colors.red),
-                  ),
+                  const Text(' *', style: TextStyle(color: Colors.red)),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Wrap(
-              spacing: 8,
-              children: field.options.map((option) {
-                return ChoiceChip(
-                  label: Text(option.label),
-                  selected: currentValue == option.value,
-                  onSelected: (selected) {
-                    if (selected) {
-                      onChanged(field.key, option.value);
-                    }
-                  },
-                );
-              }).toList(),
+            child: SegmentedControl<String>(
+              value: currentValue,
+              onChanged: (value) => onChanged(field.key, value),
+              options: [
+                for (final option in field.options)
+                  SegmentedOption(value: option.value, label: option.label),
+              ],
             ),
           ),
           const SizedBox(height: 16),

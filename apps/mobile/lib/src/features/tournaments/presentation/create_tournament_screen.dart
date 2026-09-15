@@ -23,6 +23,7 @@ import '../../../shared/widgets/count_stepper.dart';
 import '../../../shared/widgets/date_strip.dart';
 import '../../../shared/widgets/dual_price.dart';
 import '../../../shared/widgets/pill_toggle.dart';
+import '../../../shared/widgets/selectable_chip.dart';
 import '../../../shared/widgets/segmented_control.dart';
 
 extension on Iterable<TournamentPresetDto> {
@@ -92,6 +93,26 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   /// pertenece a un único deporte según `sportId`).
   List<CategoryDto> get _categoriesForSport =>
       _categories.where((c) => c.sportId == _selectedSportId).toList();
+
+  String get _selectedVenueName =>
+      _venues
+          .where((venue) => venue.id == _selectedVenueId)
+          .firstOrNull
+          ?.name ??
+      'Elegí sede';
+
+  String get _selectedCategoryName =>
+      _categoriesForSport
+          .where((category) => category.id == _selectedCategoryId)
+          .firstOrNull
+          ?.name ??
+      'categoría pendiente';
+
+  String get _genderLabel => switch (_gender) {
+    'FEMALE' => 'Femenino',
+    'MIXED' => 'Mixto',
+    _ => 'Masculino',
+  };
 
   @override
   void initState() {
@@ -421,10 +442,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                   runSpacing: 10,
                   children: _sports
                       .map(
-                        (s) => ChoiceChip(
+                        (s) => SelectableChip(
                           selected: _selectedSportId == s.id,
-                          onSelected: (_) => _onSelectSport(s.id),
-                          label: Text(s.name),
+                          onTap: () => _onSelectSport(s.id),
+                          label: s.name,
                         ),
                       )
                       .toList(),
@@ -473,7 +494,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                         DualPrice(
                           primaryLabel: _registrationPrice == 0
                               ? 'Gratis'
-                              : 'US\$_registrationPrice',
+                              : 'US\$$_registrationPrice',
                           secondaryLabel: _registrationPrice == 0
                               ? null
                               : 'Bs ${_registrationPrice * 40}',
@@ -557,8 +578,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     TournamentPresetsSuccess(:final presets) => Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        RadioGroup<String>(
-                          groupValue: _selectedPreset?.id,
+                        SegmentedControl<String>(
+                          value: _selectedPreset?.id,
                           onChanged: (id) {
                             final preset = presets
                                 .where((p) => p.id == id)
@@ -570,31 +591,25 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                               );
                             });
                           },
-                          child: Column(
-                            children: [
-                              for (final p in presets)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: RadioListTile<String>(
-                                    value: p.id,
-                                    title: Text(
-                                      p.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      _presetDescription(p.code),
-                                      style: TextStyle(
-                                        color: scheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
+                          options: [
+                            for (final preset in presets)
+                              SegmentedOption(
+                                value: preset.id,
+                                label: preset.name,
+                              ),
+                          ],
                         ),
+                        if (_selectedPreset case final preset?)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              _presetDescription(preset.code),
+                              style: TextStyle(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         //? Los parámetros los define el schema del preset.
                         if (_selectedPreset?.parametersSchema?.isNotEmpty ??
                             false) ...[
@@ -678,7 +693,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Sede pendiente · ${_selectedCategoryId == null ? 'categoría pendiente' : 'categoría seleccionada'}',
+                                  '$_selectedVenueName · $_selectedCategoryName $_genderLabel · $_maxSlots cupos',
                                   style: TextStyle(
                                     color: scheme.onSurfaceVariant,
                                     fontSize: 12.5,
@@ -687,7 +702,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                                 ),
                               ),
                               Text(
-                                'Precio por confirmar',
+                                _registrationPrice == 0
+                                    ? 'Gratis'
+                                    : 'US\$$_registrationPrice',
                                 style: TextStyle(
                                   color: scheme.onSurface,
                                   fontWeight: FontWeight.w800,
