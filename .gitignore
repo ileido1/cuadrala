@@ -29,6 +29,8 @@ android/.gradle/
 .idea/
 .vscode/
 *.iml
+.codex
+.atl
 
 # OS
 .DS_Store
