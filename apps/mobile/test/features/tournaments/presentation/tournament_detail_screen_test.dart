@@ -1389,4 +1389,139 @@ void main() {
       expect(find.text(seAdvancementCaption), findsNothing);
     });
   });
+
+  group('_OrganizerBracketTab — Cargar resultado (M11c)', () {
+    testWidgets(
+      'disables Cargar when a side has no user id (guest-only side)',
+      (tester) async {
+        final schedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Semifinal',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'sched-5',
+                  label: 'Daniel R. vs Invitado',
+                  status: '',
+                  matchId: 'match-5',
+                  matchStatus: 'IN_PROGRESS',
+                  scheduledAt: DateTime(2024, 1, 1, 11, 30),
+                  courtName: 'Central',
+                  sides: const [
+                    TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
+                    TournamentScheduleMatchSideDto(sideKey: 'b', userIds: [null]),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        );
+
+        await pumpAndOpenBracketTab(tester, schedule: schedule);
+
+        final button = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Cargar'),
+        );
+        expect(button.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'enables Cargar and opens ResultEntrySheet when every side has a user id',
+      (tester) async {
+        final schedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Semifinal',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'sched-6',
+                  label: 'Daniel R. vs Luis P.',
+                  status: '',
+                  matchId: 'match-6',
+                  matchStatus: 'IN_PROGRESS',
+                  scheduledAt: DateTime(2024, 1, 1, 11, 30),
+                  courtName: 'Central',
+                  sides: const [
+                    TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
+                    TournamentScheduleMatchSideDto(sideKey: 'b', userIds: ['u2']),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        );
+
+        await pumpAndOpenBracketTab(tester, schedule: schedule);
+
+        final button = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Cargar'),
+        );
+        expect(button.onPressed, isNotNull);
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Cargar'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('tournament.resultEntrySheet')),
+          findsOneWidget,
+        );
+        expect(find.text('Semifinal · Central'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'submitting the sheet calls TournamentScheduleCubit.submitMatchResult',
+      (tester) async {
+        final schedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Semifinal',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'sched-7',
+                  label: 'Daniel R. vs Luis P.',
+                  status: '',
+                  matchId: 'match-7',
+                  matchStatus: 'IN_PROGRESS',
+                  scheduledAt: DateTime(2024, 1, 1, 11, 30),
+                  courtName: 'Central',
+                  sides: const [
+                    TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
+                    TournamentScheduleMatchSideDto(sideKey: 'b', userIds: ['u2']),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        );
+        when(
+          () => scheduleCubit.submitMatchResult(
+            matchId: 'match-7',
+            scores: any(named: 'scores'),
+          ),
+        ).thenAnswer((_) async {});
+
+        await pumpAndOpenBracketTab(tester, schedule: schedule);
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Cargar'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const Key('tournament.resultEntrySheet.submit')),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => scheduleCubit.submitMatchResult(
+            matchId: 'match-7',
+            scores: const [
+              TournamentScheduleMatchScoreDto(userId: 'u1', points: 0),
+              TournamentScheduleMatchScoreDto(userId: 'u2', points: 0),
+            ],
+          ),
+        ).called(1);
+      },
+    );
+  });
 }

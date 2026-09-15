@@ -35,6 +35,7 @@ import 'cubit/tournament_scoreboard_state.dart';
 import 'tournament_status_view.dart';
 import 'tournament_roster_grouping.dart';
 import 'tournament_roster_summary.dart';
+import 'widgets/result_entry_sheet.dart';
 import 'widgets/tournament_entry_check.dart';
 import 'widgets/tournament_pairing_section.dart';
 import 'widgets/tournament_roster_sheet.dart';

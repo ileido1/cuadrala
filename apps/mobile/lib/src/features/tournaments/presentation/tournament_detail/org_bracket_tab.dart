@@ -407,6 +407,12 @@ final class _OrganizerMatchRow extends StatelessWidget {
     final isRejected = match.decision == 'REJECTED';
     final isLive = match.matchStatus == 'IN_PROGRESS';
     final isDone = match.matchStatus == 'FINISHED' && match.scores.isNotEmpty;
+    //? Cargar disabled without a user id (spec): a side is "guest-only" when
+    //? every one of its userIds is null — no participant on that side has an
+    //? account, so no MatchResultScore row could ever be written for it.
+    final hasGuestOnlySide = match.sides.any(
+      (side) => side.userIds.isNotEmpty && side.userIds.every((id) => id == null),
+    );
     const rejectColor = Color(0xFFF59E0B);
 
     return Padding(
@@ -456,8 +462,19 @@ final class _OrganizerMatchRow extends StatelessWidget {
             )
           else if (isLive)
             FilledButton(
-              //? Wiring the results endpoint is M11c's ResultEntrySheet.
-              onPressed: null,
+              onPressed: hasGuestOnlySide || match.matchId == null
+                  ? null
+                  : () => showResultEntrySheet(
+                      context,
+                      match: match,
+                      roundName: roundName,
+                      onSubmit: (scores) => context
+                          .read<TournamentScheduleCubit>()
+                          .submitMatchResult(
+                            matchId: match.matchId!,
+                            scores: scores,
+                          ),
+                    ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(0, 34),
                 padding: const EdgeInsets.symmetric(horizontal: 12),

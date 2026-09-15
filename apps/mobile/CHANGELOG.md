@@ -5,6 +5,17 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.25] - 2026-09-14
+
+### Agregado
+
+- **"Cargar" abre ResultEntrySheet; deshabilitado para lados sin cuenta
+  (M11c)**: el botón "Cargar" de cada fila en vivo de "Partidos de hoy"
+  ahora abre `ResultEntrySheet` y postea el resultado via
+  `TournamentScheduleCubit.submitMatchResult`. Queda deshabilitado cuando
+  algún lado del partido no tiene ningún `userId` (lado enteramente
+  huésped), ya que ese lado nunca podría recibir un `MatchResultScore`.
+
 ## [1.7.24] - 2026-09-14
 
 ### Agregado
