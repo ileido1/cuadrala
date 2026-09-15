@@ -253,14 +253,22 @@ void main() {
             ),
           ).called(1);
 
-          //? Alice now shows in the "Invitados" group as PENDING.
+          //? Alice now shows in the "Pendientes" group (M10a: roster groups by
+          //? status, guests and authenticated players interleaved — not by
+          //? guest/authenticated).
           //? `skipOffstage: false` because these tiles live inside the TabBarView's
           //? registrations page, whose RenderBox transform can be temporarily
           //? unresolvable to the default onstage check right after a tab switch +
           //? bottom-sheet pop in the same pumpAndSettle cycle, even though the
           //? widgets are genuinely built with the right data (confirmed via
           //? `tester.allWidgets` during triage).
-          expect(find.text('Invitados', skipOffstage: false), findsOneWidget);
+          expect(
+            find.byKey(
+              const Key('tournament.registrationsGroup.pending'),
+              skipOffstage: false,
+            ),
+            findsOneWidget,
+          );
           expect(find.text('Alice', skipOffstage: false), findsOneWidget);
           expect(find.text('Pendiente', skipOffstage: false), findsOneWidget);
 
@@ -338,7 +346,12 @@ void main() {
             ),
           ).called(1);
           expect(find.text('Alice'), findsNothing);
-          expect(find.text('Invitados'), findsNothing);
+          //? No PENDING items remain — the "Pendientes" section is omitted
+          //? entirely, not shown empty.
+          expect(
+            find.byKey(const Key('tournament.registrationsGroup.pending')),
+            findsNothing,
+          );
         },
       );
 

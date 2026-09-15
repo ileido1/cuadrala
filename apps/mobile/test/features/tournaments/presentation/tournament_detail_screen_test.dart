@@ -413,11 +413,11 @@ void main() {
     }
 
     testWidgets(
-      'shows guests grouped separately with translated status labels',
+      'groups roster into Pendientes then Confirmados regardless of guest/authenticated (M10a)',
       (tester) async {
         //? El aviso de inscripciones pendientes ocupa lugar arriba del roster y
-        //? empuja la sección de invitados fuera de lo que el ListView construye
-        //? con la ventana por defecto.
+        //? empuja el resto del ListView fuera de lo que se construye con la
+        //? ventana por defecto.
         tester.view.physicalSize = const Size(1080, 2400);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -439,9 +439,77 @@ void main() {
 
         await pumpAndOpenRegistrationsTab(tester, tournament: _tournament());
 
-        expect(find.text('Invitados'), findsOneWidget);
+        //? Ya no se agrupa por guest/autenticado ("Invitados" desaparece):
+        //? el roster agrupa por status en dos secciones encabezadas.
+        expect(find.text('Invitados'), findsNothing);
+        expect(
+          find.byKey(const Key('tournament.registrationsGroup.pending')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('tournament.registrationsGroup.confirmed')),
+          findsOneWidget,
+        );
         expect(find.text('Pendiente'), findsOneWidget);
         expect(find.text('Confirmado', skipOffstage: false), findsNWidgets(2));
+
+        //? Orden: la sección "Pendientes" se dibuja antes que "Confirmados".
+        final pendingHeaderY = tester
+            .getTopLeft(
+              find.byKey(const Key('tournament.registrationsGroup.pending')),
+            )
+            .dy;
+        final confirmedHeaderY = tester
+            .getTopLeft(
+              find.byKey(const Key('tournament.registrationsGroup.confirmed')),
+            )
+            .dy;
+        expect(pendingHeaderY, lessThan(confirmedHeaderY));
+      },
+    );
+
+    testWidgets(
+      'authenticated PENDING registration shows ✓/✕ actions matching guest rows (M10a)',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [
+              TournamentRegistrationDto(
+                id: 'reg-auth-pending-1',
+                tournamentId: 't-1',
+                userId: 'user-2',
+                status: 'PENDING',
+                createdAt: DateTime(2024),
+              ),
+            ],
+            total: 1,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
+
+        await pumpAndOpenRegistrationsTab(
+          tester,
+          tournament: _tournament(organizerUserId: 'organizer-1'),
+        );
+
+        final confirmButton = find.byKey(
+          const Key('tournament.confirmRegistration.reg-auth-pending-1'),
+        );
+        final removeButton = find.byKey(
+          const Key('tournament.removeRegistration.reg-auth-pending-1'),
+        );
+        expect(confirmButton, findsOneWidget);
+        expect(removeButton, findsOneWidget);
+        //? "38px" per spec: ambos botones de la fila PENDING miden 38x38.
+        expect(tester.getSize(confirmButton), const Size(38, 38));
+        expect(tester.getSize(removeButton), const Size(38, 38));
       },
     );
 

@@ -5,6 +5,17 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.19] - 2026-09-14
+
+### Agregado
+
+- **Agrupación Pendientes/Confirmados y acciones ✓/✕ por fila en Inscriptos
+  del organizador (M10a)**: el roster ahora se agrupa por status —
+  "Pendientes" primero, "Confirmados" después — con invitados y jugadores
+  autenticados intercalados dentro de cada sección (ya no separados en
+  "Invitados"). Toda fila PENDING, sea invitado o autenticada, muestra los
+  mismos botones ✓/✕ de 38x38.
+
 ## [1.7.18] - 2026-09-14
 
 ### Corregido

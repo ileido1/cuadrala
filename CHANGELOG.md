@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Tournaments handoff fidelity (M10a)**: the organizer Inscriptos roster now groups by status into "Pendientes" then "Confirmados" sections (guests and authenticated players interleaved, not split into separate groups), and every PENDING row — guest or authenticated — shows the same 38x38 ✓/✕ actions, closing the M10a grouping/per-row-actions requirement (`apps/mobile` 1.7.19+42)
+
 ### Fixed
 - **Tournaments handoff fidelity (M10a)**: the organizer roster header now reads "N inscriptos"/"1 inscripto" (handoff spelling) instead of "N inscrito(s)"; a new `tournaments_copy_audit_test.dart` guards the whole tournaments feature against that misspelling — opens Phase 5 (organizer tools) (`apps/mobile` 1.7.18+41)
 - **Tournaments handoff fidelity (M9c)**: the invitation screen's banner now resolves "{org} te invitó" with the same rule as the Listado banner (D7) — `venueName`, falling back to the organizer's display name when there is no venue — instead of always showing the tournament's own name; closes M9 and Phase 4 (mobile detail screen) (`apps/mobile` 1.7.17+40)

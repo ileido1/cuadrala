@@ -38,10 +38,16 @@ final class _RegistrationsTab extends StatelessWidget {
           final activeItems = loaded.items
               .where((r) => r.status != 'WITHDRAWN')
               .toList();
-          final authenticatedItems = activeItems
-              .where((r) => !r.isGuest)
+          // Org Inscriptos groups by status, not by guest/authenticated
+          // (spec "Org Inscriptos — grouping and per-row actions"): guests
+          // and authenticated players interleave inside the same "Pendientes"
+          // / "Confirmados" sections.
+          final pendingItems = activeItems
+              .where((r) => r.status == 'PENDING')
               .toList();
-          final guestItems = activeItems.where((r) => r.isGuest).toList();
+          final confirmedItems = activeItems
+              .where((r) => r.status == 'CONFIRMED')
+              .toList();
           final cubit = context.read<TournamentRegistrationsCubit>();
           final currentUserId = cubit.currentUserId;
           final myPendingInvite = currentUserId != null
@@ -60,12 +66,8 @@ final class _RegistrationsTab extends StatelessWidget {
               tournamentStatus == null ||
               _kOrganizerManageableStatuses.contains(tournamentStatus);
           final canManageGuests = isOrganizer && guestActionsAllowed;
-          final pendingCount = activeItems
-              .where((r) => r.status == 'PENDING')
-              .length;
-          final confirmedCount = activeItems
-              .where((r) => r.status == 'CONFIRMED')
-              .length;
+          final pendingCount = pendingItems.length;
+          final confirmedCount = confirmedItems.length;
 
           return ListView(
             padding: const EdgeInsets.only(bottom: 24),
@@ -282,21 +284,36 @@ final class _RegistrationsTab extends StatelessWidget {
                       .read<TournamentRegistrationsCubit>()
                       .unpairRegistration(id),
                 )
+              //? Agrupa por status (Pendientes primero, Confirmados después),
+              //? guests y jugadores autenticados intercalados: cada fila
+              //? PENDING (guest o autenticada) muestra las mismas acciones
+              //? ✕/✓, así el organizador ve todo lo que le falta resolver
+              //? arriba de lo que ya está resuelto.
               else ...[
-                for (final reg in authenticatedItems)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _RegistrationTile(
-                      registration: reg,
-                      canManage: false,
-                      busy: false,
-                    ),
+                if (pendingItems.isNotEmpty) ...[
+                  const _RegistrationsGroupHeader(
+                    key: Key('tournament.registrationsGroup.pending'),
+                    label: 'Pendientes',
                   ),
-                if (guestItems.isNotEmpty) ...[
-                  if (authenticatedItems.isNotEmpty) const SizedBox(height: 4),
-                  const _RegistrationsGroupHeader(label: 'Invitados'),
                   const SizedBox(height: 6),
-                  for (final reg in guestItems)
+                  for (final reg in pendingItems)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _RegistrationTile(
+                        registration: reg,
+                        canManage: canManageGuests,
+                        busy: loaded.busyRegistrationId == reg.id,
+                      ),
+                    ),
+                ],
+                if (confirmedItems.isNotEmpty) ...[
+                  if (pendingItems.isNotEmpty) const SizedBox(height: 4),
+                  const _RegistrationsGroupHeader(
+                    key: Key('tournament.registrationsGroup.confirmed'),
+                    label: 'Confirmados',
+                  ),
+                  const SizedBox(height: 6),
+                  for (final reg in confirmedItems)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: _RegistrationTile(
@@ -316,7 +333,7 @@ final class _RegistrationsTab extends StatelessWidget {
 }
 
 final class _RegistrationsGroupHeader extends StatelessWidget {
-  const _RegistrationsGroupHeader({required this.label});
+  const _RegistrationsGroupHeader({super.key, required this.label});
 
   final String label;
 
@@ -617,11 +634,20 @@ final class _RegistrationTile extends StatelessWidget {
                 ),
               )
             else ...[
+              //? 38px por fila: mismo tamaño para el ✓ de PENDING (guest o
+              //? autenticada) y el ✕ que aplica a cualquier status, así el
+              //? organizador resuelve todo el roster con el mismo gesto.
               if (registration.status == 'PENDING')
                 IconButton(
                   key: Key('tournament.confirmRegistration.${registration.id}'),
                   tooltip: 'Confirmar',
-                  icon: const Icon(AppIcons.checkCircle),
+                  icon: const Icon(AppIcons.check, size: 18),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(38, 38),
+                    fixedSize: const Size(38, 38),
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   onPressed: () => context
                       .read<TournamentRegistrationsCubit>()
                       .confirmRegistration(registration.id),
@@ -629,7 +655,13 @@ final class _RegistrationTile extends StatelessWidget {
               IconButton(
                 key: Key('tournament.removeRegistration.${registration.id}'),
                 tooltip: 'Eliminar',
-                icon: const Icon(AppIcons.delete),
+                icon: const Icon(AppIcons.close, size: 18),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(38, 38),
+                  fixedSize: const Size(38, 38),
+                  padding: EdgeInsets.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 onPressed: () => _confirmRemoveSV(context),
               ),
             ],
