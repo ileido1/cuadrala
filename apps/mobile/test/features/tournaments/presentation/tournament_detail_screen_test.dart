@@ -168,6 +168,7 @@ void main() {
     when(
       () => scoreboardCubit.state,
     ).thenReturn(const TournamentScoreboardEmpty());
+    when(() => scheduleCubit.state).thenReturn(const TournamentScheduleEmpty());
     when(() => registrationsCubit.isCurrentUserRegistered).thenReturn(false);
   });
 
@@ -679,6 +680,128 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+  });
+
+  group('Organizer Avisos counters (M12d)', () {
+    Future<void> pumpOrganizerPublishTab(
+      WidgetTester tester, {
+      required List<TournamentRegistrationDto> registrations,
+      required List<TournamentInvitationDto> invitations,
+      required TournamentScheduleDto schedule,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: registrations,
+          total: registrations.length,
+          invitations: invitations,
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(TournamentScheduleSuccess(schedule: schedule));
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(organizerUserId: 'organizer-1'),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SegmentedControl<int>),
+          matching: find.text('Publicar'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    TournamentScheduleDto scheduleWith(int count) => TournamentScheduleDto(
+      rounds: [
+        TournamentScheduleRoundDto(
+          name: 'Ronda 1',
+          matches: List.generate(
+            count,
+            (index) => TournamentScheduleMatchDto(
+              id: 'schedule-$index',
+              label: 'Partido $index',
+              status: 'SCHEDULED',
+              scheduledAt: DateTime(2024, 1, index + 1),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    TournamentInvitationDto pendingInvitation(String name, int index) =>
+        TournamentInvitationDto(
+          id: 'inv-$index',
+          tournamentId: 't-1',
+          invitedUserId: 'player-$index',
+          invitedUserName: name,
+          createdByUserId: 'organizer-1',
+          status: 'PENDING',
+          createdAt: DateTime(2024),
+        );
+
+    testWidgets('renders counts and copy from loaded cubits', (tester) async {
+      await pumpOrganizerPublishTab(
+        tester,
+        registrations: [
+          _authRegistration(userId: 'player-1'),
+          _authRegistration(userId: 'player-2'),
+          _authRegistration(userId: 'player-3'),
+        ],
+        invitations: [
+          pendingInvitation('Carlos Martínez', 1),
+          pendingInvitation('Nicolás Pérez', 2),
+        ],
+        schedule: scheduleWith(4),
+      );
+
+      expect(find.text('Confirmaste a 3 jugadores'), findsOneWidget);
+      expect(
+        find.text('Cada uno recibió su aviso al confirmarlo'),
+        findsOneWidget,
+      );
+      expect(find.text('Se enviaron 4 horarios'), findsOneWidget);
+      expect(
+        find.text('Los jugadores aceptan o piden cambio'),
+        findsOneWidget,
+      );
+      expect(find.text('2 invitaciones sin responder'), findsOneWidget);
+      expect(find.text('Carlos M. y Nicolás P.'), findsOneWidget);
+      await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'No hay un botón de "avisar a todos": el aviso sale solo con cada acción.',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('joins three shortened pending invitee names', (tester) async {
+      await pumpOrganizerPublishTab(
+        tester,
+        registrations: [_authRegistration(userId: 'player-1')],
+        invitations: [
+          pendingInvitation('Ada Lovelace', 1),
+          pendingInvitation('Grace Hopper', 2),
+          pendingInvitation('Alan Turing', 3),
+        ],
+        schedule: scheduleWith(1),
+      );
+
+      expect(find.text('Confirmaste a 1 jugadores'), findsOneWidget);
+      expect(find.text('Se enviaron 1 horarios'), findsOneWidget);
+      expect(find.text('3 invitaciones sin responder'), findsOneWidget);
+      expect(find.text('Ada L., Grace H. y Alan T.'), findsOneWidget);
     });
   });
 

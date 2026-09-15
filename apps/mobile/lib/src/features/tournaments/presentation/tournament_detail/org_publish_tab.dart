@@ -124,6 +124,8 @@ final class _OrganizerPublishTab extends StatelessWidget {
         const SizedBox(height: 20),
         Text('Avisos', style: _sectionStyle(scheme)),
         const SizedBox(height: 10),
+        const _OrganizerAvisos(),
+        const SizedBox(height: 12),
         const _InfoBox(
           message:
               'No hay un botón de "avisar a todos": el aviso sale solo con cada acción.',
@@ -261,4 +263,159 @@ String? _statusExplanation(String status) => switch (status) {
   'IN_PROGRESS' =>
     'Se cierran las inscripciones: ya no entra ni sale nadie del plantel.',
   _ => null,
+};
+
+final class _OrganizerAvisos extends StatelessWidget {
+  const _OrganizerAvisos();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<
+      TournamentRegistrationsCubit,
+      TournamentRegistrationsState
+    >(
+      builder: (context, registrationsState) {
+        final registrations = switch (registrationsState) {
+          TournamentRegistrationsLoaded(:final items) => items,
+          _ => const <TournamentRegistrationDto>[],
+        };
+        final invitations = switch (registrationsState) {
+          TournamentRegistrationsLoaded(:final invitations) => invitations,
+          _ => const <TournamentInvitationDto>[],
+        };
+        final confirmedCount = registrations
+            .where((registration) => registration.status == 'CONFIRMED')
+            .length;
+        final pendingInvitees = invitations
+            .where((invitation) => invitation.isPending)
+            .map(
+              (invitation) => _shortInviteeName(invitation.invitedDisplayName),
+            )
+            .toList();
+
+        return BlocBuilder<TournamentScheduleCubit, TournamentScheduleState>(
+          builder: (context, scheduleState) {
+            final sentSchedules = _sentScheduleCount(scheduleState);
+
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                children: [
+                  _OrganizerAvisosRow(
+                    icon: AppIcons.check,
+                    title: 'Confirmaste a $confirmedCount jugadores',
+                    subtitle: 'Cada uno recibió su aviso al confirmarlo',
+                  ),
+                  _OrganizerAvisosRow(
+                    icon: AppIcons.calendar,
+                    title: 'Se enviaron $sentSchedules horarios',
+                    subtitle: 'Los jugadores aceptan o piden cambio',
+                  ),
+                  _OrganizerAvisosRow(
+                    icon: AppIcons.people,
+                    title:
+                        '${pendingInvitees.length} invitaciones sin responder',
+                    subtitle: _joinInviteeNames(pendingInvitees),
+                    showDivider: false,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+final class _OrganizerAvisosRow extends StatelessWidget {
+  const _OrganizerAvisosRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.showDivider = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: showDivider
+          ? BoxDecoration(
+              border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+            )
+          : null,
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: scheme.primary, size: 17),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _shortInviteeName(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  if (parts.length < 2) return name;
+  return '${parts.first} ${parts.last[0]}.';
+}
+
+String _joinInviteeNames(List<String> names) => switch (names.length) {
+  0 => '',
+  1 => names.single,
+  2 => '${names.first} y ${names.last}',
+  _ => '${names.sublist(0, names.length - 1).join(', ')} y ${names.last}',
+};
+
+int _sentScheduleCount(TournamentScheduleState state) => switch (state) {
+  TournamentScheduleSuccess(:final schedule) =>
+    schedule.rounds
+        .expand((round) => round.matches)
+        .where((match) => match.scheduledAt != null)
+        .length,
+  _ => 0,
 };
