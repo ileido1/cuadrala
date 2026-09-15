@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -26,8 +29,12 @@ final class App extends StatelessWidget {
                 title: 'Cuádrala',
                 theme: AppTheme.light(),
                 darkTheme: AppTheme.dark(),
-                themeMode: ThemeMode.system,
+                themeMode: kIsWeb ? ThemeMode.dark : ThemeMode.system,
                 routerConfig: router.router,
+                builder: (context, child) {
+                  final content = child ?? const SizedBox.shrink();
+                  return kIsWeb ? WebMobileFrame(child: content) : content;
+                },
               ),
             ),
           );
@@ -37,3 +44,54 @@ final class App extends StatelessWidget {
   }
 }
 
+final class WebMobileFrame extends StatelessWidget {
+  const WebMobileFrame({required this.child, super.key});
+
+  static const _maxWidth = 390.0;
+  static const _maxHeight = 844.0;
+  static const _cornerRadius = 28.0;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return ColoredBox(
+      color: colors.surfaceContainerHighest,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.hasBoundedWidth
+              ? math.min(_maxWidth, constraints.maxWidth)
+              : _maxWidth;
+          final height = constraints.hasBoundedHeight
+              ? math.min(_maxHeight, constraints.maxHeight)
+              : _maxHeight;
+
+          return Center(
+            child: Container(
+              width: width,
+              height: height,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerLowest,
+                border: Border.all(
+                  color: colors.outlineVariant.withValues(alpha: 0.6),
+                ),
+                borderRadius: BorderRadius.circular(_cornerRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.24),
+                    blurRadius: 28,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: child,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
