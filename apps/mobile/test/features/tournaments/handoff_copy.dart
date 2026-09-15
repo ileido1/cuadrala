@@ -64,3 +64,9 @@ String? genderTagLabel(String gender) => switch (gender) {
 /// being filtered out of the list.
 String sentInvitationStatusLabel(bool isPending) =>
     isPending ? 'Sin responder' : 'Rechazó';
+
+/// `cuadrala-torneo-org.jsx:338` — the SE-only automatic-advancement caption
+/// on the organizer's Cuadro tab (spec "Org Cuadro — result caption"; D12).
+/// Renders verbatim only for SINGLE_ELIMINATION tournaments.
+const String seAdvancementCaption =
+    'El ganador pasa de ronda automáticamente y a los dos les llega el resultado.';

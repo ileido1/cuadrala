@@ -1,18 +1,27 @@
 part of '../tournament_detail_screen.dart';
 
+/// `tournament_format_preset.code` for single elimination (D12); gates the
+/// "El ganador pasa de ronda..." caption and matches
+/// `SINGLE_ELIMINATION_FORMAT_CODE` in
+/// `register_tournament_match_result.use_case.ts`.
+const _singleEliminationFormatCode = 'SINGLE_ELIMINATION';
+
 final class _OrganizerBracketTab extends StatelessWidget {
   const _OrganizerBracketTab({
     required this.tournamentId,
     required this.organizerUserId,
     required this.tournamentsRepository,
+    required this.formatPresetName,
   });
 
   final String tournamentId;
   final String? organizerUserId;
   final TournamentsRepository tournamentsRepository;
+  final String? formatPresetName;
 
   @override
   Widget build(BuildContext context) {
+    final isSingleElimination = formatPresetName == _singleEliminationFormatCode;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
       child: BlocBuilder<TournamentScheduleCubit, TournamentScheduleState>(
@@ -64,10 +73,12 @@ final class _OrganizerBracketTab extends StatelessWidget {
                     schedule: schedule,
                     tournamentId: tournamentId,
                     tournamentsRepository: tournamentsRepository,
+                    isSingleElimination: isSingleElimination,
                   ),
                 TournamentScheduleConflict() => _OrganizerGeneratedCard(
                   tournamentId: tournamentId,
                   tournamentsRepository: tournamentsRepository,
+                  isSingleElimination: isSingleElimination,
                 ),
                 TournamentScheduleInitial() ||
                 TournamentScheduleEmpty() => _OrganizerGenerateCard(
@@ -157,10 +168,12 @@ final class _OrganizerGeneratedCard extends StatelessWidget {
   const _OrganizerGeneratedCard({
     required this.tournamentId,
     required this.tournamentsRepository,
+    required this.isSingleElimination,
   });
 
   final String tournamentId;
   final TournamentsRepository tournamentsRepository;
+  final bool isSingleElimination;
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +181,7 @@ final class _OrganizerGeneratedCard extends StatelessWidget {
       schedule: TournamentScheduleDto.empty(),
       tournamentId: tournamentId,
       tournamentsRepository: tournamentsRepository,
+      isSingleElimination: isSingleElimination,
       generatedWithoutSchedule: true,
     );
   }
@@ -178,12 +192,14 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
     required this.schedule,
     required this.tournamentId,
     required this.tournamentsRepository,
+    required this.isSingleElimination,
     this.generatedWithoutSchedule = false,
   });
 
   final TournamentScheduleDto schedule;
   final String tournamentId;
   final TournamentsRepository tournamentsRepository;
+  final bool isSingleElimination;
   final bool generatedWithoutSchedule;
 
   @override
@@ -225,6 +241,18 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
             ),
           ],
         ),
+        //? Org Cuadro — result caption (spec; D12): verbatim, SE-only, always
+        //? visible on tab render — not gated behind opening a sheet.
+        if (isSingleElimination) ...[
+          const SizedBox(height: 8),
+          Text(
+            'El ganador pasa de ronda automáticamente y a los dos les llega el resultado.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
+          ),
+        ],
         if (!generatedWithoutSchedule && schedule.rounds.isNotEmpty) ...[
           const SizedBox(height: 20),
           Text(

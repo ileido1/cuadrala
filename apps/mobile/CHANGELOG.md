@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.24] - 2026-09-14
+
+### Agregado
+
+- **Caption de avance automático — solo eliminación simple (M11c)**: la
+  pestaña Cuadro del organizador ahora muestra "El ganador pasa de ronda
+  automáticamente y a los dos les llega el resultado." (verbatim, D12) cuando
+  `formatPresetName == SINGLE_ELIMINATION`; se oculta para round robin,
+  americano o formato desconocido.
+
 ## [1.7.23] - 2026-09-14
 
 ### Agregado

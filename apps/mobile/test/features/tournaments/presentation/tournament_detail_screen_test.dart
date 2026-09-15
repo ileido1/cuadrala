@@ -107,6 +107,7 @@ Widget _buildTestApp({
   required TournamentScheduleCubit scheduleCubit,
   required TournamentScoreboardCubit scoreboardCubit,
   TournamentListItemDto? tournament,
+  TournamentsRepository? tournamentsRepository,
 }) {
   final router = GoRouter(
     initialLocation: '/tournaments/t-1',
@@ -126,7 +127,8 @@ Widget _buildTestApp({
           child: TournamentDetailBody(
             tournamentId: 't-1',
             tournament: tournament,
-            tournamentsRepository: _MockTournamentsRepository(),
+            tournamentsRepository:
+                tournamentsRepository ?? _MockTournamentsRepository(),
           ),
         ),
       ),
@@ -162,6 +164,47 @@ void main() {
     ).thenReturn(const TournamentScoreboardEmpty());
     when(() => registrationsCubit.isCurrentUserRegistered).thenReturn(false);
   });
+
+  /// Opens the organizer's Cuadro tab with the given [schedule] loaded.
+  /// [tournament] defaults to a SINGLE_ELIMINATION-less fixture (M11b's
+  /// baseline); M11c's caption/gating tests override it to set
+  /// `formatPresetName` or inject a stubbed [tournamentsRepository].
+  Future<void> pumpAndOpenBracketTab(
+    WidgetTester tester, {
+    required TournamentScheduleDto schedule,
+    TournamentListItemDto? tournament,
+    TournamentsRepository? tournamentsRepository,
+  }) async {
+    when(() => registrationsCubit.state).thenReturn(
+      const TournamentRegistrationsLoaded(
+        items: [],
+        total: 0,
+        invitations: [],
+      ),
+    );
+    when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+    when(
+      () => scheduleCubit.state,
+    ).thenReturn(TournamentScheduleSuccess(schedule: schedule));
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        registrationsCubit: registrationsCubit,
+        scheduleCubit: scheduleCubit,
+        scoreboardCubit: scoreboardCubit,
+        tournament: tournament ?? _tournament(),
+        tournamentsRepository: tournamentsRepository,
+      ),
+    );
+    await tester.pump();
+
+    final bracketTab = find.descendant(
+      of: find.byType(SegmentedControl<int>),
+      matching: find.text('Cuadro'),
+    );
+    await tester.tap(bracketTab);
+    await tester.pumpAndSettle();
+  }
 
   group('Player detail — pending invitations (D1)', () {
     testWidgets('shows the pending-invitation banner with its open action', (
@@ -1185,40 +1228,6 @@ void main() {
   });
 
   group('_OrganizerBracketTab — Partidos de hoy rows (M11b)', () {
-    Future<void> pumpAndOpenBracketTab(
-      WidgetTester tester, {
-      required TournamentScheduleDto schedule,
-    }) async {
-      when(() => registrationsCubit.state).thenReturn(
-        const TournamentRegistrationsLoaded(
-          items: [],
-          total: 0,
-          invitations: [],
-        ),
-      );
-      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
-      when(
-        () => scheduleCubit.state,
-      ).thenReturn(TournamentScheduleSuccess(schedule: schedule));
-
-      await tester.pumpWidget(
-        _buildTestApp(
-          registrationsCubit: registrationsCubit,
-          scheduleCubit: scheduleCubit,
-          scoreboardCubit: scoreboardCubit,
-          tournament: _tournament(),
-        ),
-      );
-      await tester.pump();
-
-      final bracketTab = find.descendant(
-        of: find.byType(SegmentedControl<int>),
-        matching: find.text('Cuadro'),
-      );
-      await tester.tap(bracketTab);
-      await tester.pumpAndSettle();
-    }
-
     testWidgets('shows the recorded score for a finished match', (
       tester,
     ) async {
@@ -1340,6 +1349,44 @@ void main() {
       expect(find.text('CUARTOS DE FINAL'), findsOneWidget);
       expect(find.text('Luis P. vs Jorge Á.'), findsOneWidget);
       expect(find.text('09:00 · Cancha 2'), findsOneWidget);
+    });
+  });
+
+  group('_OrganizerBracketTab — SE-only advancement caption (M11c)', () {
+    testWidgets('shows the caption verbatim for a single-elimination tournament', (
+      tester,
+    ) async {
+      await pumpAndOpenBracketTab(
+        tester,
+        schedule: const TournamentScheduleDto(rounds: []),
+        tournament: _tournament(formatPresetName: 'SINGLE_ELIMINATION'),
+      );
+
+      expect(find.text(seAdvancementCaption), findsOneWidget);
+    });
+
+    testWidgets('hides the caption for a round-robin tournament', (
+      tester,
+    ) async {
+      await pumpAndOpenBracketTab(
+        tester,
+        schedule: const TournamentScheduleDto(rounds: []),
+        tournament: _tournament(formatPresetName: 'ROUND_ROBIN'),
+      );
+
+      expect(find.text(seAdvancementCaption), findsNothing);
+    });
+
+    testWidgets('hides the caption when the format is unknown', (
+      tester,
+    ) async {
+      await pumpAndOpenBracketTab(
+        tester,
+        schedule: const TournamentScheduleDto(rounds: []),
+        tournament: _tournament(),
+      );
+
+      expect(find.text(seAdvancementCaption), findsNothing);
     });
   });
 }

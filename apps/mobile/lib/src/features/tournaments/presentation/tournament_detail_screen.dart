@@ -448,6 +448,7 @@ final class TournamentDetailBody extends StatelessWidget {
                       tournamentId: tournamentId,
                       organizerUserId: tournament?.organizerUserId,
                       tournamentsRepository: tournamentsRepository,
+                      formatPresetName: tournament?.formatPresetName,
                     ),
                     _OrganizerPublishTab(
                       tournament: tournament,
