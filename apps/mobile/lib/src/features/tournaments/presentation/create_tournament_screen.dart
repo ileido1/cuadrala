@@ -19,7 +19,10 @@ import 'cubit/create_tournament_cubit.dart';
 import 'cubit/create_tournament_state.dart';
 import 'cubit/tournament_presets_cubit.dart';
 import 'cubit/tournament_presets_state.dart';
+import '../../../shared/widgets/count_stepper.dart';
 import '../../../shared/widgets/date_strip.dart';
+import '../../../shared/widgets/dual_price.dart';
+import '../../../shared/widgets/pill_toggle.dart';
 import '../../../shared/widgets/segmented_control.dart';
 
 extension on Iterable<TournamentPresetDto> {
@@ -73,7 +76,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   String? _selectedVenueId;
   TournamentPresetDto? _selectedPreset;
   Map<String, Object?> _formatParameterValues = {};
-  String _visibility = 'PUBLIC';
+  bool _publishOnCreate = false;
+  int _maxSlots = 16;
+  int _registrationPrice = 15;
   String _gender = 'MALE';
   late final List<DateStripDay> _days;
   late String _selectedDateKey;
@@ -211,7 +216,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         startsAt: DateTime.parse(_selectedDateKey),
         venueId: _selectedVenueId,
         gender: _gender,
-        visibility: _visibility,
+        publishOnCreate: _publishOnCreate,
       ),
       error: null,
     );
@@ -425,16 +430,66 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       .toList(),
                 ),
               const SizedBox(height: 14),
-              _CreateUnavailableField(
-                title: 'Cupos',
-                message:
-                    'Se usan los cupos del formato actual hasta que el API exponga el límite configurable.',
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Cupos',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Tamaño del cuadro',
+                          style: TextStyle(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  CountStepper(
+                    value: _maxSlots,
+                    min: 4,
+                    max: 32,
+                    onChanged: (value) => setState(() => _maxSlots = value),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
-              _CreateUnavailableField(
-                title: 'Inscripción',
-                message:
-                    'El precio se define fuera de este formulario por ahora.',
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Inscripción',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 4),
+                        DualPrice(
+                          primaryLabel: _registrationPrice == 0
+                              ? 'Gratis'
+                              : 'US\$_registrationPrice',
+                          secondaryLabel: _registrationPrice == 0
+                              ? null
+                              : 'Bs ${_registrationPrice * 40}',
+                          alignEnd: false,
+                        ),
+                      ],
+                    ),
+                  ),
+                  CountStepper(
+                    value: _registrationPrice,
+                    min: 0,
+                    max: 60,
+                    onChanged: (value) =>
+                        setState(() => _registrationPrice = value),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               Text(
@@ -566,19 +621,34 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               ),
               const SizedBox(height: 8),
               Card(
-                child: SwitchListTile(
-                  value: _visibility == 'PUBLIC',
-                  onChanged: (value) => setState(
-                    () => _visibility = value ? 'PUBLIC' : 'PRIVATE',
-                  ),
-                  title: const Text(
-                    'Publicar al crear',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    _visibility == 'PUBLIC'
-                        ? 'Aparece en el listado y se abre la inscripción.'
-                        : 'Queda en borrador: cargás gente vos y publicás después.',
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Publicar al crear',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _publishOnCreate
+                                  ? 'Aparece en el listado y se abre la inscripción'
+                                  : 'Queda en borrador: cargás gente vos y publicás después',
+                              style: TextStyle(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PillToggle(
+                        value: _publishOnCreate,
+                        onChanged: (value) =>
+                            setState(() => _publishOnCreate = value),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -644,7 +714,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                                   : !_canSubmit &&
                                         _nameController.text.trim().isEmpty
                                   ? 'Ponele nombre al torneo'
-                                  : _visibility == 'PUBLIC'
+                                  : _publishOnCreate
                                   ? 'Crear y publicar'
                                   : 'Crear borrador',
                             ),

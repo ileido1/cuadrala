@@ -19,7 +19,10 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/dy
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/widgets/venue_card.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/count_stepper.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/date_strip.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/dual_price.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/pill_toggle.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
@@ -353,7 +356,7 @@ void main() {
       expect(find.text('La sede se asigna después de crear el torneo. El API todavía no expone este campo.'), findsNothing);
 
       final dateStrip = tester.widget<DateStrip>(find.byType(DateStrip));
-      await tester.tap(find.text('${dateStrip.days[1].date.day}').last);
+      await tester.tap(find.descendant(of: find.byType(DateStrip), matching: find.text('${dateStrip.days[1].date.day}')));
       await tester.pumpAndSettle();
       expect(tester.widget<DateStrip>(find.byType(DateStrip)).value, dateStrip.days[1].key);
 
@@ -388,6 +391,45 @@ void main() {
 
       final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
       expect(request.toJson()['gender'], 'MIXED');
+    });
+
+
+    testWidgets('should render interactive cupos and inscription steppers with dual price', (tester) async {
+      await _pumpScreen(tester);
+
+      expect(find.byType(CountStepper), findsNWidgets(2));
+      expect(tester.widget<CountStepper>(find.byType(CountStepper).first).value, 16);
+      expect(tester.widget<CountStepper>(find.byType(CountStepper).at(1)).value, 15);
+      expect(find.byType(DualPrice), findsOneWidget);
+
+      await tester.tap(find.descendant(of: find.byType(CountStepper).first, matching: find.byIcon(AppIcons.add)));
+      await tester.tap(find.descendant(of: find.byType(CountStepper).at(1), matching: find.byIcon(AppIcons.remove)));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<CountStepper>(find.byType(CountStepper).first).value, 17);
+      expect(tester.widget<CountStepper>(find.byType(CountStepper).at(1)).value, 14);
+    });
+
+    testWidgets('should default Publicar al crear to draft and describe both states', (tester) async {
+      await _pumpScreen(tester);
+
+      expect(find.byType(PillToggle), findsOneWidget);
+      expect(tester.widget<PillToggle>(find.byType(PillToggle)).value, isFalse);
+      expect(find.text('Queda en borrador: cargás gente vos y publicás después'), findsOneWidget);
+
+      await tester.tap(find.byType(PillToggle));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<PillToggle>(find.byType(PillToggle)).value, isTrue);
+      expect(find.text('Aparece en el listado y se abre la inscripción'), findsOneWidget);
+
+      await _enterName(tester);
+      await _selectPreset(tester, 'Llaves');
+      await tester.tap(find.bySubtype<FilledButton>());
+      await tester.pumpAndSettle();
+
+      final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
+      expect(request.publishOnCreate, isTrue);
     });
   });
 }
