@@ -336,6 +336,55 @@ void main() {
 
       expect(result, isEmpty);
     });
+
+    test(
+        'getTournamentSchedule routes S6b-enriched match state fields '
+        '(matchId, matchStatus, decision, rejectedByName, sides, scores) through to the DTO',
+        () async {
+      final api = _MockTournamentsApi();
+      final repo = TournamentsRepository(tournamentsApi: api);
+
+      when(() => api.getTournamentScheduleEnvelope(tournamentId: any(named: 'tournamentId')))
+          .thenAnswer(
+        (_) async => {
+          'rounds': [
+            {
+              'name': 'Ronda 1',
+              'matches': [
+                {
+                  'id': '1-1',
+                  'label': 'Ana vs Lucia',
+                  'status': 'SCHEDULED',
+                  'matchId': 'match-1',
+                  'matchStatus': 'FINISHED',
+                  'decision': 'REJECTED',
+                  'rejectedByName': 'Ana López',
+                  'sides': [
+                    {
+                      'sideKey': 'user-1',
+                      'userIds': ['user-1'],
+                    },
+                  ],
+                  'scores': [
+                    {'userId': 'user-1', 'points': 6},
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      );
+
+      final result = await repo.getTournamentSchedule(tournamentId: 't-1');
+
+      final match = result.rounds.single.matches.single;
+      expect(match.matchId, 'match-1');
+      expect(match.matchStatus, 'FINISHED');
+      expect(match.decision, 'REJECTED');
+      expect(match.rejectedByName, 'Ana López');
+      expect(match.sides.single.sideKey, 'user-1');
+      expect(match.scores.single.points, 6);
+    });
   });
 }
 

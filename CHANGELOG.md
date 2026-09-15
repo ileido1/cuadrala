@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Tournaments handoff fidelity (M11a)**: `TournamentScheduleMatchDto` now parses S6b's enriched match state fields — `matchId`, `matchStatus`, `decision`, `rejectedByName`, `sides`, `scores` — resolved by the API via `formatParameters.{scheduleKey,roundNumber,matchNumber}`; data layer only, no UI change yet (M11b renders these in "Partidos de hoy") (`apps/mobile` 1.7.21+44)
 - **Tournaments handoff fidelity (M10b)**: the organizer's "Invitaciones enviadas" list no longer filters out rejected invitations — they now render with a "Rechazó" label alongside pending ones ("Sin responder"), both showing the invitee's real name (`invitedUserName`, S3a) instead of the raw user id (`apps/mobile` 1.7.20+43)
 - **Tournaments handoff fidelity (M10a)**: the organizer Inscriptos roster now groups by status into "Pendientes" then "Confirmados" sections (guests and authenticated players interleaved, not split into separate groups), and every PENDING row — guest or authenticated — shows the same 38x38 ✓/✕ actions, closing the M10a grouping/per-row-actions requirement (`apps/mobile` 1.7.19+42)
 

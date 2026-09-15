@@ -5,6 +5,18 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.21] - 2026-09-14
+
+### Agregado
+
+- **Datos de estado de partido en el calendario del organizador (M11a)**:
+  `TournamentScheduleMatchDto` ahora parsea `matchStatus`, `decision`,
+  `rejectedByName`, `sides` y `scores` de la respuesta enriquecida de
+  `GET /tournaments/:id/schedule` (S6b), resueltos por el backend vía
+  `formatParameters.{scheduleKey,roundNumber,matchNumber}`. Solo capa de
+  datos — sin cambios visuales todavía (M11b los renderiza en "Partidos de
+  hoy").
+
 ## [1.7.20] - 2026-09-14
 
 ### Agregado
