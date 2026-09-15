@@ -17,6 +17,7 @@ import '../../../shared/widgets/avatar_stack.dart';
 import '../../../shared/widgets/segmented_control.dart';
 import '../../profile/data/models/user_rating_dto.dart';
 import '../../profile/data/profile_repository.dart';
+import '../../venues/data/venues_repository.dart';
 import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';
 import '../data/models/my_tournament_match_dto.dart';
@@ -36,6 +37,7 @@ import 'tournament_status_view.dart';
 import 'tournament_roster_grouping.dart';
 import 'tournament_roster_summary.dart';
 import 'widgets/result_entry_sheet.dart';
+import 'widgets/reschedule_sheet.dart';
 import 'widgets/tournament_entry_check.dart';
 import 'widgets/tournament_pairing_section.dart';
 import 'widgets/tournament_roster_sheet.dart';
@@ -450,6 +452,7 @@ final class TournamentDetailBody extends StatelessWidget {
                       organizerUserId: tournament?.organizerUserId,
                       tournamentsRepository: tournamentsRepository,
                       formatPresetName: tournament?.formatPresetName,
+                      venueId: tournament?.venueId,
                     ),
                     _OrganizerPublishTab(
                       tournament: tournament,
@@ -513,4 +516,3 @@ final class TournamentDetailBody extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Original tab classes
 // ---------------------------------------------------------------------------
-

@@ -399,4 +399,19 @@ class TournamentsRepository {
       body: {'scores': scores.map((s) => s.toJson()).toList()},
     );
   }
+
+  Future<void> rescheduleTournamentMatch({
+    required String tournamentId,
+    required int roundNumber,
+    required int matchNumber,
+    required String courtId,
+    required DateTime scheduledAt,
+  }) {
+    return _tournamentsApi.rescheduleTournamentMatch(
+      tournamentId: tournamentId,
+      roundNumber: roundNumber,
+      matchNumber: matchNumber,
+      body: {'courtId': courtId, 'scheduledAt': scheduledAt.toIso8601String()},
+    );
+  }
 }

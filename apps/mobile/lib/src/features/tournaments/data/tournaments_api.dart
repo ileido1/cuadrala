@@ -206,6 +206,13 @@ abstract interface class TournamentsApi {
     required String matchId,
     required Map<String, Object?> body,
   });
+
+  Future<void> rescheduleTournamentMatch({
+    required String tournamentId,
+    required int roundNumber,
+    required int matchNumber,
+    required Map<String, Object?> body,
+  });
 }
 
 final class DioTournamentsApi implements TournamentsApi {
@@ -511,5 +518,18 @@ final class DioTournamentsApi implements TournamentsApi {
       body: body,
     );
     return decodeEnvelopeDataMap(json);
+  }
+
+  @override
+  Future<void> rescheduleTournamentMatch({
+    required String tournamentId,
+    required int roundNumber,
+    required int matchNumber,
+    required Map<String, Object?> body,
+  }) {
+    return _apiClient.postNoContent(
+      '/api/v1/tournaments/$tournamentId/schedule/rounds/$roundNumber/matches/$matchNumber/reschedule',
+      body: body,
+    );
   }
 }

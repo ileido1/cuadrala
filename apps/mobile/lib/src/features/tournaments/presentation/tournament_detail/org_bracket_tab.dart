@@ -12,12 +12,14 @@ final class _OrganizerBracketTab extends StatelessWidget {
     required this.organizerUserId,
     required this.tournamentsRepository,
     required this.formatPresetName,
+    required this.venueId,
   });
 
   final String tournamentId;
   final String? organizerUserId;
   final TournamentsRepository tournamentsRepository;
   final String? formatPresetName;
+  final String? venueId;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +76,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
                     tournamentId: tournamentId,
                     tournamentsRepository: tournamentsRepository,
                     isSingleElimination: isSingleElimination,
+                    venueId: venueId,
                   ),
                 TournamentScheduleConflict() => _OrganizerGeneratedCard(
                   tournamentId: tournamentId,
@@ -182,6 +185,7 @@ final class _OrganizerGeneratedCard extends StatelessWidget {
       tournamentId: tournamentId,
       tournamentsRepository: tournamentsRepository,
       isSingleElimination: isSingleElimination,
+      venueId: null,
       generatedWithoutSchedule: true,
     );
   }
@@ -193,6 +197,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
     required this.tournamentId,
     required this.tournamentsRepository,
     required this.isSingleElimination,
+    required this.venueId,
     this.generatedWithoutSchedule = false,
   });
 
@@ -200,6 +205,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
   final String tournamentId;
   final TournamentsRepository tournamentsRepository;
   final bool isSingleElimination;
+  final String? venueId;
   final bool generatedWithoutSchedule;
 
   @override
@@ -260,7 +266,10 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
             style: _sectionStyle(Theme.of(context).colorScheme),
           ),
           const SizedBox(height: 10),
-          _OrganizerScheduleList(schedule: schedule),
+          _OrganizerScheduleList(
+            schedule: schedule,
+            venueId: venueId,
+          ),
         ] else ...[
           const SizedBox(height: 14),
           const _InfoBox(
@@ -331,11 +340,15 @@ final class _OrganizerWarningBanner extends StatelessWidget {
 /// plus a status-dependent subtitle and trailing action, driven by M11a's
 /// enriched fields (`matchStatus`/`decision`/`rejectedByName`/`sides`/`scores`).
 final class _OrganizerScheduleList extends StatelessWidget {
-  const _OrganizerScheduleList({required this.schedule});
+  const _OrganizerScheduleList({
+    required this.schedule,
+    required this.venueId,
+  });
 
   static final _timeFormat = DateFormat('HH:mm', 'es_ES');
 
   final TournamentScheduleDto schedule;
+  final String? venueId;
 
   @override
   Widget build(BuildContext context) {
@@ -371,6 +384,7 @@ final class _OrganizerScheduleList extends StatelessWidget {
               roundName: rows[i].roundName,
               match: rows[i].match,
               timeFormat: _timeFormat,
+              venueId: venueId,
             ),
             if (i < rows.length - 1)
               Divider(height: 1, color: scheme.outlineVariant),
@@ -395,11 +409,13 @@ final class _OrganizerMatchRow extends StatelessWidget {
     required this.roundName,
     required this.match,
     required this.timeFormat,
+    required this.venueId,
   });
 
   final String roundName;
   final TournamentScheduleMatchDto match;
   final DateFormat timeFormat;
+  final String? venueId;
 
   @override
   Widget build(BuildContext context) {
@@ -483,14 +499,42 @@ final class _OrganizerMatchRow extends StatelessWidget {
             )
           else if (isRejected)
             OutlinedButton(
-              //? Wiring the reschedule endpoint is M11d's RescheduleSheet.
-              onPressed: null,
+              onPressed: venueId == null || match.roundNumber == null || match.matchNumber == null
+                  ? null
+                  : () => _openRescheduleSheet(context),
               style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34)),
               child: const Text('Mover'),
             ),
         ],
       ),
     );
+  }
+
+  Future<void> _openRescheduleSheet(BuildContext context) async {
+    try {
+      final courts = await getIt<VenuesRepository>().listVenueCourts(
+        venueId: venueId!,
+        status: 'ACTIVE',
+      );
+      if (!context.mounted) return;
+      await showRescheduleSheet(
+        context,
+        courts: courts,
+        onSubmit: ({required courtId, required scheduledAt}) => context
+            .read<TournamentScheduleCubit>()
+            .rescheduleMatch(
+              roundNumber: match.roundNumber!,
+              matchNumber: match.matchNumber!,
+              courtId: courtId,
+              scheduledAt: scheduledAt,
+            ),
+      );
+    } on AppFailure catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
   }
 }
 
@@ -542,4 +586,3 @@ final class _OrganizerSuccessBanner extends StatelessWidget {
     return _InfoBox(message: '$title\n$body', accent: scheme.primary);
   }
 }
-

@@ -80,5 +80,20 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
     );
     await load();
   }
-}
 
+  Future<void> rescheduleMatch({
+    required int roundNumber,
+    required int matchNumber,
+    required String courtId,
+    required DateTime scheduledAt,
+  }) async {
+    await _tournamentsRepository.rescheduleTournamentMatch(
+      tournamentId: _tournamentId,
+      roundNumber: roundNumber,
+      matchNumber: matchNumber,
+      courtId: courtId,
+      scheduledAt: scheduledAt,
+    );
+    await load();
+  }
+}

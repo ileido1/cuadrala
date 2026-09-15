@@ -66,6 +66,8 @@ final class TournamentScheduleMatchDto extends Equatable {
     required this.label,
     required this.status,
     this.matchId,
+    this.roundNumber,
+    this.matchNumber,
     this.scheduledAt,
     this.courtId,
     this.courtName,
@@ -84,6 +86,8 @@ final class TournamentScheduleMatchDto extends Equatable {
   /// OPEN → IN_PROGRESS. `null` until materialized. Tap-to-live-match
   /// navigation is gated on this being non-null.
   final String? matchId;
+  final int? roundNumber;
+  final int? matchNumber;
   final DateTime? scheduledAt;
   final String? courtId;
   final String? courtName;
@@ -116,6 +120,8 @@ final class TournamentScheduleMatchDto extends Equatable {
       label: (json['label'] ?? '').toString(),
       status: (json['status'] ?? '').toString(),
       matchId: json['matchId'] as String?,
+      roundNumber: (json['roundNumber'] as num?)?.toInt(),
+      matchNumber: (json['matchNumber'] as num?)?.toInt(),
       scheduledAt: scheduledAtRaw is String ? DateTime.tryParse(scheduledAtRaw) : null,
       courtId: json['courtId'] as String?,
       courtName: json['courtName'] as String?,
@@ -144,6 +150,8 @@ final class TournamentScheduleMatchDto extends Equatable {
         'label': label,
         'status': status,
         'matchId': matchId,
+        'roundNumber': roundNumber,
+        'matchNumber': matchNumber,
         'scheduledAt': scheduledAt?.toIso8601String(),
         'courtId': courtId,
         'courtName': courtName,
@@ -160,6 +168,8 @@ final class TournamentScheduleMatchDto extends Equatable {
         label,
         status,
         matchId,
+        roundNumber,
+        matchNumber,
         scheduledAt,
         courtId,
         courtName,
@@ -228,4 +238,3 @@ final class TournamentScheduleMatchScoreDto extends Equatable {
   @override
   List<Object?> get props => [userId, points];
 }
-
