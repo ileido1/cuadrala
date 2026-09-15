@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/failures/app_failure.dart';
 import '../../../../core/theme/app_icons.dart';
+import '../../../../shared/widgets/app_header.dart';
 import '../../data/models/bracket_dto.dart';
 import '../../data/tournaments_repository.dart';
 
@@ -35,54 +36,72 @@ class _BracketScreenState extends State<BracketScreen> {
     return FutureBuilder<BracketDto>(
       future: _bracketFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          final error = snapshot.error;
-          if (error is AppFailure) {
-            switch (error.code) {
-              case 'FORMATO_NO_SOPORTADO':
-                return _EmptyState(
-                  icon: AppIcons.info,
-                  title: 'Este torneo no arma cuadro',
-                  subtitle:
-                      'El cuadro existe sólo para eliminación simple. Este torneo es round robin: seguí la posición en la tabla.',
-                );
-              case 'VALIDACION_FALLIDA':
-                return _EmptyState(
-                  icon: AppIcons.group,
-                  title: 'Todavía no hay cuadro',
-                  subtitle: 'Hacen falta al menos 2 inscriptos confirmados.',
-                );
-              default:
-                return _EmptyState(
-                  icon: AppIcons.warning,
-                  title: 'Error',
-                  subtitle: error.message,
-                );
-            }
-          }
-          return _EmptyState(
-            icon: AppIcons.warning,
-            title: 'No se pudo cargar el cuadro',
-            subtitle: 'Revisá tu conexión e intentá de nuevo.',
-          );
-        }
-
-        if (!snapshot.hasData) {
-          return _EmptyState(
-            icon: AppIcons.info,
-            title: 'Sin datos',
-            subtitle: 'No hay información del cuadro.',
-          );
-        }
-
-        final bracket = snapshot.data!;
-        return _BracketView(bracket: bracket);
+        final bracket = snapshot.data;
+        return Column(
+          children: [
+            //? `SheetHeader` con acción de volver (`cuadrala-torneos.jsx:428,439`):
+            //? el bracket ya no depende sólo del gesto de swipe para cerrarse.
+            AppHeader(
+              title: 'Cuadro',
+              subtitle: bracket != null
+                  ? '${bracket.tournamentName} · ${bracket.bracketSize} jugadores'
+                  : null,
+              showBack: true,
+              onBack: () => Navigator.of(context).maybePop(),
+            ),
+            Expanded(child: _buildBody(context, snapshot)),
+          ],
+        );
       },
     );
+  }
+
+  Widget _buildBody(BuildContext context, AsyncSnapshot<BracketDto> snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (snapshot.hasError) {
+      final error = snapshot.error;
+      if (error is AppFailure) {
+        switch (error.code) {
+          case 'FORMATO_NO_SOPORTADO':
+            return _EmptyState(
+              icon: AppIcons.info,
+              title: 'Este torneo no arma cuadro',
+              subtitle:
+                  'El cuadro existe sólo para eliminación simple. Este torneo es round robin: seguí la posición en la tabla.',
+            );
+          case 'VALIDACION_FALLIDA':
+            return _EmptyState(
+              icon: AppIcons.group,
+              title: 'Todavía no hay cuadro',
+              subtitle: 'Hacen falta al menos 2 inscriptos confirmados.',
+            );
+          default:
+            return _EmptyState(
+              icon: AppIcons.warning,
+              title: 'Error',
+              subtitle: error.message,
+            );
+        }
+      }
+      return _EmptyState(
+        icon: AppIcons.warning,
+        title: 'No se pudo cargar el cuadro',
+        subtitle: 'Revisá tu conexión e intentá de nuevo.',
+      );
+    }
+
+    if (!snapshot.hasData) {
+      return _EmptyState(
+        icon: AppIcons.info,
+        title: 'Sin datos',
+        subtitle: 'No hay información del cuadro.',
+      );
+    }
+
+    return _BracketView(bracket: snapshot.data!);
   }
 }
 
@@ -98,31 +117,24 @@ class _BracketView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            bracket.tournamentName,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${bracket.totalRounds} ronda${bracket.totalRounds > 1 ? 's' : ''} · ${bracket.bracketSize} jugadores',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Los huéspedes (inscriptos sin cuenta) no entran al cuadro: sólo jugadores con cuenta.',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 20),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: bracket.rounds
                   .map((round) => _BracketRoundCard(round: round))
                   .toList(),
+            ),
+          ),
+          const SizedBox(height: 18),
+          //? Nota al pie verbatim (`README.md:90`): "Los huéspedes
+          //? (inscriptos sin cuenta) no entran al cuadro." — sin la cláusula
+          //? ": sólo jugadores con cuenta" que estaba agregada de más.
+          Text(
+            'Los huéspedes (inscriptos sin cuenta) no entran al cuadro.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+              height: 1.5,
             ),
           ),
         ],
@@ -147,9 +159,12 @@ class _BracketRoundCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          //? Título de ronda 11.5/800 uppercase (`README.md:90`,
+          //? `cuadrala-torneos.jsx:444`: `textTransform: 'uppercase'`).
           Text(
-            round.name,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            round.name.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11.5,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.4,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -179,19 +194,25 @@ class _BracketMatchCard extends StatelessWidget {
     return GestureDetector(
       onTap: !isBye ? () => _showMatchDetails(context) : null,
       child: Container(
+        key: Key('bracket.matchCard.${match.matchId ?? match.matchNumber}'),
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
+          //? `border: 1.5px solid ${live ? 'var(--green)' : 'var(--line)'}`
+          //? (`cuadrala-torneos.jsx:471`): el ancho es siempre 1.5, sólo el
+          //? color cambia con el estado.
           border: Border.all(
             color: isInProgress ? scheme.primary : scheme.outlineVariant,
-            width: isInProgress ? 2 : 1,
+            width: 1.5,
           ),
           borderRadius: BorderRadius.circular(14),
+          //? `boxShadow: '0 0 0 3px var(--green-bg)'` (`:472`): anillo sólido
+          //? sin blur, no la aproximación previa de blur/spread.
           boxShadow: isInProgress
               ? [
                   BoxShadow(
-                    color: scheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    spreadRadius: 1,
+                    color: scheme.primaryContainer.withValues(alpha: 0.35),
+                    blurRadius: 0,
+                    spreadRadius: 3,
                   ),
                 ]
               : null,
@@ -306,10 +327,13 @@ class _BracketMatchCard extends StatelessWidget {
     );
   }
 
+  //? Sólo "EN JUEGO" está en mayúsculas en el handoff (`cuadrala-torneos.jsx
+  //? :476`); "Pendiente" queda en su capitalización literal (`:477`). No hay
+  //? badge de estado para COMPLETED ni BYE en el handoff.
   String _statusLabel(String status) {
     return switch (status) {
       'PENDING' => 'Pendiente',
-      'IN_PROGRESS' => 'En juego',
+      'IN_PROGRESS' => 'EN JUEGO',
       'COMPLETED' => 'Completado',
       'BYE' => 'Bye',
       _ => status,
@@ -358,14 +382,13 @@ class _MatchPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
+    //? El handoff (`cuadrala-torneos.jsx:459-467`) no dibuja ningún ícono de
+    //? check junto al ganador — sólo el peso de fuente y el color del score
+    //? distinguen al ganador. El check-circle era una extra inventada.
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       child: Row(
         children: [
-          if (isWinner) ...[
-            Icon(AppIcons.checkCircle, size: 16, color: scheme.primary),
-            const SizedBox(width: 4),
-          ],
           Expanded(
             child: Text(
               player?.displayName ?? (bye ? 'Bye' : 'Por definir'),

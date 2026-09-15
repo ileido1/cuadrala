@@ -5,6 +5,19 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.16] - 2026-09-14
+
+### Corregido
+
+- **Cuadro sin copy inventado ni UI de más (M9b)**: la pantalla del cuadro
+  ahora usa `AppHeader` con acción de volver (ya no depende sólo del gesto
+  de swipe); los títulos de ronda se muestran en mayúsculas; la nota al pie
+  vuelve a leer exactamente "Los huéspedes (inscriptos sin cuenta) no
+  entran al cuadro." sin la cláusula agregada de más; el partido en juego
+  usa el anillo sólido del handoff (`0 0 0 3px`) en vez de la aproximación
+  con blur/spread; se quitó el ícono de check junto al ganador, que no
+  existe en el handoff.
+
 ## [1.7.15] - 2026-09-14
 
 ### Corregido
