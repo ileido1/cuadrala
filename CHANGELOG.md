@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **Tournaments handoff fidelity (M10a)**: the organizer roster header now reads "N inscriptos"/"1 inscripto" (handoff spelling) instead of "N inscrito(s)"; a new `tournaments_copy_audit_test.dart` guards the whole tournaments feature against that misspelling — opens Phase 5 (organizer tools) (`apps/mobile` 1.7.18+41)
 - **Tournaments handoff fidelity (M9c)**: the invitation screen's banner now resolves "{org} te invitó" with the same rule as the Listado banner (D7) — `venueName`, falling back to the organizer's display name when there is no venue — instead of always showing the tournament's own name; closes M9 and Phase 4 (mobile detail screen) (`apps/mobile` 1.7.17+40)
 - **Tournaments handoff fidelity (M9b)**: the bracket screen now uses the shared `AppHeader` with a back action instead of relying on swipe-only dismiss, uppercases round titles, restores the exact footer copy "Los huéspedes (inscriptos sin cuenta) no entran al cuadro." (dropping an invented added clause), replaces the blur/spread approximation on the live match with the handoff's solid ring, and removes an invented winner checkmark icon (`apps/mobile` 1.7.16+39)
 - **Tournaments handoff fidelity (M9a)**: `BracketMatchDto.score` now parses the real `{userId, points}`-per-participant contract of `GET /tournaments/:id/bracket` instead of non-existent `playerAScore`/`playerBScore` keys, which always silently resolved to "0" (`apps/mobile` 1.7.15+38)

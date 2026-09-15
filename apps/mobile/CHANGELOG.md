@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.18] - 2026-09-14
+
+### Corregido
+
+- **Ortografía "inscriptos" en el header del roster del organizador (M10a)**:
+  el contador ahora dice "N inscriptos" / "1 inscripto" (ortografía del
+  handoff) en vez de "N inscrito(s)". Nuevo test
+  `tournaments_copy_audit_test.dart` audita todo el feature de torneos contra
+  esa ortografía. Abre la Fase 5 (herramientas del organizador).
+
 ## [1.7.17] - 2026-09-14
 
 ### Corregido

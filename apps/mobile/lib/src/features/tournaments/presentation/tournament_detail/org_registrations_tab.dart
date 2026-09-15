@@ -137,7 +137,7 @@ final class _RegistrationsTab extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${activeItems.length} inscrito${activeItems.length == 1 ? '' : 's'}',
+                      '${activeItems.length} ${activeItems.length == 1 ? 'inscripto' : 'inscriptos'}',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
