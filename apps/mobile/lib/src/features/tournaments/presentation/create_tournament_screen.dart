@@ -10,12 +10,17 @@ import '../../../router/routes.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models/category_dto.dart';
 import '../../catalog/data/models/sport_dto.dart';
+import '../../venues/data/models/venue_dto.dart';
+import '../../venues/data/venues_repository.dart';
+import '../../venues/presentation/widgets/venue_card.dart';
 import '../data/models/create_tournament_request.dart';
 import '../data/models/tournament_preset_dto.dart';
 import 'cubit/create_tournament_cubit.dart';
 import 'cubit/create_tournament_state.dart';
 import 'cubit/tournament_presets_cubit.dart';
 import 'cubit/tournament_presets_state.dart';
+import '../../../shared/widgets/date_strip.dart';
+import '../../../shared/widgets/segmented_control.dart';
 
 extension on Iterable<TournamentPresetDto> {
   TournamentPresetDto? get firstOrNull => isEmpty ? null : first;
@@ -64,9 +69,14 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   String? _selectedSportId;
   List<CategoryDto> _categories = const [];
   String? _selectedCategoryId;
+  List<VenueDto> _venues = const [];
+  String? _selectedVenueId;
   TournamentPresetDto? _selectedPreset;
   Map<String, Object?> _formatParameterValues = {};
   String _visibility = 'PUBLIC';
+  String _gender = 'MALE';
+  late final List<DateStripDay> _days;
+  late String _selectedDateKey;
 
   bool _isLoadingSports = false;
   String? _sportsError;
@@ -81,6 +91,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   @override
   void initState() {
     super.initState();
+    _days = buildDateStripDays(21);
+    _selectedDateKey = _days.first.key;
     _createTournamentCubit = getIt<CreateTournamentCubit>();
     _tournamentPresetsCubit = getIt<TournamentPresetsCubit>();
     _loadSports();
@@ -102,11 +114,13 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     try {
       final sports = await getIt<CatalogRepository>().listSports();
       final categories = await getIt<CatalogRepository>().listCategories();
+      final venues = await getIt<VenuesRepository>().listVenues();
       if (mounted) {
         setState(() {
           _sports = sports;
           _selectedSportId = sports.isEmpty ? null : sports.first.id;
           _categories = categories;
+          _venues = venues;
           //? Solo se ofrecen las categorías del deporte seleccionado (evita
           //? duplicados al mezclar categorías de todos los deportes).
           _selectedCategoryId = _categoriesForSport.isEmpty
@@ -174,8 +188,12 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     //? 3. Validar campos requeridos del schema
     if (preset.parametersSchema != null) {
       for (final field in preset.parametersSchema!) {
-        if (field.required == true && (_formatParameterValues[field.key] == null)) {
-          return (request: null, error: 'El campo "${field.label}" es requerido.');
+        if (field.required == true &&
+            (_formatParameterValues[field.key] == null)) {
+          return (
+            request: null,
+            error: 'El campo "${field.label}" es requerido.',
+          );
         }
       }
     }
@@ -187,7 +205,12 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         categoryId: categoryId,
         name: name,
         formatPresetId: preset.id,
-        formatParameters: _formatParameterValues.isNotEmpty ? _formatParameterValues : null,
+        formatParameters: _formatParameterValues.isNotEmpty
+            ? _formatParameterValues
+            : null,
+        startsAt: DateTime.parse(_selectedDateKey),
+        venueId: _selectedVenueId,
+        gender: _gender,
         visibility: _visibility,
       ),
       error: null,
@@ -217,7 +240,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     final preset = _selectedPreset;
     if (preset?.parametersSchema != null) {
       for (final field in preset!.parametersSchema!) {
-        if (field.required == true && _formatParameterValues[field.key] == null) {
+        if (field.required == true &&
+            _formatParameterValues[field.key] == null) {
           return false;
         }
       }
@@ -307,10 +331,65 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              _CreateUnavailableField(
-                title: 'Dónde',
-                message:
-                    'La sede se asigna después de crear el torneo. El API todavía no expone este campo.',
+              Text(
+                'Cuándo',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              DateStrip(
+                days: _days,
+                value: _selectedDateKey,
+                horizontalPadding: 0,
+                onChanged: (value) => setState(() => _selectedDateKey = value),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Dónde',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              if (_isLoadingSports)
+                const Center(child: CircularProgressIndicator())
+              else if (_venues.isEmpty)
+                const _EmptyBox(message: 'No hay sedes disponibles.')
+              else
+                Column(
+                  children: [
+                    for (final venue in _venues) ...[
+                      VenueCard(
+                        name: venue.name,
+                        imageUrl: venue.imageUrl,
+                        rating: venue.averageRating,
+                        subtitle: venue.address,
+                        tags: venue.sports,
+                        selected: _selectedVenueId == venue.id,
+                        onTap: () =>
+                            setState(() => _selectedVenueId = venue.id),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+                ),
+              const SizedBox(height: 14),
+              Text(
+                'Género',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              SegmentedControl<String>(
+                value: _gender,
+                onChanged: (value) => setState(() => _gender = value),
+                options: const [
+                  SegmentedOption(value: 'MALE', label: 'Masculino'),
+                  SegmentedOption(value: 'FEMALE', label: 'Femenino'),
+                  SegmentedOption(value: 'MIXED', label: 'Mixto'),
+                ],
               ),
               const SizedBox(height: 14),
               Text(

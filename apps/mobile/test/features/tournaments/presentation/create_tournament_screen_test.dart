@@ -16,10 +16,16 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/create_tou
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/create_tournament_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_presets_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/dynamic_format_parameters_form.dart';
+import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
+import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
+import 'package:cuadrala_mobile/src/features/venues/presentation/widgets/venue_card.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/date_strip.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
 
 class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockVenuesRepository extends Mock implements VenuesRepository {}
 
 const _sports = [
   SportDto(id: 'padel', code: 'PADEL', name: 'Pádel'),
@@ -43,6 +49,11 @@ const _categories = [
     scheme: 'NUMERIC',
     sortOrder: 1,
   ),
+];
+
+const _venues = [
+  VenueDto(id: 'venue-1', name: 'Club Norte', address: 'Av. Norte 123', latitude: null, longitude: null),
+  VenueDto(id: 'venue-2', name: 'Pádel Centro', address: 'Calle Centro 456', latitude: null, longitude: null),
 ];
 
 const _presetWithSchema = TournamentPresetDto(
@@ -97,9 +108,11 @@ const _presetWithoutSchema = TournamentPresetDto(
 Future<void> _setupGetIt(
   _MockCatalogRepository catalogRepository,
   _MockTournamentsRepository tournamentsRepository,
+  _MockVenuesRepository venuesRepository,
 ) async {
   await getIt.reset();
   getIt.registerLazySingleton<CatalogRepository>(() => catalogRepository);
+  getIt.registerLazySingleton<VenuesRepository>(() => venuesRepository);
   getIt.registerFactory<CreateTournamentCubit>(
     () => CreateTournamentCubit(tournamentsRepository: tournamentsRepository),
   );
@@ -140,10 +153,12 @@ Finder _inForm(Finder matching) => find.descendant(
 void main() {
   late _MockCatalogRepository catalogRepository;
   late _MockTournamentsRepository tournamentsRepository;
+  late _MockVenuesRepository venuesRepository;
 
   setUp(() async {
     catalogRepository = _MockCatalogRepository();
     tournamentsRepository = _MockTournamentsRepository();
+    venuesRepository = _MockVenuesRepository();
 
     when(() => catalogRepository.listSports()).thenAnswer((_) async => _sports);
     when(() => catalogRepository.listCategories()).thenAnswer((_) async => _categories);
@@ -157,8 +172,9 @@ void main() {
     when(
       () => tournamentsRepository.createTournament(request: any(named: 'request')),
     ).thenAnswer((_) async => const CreateTournamentResponse(tournamentId: ''));
+    when(() => venuesRepository.listVenues()).thenAnswer((_) async => _venues);
 
-    await _setupGetIt(catalogRepository, tournamentsRepository);
+    await _setupGetIt(catalogRepository, tournamentsRepository, venuesRepository);
   });
 
   tearDown(() async => getIt.reset());
@@ -326,5 +342,52 @@ void main() {
     await _selectPreset(tester, 'Liga');
     expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Dobles')).selected, isFalse);
     expect(_submitButton(tester).onPressed, isNull);
+  });
+
+  group('create handoff fields', () {
+    testWidgets('should render DateStrip and selectable venue cards instead of unavailable venue field', (tester) async {
+      await _pumpScreen(tester);
+
+      expect(find.byType(DateStrip), findsOneWidget);
+      expect(find.byType(VenueCard), findsNWidgets(2));
+      expect(find.text('La sede se asigna después de crear el torneo. El API todavía no expone este campo.'), findsNothing);
+
+      final dateStrip = tester.widget<DateStrip>(find.byType(DateStrip));
+      await tester.tap(find.text('${dateStrip.days[1].date.day}').last);
+      await tester.pumpAndSettle();
+      expect(tester.widget<DateStrip>(find.byType(DateStrip)).value, dateStrip.days[1].key);
+
+      await tester.tap(find.text('Pádel Centro'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<VenueCard>(find.byType(VenueCard).at(1)).selected, isTrue);
+    });
+
+    testWidgets('should default gender to Masculino and send the selected API value', (tester) async {
+      await _pumpScreen(tester);
+      expect(tester.widget<SegmentedControl<String>>(find.byType(SegmentedControl<String>)).value, 'MALE');
+
+      await tester.tap(find.text('Femenino'));
+      await tester.tap(find.text('Pádel Centro'));
+      await _enterName(tester);
+      await _selectPreset(tester, 'Llaves');
+      await tester.tap(find.bySubtype<FilledButton>());
+      await tester.pumpAndSettle();
+
+      final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
+      expect(request.toJson()['gender'], 'FEMALE');
+      expect(request.toJson()['venueId'], 'venue-2');
+    });
+
+    testWidgets('should map Mixto to MIXED when submitted', (tester) async {
+      await _pumpScreen(tester);
+      await tester.tap(find.text('Mixto'));
+      await _enterName(tester);
+      await _selectPreset(tester, 'Llaves');
+      await tester.tap(find.bySubtype<FilledButton>());
+      await tester.pumpAndSettle();
+
+      final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
+      expect(request.toJson()['gender'], 'MIXED');
+    });
   });
 }

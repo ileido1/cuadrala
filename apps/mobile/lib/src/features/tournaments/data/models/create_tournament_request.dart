@@ -8,6 +8,8 @@ final class CreateTournamentRequest extends Equatable {
     required this.formatPresetId,
     this.formatParameters,
     this.startsAt,
+    this.venueId,
+    this.gender,
     this.visibility = 'PUBLIC',
     this.publishOnCreate = false,
   });
@@ -18,6 +20,8 @@ final class CreateTournamentRequest extends Equatable {
   final String formatPresetId;
   final Map<String, Object?>? formatParameters;
   final DateTime? startsAt;
+  final String? venueId;
+  final String? gender;
 
   /// `PUBLIC` (aparece en el catálogo) o `PRIVATE` (solo por link).
   final String visibility;
@@ -33,6 +37,8 @@ final class CreateTournamentRequest extends Equatable {
     'visibility': visibility,
     if (formatParameters != null) 'formatParameters': formatParameters,
     if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
+    if (venueId != null) 'venueId': venueId,
+    if (gender != null) 'gender': gender,
   };
 
   @override
@@ -43,6 +49,8 @@ final class CreateTournamentRequest extends Equatable {
     formatPresetId,
     formatParameters,
     startsAt,
+    venueId,
+    gender,
     visibility,
     publishOnCreate,
   ];
