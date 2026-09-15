@@ -65,6 +65,63 @@ TournamentRegistrationDto _registration() => TournamentRegistrationDto(
 void main() {
   setUpAll(() async => initializeDateFormatting('es_ES'));
 
+  testWidgets(
+    'shows organizer tabs on the first pump when viewer role comes from Mis torneos',
+    (tester) async {
+      final registrationsCubit = _MockRegistrationsCubit();
+      final scheduleCubit = _MockScheduleCubit();
+      final scoreboardCubit = _MockScoreboardCubit();
+
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsInitial(),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn(null);
+      when(() => scheduleCubit.state).thenReturn(
+        const TournamentScheduleInitial(),
+      );
+      when(() => scoreboardCubit.state).thenReturn(
+        const TournamentScoreboardEmpty(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<TournamentRegistrationsCubit>.value(
+                value: registrationsCubit,
+              ),
+              BlocProvider<TournamentScheduleCubit>.value(value: scheduleCubit),
+              BlocProvider<TournamentScoreboardCubit>.value(
+                value: scoreboardCubit,
+              ),
+            ],
+            child: TournamentDetailBody(
+              tournamentId: 't-1',
+              tournament: _tournament(organizerUserId: null),
+              viewerIsOrganizer: true,
+              tournamentsRepository: _MockTournamentsRepository(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final tabs = find.byType(SegmentedControl<int>);
+      expect(
+        find.descendant(of: tabs, matching: find.text('Inscriptos')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: tabs, matching: find.text('Cuadro')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: tabs, matching: find.text('Publicar')),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('renders the organizer segmented panel and pending counter', (
     tester,
   ) async {

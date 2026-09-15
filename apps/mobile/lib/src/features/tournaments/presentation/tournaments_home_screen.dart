@@ -334,6 +334,7 @@ final class _ViewerTournamentTile extends StatelessWidget {
         //? código muerto.
         TournamentListItemTile(
           tournament: item.tournament,
+          detailExtra: item,
           pendingInvitationId: item.pendingInvitationId,
           isOrganizer: item.isOrganizer,
         ),

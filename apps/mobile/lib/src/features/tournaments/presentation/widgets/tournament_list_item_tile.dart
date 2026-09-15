@@ -40,6 +40,7 @@ final class TournamentListItemTile extends StatelessWidget {
   const TournamentListItemTile({
     super.key,
     required this.tournament,
+    this.detailExtra,
     this.pendingInvitationId,
     this.isOrganizer = false,
     this.onViewInvitation,
@@ -47,6 +48,10 @@ final class TournamentListItemTile extends StatelessWidget {
   });
 
   final TournamentListItemDto tournament;
+
+  /// Extra completo que se conserva al abrir el detalle desde un listado con
+  /// contexto adicional, como `ViewerTournamentDto` en "Mis torneos".
+  final Object? detailExtra;
 
   /// Id de la invitación PENDING del visor a este torneo (`ViewerTournamentDto
   /// .pendingInvitationId`, M4a); `null` cuando no hay ninguna. Dispara el
@@ -77,7 +82,7 @@ final class TournamentListItemTile extends StatelessWidget {
       child: InkWell(
         onTap: () => context.push(
           Routes.tournamentDetail(tournament.id),
-          extra: tournament,
+          extra: detailExtra ?? tournament,
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),

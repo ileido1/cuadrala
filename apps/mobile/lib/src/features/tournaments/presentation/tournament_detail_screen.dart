@@ -22,6 +22,7 @@ import '../../venues/data/venues_repository.dart';
 import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';
 import '../data/models/my_tournament_match_dto.dart';
+import '../data/models/viewer_tournament_dto.dart';
 import '../domain/tournament_eligibility_resolver.dart';
 import 'tournament_format_label.dart';
 import '../data/models/tournament_registration_dto.dart';
@@ -122,10 +123,12 @@ final class TournamentDetailScreen extends StatefulWidget {
     super.key,
     required this.tournamentId,
     this.extra,
+    this.viewerIsOrganizer,
   });
 
   final String tournamentId;
   final Object? extra;
+  final bool? viewerIsOrganizer;
 
   @override
   State<TournamentDetailScreen> createState() => _TournamentDetailScreenState();
@@ -138,6 +141,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
   late final TournamentsRepository _tournamentsRepository;
 
   TournamentListItemDto? _tournament;
+  bool? _viewerIsOrganizer;
   bool _loadingTournament = false;
   List<UserRatingDto>? _playerRatings;
   TabController? _tabController;
@@ -165,9 +169,15 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     Future.microtask(_loadPlayerRatings);
 
     //? Validar tipo antes de asignar (evita silent null cuando extra es tipo incorrecto)
-    _tournament = widget.extra is TournamentListItemDto
-        ? widget.extra as TournamentListItemDto
+    final viewerTournament = widget.extra is ViewerTournamentDto
+        ? widget.extra as ViewerTournamentDto
         : null;
+    _tournament = viewerTournament?.tournament ??
+        (widget.extra is TournamentListItemDto
+            ? widget.extra as TournamentListItemDto
+            : null);
+    _viewerIsOrganizer =
+        widget.viewerIsOrganizer ?? viewerTournament?.isOrganizer;
     //? Solo fetch si: 1) no tenemos extra, O 2) extra existe pero sin organizerUserId
     //? Con organizerUserId en el listado DTO, evitamos spinner en 90% de los casos.
     if (_tournament == null) {
@@ -258,6 +268,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
           : TournamentDetailBody(
               tournamentId: widget.tournamentId,
               tournament: _tournament,
+              viewerIsOrganizer: _viewerIsOrganizer,
               playerRatings: _playerRatings,
               tournamentsRepository: _tournamentsRepository,
             ),
@@ -273,12 +284,14 @@ final class TournamentDetailBody extends StatelessWidget {
     super.key,
     required this.tournamentId,
     required this.tournament,
+    this.viewerIsOrganizer,
     this.playerRatings,
     required this.tournamentsRepository,
   });
 
   final String tournamentId;
   final TournamentListItemDto? tournament;
+  final bool? viewerIsOrganizer;
   final List<UserRatingDto>? playerRatings;
   final TournamentsRepository tournamentsRepository;
 
@@ -294,10 +307,11 @@ final class TournamentDetailBody extends StatelessWidget {
             registrationsCubit.currentUserId != null
         ? registrationsState.registrationFor(registrationsCubit.currentUserId!)
         : null;
-    final isOrganizer = _isOrganizer(
-      tournament?.organizerUserId,
-      registrationsCubit.currentUserId,
-    );
+    final isOrganizer = viewerIsOrganizer ??
+        _isOrganizer(
+          tournament?.organizerUserId,
+          registrationsCubit.currentUserId,
+        );
     final showPlayerTabs =
         currentRegistration?.status == 'CONFIRMED' ||
         tournament?.status == 'IN_PROGRESS';
