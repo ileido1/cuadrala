@@ -198,6 +198,14 @@ abstract interface class TournamentsApi {
   /// Los torneos del usuario actual: en los que está inscripto, invitado, o
   /// que organiza ("Mis torneos", M4a).
   Future<Map<String, Object?>> getMyTournamentsEnvelope();
+
+  /// El organizador carga el resultado de un partido materializado (D1):
+  /// nunca pasa por el endpoint de settle.
+  Future<Map<String, Object?>> registerTournamentMatchResultEnvelope({
+    required String tournamentId,
+    required String matchId,
+    required Map<String, Object?> body,
+  });
 }
 
 final class DioTournamentsApi implements TournamentsApi {
@@ -490,5 +498,18 @@ final class DioTournamentsApi implements TournamentsApi {
   @override
   Future<Map<String, Object?>> getMyTournamentsEnvelope() {
     return _apiClient.getEnvelopeDataMap('/api/v1/users/me/tournaments');
+  }
+
+  @override
+  Future<Map<String, Object?>> registerTournamentMatchResultEnvelope({
+    required String tournamentId,
+    required String matchId,
+    required Map<String, Object?> body,
+  }) async {
+    final json = await _apiClient.postJson(
+      '/api/v1/tournaments/$tournamentId/matches/$matchId/results',
+      body: body,
+    );
+    return decodeEnvelopeDataMap(json);
   }
 }

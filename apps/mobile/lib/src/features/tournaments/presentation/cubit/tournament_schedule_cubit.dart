@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../data/models/tournament_schedule_dto.dart';
 import '../../data/tournaments_repository.dart';
 import 'tournament_schedule_state.dart';
 
@@ -61,6 +62,23 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
       //? Re-throw programming errors para logs/debugging
       rethrow;
     }
+  }
+
+  /// "Cargar resultado" (M11c): postea via el endpoint de resultados (D1) y
+  /// recarga el calendario para reflejar el estado real (avance de ronda,
+  /// score materializado). Un fallo (p. ej. 409 `RESULTADO_YA_CARGADO`) se
+  /// propaga tal cual — no emite estado ni recarga — para que
+  /// `ResultEntrySheet` muestre el mensaje del backend sin perder lo tipeado.
+  Future<void> submitMatchResult({
+    required String matchId,
+    required List<TournamentScheduleMatchScoreDto> scores,
+  }) async {
+    await _tournamentsRepository.registerMatchResult(
+      tournamentId: _tournamentId,
+      matchId: matchId,
+      scores: scores,
+    );
+    await load();
   }
 }
 

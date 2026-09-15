@@ -5,6 +5,19 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.23] - 2026-09-14
+
+### Agregado
+
+- **ResultEntrySheet — "Cargar resultado" (M11c)**: nuevo bottom sheet
+  organizador que carga el resultado de un partido en vivo via
+  `POST /tournaments/:id/matches/:matchId/results` (D1) — nunca el endpoint
+  de settle. Un `CountStepper` por lado (0-9) define el marcador; al enviar,
+  arma un score por cada `userId` no nulo del lado (los huéspedes se
+  excluyen, ya que `MatchResultScore.userId` es obligatorio) y recarga el
+  calendario del torneo. Un error del backend (p. ej. 409
+  "ya tiene un resultado cargado") se muestra dentro del sheet sin cerrarlo.
+
 ## [1.7.22] - 2026-09-14
 
 ### Agregado

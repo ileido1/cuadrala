@@ -384,4 +384,19 @@ class TournamentsRepository {
         .map(ViewerTournamentDto.fromJson)
         .toList(growable: false);
   }
+
+  /// "Cargar resultado" (M11c, D1): siempre via el endpoint de resultados,
+  /// nunca settle. Un partido ya resuelto responde 409 `RESULTADO_YA_CARGADO`,
+  /// propagado sin envolver para que el sheet muestre el mensaje del backend.
+  Future<void> registerMatchResult({
+    required String tournamentId,
+    required String matchId,
+    required List<TournamentScheduleMatchScoreDto> scores,
+  }) async {
+    await _tournamentsApi.registerTournamentMatchResultEnvelope(
+      tournamentId: tournamentId,
+      matchId: matchId,
+      body: {'scores': scores.map((s) => s.toJson()).toList()},
+    );
+  }
 }

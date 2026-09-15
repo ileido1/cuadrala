@@ -116,6 +116,85 @@ void main() {
         const TournamentScheduleConflict(),
       ],
     );
+
+    blocTest<TournamentScheduleCubit, TournamentScheduleState>(
+      'submitMatchResult (M11c): posts via the results endpoint, then reloads the schedule',
+      build: () {
+        when(
+          () => tournamentsRepository.registerMatchResult(
+            tournamentId: tournamentId,
+            matchId: 'match-1',
+            scores: const [
+              TournamentScheduleMatchScoreDto(userId: 'u1', points: 6),
+              TournamentScheduleMatchScoreDto(userId: 'u2', points: 3),
+            ],
+          ),
+        ).thenAnswer((_) async {});
+        when(() => tournamentsRepository.getTournamentSchedule(tournamentId: tournamentId))
+            .thenAnswer(
+          (_) async => const TournamentScheduleDto(rounds: []),
+        );
+        return TournamentScheduleCubit(
+          tournamentsRepository: tournamentsRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) => cubit.submitMatchResult(
+        matchId: 'match-1',
+        scores: const [
+          TournamentScheduleMatchScoreDto(userId: 'u1', points: 6),
+          TournamentScheduleMatchScoreDto(userId: 'u2', points: 3),
+        ],
+      ),
+      expect: () => [
+        const TournamentScheduleLoading(),
+        const TournamentScheduleEmpty(),
+      ],
+      verify: (_) {
+        verify(
+          () => tournamentsRepository.registerMatchResult(
+            tournamentId: tournamentId,
+            matchId: 'match-1',
+            scores: const [
+              TournamentScheduleMatchScoreDto(userId: 'u1', points: 6),
+              TournamentScheduleMatchScoreDto(userId: 'u2', points: 3),
+            ],
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<TournamentScheduleCubit, TournamentScheduleState>(
+      'submitMatchResult (M11c): a duplicate result (409) propagates and does not reload',
+      build: () {
+        when(
+          () => tournamentsRepository.registerMatchResult(
+            tournamentId: tournamentId,
+            matchId: 'match-1',
+            scores: any(named: 'scores'),
+          ),
+        ).thenThrow(
+          const AppFailure(code: 'RESULTADO_YA_CARGADO', message: 'Ya cargado.'),
+        );
+        return TournamentScheduleCubit(
+          tournamentsRepository: tournamentsRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) => cubit.submitMatchResult(
+        matchId: 'match-1',
+        scores: const [
+          TournamentScheduleMatchScoreDto(userId: 'u1', points: 6),
+        ],
+      ),
+      expect: () => <TournamentScheduleState>[],
+      errors: () => [isA<AppFailure>()],
+      verify: (_) {
+        verifyNever(
+          () => tournamentsRepository.getTournamentSchedule(tournamentId: tournamentId),
+        );
+      },
+    );
   });
 }
 
