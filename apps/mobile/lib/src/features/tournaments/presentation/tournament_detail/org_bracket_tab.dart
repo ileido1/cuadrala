@@ -232,7 +232,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
             style: _sectionStyle(Theme.of(context).colorScheme),
           ),
           const SizedBox(height: 10),
-          _ScheduleList(schedule: schedule),
+          _OrganizerScheduleList(schedule: schedule),
         ] else ...[
           const SizedBox(height: 14),
           const _InfoBox(
@@ -295,6 +295,194 @@ final class _OrganizerWarningBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Renders the organizer's "Partidos de hoy" section (`cuadrala-torneo-org.jsx:150-170`):
+/// a single card listing every scheduled match across all rounds (flat, no
+/// per-round headers), each row carrying its own uppercase round caption
+/// plus a status-dependent subtitle and trailing action, driven by M11a's
+/// enriched fields (`matchStatus`/`decision`/`rejectedByName`/`sides`/`scores`).
+final class _OrganizerScheduleList extends StatelessWidget {
+  const _OrganizerScheduleList({required this.schedule});
+
+  static final _timeFormat = DateFormat('HH:mm', 'es_ES');
+
+  final TournamentScheduleDto schedule;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    //? 1. Flatten every round's matches into one ordered list — the handoff
+    //? shows a single card mixing rounds ("Cuartos 1", "Semi 1"…), not one
+    //? card per round.
+    final rows = <({String roundName, TournamentScheduleMatchDto match})>[
+      for (final round in schedule.rounds)
+        for (final match in round.matches)
+          (roundName: round.name, match: match),
+    ];
+
+    if (rows.isEmpty) {
+      return const _InfoBox(
+        message: 'El calendario todavía no expone partidos de hoy.',
+      );
+    }
+
+    //? 2. Render as a bordered card with a divider between rows.
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            _OrganizerMatchRow(
+              roundName: rows[i].roundName,
+              match: rows[i].match,
+              timeFormat: _timeFormat,
+            ),
+            if (i < rows.length - 1)
+              Divider(height: 1, color: scheme.outlineVariant),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A single "Partidos de hoy" row. Trailing content and subtitle depend on
+/// the match's enriched state:
+/// - `decision == REJECTED`: amber "{who} no puede a las {hh:mm}" subtitle
+///   plus a "Mover" action (wired in M11d).
+/// - `matchStatus == IN_PROGRESS`: normal time/court subtitle plus a
+///   "Cargar" action (wired in M11c).
+/// - `matchStatus == FINISHED` with recorded scores: the per-side score
+///   total, e.g. "6-3".
+/// - anything else: just the time/court subtitle, no trailing action.
+final class _OrganizerMatchRow extends StatelessWidget {
+  const _OrganizerMatchRow({
+    required this.roundName,
+    required this.match,
+    required this.timeFormat,
+  });
+
+  final String roundName;
+  final TournamentScheduleMatchDto match;
+  final DateFormat timeFormat;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isRejected = match.decision == 'REJECTED';
+    final isLive = match.matchStatus == 'IN_PROGRESS';
+    final isDone = match.matchStatus == 'FINISHED' && match.scores.isNotEmpty;
+    const rejectColor = Color(0xFFF59E0B);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  roundName.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .3,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  match.label.isEmpty ? 'Partido' : match.label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  isRejected
+                      ? _rejectedSubtitle(match, timeFormat)
+                      : _scheduledSubtitle(match, timeFormat),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isRejected ? rejectColor : scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (isDone)
+            Text(
+              _scoreLabel(match),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            )
+          else if (isLive)
+            FilledButton(
+              //? Wiring the results endpoint is M11c's ResultEntrySheet.
+              onPressed: null,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              child: const Text('Cargar'),
+            )
+          else if (isRejected)
+            OutlinedButton(
+              //? Wiring the reschedule endpoint is M11d's RescheduleSheet.
+              onPressed: null,
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34)),
+              child: const Text('Mover'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "{time} · {court}", omitting whichever part is unavailable.
+String _scheduledSubtitle(
+  TournamentScheduleMatchDto match,
+  DateFormat timeFormat,
+) {
+  final parts = [
+    if (match.scheduledAt != null) timeFormat.format(match.scheduledAt!),
+    if (match.courtName != null) match.courtName!,
+  ];
+  return parts.isEmpty ? 'Sin horario' : parts.join(' · ');
+}
+
+/// "{rejectedByName} no puede a las {hh:mm}" (`cuadrala-torneo-org.jsx:162`).
+String _rejectedSubtitle(
+  TournamentScheduleMatchDto match,
+  DateFormat timeFormat,
+) {
+  final time = match.scheduledAt != null
+      ? ' a las ${timeFormat.format(match.scheduledAt!)}'
+      : '';
+  final who = match.rejectedByName ?? 'Un jugador';
+  return '$who no puede$time';
+}
+
+/// Sums each side's recorded points and joins them with "-" (e.g. "6-3"),
+/// mirroring the winner rule (D4/D13): total points per side, not sets.
+String _scoreLabel(TournamentScheduleMatchDto match) {
+  return match.sides
+      .map(
+        (side) => match.scores
+            .where((score) => side.userIds.contains(score.userId))
+            .fold<int>(0, (sum, score) => sum + score.points),
+      )
+      .join('-');
 }
 
 final class _OrganizerSuccessBanner extends StatelessWidget {

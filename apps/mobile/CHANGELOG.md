@@ -5,6 +5,20 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.22] - 2026-09-14
+
+### Agregado
+
+- **Filas de "Partidos de hoy" en el Cuadro del organizador (M11b)**:
+  la pestaña Cuadro del organizador ahora renderiza "Partidos de hoy" a
+  partir de los campos enriquecidos de M11a — una sola tarjeta plana con
+  todos los partidos de todas las rondas, cada fila con su ronda en
+  mayúsculas, el marcador total por lado cuando el partido terminó (p. ej.
+  "6-3"), una acción "Cargar" para partidos en vivo, y el nombre de quien
+  rechazó más una acción "Mover" para un horario rechazado ("{nombre} no
+  puede a las {hh:mm}"). Ambas acciones quedan deshabilitadas por ahora —
+  se conectan en M11c/M11d.
+
 ## [1.7.21] - 2026-09-14
 
 ### Agregado

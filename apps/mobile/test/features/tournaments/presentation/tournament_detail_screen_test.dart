@@ -1183,4 +1183,163 @@ void main() {
       },
     );
   });
+
+  group('_OrganizerBracketTab — Partidos de hoy rows (M11b)', () {
+    Future<void> pumpAndOpenBracketTab(
+      WidgetTester tester, {
+      required TournamentScheduleDto schedule,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(TournamentScheduleSuccess(schedule: schedule));
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(),
+        ),
+      );
+      await tester.pump();
+
+      final bracketTab = find.descendant(
+        of: find.byType(SegmentedControl<int>),
+        matching: find.text('Cuadro'),
+      );
+      await tester.tap(bracketTab);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows the recorded score for a finished match', (
+      tester,
+    ) async {
+      final schedule = const TournamentScheduleDto(
+        rounds: [
+          TournamentScheduleRoundDto(
+            name: 'Cuartos de final',
+            matches: [
+              TournamentScheduleMatchDto(
+                id: 'sched-1',
+                label: 'Daniel R. vs Marcos S.',
+                status: '',
+                matchId: 'match-1',
+                matchStatus: 'FINISHED',
+                sides: [
+                  TournamentScheduleMatchSideDto(
+                    sideKey: 'a',
+                    userIds: ['u1'],
+                  ),
+                  TournamentScheduleMatchSideDto(
+                    sideKey: 'b',
+                    userIds: ['u2'],
+                  ),
+                ],
+                scores: [
+                  TournamentScheduleMatchScoreDto(userId: 'u1', points: 6),
+                  TournamentScheduleMatchScoreDto(userId: 'u2', points: 3),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await pumpAndOpenBracketTab(tester, schedule: schedule);
+
+      expect(find.text('Partidos de hoy'), findsOneWidget);
+      expect(find.text('Daniel R. vs Marcos S.'), findsOneWidget);
+      expect(find.text('6-3'), findsOneWidget);
+    });
+
+    testWidgets('shows a Cargar action for a live match', (tester) async {
+      final schedule = TournamentScheduleDto(
+        rounds: [
+          TournamentScheduleRoundDto(
+            name: 'Semifinal',
+            matches: [
+              TournamentScheduleMatchDto(
+                id: 'sched-2',
+                label: 'Daniel R. vs Luis P.',
+                status: '',
+                matchId: 'match-2',
+                matchStatus: 'IN_PROGRESS',
+                scheduledAt: DateTime(2024, 1, 1, 11, 30),
+                courtName: 'Central',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await pumpAndOpenBracketTab(tester, schedule: schedule);
+
+      expect(find.text('11:30 · Central'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Cargar'), findsOneWidget);
+    });
+
+    testWidgets(
+      'shows the rejecter name and a Mover action for a rejected slot',
+      (tester) async {
+        final schedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Semifinal',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'sched-3',
+                  label: 'Pedro L. vs Rafa T.',
+                  status: '',
+                  decision: 'REJECTED',
+                  rejectedByName: 'Rafa T.',
+                  scheduledAt: DateTime(2024, 1, 1, 11, 30),
+                  courtName: 'Cancha 2',
+                ),
+              ],
+            ),
+          ],
+        );
+
+        await pumpAndOpenBracketTab(tester, schedule: schedule);
+
+        expect(find.text('Rafa T. no puede a las 11:30'), findsOneWidget);
+        expect(find.widgetWithText(OutlinedButton, 'Mover'), findsOneWidget);
+      },
+    );
+
+    testWidgets('shows round name and label for a scheduled, not-yet-live match', (
+      tester,
+    ) async {
+      final schedule = TournamentScheduleDto(
+        rounds: [
+          TournamentScheduleRoundDto(
+            name: 'Cuartos de final',
+            matches: [
+              TournamentScheduleMatchDto(
+                id: 'sched-4',
+                label: 'Luis P. vs Jorge Á.',
+                status: '',
+                scheduledAt: DateTime(2024, 1, 1, 9),
+                courtName: 'Cancha 2',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await pumpAndOpenBracketTab(tester, schedule: schedule);
+
+      expect(find.text('CUARTOS DE FINAL'), findsOneWidget);
+      expect(find.text('Luis P. vs Jorge Á.'), findsOneWidget);
+      expect(find.text('09:00 · Cancha 2'), findsOneWidget);
+    });
+  });
 }
