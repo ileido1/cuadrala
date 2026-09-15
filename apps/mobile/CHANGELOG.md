@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.20] - 2026-09-14
+
+### Agregado
+
+- **"Rechazó"/"Sin responder" y nombres reales en Invitaciones enviadas del
+  organizador (M10b)**: las invitaciones rechazadas ya no se filtran de la
+  lista "Invitaciones enviadas" — ahora muestran la etiqueta "Rechazó", junto
+  a las pendientes con "Sin responder". Ambas filas muestran el nombre real
+  del invitado (`invitedUserName`, S3a) en vez del id crudo.
+
 ## [1.7.19] - 2026-09-14
 
 ### Agregado

@@ -19,6 +19,8 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_invitation_screen.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
+import '../handoff_copy.dart';
+
 class _MockRegistrationsCubit extends MockCubit<TournamentRegistrationsState>
     implements TournamentRegistrationsCubit {}
 
@@ -217,6 +219,84 @@ void main() {
       await tester.pump();
 
       expect(find.text('Juan Pérez te invitó'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'org Inscriptos shows Rechazó for rejected invitations and invitee names, '
+    'not filtered out',
+    (tester) async {
+      final registrationsCubit = _MockRegistrationsCubit();
+      final scheduleCubit = _MockScheduleCubit();
+      final scoreboardCubit = _MockScoreboardCubit();
+      final repository = _MockTournamentsRepository();
+
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: const [],
+          total: 0,
+          canManageInvitations: true,
+          invitations: [
+            TournamentInvitationDto(
+              id: 'inv-pending',
+              tournamentId: 't-1',
+              invitedUserId: 'user-pending',
+              invitedUserName: 'Ana López',
+              createdByUserId: 'organizer-1',
+              status: 'PENDING',
+              createdAt: DateTime(2026),
+            ),
+            TournamentInvitationDto(
+              id: 'inv-rejected',
+              tournamentId: 't-1',
+              invitedUserId: 'user-rejected',
+              invitedUserName: 'Carlos Ruiz',
+              createdByUserId: 'organizer-1',
+              status: 'REJECTED',
+              createdAt: DateTime(2026),
+            ),
+          ],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleInitial());
+      when(
+        () => scoreboardCubit.state,
+      ).thenReturn(const TournamentScoreboardEmpty());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<TournamentRegistrationsCubit>.value(
+                value: registrationsCubit,
+              ),
+              BlocProvider<TournamentScheduleCubit>.value(
+                value: scheduleCubit,
+              ),
+              BlocProvider<TournamentScoreboardCubit>.value(
+                value: scoreboardCubit,
+              ),
+            ],
+            child: TournamentDetailBody(
+              tournamentId: 't-1',
+              tournament: _tournament(organizerUserId: 'organizer-1'),
+              tournamentsRepository: repository,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      //? Rejected invitations render "Rechazó" instead of being filtered
+      //? out of "Invitaciones enviadas" (spec "Org Inscriptos — grouping and
+      //? per-row actions" cross-reference; M10b).
+      expect(find.text('Ana López'), findsOneWidget);
+      expect(find.text('Carlos Ruiz'), findsOneWidget);
+      expect(find.text(sentInvitationStatusLabel(true)), findsOneWidget);
+      expect(find.text(sentInvitationStatusLabel(false)), findsOneWidget);
     },
   );
 }

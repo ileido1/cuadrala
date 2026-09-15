@@ -10,6 +10,7 @@ final class TournamentInvitationDto extends Equatable {
     required this.createdByUserId,
     required this.status,
     required this.createdAt,
+    this.invitedUserName,
   });
 
   final String id;
@@ -21,7 +22,17 @@ final class TournamentInvitationDto extends Equatable {
   final String status;
   final DateTime createdAt;
 
+  /// Display name of the invited user (S3a — `organizerName`/`invitedUserName`
+  /// design D7). `null` when the API can't resolve it (e.g. deleted user).
+  final String? invitedUserName;
+
   bool get isPending => status == 'PENDING';
+
+  bool get isRejected => status == 'REJECTED';
+
+  /// Label for the organizer's "Invitaciones enviadas" row, falling back to
+  /// the raw id when [invitedUserName] is unavailable.
+  String get invitedDisplayName => invitedUserName ?? invitedUserId;
 
   factory TournamentInvitationDto.fromJson(Map<String, Object?> json) {
     return TournamentInvitationDto(
@@ -31,6 +42,7 @@ final class TournamentInvitationDto extends Equatable {
       createdByUserId: json['createdByUserId'] as String,
       status: json['status'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      invitedUserName: json['invitedUserName'] as String?,
     );
   }
 
@@ -42,5 +54,6 @@ final class TournamentInvitationDto extends Equatable {
         createdByUserId,
         status,
         createdAt,
+        invitedUserName,
       ];
 }

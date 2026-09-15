@@ -127,8 +127,12 @@ final class _RegistrationsTab extends StatelessWidget {
               if (loaded.canManageInvitations) ...[
                 _OrganizerInvitationsSection(
                   tournamentId: tournamentId,
+                  //? Rejected invitations render with a "Rechazó" label
+                  //? instead of being filtered out (spec "Org Inscriptos —
+                  //? grouping and per-row actions"; M10b). Accepted ones
+                  //? became a registration already; cancelled ones are gone.
                   invitations: loaded.invitations
-                      .where((i) => i.isPending)
+                      .where((i) => i.isPending || i.isRejected)
                       .toList(),
                   busy: loaded.inviting,
                 ),
@@ -845,13 +849,30 @@ final class _OrganizerInvitationsSectionState
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
                   children: [
-                    Expanded(child: Text(invitation.invitedUserId)),
-                    TextButton(
-                      onPressed: widget.busy
-                          ? null
-                          : () => cubit.cancelInvitation(invitation.id),
-                      child: const Text('Cancelar'),
+                    //? Invitee display name from S3a's `invitedUserName`,
+                    //? falling back to the raw id when it's unavailable.
+                    Expanded(child: Text(invitation.invitedDisplayName)),
+                    const SizedBox(width: 8),
+                    //? "Sin responder" while PENDING, "Rechazó" once
+                    //? REJECTED — rejected invitations are shown here
+                    //? instead of being filtered out (M10b).
+                    Text(
+                      invitation.isPending ? 'Sin responder' : 'Rechazó',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: invitation.isPending
+                            ? scheme.onSurfaceVariant
+                            : scheme.error,
+                      ),
                     ),
+                    if (invitation.isPending)
+                      TextButton(
+                        onPressed: widget.busy
+                            ? null
+                            : () => cubit.cancelInvitation(invitation.id),
+                        child: const Text('Cancelar'),
+                      ),
                   ],
                 ),
               ),
