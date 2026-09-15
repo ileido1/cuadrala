@@ -759,47 +759,6 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   }
 }
 
-final class _CreateUnavailableField extends StatelessWidget {
-  const _CreateUnavailableField({required this.title, required this.message});
-
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: scheme.outlineVariant),
-          ),
-          child: Text(
-            message,
-            style: TextStyle(
-              color: scheme.onSurfaceVariant,
-              fontSize: 12.5,
-              height: 1.45,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 final class _EmptyBox extends StatelessWidget {
   const _EmptyBox({required this.message});
 
