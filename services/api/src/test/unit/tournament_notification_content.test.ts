@@ -16,6 +16,7 @@ describe('Tournament notification events', () => {
       //? Un rechazo y un vencimiento comparten evento: para el organizador son
       //? el mismo problema, "este partido necesita que lo mires".
       'TOURNAMENT_MATCH_NEEDS_ATTENTION',
+      'TOURNAMENT_MATCH_RESULT_RECORDED',
     ]);
   });
 
@@ -42,5 +43,12 @@ describe('Tournament notification events', () => {
     expect(notificationContentForTypeSV('TOURNAMENT_SCHEDULE_PUBLISHED').title).toBe(
       'Ya está el calendario',
     );
+  });
+
+  //? Copia exacta del handoff (`cuadrala-torneo-org.jsx:342`): nada inventado.
+  it('should use the exact handoff copy "Resultado cargado" for both title and body', () => {
+    const CONTENT = notificationContentForTypeSV('TOURNAMENT_MATCH_RESULT_RECORDED');
+    expect(CONTENT.title).toBe('Resultado cargado');
+    expect(CONTENT.body).toBe('Resultado cargado');
   });
 });

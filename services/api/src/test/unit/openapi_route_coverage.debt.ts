@@ -60,8 +60,7 @@ export const UNDOCUMENTED_ROUTES: readonly string[] = [
   'PATCH /tournaments/:tournamentId/registrations/:registrationId',
   'POST /tournaments/:tournamentId/registrations/:userId/withdraw',
 
-  //? tournaments — 7 de 7
-  'GET /tournaments',
+  //? tournaments — 6 de 7 (GET /tournaments documentada en sdd/tournaments-handoff-fidelity S1)
   'GET /tournaments/:tournamentId',
   'GET /tournaments/:tournamentId/bracket',
   'POST /tournaments/:tournamentId/matches/:matchId/results',

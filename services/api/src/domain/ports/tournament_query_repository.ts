@@ -7,12 +7,17 @@ export type TournamentVisibility = 'PUBLIC' | 'PRIVATE';
 
 export type RegistrationStatus = 'PENDING' | 'CONFIRMED' | 'WITHDRAWN';
 
+/** Reusa `MatchGender` (schema.prisma). `null` = sin declarar. */
+export type TournamentGender = 'MALE' | 'FEMALE' | 'MIXED';
+
 export type TournamentListItemDTO = {
   id: string;
   name: string;
   status: TournamentStatus;
   visibility: TournamentVisibility;
   organizerUserId: string | null;
+  /** Nombre del organizador; `null` cuando el torneo no tiene uno asignado. */
+  organizerName: string | null;
   sportId: string;
   sportName: string;
   categoryId: string;
@@ -28,6 +33,10 @@ export type TournamentListItemDTO = {
   maxSlots: number | null;
   /** Cierre informativo de la inscripción (ISO 8601). */
   registrationClosesAt: string | null;
+  /** Reusa `MatchGender`; `null` = sin declarar. */
+  gender: TournamentGender | null;
+  /** Distancia a `near` en km. Ausente (nunca `null`) cuando el listado no se filtró por `near`. */
+  distanceKm?: number;
 };
 
 export type TournamentDetailDTO = TournamentListItemDTO & {
@@ -54,11 +63,30 @@ export type ListTournamentsFiltersDTO = {
   venueId?: string;
   startsAtFrom?: string;
   startsAtTo?: string;
+  /** Filtra por la sede del torneo dentro de `radiusKm` y habilita `distanceKm` en el DTO. */
+  near?: { lat: number; lng: number; radiusKm: number };
 };
 
 export type PageDTO = {
   page: number;
   limit: number;
+};
+
+/**
+ * Un torneo desde el punto de vista del usuario que consulta: en que estado
+ * esta su inscripcion (si tiene), si tiene una invitacion pendiente, si es el
+ * organizador, y (solo para el organizador) cuantas inscripciones esperan
+ * confirmacion.
+ */
+export type ViewerTournamentItemDTO = {
+  tournament: TournamentListItemDTO;
+  /** `null` cuando el usuario no tiene inscripcion vigente (PENDING/CONFIRMED) en el torneo. */
+  registrationStatus: 'PENDING' | 'CONFIRMED' | null;
+  /** Id de la invitacion PENDING del usuario a este torneo; `null` si no hay ninguna. */
+  pendingInvitationId: string | null;
+  isOrganizer: boolean;
+  /** Solo tiene valor cuando `isOrganizer` es true; `null` para cualquier otro rol. */
+  pendingRegistrationsCount: number | null;
 };
 
 export interface TournamentQueryRepository {
@@ -78,4 +106,11 @@ export interface TournamentQueryRepository {
     _filters: ListTournamentsFiltersDTO,
     _page: PageDTO,
   ): Promise<{ items: TournamentListItemDTO[]; total: number }>;
+
+  /**
+   * Torneos en los que el usuario esta inscripto, invitado (PENDING), o que
+   * organiza. Un torneo puede aparecer una sola vez aunque el usuario cumpla
+   * mas de un rol a la vez (p. ej. organizador que tambien se autoinscribio).
+   */
+  listViewerTournamentsSV(_userId: string): Promise<ViewerTournamentItemDTO[]>;
 }

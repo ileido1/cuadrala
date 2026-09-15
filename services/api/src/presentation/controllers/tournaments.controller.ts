@@ -29,6 +29,8 @@ export async function getListTournamentsCON(_req: Request, _res: Response): Prom
     ...(QUERY.venueId !== undefined ? { venueId: QUERY.venueId } : {}),
     ...(QUERY.startsAtFrom !== undefined ? { startsAtFrom: QUERY.startsAtFrom } : {}),
     ...(QUERY.startsAtTo !== undefined ? { startsAtTo: QUERY.startsAtTo } : {}),
+    ...(QUERY.near !== undefined ? { near: QUERY.near } : {}),
+    ...(QUERY.radiusKm !== undefined ? { radiusKm: QUERY.radiusKm } : {}),
   });
 
   _res.status(200).json({

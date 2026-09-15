@@ -20,6 +20,10 @@ final class TournamentListItemDto extends Equatable {
     this.inscriptionPrice,
     this.maxSlots,
     this.registrationClosesAt,
+    this.distanceKm,
+    this.gender,
+    this.organizerName,
+    this.formatPresetName,
   });
 
   final String id;
@@ -62,6 +66,27 @@ final class TournamentListItemDto extends Equatable {
   /// la API sigue aceptando altas mientras el torneo esté en DRAFT u OPEN.
   final DateTime? registrationClosesAt;
 
+  /// Distancia en km al venue del torneo. Sólo viene cuando el listado se
+  /// filtró con `near` (chip "Cerca", M3d); si no se aplicó el filtro, la API
+  /// no manda el campo y la tarjeta no debe inventar una distancia.
+  final double? distanceKm;
+
+  /// `MALE`/`FEMALE`/`MIXED` (`MatchGender`, S2). `null` en torneos viejos
+  /// que no lo declararon; la tarjeta del listado lo muestra como etiqueta
+  /// junto a la categoría (M4b-2).
+  final String? gender;
+
+  /// Nombre del organizador (S3a). Resuelve `{org}` del banner de invitación
+  /// y la fila de organizador (M4b-1) cuando el torneo no tiene sede.
+  final String? organizerName;
+
+  /// CODE del preset de formato (`SINGLE_ELIMINATION`, `ROUND_ROBIN`, ...),
+  /// no un nombre listo para mostrar — usar `tournamentFormatLabel` para
+  /// traducirlo. Sólo `GET /tournaments/:id` (detalle) lo manda
+  /// (`tournament_query_repository.ts:44`); el listado no lo trae, por eso
+  /// es `null` en una tarjeta de `GET /tournaments`.
+  final String? formatPresetName;
+
   factory TournamentListItemDto.fromJson(Map<String, Object?> json) {
     return TournamentListItemDto(
       id: json['id'] as String,
@@ -97,6 +122,15 @@ final class TournamentListItemDto extends Equatable {
         json['registrationClosesAt'],
         json['registration_closes_at'],
       ),
+      distanceKm: _parseNumericFieldSV(
+        json['distanceKm'],
+        json['distance_km'],
+      ),
+      gender: json['gender'] as String?,
+      organizerName:
+          json['organizerName'] as String? ?? json['organizer_name'] as String?,
+      formatPresetName: json['formatPresetName'] as String? ??
+          json['format_preset_name'] as String?,
     );
   }
 
@@ -135,5 +169,9 @@ final class TournamentListItemDto extends Equatable {
         inscriptionPrice,
         maxSlots,
         registrationClosesAt,
+        distanceKm,
+        gender,
+        organizerName,
+        formatPresetName,
       ];
 }

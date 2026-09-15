@@ -1,7 +1,16 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { TournamentQueryRepository } from '../../domain/ports/tournament_query_repository.js';
 import type { TournamentMatchResultRepository } from '../../domain/ports/tournament_match_result_repository.js';
-import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
+import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
+import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
+import {
+  resolveMatchWinningUserIdsSV,
+  type MatchParticipantScoreSV,
+} from '../../domain/tournament/match_side_aggregation.js';
+
+//? Único formato donde un empate es inválido (D13): el bracket necesita un
+//? ganador para avanzar. Round robin/americano aceptan empates sin avance.
+const SINGLE_ELIMINATION_FORMAT_CODE = 'SINGLE_ELIMINATION';
 
 export type ScoreEntryDTO = {
   scores: { userId: string; points: number }[];
@@ -18,13 +27,16 @@ export type RegisterTournamentMatchResultInput = {
 export type RegisterTournamentMatchResultOutput = {
   resultId: string;
   recordedAt: Date;
+  /** Partidos de ronda siguiente creados por el avance automático (S7c-1); vacío fuera de SE. */
+  createdMatchIds: string[];
 };
 
 export class RegisterTournamentMatchResultUseCase {
   constructor(
     private readonly _tournamentQueryRepository: TournamentQueryRepository,
-    private readonly _venueStaffRepository: VenueStaffRepository,
+    private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
     private readonly _tournamentMatchResultRepository: TournamentMatchResultRepository,
+    private readonly _createTournamentNotificationEvent: CreateTournamentNotificationEventUseCase | null = null,
   ) {}
 
   async executeSV(
@@ -43,13 +55,14 @@ export class RegisterTournamentMatchResultUseCase {
       throw new AppError('VALIDACION_FALLIDA', 'El torneo no tiene partidos asociados.', 400);
     }
 
-    const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
-      requestingUserId,
-      VENUE_ID,
-    );
-    if (!IS_STAFF) {
-      throw new AppError('ACCESO_DENEGADO', 'No tienes permisos para editar este torneo.', 403);
-    }
+    //? El organizador del torneo también puede cargar resultados, no solo el staff de la sede
+    //? (regla compartida con list_tournament_registrations.use_case.ts — no duplicarla).
+    await this._assertTournamentOrganizerAccess.executeSV({
+      actorUserId: requestingUserId,
+      organizerUserId: TOURNAMENT.organizerUserId,
+      venueId: VENUE_ID,
+      forbiddenMessage: 'No tienes permisos para editar este torneo.',
+    });
 
     const BELONGS = await this._tournamentMatchResultRepository.matchBelongsToTournamentSV(
       matchId,
@@ -57,6 +70,19 @@ export class RegisterTournamentMatchResultUseCase {
     );
     if (!BELONGS) {
       throw new AppError('VALIDACION_FALLIDA', 'El partido no pertenece a este torneo.', 400);
+    }
+
+    //? Un partido ya resuelto no admite un segundo resultado (evita duplicar el marcador).
+    //? Chequeo a nivel de aplicación, no atómico bajo concurrencia real: la garantía
+    //? transaccional (SELECT ... FOR UPDATE) queda para S7c-1, que ya construye
+    //? registerResultAndAdvanceSV como una única transacción.
+    const HAS_RESULT = await this._tournamentMatchResultRepository.matchHasResultSV(matchId);
+    if (HAS_RESULT) {
+      throw new AppError(
+        'RESULTADO_YA_CARGADO',
+        'Este partido ya tiene un resultado cargado.',
+        409,
+      );
     }
 
     if (!Array.isArray(scores) || scores.length === 0) {
@@ -73,6 +99,59 @@ export class RegisterTournamentMatchResultUseCase {
       }
     }
 
-    return this._tournamentMatchResultRepository.registerResultSV({ matchId, scores });
+    //? Empate inválido solo en eliminación simple (D13). El agrupamiento por
+    //? lado (teamLabel ?? userId) reutiliza resolveMatchWinningUserIdsSV — nunca
+    //? se reimplementa la comparación de filas individuales (pattern #807).
+    if (TOURNAMENT.formatPresetName === SINGLE_ELIMINATION_FORMAT_CODE) {
+      const PARTICIPANT_SIDES =
+        await this._tournamentMatchResultRepository.listMatchParticipantSidesSV(matchId);
+      const TEAM_LABEL_BY_USER_ID = new Map(
+        PARTICIPANT_SIDES.map((_p) => [_p.userId, _p.teamLabel]),
+      );
+
+      const SIDE_SCORES: MatchParticipantScoreSV[] = scores.map((_score) => ({
+        userId: _score.userId,
+        teamLabel: TEAM_LABEL_BY_USER_ID.get(_score.userId) ?? null,
+        points: _score.points,
+      }));
+
+      const WINNING_USER_IDS = resolveMatchWinningUserIdsSV(SIDE_SCORES);
+      if (WINNING_USER_IDS.length === 0) {
+        throw new AppError(
+          'VALIDACION_FALLIDA',
+          'Un partido de eliminación simple no puede terminar empatado.',
+          400,
+        );
+      }
+    }
+
+    //? La escritura del resultado y el avance automático de eliminación simple
+    //? (S7c-1, D13) ocurren en una única transacción del repositorio — nunca
+    //? se separan, para que un resultado nunca quede guardado sin su avance
+    //? (o viceversa) si falla a mitad de camino.
+    const RESULT = await this._tournamentMatchResultRepository.registerResultAndAdvanceSV({
+      matchId,
+      scores,
+    });
+
+    //? Mejor esfuerzo, después del commit (S9): una notificación fallida nunca
+    //? tira abajo un resultado ya guardado. `MatchResultScore.userId` es NOT
+    //? NULL en el schema, así que un lado huésped nunca aparece en `scores` —
+    //? no hace falta distinguirlo aparte ni consultar participantes.
+    if (this._createTournamentNotificationEvent !== null) {
+      try {
+        await this._createTournamentNotificationEvent.executeSV({
+          type: 'TOURNAMENT_MATCH_RESULT_RECORDED',
+          tournamentId,
+          categoryId: TOURNAMENT.categoryId,
+          payload: { tournamentName: TOURNAMENT.name },
+          userIds: [...new Set(scores.map((_s) => _s.userId))],
+        });
+      } catch {
+        // No bloquear ni revertir el resultado si falla la notificación.
+      }
+    }
+
+    return RESULT;
   }
 }

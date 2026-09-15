@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/formatting/money_format.dart';
 import '../../../../core/models/currency_code.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/brand_colors.dart';
+import '../../../../shared/widgets/dual_price.dart';
 
 /// Por qué el jugador puede o no puede entrar al torneo.
 ///
@@ -33,6 +35,7 @@ class TournamentEntryCheck extends StatelessWidget {
     required this.categoryName,
     this.playerCategoryName,
     this.inscriptionPrice,
+    this.inscriptionPriceBs,
     this.startsAt,
     this.registrationClosesAt,
     this.venueName,
@@ -45,6 +48,14 @@ class TournamentEntryCheck extends StatelessWidget {
   final String? playerCategoryName;
 
   final double? inscriptionPrice;
+
+  /// Precio en Bs ya formateado (p. ej. `Bs 320`), para [DualPrice].
+  ///
+  /// `null` mientras nadie resuelva la tasa real (`ExchangeRatesRepository`)
+  /// contra este dato — este widget sigue siendo presentacional y no debe
+  /// inventar una conversión con un factor fijo.
+  final String? inscriptionPriceBs;
+
   final DateTime? startsAt;
   final DateTime? registrationClosesAt;
   final String? venueName;
@@ -55,32 +66,52 @@ class TournamentEntryCheck extends StatelessWidget {
 
     final rows = <Widget>[
       _EntryRow(
-        icon: Icons.workspace_premium_outlined,
+        icon: AppIcons.star,
         label: 'NIVEL',
         value: categoryName,
         sub: _levelSubSV(),
         blocked: eligibility == TournamentEligibility.wrongCategory,
-        trailing: eligibility == TournamentEligibility.wrongCategory
-            ? Icon(
-                key: const Key('entry.level.locked'),
-                Icons.lock_outline,
-                size: 18,
-                color: BrandColors.dangerRed,
-              )
-            : null,
+        //? `cuadrala-torneos.jsx:86-87`: `tone === 'ok'` (elegible o
+        //? invitado) dibuja un check verde; sólo `wrongCategory` es `tone ===
+        //? 'no'` y dibuja el candado.
+        trailing: switch (eligibility) {
+          TournamentEligibility.wrongCategory => Icon(
+            key: const Key('entry.level.locked'),
+            AppIcons.lock,
+            size: 18,
+            color: BrandColors.dangerRed,
+          ),
+          TournamentEligibility.eligible ||
+          TournamentEligibility.invited => Icon(
+            key: const Key('entry.level.check'),
+            AppIcons.check,
+            size: 17,
+            color: scheme.primary,
+          ),
+        },
       ),
       _EntryRow(
-        icon: Icons.payments_outlined,
+        icon: AppIcons.payments,
         label: 'INSCRIPCIÓN',
         value: inscriptionPrice == null
             ? 'Precio por confirmar'
             : inscriptionPrice == 0
             ? 'Gratis'
-            : formatMoneyFromMajor(inscriptionPrice!, CurrencyCode.usd),
+            : null,
+        valueWidget: inscriptionPrice == null || inscriptionPrice == 0
+            ? null
+            : DualPrice(
+                primaryLabel: formatMoneyFromMajor(
+                  inscriptionPrice!,
+                  CurrencyCode.usd,
+                ),
+                secondaryLabel: inscriptionPriceBs,
+                alignEnd: false,
+              ),
         sub: 'Por jugador, se paga al confirmar',
       ),
       _EntryRow(
-        icon: Icons.event_outlined,
+        icon: AppIcons.calendar,
         label: 'CUÁNDO',
         value: startsAt == null
             ? 'Fecha por confirmar'
@@ -90,7 +121,7 @@ class TournamentEntryCheck extends StatelessWidget {
             : 'Inscripción hasta ${_formatDateTimeSV(registrationClosesAt!)}',
       ),
       _EntryRow(
-        icon: Icons.place_outlined,
+        icon: AppIcons.pin,
         label: 'DÓNDE',
         value: venueName ?? 'Sede por confirmar',
         sub: venueName == null ? 'La sede todavía no fue declarada' : null,
@@ -124,17 +155,19 @@ class TournamentEntryCheck extends StatelessWidget {
     );
   }
 
+  //? Copia verbatim de `cuadrala-torneos.jsx:246-248`: sustituye la
+  //? categoría real del jugador (invitado) o la del torneo (bloqueado), en
+  //? vez de una frase fija. Sin categoría declarada cae a una nota genérica.
   String _levelSubSV() => switch (eligibility) {
-    TournamentEligibility.invited =>
-      'Te invitaron: entrás aunque juegues otra categoría.',
-    TournamentEligibility.wrongCategory =>
-      playerCategoryName == null
-          ? 'No jugás esta categoría.'
-          : 'Jugás $playerCategoryName. No podés entrar a este torneo.',
-    TournamentEligibility.eligible =>
-      playerCategoryName == null
-          ? 'Podés entrar.'
-          : 'Jugás $playerCategoryName. Podés entrar.',
+    TournamentEligibility.invited => playerCategoryName == null
+        ? 'Te invitaron: entrás aunque juegues otra categoría.'
+        : 'Te invitaron: entrás aunque juegues $playerCategoryName.',
+    TournamentEligibility.wrongCategory => playerCategoryName == null
+        ? 'Este torneo es para $categoryName.'
+        : 'Jugás $playerCategoryName. Este torneo es para $categoryName.',
+    TournamentEligibility.eligible => playerCategoryName == null
+        ? 'Podés entrar.'
+        : 'Jugás $playerCategoryName. Podés entrar.',
   };
 
   static String _formatDateTimeSV(DateTime value) {
@@ -147,15 +180,26 @@ final class _EntryRow extends StatelessWidget {
   const _EntryRow({
     required this.icon,
     required this.label,
-    required this.value,
+    this.value,
+    this.valueWidget,
     this.sub,
     this.blocked = false,
     this.trailing,
-  });
+  }) : assert(
+         value != null || valueWidget != null,
+         'Either value or valueWidget must be provided',
+       );
 
   final IconData icon;
   final String label;
-  final String value;
+
+  /// Texto plano de la fila. Ignorado cuando [valueWidget] no es `null`.
+  final String? value;
+
+  /// Widget de reemplazo (p. ej. [DualPrice]) para filas cuyo valor no es
+  /// texto simple. Cuando está presente, [value] no se dibuja.
+  final Widget? valueWidget;
+
   final String? sub;
   final bool blocked;
   final Widget? trailing;
@@ -194,13 +238,14 @@ final class _EntryRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                valueWidget ??
+                    Text(
+                      value!,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                 if (sub != null) ...[
                   const SizedBox(height: 2),
                   Text(

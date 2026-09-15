@@ -9,6 +9,7 @@ final class MyTournamentMatchDto {
     required this.partners,
     required this.opponents,
     required this.decision,
+    this.roundName,
     this.scheduledAt,
     this.courtName,
     this.myResponse,
@@ -16,6 +17,11 @@ final class MyTournamentMatchDto {
 
   final int roundNumber;
   final int matchNumber;
+
+  /// Nombre cualitativo de la ronda ("Octavos", "Semifinal", ...) para
+  /// SINGLE_ELIMINATION; `null` en cualquier otro formato, donde la tarjeta
+  /// cae a "Ronda {roundNumber}".
+  final String? roundName;
 
   /// `null` mientras el partido no tenga cancha apartada.
   final DateTime? scheduledAt;
@@ -38,6 +44,7 @@ final class MyTournamentMatchDto {
     final rawAt = json['scheduledAt'];
     return MyTournamentMatchDto(
       roundNumber: (json['roundNumber'] as num?)?.toInt() ?? 0,
+      roundName: json['roundName'] as String?,
       matchNumber: (json['matchNumber'] as num?)?.toInt() ?? 0,
       scheduledAt: rawAt is String ? DateTime.tryParse(rawAt) : null,
       courtName: json['courtName'] as String?,

@@ -15,6 +15,7 @@ import { RespondTournamentSlotUseCase } from '../../application/use_cases/respon
 import { ListMyTournamentMatchesUseCase } from '../../application/use_cases/list_my_tournament_matches.use_case.js';
 import { RescheduleTournamentMatchUseCase } from '../../application/use_cases/reschedule_tournament_match.use_case.js';
 import { SettleTournamentSlotAsOrganizerUseCase } from '../../application/use_cases/settle_tournament_slot_as_organizer.use_case.js';
+import { PrismaTournamentMatchResultRepository } from '../../infrastructure/adapters/prisma_tournament_match_result_repository.js';
 import {
   PrismaTournamentSlotHoldLifecycleRepository,
   PrismaTournamentSlotResponseRepository,
@@ -83,10 +84,13 @@ export const GENERATE_TOURNAMENT_SCHEDULE_UC = new GenerateTournamentScheduleUse
   RESERVE_TOURNAMENT_SCHEDULE_SLOTS_UC,
 );
 
+/** El calendario de "hoy" para el organizador: partido, lado y resultado. */
 export const GET_TOURNAMENT_SCHEDULE_UC = new GetTournamentScheduleUseCase(
   TOURNAMENT_REPOSITORY,
   TOURNAMENT_SCHEDULE_REPOSITORY,
   TOURNAMENT_REGISTRATION_REPOSITORY,
   new PrismaMatchCourtAvailabilityRepository(),
+  new PrismaTournamentMatchResultRepository(),
+  new PrismaTournamentSlotResponseRepository(),
 );
 

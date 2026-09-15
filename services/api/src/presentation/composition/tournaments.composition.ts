@@ -19,6 +19,7 @@ import { PrismaVenueRepository } from '../../infrastructure/adapters/prisma_venu
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { DefaultTournamentFormatParametersValidator } from '../../domain/services/tournament/tournament_format_parameters_validator.js';
 import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
+import { MATCHMAKING_DEFAULT_RADIUS_KM } from './matchmaking.composition.js';
 
 const TOURNAMENT_QUERY_REPOSITORY = new PrismaTournamentQueryRepository();
 const CATEGORY_REPOSITORY = new PrismaCategoryRepository();
@@ -40,7 +41,10 @@ const MATERIALIZE_TOURNAMENT_MATCHES_UC = new MaterializeTournamentMatchesUseCas
   TOURNAMENT_REGISTRATION_REPOSITORY,
 );
 
-export const LIST_TOURNAMENTS_UC = new ListTournamentsUseCase(TOURNAMENT_QUERY_REPOSITORY);
+export const LIST_TOURNAMENTS_UC = new ListTournamentsUseCase(
+  TOURNAMENT_QUERY_REPOSITORY,
+  MATCHMAKING_DEFAULT_RADIUS_KM,
+);
 export const GET_TOURNAMENT_UC = new GetTournamentUseCase(TOURNAMENT_QUERY_REPOSITORY);
 export const LIST_TOURNAMENTS_BY_VENUE_UC = new ListTournamentsByVenueUseCase(TOURNAMENT_QUERY_REPOSITORY);
 export const CREATE_PARAMETRIZED_TOURNAMENT_UC = new CreateParametrizedTournamentUseCase(

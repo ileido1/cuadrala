@@ -124,3 +124,92 @@ describe('GenerateTournamentScheduleUseCase — guest + authenticated tokens', (
     expect(RESULT.schedule.formatCode).toBe('ROUND_ROBIN');
   });
 });
+
+describe('GenerateTournamentScheduleUseCase — guests excluded from single elimination only', () => {
+  it('seeds only authenticated registrations into a single-elimination bracket', async () => {
+    mockTournamentRepository.findByIdSV.mockResolvedValue({
+      id: 'tournament-1',
+      organizerUserId: 'organizer-1',
+      venueId: null,
+      formatPresetId: 'preset-se',
+      status: 'DRAFT',
+      pairedRegistration: false,
+    });
+    mockFormatPresetRepository.findByIdSV.mockResolvedValue({ id: 'preset-se', code: 'SINGLE_ELIMINATION' });
+    mockTournamentRegistrationRepository.listByTournamentIdAndStatusSV.mockResolvedValue([
+      ...AUTH_REGISTRATIONS,
+      ...GUEST_REGISTRATIONS,
+    ]);
+    mockTournamentScheduleRepository.createOrValidateIdempotencySV.mockImplementation(async (_args) => ({
+      created: true,
+      schedule: {
+        tournamentId: _args.tournamentId,
+        formatCode: _args.formatCode,
+        scheduleKey: _args.scheduleKey,
+        payload: _args.payload,
+      },
+    }));
+
+    const RESULT = await useCase.executeSV({ tournamentId: 'tournament-1', actorUserId: 'organizer-1' });
+
+    expect(RESULT.created).toBe(true);
+    const PAYLOAD_TOKENS = new Set<string>();
+    const PAYLOAD = RESULT.schedule.payload as {
+      rounds: Array<{ matches: Array<{ playerA: string | null; playerB: string | null }> }>;
+    };
+    for (const ROUND of PAYLOAD.rounds) {
+      for (const MATCH of ROUND.matches) {
+        if (MATCH.playerA !== null) PAYLOAD_TOKENS.add(MATCH.playerA);
+        if (MATCH.playerB !== null) PAYLOAD_TOKENS.add(MATCH.playerB);
+      }
+    }
+
+    for (const GUEST of GUEST_REGISTRATIONS) {
+      expect(PAYLOAD_TOKENS.has(GUEST.id)).toBe(false);
+    }
+    for (const AUTH of AUTH_REGISTRATIONS) {
+      expect(PAYLOAD_TOKENS.has(AUTH.id)).toBe(true);
+    }
+  });
+
+  it('still includes guests in round-robin generation (unchanged)', async () => {
+    mockTournamentRepository.findByIdSV.mockResolvedValue({
+      id: 'tournament-1',
+      organizerUserId: 'organizer-1',
+      venueId: null,
+      formatPresetId: 'preset-rr',
+      status: 'DRAFT',
+      pairedRegistration: false,
+    });
+    mockFormatPresetRepository.findByIdSV.mockResolvedValue({ id: 'preset-rr', code: 'ROUND_ROBIN' });
+    mockTournamentRegistrationRepository.listByTournamentIdAndStatusSV.mockResolvedValue([
+      ...AUTH_REGISTRATIONS,
+      ...GUEST_REGISTRATIONS,
+    ]);
+    mockTournamentScheduleRepository.createOrValidateIdempotencySV.mockImplementation(async (_args) => ({
+      created: true,
+      schedule: {
+        tournamentId: _args.tournamentId,
+        formatCode: _args.formatCode,
+        scheduleKey: _args.scheduleKey,
+        payload: _args.payload,
+      },
+    }));
+
+    const RESULT = await useCase.executeSV({ tournamentId: 'tournament-1', actorUserId: 'organizer-1' });
+
+    expect(RESULT.created).toBe(true);
+    const PAYLOAD_TOKENS = new Set<string>();
+    const PAYLOAD = RESULT.schedule.payload as { rounds: Array<{ matches: Array<{ playerA: string; playerB: string }> }> };
+    for (const ROUND of PAYLOAD.rounds) {
+      for (const MATCH of ROUND.matches) {
+        PAYLOAD_TOKENS.add(MATCH.playerA);
+        PAYLOAD_TOKENS.add(MATCH.playerB);
+      }
+    }
+
+    for (const GUEST of GUEST_REGISTRATIONS) {
+      expect(PAYLOAD_TOKENS.has(GUEST.id)).toBe(true);
+    }
+  });
+});

@@ -15,6 +15,11 @@ export const CREATE_PARAMETRIZED_TOURNAMENT_BODY_SCHEMA = z
     formatParameters: z.record(z.string(), z.unknown()).optional(),
     startsAt: z.string().datetime({ offset: true }).optional(),
     visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
+    //? Reusa MatchGender (schema.prisma). Ausente = null: los torneos viejos y
+    //? los clientes legacy que no lo mandan no quedan invalidados.
+    gender: z.enum(['MALE', 'FEMALE', 'MIXED'], {
+      message: 'gender debe ser MALE, FEMALE o MIXED.',
+    }).optional(),
     venueId: z.string().uuid('venueId debe ser un UUID valido.').optional(),
     //? Precio por jugador. 0 es un valor legitimo: "gratis" declarado no es lo
     //? mismo que "no lo declararon" (null).

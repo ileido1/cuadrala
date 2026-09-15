@@ -6,6 +6,8 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { PrismaTournamentMatchMaterializationRepository } from '../../infrastructure/adapters/prisma_tournament_match_materialization_repository.js';
 import { remapScheduleTokensSV } from '../../domain/tournament/tournament_schedule_token_migration.js';
+import { FORMAT_PRESET_V1_PARAMETERS_SCHEMAS } from '../../domain/services/tournament/format_preset_parameters_catalog.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -20,6 +22,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let categoryId: string;
     let sportId: string;
     let presetAmericanoId: string;
+    let presetSingleEliminationId: string;
     let organizerToken: string;
     let organizerUserId: string;
 
@@ -29,6 +32,24 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const CATALOG = await ensureTestCatalogSV();
       sportId = CATALOG.sportPadelId;
       presetAmericanoId = CATALOG.presetAmericanoId;
+
+      //? `ensureTestCatalogSV` no siembra SINGLE_ELIMINATION (mismo motivo que
+      //? `tournament_match_advancement.http-db.integration.test.ts:45-52`).
+      const SE_PRESET = await PRISMA.tournamentFormatPreset.upsert({
+        where: { sportId_code_version: { sportId, code: 'SINGLE_ELIMINATION', version: 1 } },
+        create: {
+          sportId,
+          code: 'SINGLE_ELIMINATION',
+          version: 1,
+          name: 'SINGLE_ELIMINATION',
+          schemaVersion: 1,
+          defaultParameters: {},
+          parametersSchema: FORMAT_PRESET_V1_PARAMETERS_SCHEMAS.SINGLE_ELIMINATION as unknown as Prisma.InputJsonValue,
+        },
+        update: {},
+        select: { id: true },
+      });
+      presetSingleEliminationId = SE_PRESET.id;
 
       const CAT = await createTestCategorySV(sportId, `tourn-materialize-${Date.now()}`, 'Cat Materialize');
       categoryId = CAT.id;
@@ -287,6 +308,59 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(AUTH_PARTICIPANTS.length).toBeGreaterThan(0);
       expect(GUEST_PARTICIPANTS.length).toBeGreaterThan(0);
       expect(AUTH_PARTICIPANTS.every((_p) => [AUTH_A, AUTH_B].includes(_p.userId as string))).toBe(true);
+    });
+
+    it('excludes guest registrations from single-elimination bracket generation, keeping them for americano/round-robin (S8a)', async () => {
+      const TOURNAMENT = await PRISMA.tournament.create({
+        data: {
+          name: `Torneo SE Guest Exclusion ${Date.now()}`,
+          categoryId,
+          sportId,
+          formatPresetId: presetSingleEliminationId,
+          organizerUserId,
+          status: 'DRAFT',
+        },
+      });
+
+      const AUTH_A = await createConfirmedPlayerSV('se-guest-auth-a', TOURNAMENT.id);
+      const AUTH_B = await createConfirmedPlayerSV('se-guest-auth-b', TOURNAMENT.id);
+      const AUTH_C = await createConfirmedPlayerSV('se-guest-auth-c', TOURNAMENT.id);
+      const AUTH_D = await createConfirmedPlayerSV('se-guest-auth-d', TOURNAMENT.id);
+      await createGuestRegistrationSV(TOURNAMENT.id, 'Guest Excluded A');
+      await createGuestRegistrationSV(TOURNAMENT.id, 'Guest Excluded B');
+
+      await request(APP)
+        .patch(`/api/v1/tournaments/${TOURNAMENT.id}/status`)
+        .send({ status: 'OPEN' })
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+
+      const GENERATE_RES = await request(APP)
+        .post(`/api/v1/tournaments/${TOURNAMENT.id}/schedule:generate`)
+        .send({})
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+      expect(GENERATE_RES.status).toBe(201);
+
+      const IN_PROGRESS_RES = await request(APP)
+        .patch(`/api/v1/tournaments/${TOURNAMENT.id}/status`)
+        .send({ status: 'IN_PROGRESS' })
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+      expect(IN_PROGRESS_RES.status).toBe(200);
+
+      const MATCHES = await PRISMA.match.findMany({
+        where: { tournamentId: TOURNAMENT.id },
+        include: { participants: true },
+      });
+      const ALL_PARTICIPANTS = MATCHES.flatMap((_m) => _m.participants);
+
+      //? Bracket de 4: solo los autenticados entran, ningún participante huésped.
+      expect(ALL_PARTICIPANTS).toHaveLength(4);
+      expect(ALL_PARTICIPANTS.every((_p) => _p.userId !== null)).toBe(true);
+      expect(ALL_PARTICIPANTS.map((_p) => _p.userId).sort()).toEqual(
+        [AUTH_A, AUTH_B, AUTH_C, AUTH_D].sort(),
+      );
     });
 
     it('responds 409 CALENDARIO_OBSOLETO when materializing a stale pre-Slice-1 schedule (userId tokens, not registrationId)', async () => {

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/formatting/money_format.dart';
 import '../../../../core/models/currency_code.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/theme/brand_colors.dart';
 import '../../../../router/routes.dart';
 import '../../../../shared/widgets/dual_price.dart';
 import '../../data/models/tournament_list_item_dto.dart';
@@ -16,6 +18,18 @@ String _occupancyLabel(int count, int? max) {
   return '$count/$max inscriptos';
 }
 
+/// `MALE`/`FEMALE`/`MIXED` (`MatchGender`, S2) → la etiqueta en español del
+/// handoff (`cuadrala-torneos.jsx:7,10,13,16`), la misma que ya usan
+/// `discover_matches_screen.dart` y `venue_booking_form.dart`. Un código
+/// desconocido no se inventa: la etiqueta desaparece en vez de mostrar el
+/// enum crudo (mismo criterio que `tournamentStatusLabel`).
+String? _genderTagLabel(String gender) => switch (gender) {
+      'MALE' => 'Masculino',
+      'FEMALE' => 'Femenino',
+      'MIXED' => 'Mixto',
+      _ => null,
+    };
+
 /// Tarjeta de torneo del listado (rediseño).
 ///
 /// Responde la primera pregunta del jugador —¿puedo entrar?— sin abrir nada:
@@ -23,9 +37,37 @@ String _occupancyLabel(int count, int? max) {
 /// que el organizador no declaró **no se inventan**: la fila desaparece en vez
 /// de mostrarse vacía o con un placeholder.
 final class TournamentListItemTile extends StatelessWidget {
-  const TournamentListItemTile({super.key, required this.tournament});
+  const TournamentListItemTile({
+    super.key,
+    required this.tournament,
+    this.pendingInvitationId,
+    this.isOrganizer = false,
+    this.onViewInvitation,
+    this.onOrganizerTap,
+  });
 
   final TournamentListItemDto tournament;
+
+  /// Id de la invitación PENDING del visor a este torneo (`ViewerTournamentDto
+  /// .pendingInvitationId`, M4a); `null` cuando no hay ninguna. Dispara el
+  /// banner "{org} te invitó" (spec "Listado — invitation banner and
+  /// organizer row").
+  final String? pendingInvitationId;
+
+  /// `true` cuando el visor organiza este torneo (`ViewerTournamentDto
+  /// .isOrganizer`, M4a). Dispara la fila lime "Organizás {torneo}".
+  final bool isOrganizer;
+
+  /// Toque en "Ver invitación →". `null` deja el link sin acción (la
+  /// navegación se resuelve en la pantalla que arma la tarjeta).
+  final VoidCallback? onViewInvitation;
+
+  /// Toque en la fila de organizador. `null` la deja sin acción.
+  final VoidCallback? onOrganizerTap;
+
+  /// `{org}`: `venueName`, cayendo al nombre del organizador sin sede
+  /// declarada (D7). Nunca el nombre del propio torneo.
+  String? get _invitationOrg => tournament.venueName ?? tournament.organizerName;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +84,20 @@ final class TournamentListItemTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (pendingInvitationId != null && _invitationOrg != null) ...[
+                _InvitationBanner(
+                  org: _invitationOrg!,
+                  onTap: onViewInvitation,
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (isOrganizer) ...[
+                _OrganizerRow(
+                  tournamentName: tournament.name,
+                  onTap: onOrganizerTap,
+                ),
+                const SizedBox(height: 10),
+              ],
               Row(
                 children: [
                   TournamentStatusPill(status: tournament.status),
@@ -49,6 +105,11 @@ final class TournamentListItemTile extends StatelessWidget {
                   Flexible(
                     child: _CategoryChip(label: tournament.categoryName),
                   ),
+                  if (tournament.gender != null &&
+                      _genderTagLabel(tournament.gender!) != null) ...[
+                    const SizedBox(width: 8),
+                    _GenderTag(label: _genderTagLabel(tournament.gender!)!),
+                  ],
                 ],
               ),
               const SizedBox(height: 10),
@@ -70,14 +131,19 @@ final class TournamentListItemTile extends StatelessWidget {
                 children: [
                   if (tournament.startsAt != null)
                     _MetaRow(
-                      icon: Icons.calendar_today_outlined,
+                      icon: AppIcons.calendar,
                       label: _formatStartSV(tournament.startsAt!),
                     ),
                   if (tournament.venueName != null)
                     _MetaRow(
                       key: const Key('tournament.card.venue'),
-                      icon: Icons.place_outlined,
-                      label: tournament.venueName!,
+                      icon: AppIcons.pin,
+                      //? "Cerca" (M3d): `distanceKm` sólo viene cuando el
+                      //? listado se filtró por cercanía (cuadrala-torneos.jsx:128,
+                      //? `{venue} · {dist}`); sin ese filtro no se inventa.
+                      label: tournament.distanceKm != null
+                          ? '${tournament.venueName} · ${tournament.distanceKm!.toStringAsFixed(1)} km'
+                          : tournament.venueName!,
                     ),
                 ],
               ),
@@ -131,6 +197,35 @@ final class _CategoryChip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.3,
+          color: scheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+/// Etiqueta de género junto a la chip de categoría (`tagStyle`,
+/// `cuadrala-screens.jsx:113`; uso en tarjeta `cuadrala-torneos.jsx:117`).
+final class _GenderTag extends StatelessWidget {
+  const _GenderTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
           color: scheme.onSurfaceVariant,
         ),
       ),
@@ -271,6 +366,129 @@ final class _Price extends StatelessWidget {
     return DualPrice(
       primaryLabel: formatMoneyFromMajor(amount, CurrencyCode.usd),
       suffix: 'p/p',
+    );
+  }
+}
+
+/// Banner lime "{org} te invitó" (`cuadrala-torneo-org.jsx:359`,
+/// `README.md:51`): el visor tiene una invitación PENDING a este torneo.
+/// `{org}` nunca es el nombre del torneo (D7).
+final class _InvitationBanner extends StatelessWidget {
+  const _InvitationBanner({required this.org, this.onTap});
+
+  final String org;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('tournament.card.invitationBanner'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: BrandColors.limeAccent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: BrandColors.limeAccent.withValues(alpha: 0.45),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: BrandColors.limeAccent,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(AppIcons.mail, size: 16, color: BrandColors.onLime),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$org te invitó',
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: onTap,
+                  child: Text(
+                    'Ver invitación →',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fila lime con escudo "Organizás {torneo}" (`cuadrala-torneos.jsx:175-184`):
+/// el visor organiza este torneo.
+final class _OrganizerRow extends StatelessWidget {
+  const _OrganizerRow({required this.tournamentName, this.onTap});
+
+  final String tournamentName;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      key: const Key('tournament.card.organizerRow'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: scheme.outlineVariant, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: BrandColors.limeAccent,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(AppIcons.shield, size: 16, color: BrandColors.onLime),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Organizás $tournamentName',
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Icon(
+              AppIcons.chevronRight,
+              size: 18,
+              color: scheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

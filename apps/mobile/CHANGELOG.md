@@ -5,6 +5,299 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.17] - 2026-09-14
+
+### Corregido
+
+- **Banner de invitación con la resolución de {org} del Listado (M9c)**: la
+  pantalla de invitación ahora arma "{org} te invitó" con la misma regla
+  que el banner del Listado (D7) — `venueName`, cayendo al nombre del
+  organizador sin sede declarada — en vez de mostrar siempre el nombre del
+  propio torneo. Cierra M9 y la Fase 4 (detalle móvil) del rediseño de
+  torneos.
+
+## [1.7.16] - 2026-09-14
+
+### Corregido
+
+- **Cuadro sin copy inventado ni UI de más (M9b)**: la pantalla del cuadro
+  ahora usa `AppHeader` con acción de volver (ya no depende sólo del gesto
+  de swipe); los títulos de ronda se muestran en mayúsculas; la nota al pie
+  vuelve a leer exactamente "Los huéspedes (inscriptos sin cuenta) no
+  entran al cuadro." sin la cláusula agregada de más; el partido en juego
+  usa el anillo sólido del handoff (`0 0 0 3px`) en vez de la aproximación
+  con blur/spread; se quitó el ícono de check junto al ganador, que no
+  existe en el handoff.
+
+## [1.7.15] - 2026-09-14
+
+### Corregido
+
+- **Contrato del score del cuadro alineado con la API (M9a)**:
+  `BracketMatchDto.score` ahora lee un puntaje por participante
+  (`{userId, points}`, contrato real de `GET /tournaments/:id/bracket`) en
+  vez de un arreglo de sets con claves `playerAScore`/`playerBScore`, que
+  nunca existieron en la respuesta y siempre resolvían a "0".
+
+## [1.7.14] - 2026-09-14
+
+### Corregido
+
+- **Fidelidad de fila y caption de la Tabla (M8)**: la fila del jugador ahora
+  muestra columnas `# / Jugador / PJ / PG / Pts`; la fila del jugador
+  resalta con fondo verde, el nombre en 800 y sufijo "· vos"; las
+  posiciones 1 y 2 se pintan en verde; se agregó el caption "Se actualiza
+  sola al cargarse cada resultado" sobre la tabla.
+
+## [1.7.13] - 2026-09-14
+
+### Corregido
+
+- **Contrato de la Tabla alineado con la API (M8)**: `TournamentScoreboardRowDto`
+  ahora lee `userId/name/gamesPlayed/gamesWon/rank` — los campos reales que
+  manda `GET /tournaments/:id/scoreboard` (D5) — en vez de `teamId/teamName`,
+  que ya no existían en la respuesta.
+
+## [1.7.12] - 2026-09-14
+
+### Corregido
+
+- **Fidelidad de la tarjeta "Mis partidos" (M7)**: la ronda ahora muestra el
+  nombre cualitativo que manda la API (S5, ej. "Octavos") en vez de
+  "Ronda N · Partido M"; sólo cae a "Ronda {n}" cuando el formato no tiene
+  nombre de ronda (round robin). Un horario propuesto muestra "El
+  organizador propuso este horario. ¿Te sirve?" antes de los botones
+  **Me sirve** (primario, ahora primero) / **No puedo** (secundario), y los
+  oculta una vez que el jugador ya contestó. Rechazar muestra "Avisamos al
+  organizador. Va a reprogramar el partido y te llega el horario nuevo.".
+  Un partido sin cancha materializada ahora dice "Depende del cuadro" en
+  vez de "Sin cancha".
+
+## [1.7.11] - 2026-09-14
+
+### Agregado
+
+- **Chevron de Inscriptos abre el roster (M6b-3b-2)**: tocar la tarjeta de
+  Inscriptos ahora abre `TournamentRosterSheet` con la lista de
+  inscriptos. Cierra M6b (Detail B2 de la Fase 4).
+
+## [1.7.10] - 2026-09-14
+
+### Agregado
+
+- **Widget `TournamentRosterSheet` (M6b-3b-1)**: nuevo bottom sheet de sólo
+  lectura que lista a los inscriptos, agrupados en duplas + "Sin pareja"
+  para torneos de pareja fija o en una sola lista para torneos
+  individuales (reutiliza `groupRosterIntoPairs`); nunca lee el
+  teléfono/email de un huésped, sólo nombre y estado. Todavía no está
+  conectado a ninguna pantalla.
+
+## [1.7.9] - 2026-09-14
+
+### Agregado
+
+- **Resumen de Inscriptos con conteos reales (M6b-3a)**: la tarjeta de
+  Inscriptos del detalle ahora muestra "{N} confirmados" / "{M} esperando
+  al organizador" (esto último sólo si M>0), calculados a partir de los
+  inscriptos ya cargados, en vez del `registrationCount` crudo del
+  torneo; la sección se oculta hasta que los inscriptos terminan de
+  cargar. El chevron se dibuja pero todavía no hace nada (llega en
+  M6b-3b).
+
+## [1.7.8] - 2026-09-14
+
+### Corregido
+
+- **Fidelidad de las tarjetas "Cómo se juega" (M6b-2)**: la tarjeta
+  "Formato" ahora muestra el formato real del torneo (mapeado con
+  `tournamentFormatLabel`) en vez del nombre del deporte; la tarjeta
+  "Cuadro" muestra "{maxSlots} jugadores" cuando el organizador declaró un
+  cupo máximo, y se omite por completo (no un placeholder "Cupos no
+  declarados") cuando no lo declaró.
+
+## [1.7.7] - 2026-09-14
+
+### Agregado
+
+- **Mapper de formato de torneo (M6b-1)**: nueva función `tournamentFormatLabel`
+  que traduce el CODE del preset de formato (`SINGLE_ELIMINATION`,
+  `ROUND_ROBIN`) a la etiqueta en español del handoff ("Eliminación
+  simple", "Round robin"); un preset sin mapeo conocido muestra su nombre
+  crudo en vez de esconderse. Todavía no está conectada a ninguna pantalla.
+
+## [1.7.6] - 2026-09-14
+
+### Corregido
+
+- **Fidelidad de `TournamentEntryCheck` (M6a)**: la fila de Nivel ahora
+  muestra un check verde de 17px cuando el jugador es elegible o fue
+  invitado (antes sólo se dibujaba el candado de categoría incorrecta); el
+  subtítulo de invitado sustituye la categoría real del jugador
+  ("Te invitaron: entrás aunque juegues {categoría}.") en vez de una frase
+  fija, y el subtítulo de categoría incorrecta nombra la del torneo
+  ("Jugás {categoría}. Este torneo es para {categoría del torneo}."); la
+  fila de Inscripción ahora usa el widget compartido `DualPrice` en vez de
+  un `Text` a mano.
+
+## [1.7.5] - 2026-09-14
+
+### Cambiado
+
+- **`SegmentedControl` en el detalle del torneo (M5b)**: el `TabBar` de
+  Material entre Info/Mis partidos/Tabla (y Inscriptos/Cuadro/Publicar del
+  organizador) ahora usa el `SegmentedControl` compartido, sin swipe —el
+  cambio de pestaña es sólo por toque, igual que el handoff.
+
+### Corregido
+
+- **El pie de "inscribirme" tapaba toda la pantalla para un torneo sin
+  organizador**: cuando un jugador ve el detalle de un torneo cuya lista de
+  partidos aún no tiene calendario, un spinner que debía indicar "todavía no
+  cargó el torneo" en realidad se mostraba para siempre en cualquier torneo
+  sin organizador asignado, y el pie de inscripción se expandía a toda la
+  altura de la pantalla en vez de quedarse pegado abajo —entre los dos,
+  ningún toque en la pantalla llegaba a destino.
+
+## [1.7.4] - 2026-09-14
+
+### Cambiado
+
+- **Header estático en el detalle del torneo (M5a)**: la pantalla de detalle ya
+  no usa un `SliverAppBar` que se encoge al scrollear; ahora usa el `AppHeader`
+  compartido (título, subtítulo "{sede} · {género} {categoría}", volver, badge
+  ORG), fijo sin importar cuánto se scrollee el contenido de las pestañas.
+  Arranca la Fase 4 (detalle) del rediseño de torneos.
+
+## [1.7.3] - 2026-09-14
+
+### Agregado
+
+- **Fidelidad final de la tarjeta de torneo (M4b-2)**: la tarjeta muestra la
+  etiqueta de género ("Masculino"/"Femenino"/"Mixto") junto a la categoría
+  cuando el torneo la declaró; el pill de estado ahora distingue
+  explícitamente `DRAFT` y `COMPLETED` (gris) del resto en vez de depender
+  del caso por defecto. La pantalla de "Mis torneos" conecta
+  `pendingInvitationId`/`isOrganizer` (M4a) con el banner de invitación y la
+  fila de organizador (M4b-1), que hasta ahora quedaban sin usarse. Cierra la
+  Fase 3 (listado) del rediseño de torneos.
+
+## [1.7.2] - 2026-09-14
+
+### Agregado
+
+- **Fila de organizador en la tarjeta de torneo (M4b-1)**: `TournamentListItemTile`
+  acepta un `isOrganizer` opcional y, cuando es `true`, muestra la fila lime
+  con escudo "Organizás {torneo}" y chevron. Aún no conectada a ninguna
+  pantalla.
+
+## [1.7.1] - 2026-09-14
+
+### Agregado
+
+- **Banner de invitación en la tarjeta de torneo (M4b-1)**: `TournamentListItemTile`
+  acepta un `pendingInvitationId` opcional y, cuando está presente, muestra el
+  banner lime "{org} te invitó" con el link "Ver invitación →"; `{org}` es el
+  nombre de la sede o, si el torneo no tiene sede, el nombre del organizador.
+  Aún no conectado a ninguna pantalla.
+
+## [1.7.0] - 2026-09-14
+
+### Agregado
+
+- **"Mis torneos" con datos reales (M4a-2)**: la sección "Mis torneos" del
+  listado ya no muestra una lista vacía hardcodeada — se llena con los datos
+  de `TournamentsListCubit.listMyTournaments`, y cada tarjeta muestra el
+  estado real de inscripción del visor ("Adentro" para CONFIRMED, "Pendiente"
+  para cualquier otro estado vigente).
+
+## [1.6.1] - 2026-09-14
+
+### Agregado
+
+- **`ViewerTournamentDto` y `TournamentsRepository.listMyTournaments` (M4a-1)**:
+  nuevo DTO y llamada al repositorio para `GET /api/v1/users/me/tournaments`,
+  aún no conectados a ninguna pantalla.
+
+## [1.6.0] - 2026-09-14
+
+### Agregado
+
+- **Chip "Cerca" y distancia en la tarjeta**: el chip resuelve la ubicación
+  del visor en este orden: guardada (`OnboardingRepository.getLocation()`) y,
+  si no hay, GPS (`LocationService.getCurrentLocation()`); manda `near` con
+  `radiusKm: 10` al activarse. Si ninguna ubicación resuelve, el chip queda
+  inactivo — no se manda un filtro roto. La tarjeta del listado ahora muestra
+  `distanceKm` junto a la sede ("{sede} · {distancia} km") sólo cuando la API
+  lo devuelve.
+
+## [1.5.0] - 2026-09-14
+
+### Agregado
+
+- **Chip "Mi categoría"**: el chip de filtro (agregado en la slice anterior
+  con el toggle deshabilitado) ahora se renderiza sólo cuando el visor tiene
+  categoría propia (`hasOwnCategory`), con el copy verbatim del handoff
+  ("Mi categoría {categoría}"). Tocarlo alterna el filtro de categoría
+  reutilizando `applyFilters` del cubit — sin lógica nueva de filtrado.
+
+## [1.4.1] - 2026-09-13
+
+### Agregado
+
+- **"Mi categoría" default-on**: `TournamentsListCubit` ahora usa la
+  categoría del rating primario del visor (`getMe().primaryRating`) como
+  filtro de categoría por default en la primera carga, sin que el usuario
+  toque nada. Nuevo `hasOwnCategory` en `TournamentsListLoaded` (el chip
+  correspondiente, en la próxima slice, se oculta cuando es `false`). Un
+  filtro que el usuario ya tocó explícitamente nunca se pisa en cargas
+  posteriores.
+
+## [1.4.0] - 2026-09-13
+
+### Cambiado
+
+- **Migración a `AppIcons`**: los ~46 usos de `Icons.*` (Material) bajo
+  `lib/src/features/tournaments/` ahora pasan por el catálogo semántico
+  `AppIcons`, incluidos dos íconos nuevos (`pending`, `public`). Nuevo test
+  `tournaments_icons_audit_test.dart` guarda contra regresiones: falla si
+  aparece cualquier `Icons.*` bajo esa carpeta.
+
+## [1.3.2] - 2026-09-13
+
+### Quitado
+
+- **`TournamentFiltersBar`**: widget muerto desde M3a (ya nadie lo referenciaba).
+
+## [1.3.1] - 2026-09-13
+
+### Quitado
+
+- **Botón "Más filtros"**: se sacó de la pantalla de torneos (no existe en el
+  handoff). El chip "Mi categoría" queda temporalmente sin acción hasta que
+  M3c lo conecte a la categoría propia del visor.
+
+## [1.3.0] - 2026-09-13
+
+### Agregado
+
+- **`CountStepper`** (`shared/widgets/count_stepper.dart`): selector numérico
+  −/+ compartido, botones 38x38 con ícono 18px; un botón en `min`/`max` se
+  apaga (`onSurface.withValues(alpha: 0.38)`, mismo precedente de
+  `SelectableChip`) e ignora toques en vez de desaparecer.
+- **`PillToggle`** (`shared/widgets/pill_toggle.dart`): interruptor tipo
+  píldora compartido; pista verde con thumb al final cuando está ON, `line-strong`
+  con thumb al inicio cuando está OFF.
+- **`SegmentedOption.enabled`**: nuevo flag (default `true`) en
+  `shared/widgets/segmented_control.dart`; una opción con `enabled: false` se
+  dibuja apagada e ignora toques, mismo precedente de deshabilitado.
+
+## [1.2.1] - 2026-09-13
+
+### Cambiado
+
+- **Refactor interno**: se separó `tournament_detail_screen.dart` en archivos
+  `part` más chicos por sección de la pantalla, sin cambios de comportamiento.
+
 ## [1.2.0] - 2026-09-10
 
 ### Agregado

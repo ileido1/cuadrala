@@ -8,6 +8,9 @@ export type TournamentCreatedDTO = {
 
 export type TournamentVisibility = 'PUBLIC' | 'PRIVATE';
 
+/** Reusa `MatchGender` (schema.prisma). `null` = sin declarar. */
+export type TournamentGender = 'MALE' | 'FEMALE' | 'MIXED';
+
 export interface TournamentRepository {
   findByIdSV(_id: string): Promise<{
     id: string;
@@ -26,6 +29,7 @@ export interface TournamentRepository {
     pairedRegistration: boolean;
     isCompetitive: boolean;
     inscriptionPrice: number | null;
+    gender: TournamentGender | null;
     createdAt: Date;
     updatedAt: Date;
   } | null>;
@@ -44,6 +48,7 @@ export interface TournamentRepository {
     inscriptionPrice?: number;
     maxSlots?: number;
     registrationClosesAt?: Date;
+    gender?: TournamentGender;
   }): Promise<TournamentCreatedDTO>;
 
   updateStatusSV(

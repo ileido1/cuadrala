@@ -5,7 +5,7 @@ import type {
 } from '../../domain/ports/tournament_invitation_repository.js';
 import { PRISMA } from '../prisma_client.js';
 
-function mapRowSV(_row: {
+export function mapRowSV(_row: {
   id: string;
   tournamentId: string;
   invitedUserId: string;
@@ -13,11 +13,13 @@ function mapRowSV(_row: {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  invitedUser: { name: string } | null;
 }): TournamentInvitationDTO {
   return {
     id: _row.id,
     tournamentId: _row.tournamentId,
     invitedUserId: _row.invitedUserId,
+    invitedUserName: _row.invitedUser?.name ?? null,
     createdByUserId: _row.createdByUserId,
     status: _row.status,
     createdAt: _row.createdAt,
@@ -33,12 +35,16 @@ export class PrismaTournamentInvitationRepository implements TournamentInvitatio
         invitedUserId: _input.invitedUserId,
         createdByUserId: _input.createdByUserId,
       },
+      include: { invitedUser: { select: { name: true } } },
     });
     return mapRowSV(CREATED);
   }
 
   async findByIdSV(_id: string): Promise<TournamentInvitationDTO | null> {
-    const ROW = await PRISMA.tournamentInvitation.findUnique({ where: { id: _id } });
+    const ROW = await PRISMA.tournamentInvitation.findUnique({
+      where: { id: _id },
+      include: { invitedUser: { select: { name: true } } },
+    });
     return ROW === null ? null : mapRowSV(ROW);
   }
 
@@ -53,6 +59,7 @@ export class PrismaTournamentInvitationRepository implements TournamentInvitatio
           invitedUserId: _invitedUserId,
         },
       },
+      include: { invitedUser: { select: { name: true } } },
     });
     return ROW === null ? null : mapRowSV(ROW);
   }
@@ -61,6 +68,7 @@ export class PrismaTournamentInvitationRepository implements TournamentInvitatio
     const ROWS = await PRISMA.tournamentInvitation.findMany({
       where: { tournamentId: _tournamentId },
       orderBy: { createdAt: 'asc' },
+      include: { invitedUser: { select: { name: true } } },
     });
     return ROWS.map(mapRowSV);
   }
@@ -72,6 +80,7 @@ export class PrismaTournamentInvitationRepository implements TournamentInvitatio
     const UPDATED = await PRISMA.tournamentInvitation.update({
       where: { id: _id },
       data: { status: _status as never },
+      include: { invitedUser: { select: { name: true } } },
     });
     return mapRowSV(UPDATED);
   }

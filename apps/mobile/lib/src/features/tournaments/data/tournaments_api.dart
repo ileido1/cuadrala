@@ -12,6 +12,8 @@ final class TournamentListFilters extends Equatable {
     this.status,
     this.sportId,
     this.categoryId,
+    this.near,
+    this.radiusKm,
   });
 
   final String? venueId;
@@ -21,9 +23,44 @@ final class TournamentListFilters extends Equatable {
   final String? sportId;
   final String? categoryId;
 
+  /// `"lat,lng"` del chip "Cerca" (M3d). `null` cuando el filtro está
+  /// inactivo — no se manda `near` a la API.
+  final String? near;
+
+  /// Radio en km para [near]. Siempre 10 cuando el chip está activo
+  /// (`sdd/tournaments-handoff-fidelity/tasks` M3d); `null` junto con [near].
+  final int? radiusKm;
+
+  TournamentListFilters copyWith({
+    String? categoryId,
+    bool clearCategoryId = false,
+    String? near,
+    int? radiusKm,
+    bool clearNear = false,
+  }) {
+    return TournamentListFilters(
+      venueId: venueId,
+      startsAtFrom: startsAtFrom,
+      startsAtTo: startsAtTo,
+      status: status,
+      sportId: sportId,
+      categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
+      near: clearNear ? null : (near ?? this.near),
+      radiusKm: clearNear ? null : (radiusKm ?? this.radiusKm),
+    );
+  }
+
   @override
-  List<Object?> get props =>
-      [venueId, startsAtFrom, startsAtTo, status, sportId, categoryId];
+  List<Object?> get props => [
+        venueId,
+        startsAtFrom,
+        startsAtTo,
+        status,
+        sportId,
+        categoryId,
+        near,
+        radiusKm,
+      ];
 }
 
 abstract interface class TournamentsApi {
@@ -157,6 +194,10 @@ abstract interface class TournamentsApi {
   Future<Map<String, Object?>> getTournamentBracketEnvelope({
     required String tournamentId,
   });
+
+  /// Los torneos del usuario actual: en los que está inscripto, invitado, o
+  /// que organiza ("Mis torneos", M4a).
+  Future<Map<String, Object?>> getMyTournamentsEnvelope();
 }
 
 final class DioTournamentsApi implements TournamentsApi {
@@ -194,6 +235,10 @@ final class DioTournamentsApi implements TournamentsApi {
       if (filters.status != null) params['status'] = filters.status!;
       if (filters.sportId != null) params['sportId'] = filters.sportId!;
       if (filters.categoryId != null) params['categoryId'] = filters.categoryId!;
+      if (filters.near != null) params['near'] = filters.near!;
+      if (filters.radiusKm != null) {
+        params['radiusKm'] = filters.radiusKm!.toString();
+      }
     }
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/tournaments',
@@ -440,5 +485,10 @@ final class DioTournamentsApi implements TournamentsApi {
     return _apiClient.getEnvelopeDataMap(
       '/api/v1/tournaments/$tournamentId/bracket',
     );
+  }
+
+  @override
+  Future<Map<String, Object?>> getMyTournamentsEnvelope() {
+    return _apiClient.getEnvelopeDataMap('/api/v1/users/me/tournaments');
   }
 }

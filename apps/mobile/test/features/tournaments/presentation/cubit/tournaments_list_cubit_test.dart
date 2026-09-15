@@ -3,9 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
+import 'package:cuadrala_mobile/src/core/location/location_service.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/models/user_location_dto.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/onboarding_repository.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_page.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/viewer_tournament_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_api.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournaments_list_cubit.dart';
@@ -15,17 +21,42 @@ import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart'
 class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
 class _MockVenuesRepository extends Mock implements VenuesRepository {}
+class _MockProfileRepository extends Mock implements ProfileRepository {}
+class _MockOnboardingRepository extends Mock implements OnboardingRepository {}
+class _MockLocationService extends Mock implements LocationService {}
+
+const _meNoCategory = UserMeDto(
+  id: 'user-1',
+  email: 'user@test.local',
+  name: 'Jugador',
+  subscriptionType: 'FREE',
+);
+
+const _meWithCategory = UserMeDto(
+  id: 'user-2',
+  email: 'user2@test.local',
+  name: 'Jugadora',
+  subscriptionType: 'FREE',
+  primaryRating: UserPrimaryRatingDto(
+    categoryId: 'cat-own',
+    categoryName: 'Cuarta',
+    sportId: 'sport-1',
+    rating: 3.5,
+  ),
+);
 
 void main() {
   group('TournamentsListCubit', () {
     late _MockTournamentsRepository tournamentsRepository;
     late _MockCatalogRepository catalogRepository;
     late _MockVenuesRepository venuesRepository;
+    late _MockProfileRepository profileRepository;
 
     setUp(() {
       tournamentsRepository = _MockTournamentsRepository();
       catalogRepository = _MockCatalogRepository();
       venuesRepository = _MockVenuesRepository();
+      profileRepository = _MockProfileRepository();
       // Default: loading sports/categories/venues returns empty (silent fail for tests)
       when(() => catalogRepository.listSports())
           .thenAnswer((_) async => []);
@@ -38,6 +69,11 @@ void main() {
             radiusKm: any(named: 'radiusKm'),
             sportType: any(named: 'sportType'),
           )).thenAnswer((_) async => []);
+      // Default: sin rating primario. Los tests de M3c-1 pisan esto puntualmente.
+      when(() => profileRepository.getMe()).thenAnswer((_) async => _meNoCategory);
+      // Default: "Mis torneos" vacío. Los tests de M4a pisan esto puntualmente.
+      when(() => tournamentsRepository.listMyTournaments())
+          .thenAnswer((_) async => const []);
     });
 
     final testPage = TournamentListPage(
@@ -70,6 +106,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -95,6 +132,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) => cubit.load(),
@@ -136,6 +174,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) async {
@@ -172,6 +211,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) async {
@@ -210,6 +250,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) async {
@@ -244,6 +285,7 @@ void main() {
           tournamentsRepository: tournamentsRepository,
           catalogRepository: catalogRepository,
           venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
         );
       },
       act: (cubit) async {
@@ -259,5 +301,318 @@ void main() {
             .having((s) => s.filters.status, 'after refresh still FINISHED', 'FINISHED'),
       ],
     );
+
+    group('Mi categoría default-on (M3c-1)', () {
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        "defaults categoryId to the viewer's primary category on first load",
+        setUp: () {
+          when(() => profileRepository.getMe()).thenAnswer((_) async => _meWithCategory);
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'filters.categoryId', 'cat-own')
+              .having((s) => s.hasOwnCategory, 'hasOwnCategory', true)
+              .having((s) => s.ownCategoryId, 'ownCategoryId', 'cat-own')
+              .having((s) => s.ownCategoryLabel, 'ownCategoryLabel', 'Cuarta'),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'never surfaces a category default when the viewer has none',
+        setUp: () {
+          when(() => profileRepository.getMe()).thenAnswer((_) async => _meNoCategory);
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'filters.categoryId', null)
+              .having((s) => s.hasOwnCategory, 'hasOwnCategory', false)
+              .having((s) => s.ownCategoryId, 'ownCategoryId', null)
+              .having((s) => s.ownCategoryLabel, 'ownCategoryLabel', null),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'does not re-derive or clobber a category the caller already cleared, on a later refresh',
+        setUp: () {
+          when(() => profileRepository.getMe()).thenAnswer((_) async => _meWithCategory);
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) async {
+          await cubit.load();
+          cubit.clearFilters();
+          await Future.delayed(Duration.zero);
+          await cubit.load(); // refresh
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'defaulted', 'cat-own'),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'cleared by the user', null),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.categoryId, 'still cleared after refresh', null),
+        ],
+        verify: (_) {
+          // getMe() sólo se llama una vez por cubit, nunca en cada load().
+          verify(() => profileRepository.getMe()).called(1);
+        },
+      );
+    });
+
+    group('Cerca (M3d)', () {
+      late _MockOnboardingRepository onboardingRepository;
+      late _MockLocationService locationService;
+
+      setUp(() {
+        onboardingRepository = _MockOnboardingRepository();
+        locationService = _MockLocationService();
+        when(() => tournamentsRepository.listTournaments(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              filters: any(named: 'filters'),
+            )).thenAnswer((_) async => testPage);
+      });
+
+      TournamentsListCubit buildCubit() => TournamentsListCubit(
+            tournamentsRepository: tournamentsRepository,
+            catalogRepository: catalogRepository,
+            venuesRepository: venuesRepository,
+            profileRepository: profileRepository,
+            onboardingRepository: onboardingRepository,
+            locationService: locationService,
+          );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'applies near from the saved location, without touching the GPS',
+        setUp: () {
+          when(() => onboardingRepository.getLocation()).thenAnswer(
+            (_) async => const UserLocationDto(
+              label: 'Casa',
+              latitude: -10.5,
+              longitude: -66.9,
+              radiusKm: 20,
+            ),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.toggleNear();
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near before toggle', null),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near', '-10.5,-66.9')
+              .having((s) => s.filters.radiusKm, 'radiusKm', 10),
+        ],
+        verify: (_) {
+          verify(() => onboardingRepository.getLocation()).called(1);
+          verifyNever(() => locationService.getCurrentLocation());
+        },
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'falls back to GPS when there is no saved location',
+        setUp: () {
+          when(() => onboardingRepository.getLocation())
+              .thenAnswer((_) async => null);
+          when(() => locationService.getCurrentLocation()).thenAnswer(
+            (_) async =>
+                const DeviceLocation(latitude: -10.4, longitude: -66.8),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.toggleNear();
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>(),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near', '-10.4,-66.8')
+              .having((s) => s.filters.radiusKm, 'radiusKm', 10),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'stays inactive when neither the saved location nor GPS resolve',
+        setUp: () {
+          when(() => onboardingRepository.getLocation())
+              .thenAnswer((_) async => null);
+          when(() => locationService.getCurrentLocation()).thenThrow(
+            const LocationFailure(
+              code: 'LOCATION_DENIED',
+              message: 'Necesitamos permiso de ubicación.',
+            ),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.toggleNear();
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near stays null', null),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'toggling again clears the near filter',
+        setUp: () {
+          when(() => onboardingRepository.getLocation()).thenAnswer(
+            (_) async => const UserLocationDto(
+              label: null,
+              latitude: -10.5,
+              longitude: -66.9,
+              radiusKm: 20,
+            ),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.toggleNear();
+          await cubit.toggleNear();
+        },
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>(),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near after first toggle', '-10.5,-66.9'),
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.filters.near, 'near after second toggle', null)
+              .having((s) => s.filters.radiusKm, 'radiusKm after clear', null),
+        ],
+      );
+    });
+
+    group('Mis torneos (M4a)', () {
+      final viewerTournamentA = ViewerTournamentDto(
+        tournament: testPage.items.first,
+        registrationStatus: 'CONFIRMED',
+        pendingInvitationId: null,
+        isOrganizer: false,
+        pendingRegistrationsCount: null,
+      );
+      const viewerTournamentB = ViewerTournamentDto(
+        tournament: TournamentListItemDto(
+          id: 't-invited',
+          name: 'Nocturno Chacao',
+          status: 'OPEN',
+          sportName: 'Padel',
+          categoryName: '5ta',
+          categoryId: 'cat-5',
+          startsAt: null,
+          registrationCount: 4,
+        ),
+        registrationStatus: null,
+        pendingInvitationId: 'inv-1',
+        isOrganizer: false,
+        pendingRegistrationsCount: null,
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'load populates myTournaments from GET /api/v1/users/me/tournaments',
+        setUp: () {
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+          when(() => tournamentsRepository.listMyTournaments()).thenAnswer(
+            (_) async => [viewerTournamentA, viewerTournamentB],
+          );
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>().having(
+            (s) => s.myTournaments,
+            'myTournaments',
+            [viewerTournamentA, viewerTournamentB],
+          ),
+        ],
+      );
+
+      blocTest<TournamentsListCubit, TournamentsListState>(
+        'keeps myTournaments empty when the repository call fails, without breaking the main list',
+        setUp: () {
+          when(() => tournamentsRepository.listTournaments(
+                page: any(named: 'page'),
+                limit: any(named: 'limit'),
+                filters: any(named: 'filters'),
+              )).thenAnswer((_) async => testPage);
+          when(() => tournamentsRepository.listMyTournaments()).thenThrow(
+            const AppFailure(code: 'HTTP_500', message: 'Error del servidor.'),
+          );
+        },
+        build: () => TournamentsListCubit(
+          tournamentsRepository: tournamentsRepository,
+          catalogRepository: catalogRepository,
+          venuesRepository: venuesRepository,
+          profileRepository: profileRepository,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const TournamentsListLoading(),
+          isA<TournamentsListLoaded>()
+              .having((s) => s.myTournaments, 'myTournaments', const <ViewerTournamentDto>[])
+              .having((s) => s.items.length, 'items.length still loads', 1),
+        ],
+      );
+    });
   });
 }

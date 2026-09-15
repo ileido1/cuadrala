@@ -22,6 +22,32 @@ Finder get _indicator => find.byType(AnimatedPositioned);
 
 void main() {
   group('SegmentedControl', () {
+    testWidgets('a disabled option ignores taps and renders dimmed', (tester) async {
+      var changed = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SegmentedControl<String>(
+              options: const [
+                SegmentedOption(value: 'RIGHT', label: 'Drive'),
+                SegmentedOption(value: 'LEFT', label: 'Revés', enabled: false),
+              ],
+              value: 'RIGHT',
+              onChanged: (_) => changed = true,
+            ),
+          ),
+        ),
+      );
+
+      final disabledText = tester.widget<Text>(find.text('Revés'));
+      final scheme = Theme.of(tester.element(find.text('Revés'))).colorScheme;
+      expect(disabledText.style?.color, scheme.onSurface.withValues(alpha: 0.38));
+
+      await tester.tap(find.text('Revés'));
+      await tester.pump();
+      expect(changed, isFalse);
+    });
+
     testWidgets('should show the indicator when value matches an option',
         (tester) async {
       await tester.pumpWidget(_host('LEFT'));

@@ -1,7 +1,13 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import { generateSingleEliminationScheduleSV } from '../../domain/single_elimination/bracket_generator.js';
+import { resolveMatchWinningUserIdsSV } from '../../domain/tournament/match_side_aggregation.js';
 import type { TournamentQueryRepository } from '../../domain/ports/tournament_query_repository.js';
 import type { MatchCrudRepository } from '../../domain/ports/match_crud_repository.js';
+import type { TournamentScheduleRepository } from '../../domain/ports/tournament_schedule_repository.js';
+import type {
+  TournamentMatchResultRepository,
+  TournamentMatchStateSV,
+} from '../../domain/ports/tournament_match_result_repository.js';
 
 export type PlayerBracketSlotDTO = {
   userId: string;
@@ -34,10 +40,51 @@ export type TournamentBracketDTO = {
   rounds: BracketRoundDTO[];
 };
 
+//? Match.status (dominio: SCHEDULED/IN_PROGRESS/FINISHED/CANCELLED) al status
+//? del bracket. Un partido materializado sin resultado (SCHEDULED) o
+//? cancelado se muestra como PENDING — el bracket no distingue "cancelado"
+//? de "todavía no jugado", ninguna pantalla lo necesita hoy.
+function mapMatchStatusToBracketStatusSV(
+  _matchStatus: string,
+): 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' {
+  if (_matchStatus === 'FINISHED') return 'COMPLETED';
+  if (_matchStatus === 'IN_PROGRESS') return 'IN_PROGRESS';
+  return 'PENDING';
+}
+
+/**
+ * Resuelve el `winnerId` real de un partido materializado con resultado.
+ * Reutiliza `resolveMatchWinningUserIdsSV` (misma regla de suma-por-lado que
+ * S7b/S7c) armando el `teamLabel` de cada score a partir de `sides` — en
+ * singles cada `sideKey` ya es el propio `userId`, así que la agrupación
+ * sigue siendo correcta sin una rama aparte.
+ */
+function resolveBracketWinnerIdSV(_state: TournamentMatchStateSV): string | null {
+  if (_state.scores.length === 0) return null;
+
+  const SIDE_KEY_BY_USER_ID = new Map<string, string>();
+  for (const SIDE of _state.sides) {
+    for (const USER_ID of SIDE.userIds) {
+      if (USER_ID !== null) SIDE_KEY_BY_USER_ID.set(USER_ID, SIDE.sideKey);
+    }
+  }
+
+  const WINNING_USER_IDS = resolveMatchWinningUserIdsSV(
+    _state.scores.map((_s) => ({
+      userId: _s.userId,
+      teamLabel: SIDE_KEY_BY_USER_ID.get(_s.userId) ?? null,
+      points: _s.points,
+    })),
+  );
+  return WINNING_USER_IDS[0] ?? null;
+}
+
 export class GetTournamentBracketUseCase {
   constructor(
     private readonly _tournamentQueryRepository: TournamentQueryRepository,
     private readonly _matchCrudRepository: MatchCrudRepository,
+    private readonly _tournamentScheduleRepository: TournamentScheduleRepository,
+    private readonly _tournamentMatchResultRepository: TournamentMatchResultRepository,
   ) {}
 
   async executeSV(_input: { tournamentId: string }): Promise<TournamentBracketDTO> {
@@ -79,6 +126,24 @@ export class GetTournamentBracketUseCase {
     // Generar bracket usando la función del dominio
     const SCHEDULE = generateSingleEliminationScheduleSV({ participantRegistrationIds: PARTICIPANT_IDS });
 
+    //? Estado real (S8b): mientras no exista un calendario guardado el bracket
+    //? es pura preview (siempre fue así). Una vez generado, cada slot que ya
+    //? tenga un Match materializado se pisa con su estado real — los slots sin
+    //? Match (incluidos los byes, que nunca materializan uno) quedan en preview.
+    const STORED_SCHEDULE = await this._tournamentScheduleRepository.findByTournamentIdSV(
+      _input.tournamentId,
+    );
+    const MATCH_STATE_BY_SLOT = new Map<string, TournamentMatchStateSV>();
+    if (STORED_SCHEDULE !== null) {
+      const MATCH_STATES = await this._tournamentMatchResultRepository.listTournamentMatchStatesSV({
+        tournamentId: _input.tournamentId,
+        scheduleKey: STORED_SCHEDULE.scheduleKey,
+      });
+      for (const STATE of MATCH_STATES) {
+        MATCH_STATE_BY_SLOT.set(`${STATE.roundNumber}:${STATE.matchNumber}`, STATE);
+      }
+    }
+
     // Construir DTO con mapeo de jugadores
     const ROUNDS: BracketRoundDTO[] = SCHEDULE.rounds.map((_round) => ({
       roundNumber: _round.roundNumber,
@@ -104,15 +169,22 @@ export class GetTournamentBracketUseCase {
               }
             : null;
 
+        const REAL_STATE = MATCH_STATE_BY_SLOT.get(`${_round.roundNumber}:${_match.matchNumber}`);
+
         return {
           matchNumber: _match.matchNumber,
           roundNumber: _round.roundNumber,
           playerA: PLAYER_A_SLOT,
           playerB: PLAYER_B_SLOT,
-          winnerId: null,
-          score: null,
-          status: _match.bye ? 'BYE' : 'PENDING',
-          matchId: null,
+          winnerId: REAL_STATE !== undefined ? resolveBracketWinnerIdSV(REAL_STATE) : null,
+          score: REAL_STATE !== undefined && REAL_STATE.scores.length > 0 ? REAL_STATE.scores : null,
+          status:
+            REAL_STATE !== undefined
+              ? mapMatchStatusToBracketStatusSV(REAL_STATE.matchStatus)
+              : _match.bye
+                ? 'BYE'
+                : 'PENDING',
+          matchId: REAL_STATE?.matchId ?? null,
         };
       }),
     }));

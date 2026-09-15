@@ -3,11 +3,21 @@ import 'package:flutter/material.dart';
 /// Una opción del [SegmentedControl].
 @immutable
 class SegmentedOption<T> {
-  const SegmentedOption({required this.value, required this.label, this.icon});
+  const SegmentedOption({
+    required this.value,
+    required this.label,
+    this.icon,
+    this.enabled = true,
+  });
 
   final T value;
   final String label;
   final IconData? icon;
+
+  /// Cuando es `false`, la opción se dibuja apagada e ignora toques (mismo
+  /// precedente de [SelectableChip]: `onSurface.withValues(alpha: 0.38)`,
+  /// asunción A4 — no existe un token de deshabilitado en el theme).
+  final bool enabled;
 }
 
 /// Control segmentado (rediseño Cuádrala) con indicador deslizante.
@@ -80,7 +90,7 @@ class SegmentedControl<T> extends StatelessWidget {
                       child: _SegmentButton(
                         option: options[i],
                         active: i == index,
-                        onTap: () => onChanged(options[i].value),
+                        onTap: options[i].enabled ? () => onChanged(options[i].value) : null,
                       ),
                     ),
                 ],
@@ -102,12 +112,16 @@ class _SegmentButton<T> extends StatelessWidget {
 
   final SegmentedOption<T> option;
   final bool active;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = active ? scheme.onSurface : scheme.onSurfaceVariant;
+    final color = !option.enabled
+        ? scheme.onSurface.withValues(alpha: 0.38)
+        : active
+            ? scheme.onSurface
+            : scheme.onSurfaceVariant;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

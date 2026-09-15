@@ -1,5 +1,6 @@
 import type {
   TournamentCreatedDTO,
+  TournamentGender,
   TournamentRepository,
   TournamentVisibility,
 } from '../../domain/ports/tournament_repository.js';
@@ -23,6 +24,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
     pairedRegistration: boolean;
     isCompetitive: boolean;
     inscriptionPrice: number | null;
+    gender: TournamentGender | null;
     createdAt: Date;
     updatedAt: Date;
   } | null> {
@@ -44,6 +46,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
       pairedRegistration: ROW.pairedRegistration,
       isCompetitive: ROW.isCompetitive,
       inscriptionPrice: ROW.inscriptionPrice === null ? null : ROW.inscriptionPrice.toNumber(),
+      gender: ROW.gender,
       createdAt: ROW.createdAt,
       updatedAt: ROW.updatedAt,
     };
@@ -63,6 +66,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
     inscriptionPrice?: number;
     maxSlots?: number;
     registrationClosesAt?: Date;
+    gender?: TournamentGender;
   }): Promise<TournamentCreatedDTO> {
     const CREATED = await PRISMA.tournament.create({
       data: {
@@ -83,6 +87,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
         ...(_data.registrationClosesAt !== undefined
           ? { registrationClosesAt: _data.registrationClosesAt }
           : {}),
+        ...(_data.gender !== undefined ? { gender: _data.gender } : {}),
       },
     });
 

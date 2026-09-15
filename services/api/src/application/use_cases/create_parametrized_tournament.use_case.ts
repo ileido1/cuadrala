@@ -26,6 +26,8 @@ export type CreateParametrizedTournamentInput = {
   maxSlots?: number;
   /** Cierre informativo de la inscripción; la ventana real la manda `status`. */
   registrationClosesAt?: Date;
+  /** Reusa `MatchGender`; ausente = sin declarar (`null` en la base). */
+  gender?: 'MALE' | 'FEMALE' | 'MIXED';
 };
 
 export class CreateParametrizedTournamentUseCase {
@@ -154,6 +156,7 @@ export class CreateParametrizedTournamentUseCase {
       ...(_input.registrationClosesAt !== undefined
         ? { registrationClosesAt: _input.registrationClosesAt }
         : {}),
+      ...(_input.gender !== undefined ? { gender: _input.gender } : {}),
     });
 
     return {

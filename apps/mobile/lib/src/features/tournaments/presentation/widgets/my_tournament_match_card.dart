@@ -41,7 +41,7 @@ class MyTournamentMatchCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Ronda ${match.roundNumber} · Partido ${match.matchNumber}',
+                  match.roundName ?? 'Ronda ${match.roundNumber}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -75,9 +75,15 @@ class MyTournamentMatchCard extends StatelessWidget {
               color: match.hasSlot ? scheme.onSurface : scheme.onSurfaceVariant,
             ),
           ),
-          //? Solo se pregunta cuando hay algo concreto que aceptar.
-          if (match.hasSlot && match.decision == 'PENDING') ...[
+          //? Solo se pregunta cuando hay algo concreto que aceptar y todavía
+          //? no contesté: ya contestado, repreguntar no tiene sentido.
+          if (match.hasSlot && match.decision == 'PENDING' && !match.answered) ...[
             const SizedBox(height: 12),
+            Text(
+              'El organizador propuso este horario. ¿Te sirve?',
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 10),
             if (busy)
               const Center(
                 child: SizedBox(
@@ -90,22 +96,35 @@ class MyTournamentMatchCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      key: Key('tournament.rejectSlot.${match.roundNumber}.${match.matchNumber}'),
-                      onPressed: () => onRespond('REJECTED'),
-                      child: const Text('No puedo'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
                     child: FilledButton(
                       key: Key('tournament.acceptSlot.${match.roundNumber}.${match.matchNumber}'),
                       onPressed: () => onRespond('ACCEPTED'),
                       child: const Text('Me sirve'),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton(
+                      key: Key('tournament.rejectSlot.${match.roundNumber}.${match.matchNumber}'),
+                      onPressed: () => onRespond('REJECTED'),
+                      child: const Text('No puedo'),
+                    ),
+                  ),
                 ],
               ),
+          ],
+          //? Aviso persistente: sigue ahí aunque se refresque la pantalla,
+          //? porque viene de `myResponse`, no de un estado local efímero.
+          if (match.myResponse == 'REJECTED') ...[
+            const SizedBox(height: 12),
+            Text(
+              'Avisamos al organizador. Va a reprogramar el partido y te llega el horario nuevo.',
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.45,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ],
       ),
@@ -144,7 +163,10 @@ class _DecisionChip extends StatelessWidget {
   }
 
   static (String, Color) _labelSV(MyTournamentMatchDto match) {
-    if (!match.hasSlot) return ('Sin cancha', Colors.grey);
+    //? Sin cancha materializada el partido depende de resultados previos del
+    //? cuadro (`README.md:84`); no es "todavía no hay cancha", es "todavía no
+    //? sabemos quién juega".
+    if (!match.hasSlot) return ('Depende del cuadro', Colors.grey);
     return switch (match.decision) {
       'ACCEPTED' => ('Confirmado', Colors.green),
       'REJECTED' => ('Se reubica', Colors.orange),

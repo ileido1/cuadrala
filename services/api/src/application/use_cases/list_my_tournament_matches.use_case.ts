@@ -1,4 +1,6 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import { resolveSingleEliminationRoundNameSV } from '../../domain/single_elimination/bracket_generator.js';
+import type { SingleEliminationScheduleDTO } from '../../domain/single_elimination/bracket_generator.js';
 import { buildMaterializedMatchPlansSV } from '../../domain/tournament/tournament_match_materialization.js';
 import {
   resolveSlotDecisionSV,
@@ -13,6 +15,12 @@ import type { TournamentSlotResponseRepository } from './respond_tournament_slot
 
 export type MyTournamentMatchDTO = {
   roundNumber: number;
+  /**
+   * Nombre cualitativo de la ronda ("Cuartos de final", "Semifinal", "Final",
+   * "Tercer puesto") para torneos SINGLE_ELIMINATION; `null` para cualquier
+   * otro formato, donde el cliente cae a "Ronda {n}" con `roundNumber`.
+   */
+  roundName: string | null;
   matchNumber: number;
   scheduledAt: Date | null;
   courtId: string | null;
@@ -78,6 +86,14 @@ export class ListMyTournamentMatchesUseCase {
       payload: SCHEDULE.payload,
     });
 
+    //? El nombre cualitativo de ronda solo existe para SINGLE_ELIMINATION: es
+    //? el único formato con un `totalRounds` fijo del que derivarlo. Otros
+    //? formatos (ROUND_ROBIN, AMERICANO) no tienen "cuartos" ni "semifinal".
+    const TOTAL_ROUNDS =
+      SCHEDULE.formatCode === 'SINGLE_ELIMINATION'
+        ? (SCHEDULE.payload as SingleEliminationScheduleDTO).totalRounds
+        : null;
+
     const ITEMS: MyTournamentMatchDTO[] = [];
 
     for (const PLAN of PLANS) {
@@ -122,6 +138,10 @@ export class ListMyTournamentMatchesUseCase {
 
       ITEMS.push({
         roundNumber: PLAN.roundNumber,
+        roundName:
+          TOTAL_ROUNDS === null
+            ? null
+            : resolveSingleEliminationRoundNameSV(PLAN.roundNumber, TOTAL_ROUNDS),
         matchNumber: PLAN.matchNumber,
         scheduledAt: SLOT?.scheduledAt ?? null,
         courtId: SLOT?.courtId ?? null,

@@ -7,6 +7,7 @@ const mockTournamentQueryRepository = {
   getTournamentByIdSV: vi.fn(),
   listTournamentRegistrationsSV: vi.fn(),
   listTournamentsByVenueSV: vi.fn(),
+  listViewerTournamentsSV: vi.fn(),
 };
 
 // Mock match repository (for resolving match IDs)
@@ -17,7 +18,34 @@ const mockMatchRepository = {
   cancelMatchSV: vi.fn(),
 };
 
-const useCase = new GetTournamentBracketUseCase(mockTournamentQueryRepository, mockMatchRepository);
+// Mock schedule repository (S8b: whether a schedule was ever generated)
+const mockTournamentScheduleRepository = {
+  findByTournamentIdSV: vi.fn(),
+  createOrValidateIdempotencySV: vi.fn(),
+  saveSlotPlanSV: vi.fn(),
+};
+
+// Mock match-result repository (S8b: real per-match state once materialized)
+const mockTournamentMatchResultRepository = {
+  getVenueIdForTournamentSV: vi.fn(),
+  matchBelongsToTournamentSV: vi.fn(),
+  matchHasResultSV: vi.fn(),
+  registerResultAndAdvanceSV: vi.fn(),
+  listMatchParticipantSidesSV: vi.fn(),
+  listTournamentMatchStatesSV: vi.fn(),
+};
+
+const useCase = new GetTournamentBracketUseCase(
+  mockTournamentQueryRepository,
+  mockMatchRepository,
+  mockTournamentScheduleRepository,
+  mockTournamentMatchResultRepository,
+);
+
+//? Por defecto ningún torneo tiene calendario generado: los tests existentes
+//? (preview pura) no deben cambiar de comportamiento. Los tests de S8b
+//? pisan este mock puntualmente con `mockResolvedValueOnce`.
+mockTournamentScheduleRepository.findByTournamentIdSV.mockResolvedValue(null);
 
 describe('GetTournamentBracketUseCase', () => {
   it('should return bracket for tournament with 8 confirmed players', async () => {
@@ -210,5 +238,142 @@ describe('GetTournamentBracketUseCase', () => {
     await expect(
       useCase.executeSV({ tournamentId: 'tournament-insufficient' })
     ).rejects.toThrow('Se requieren al menos 2 participantes confirmados para SINGLE_ELIMINATION.');
+  });
+});
+
+describe('GetTournamentBracketUseCase — real match state once a schedule exists (S8b)', () => {
+  const BASE_TOURNAMENT = {
+    id: 'tournament-real',
+    name: 'Torneo Real State',
+    status: 'IN_PROGRESS',
+    sportId: 'sport-uuid',
+    sportName: 'Padel',
+    categoryId: 'cat-uuid',
+    categoryName: 'Masculino',
+    startsAt: '2026-06-01T00:00:00.000Z',
+    registrationCount: 4,
+    maxParticipants: 4,
+    formatPresetId: 'preset-uuid',
+    formatPresetName: 'SINGLE_ELIMINATION',
+    presetSchemaVersion: 1,
+    formatParameters: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+
+  const FOUR_REGISTRATIONS = [
+    { id: 'reg-1', userId: 'user-1', userName: 'Jugador 1', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'reg-2', userId: 'user-2', userName: 'Jugador 2', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:01.000Z' },
+    { id: 'reg-3', userId: 'user-3', userName: 'Jugador 3', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:02.000Z' },
+    { id: 'reg-4', userId: 'user-4', userName: 'Jugador 4', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:03.000Z' },
+  ];
+
+  it('keeps the preview shape (winnerId/score/matchId null, status PENDING) when no schedule was ever generated', async () => {
+    mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(BASE_TOURNAMENT);
+    mockTournamentQueryRepository.listTournamentRegistrationsSV.mockResolvedValue(FOUR_REGISTRATIONS);
+    mockTournamentScheduleRepository.findByTournamentIdSV.mockResolvedValueOnce(null);
+
+    const result = await useCase.executeSV({ tournamentId: 'tournament-real' });
+
+    for (const round of result.rounds) {
+      for (const match of round.matches) {
+        expect(match.winnerId).toBeNull();
+        expect(match.score).toBeNull();
+        expect(match.matchId).toBeNull();
+        expect(match.status).toBe('PENDING');
+      }
+    }
+    expect(mockTournamentMatchResultRepository.listTournamentMatchStatesSV).not.toHaveBeenCalled();
+  });
+
+  it('overlays real winnerId/score/status/matchId onto a completed match once the schedule and its result exist', async () => {
+    mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(BASE_TOURNAMENT);
+    mockTournamentQueryRepository.listTournamentRegistrationsSV.mockResolvedValue(FOUR_REGISTRATIONS);
+    mockTournamentScheduleRepository.findByTournamentIdSV.mockResolvedValueOnce({
+      id: 'schedule-1',
+      tournamentId: 'tournament-real',
+      formatCode: 'SINGLE_ELIMINATION',
+      scheduleKey: 'schedule-key-real',
+      payload: {},
+      slotPlan: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    mockTournamentMatchResultRepository.listTournamentMatchStatesSV.mockResolvedValueOnce([
+      {
+        roundNumber: 1,
+        matchNumber: 1,
+        matchId: 'match-sf1',
+        matchStatus: 'FINISHED',
+        sides: [
+          { sideKey: 'user-1', userIds: ['user-1'] },
+          { sideKey: 'user-2', userIds: ['user-2'] },
+        ],
+        scores: [
+          { userId: 'user-1', points: 6 },
+          { userId: 'user-2', points: 2 },
+        ],
+      },
+    ]);
+
+    const result = await useCase.executeSV({ tournamentId: 'tournament-real' });
+
+    expect(mockTournamentMatchResultRepository.listTournamentMatchStatesSV).toHaveBeenCalledWith({
+      tournamentId: 'tournament-real',
+      scheduleKey: 'schedule-key-real',
+    });
+
+    const ROUND_1 = result.rounds.find((_r) => _r.roundNumber === 1)!;
+    const PLAYED_MATCH = ROUND_1.matches.find((_m) => _m.matchNumber === 1)!;
+    expect(PLAYED_MATCH.matchId).toBe('match-sf1');
+    expect(PLAYED_MATCH.status).toBe('COMPLETED');
+    expect(PLAYED_MATCH.winnerId).toBe('user-1');
+    expect(PLAYED_MATCH.score).toEqual([
+      { userId: 'user-1', points: 6 },
+      { userId: 'user-2', points: 2 },
+    ]);
+
+    // La otra semifinal de la misma ronda no tiene Match materializado todavía: preview intacto.
+    const OTHER_MATCH = ROUND_1.matches.find((_m) => _m.matchNumber !== 1)!;
+    expect(OTHER_MATCH.matchId).toBeNull();
+    expect(OTHER_MATCH.status).toBe('PENDING');
+    expect(OTHER_MATCH.winnerId).toBeNull();
+    expect(OTHER_MATCH.score).toBeNull();
+  });
+
+  it('maps a materialized match with no recorded result yet to IN_PROGRESS with a real matchId but no winner', async () => {
+    mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue(BASE_TOURNAMENT);
+    mockTournamentQueryRepository.listTournamentRegistrationsSV.mockResolvedValue(FOUR_REGISTRATIONS);
+    mockTournamentScheduleRepository.findByTournamentIdSV.mockResolvedValueOnce({
+      id: 'schedule-2',
+      tournamentId: 'tournament-real',
+      formatCode: 'SINGLE_ELIMINATION',
+      scheduleKey: 'schedule-key-live',
+      payload: {},
+      slotPlan: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    mockTournamentMatchResultRepository.listTournamentMatchStatesSV.mockResolvedValueOnce([
+      {
+        roundNumber: 1,
+        matchNumber: 1,
+        matchId: 'match-live',
+        matchStatus: 'IN_PROGRESS',
+        sides: [
+          { sideKey: 'user-1', userIds: ['user-1'] },
+          { sideKey: 'user-2', userIds: ['user-2'] },
+        ],
+        scores: [],
+      },
+    ]);
+
+    const result = await useCase.executeSV({ tournamentId: 'tournament-real' });
+
+    const MATCH = result.rounds[0]!.matches.find((_m) => _m.matchNumber === 1)!;
+    expect(MATCH.matchId).toBe('match-live');
+    expect(MATCH.status).toBe('IN_PROGRESS');
+    expect(MATCH.winnerId).toBeNull();
+    expect(MATCH.score).toBeNull();
   });
 });

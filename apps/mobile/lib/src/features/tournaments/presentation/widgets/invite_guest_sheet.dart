@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../cubit/tournament_registrations_cubit.dart';
 import '../cubit/tournament_registrations_state.dart';
 
@@ -118,7 +119,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.person_add_alt_1),
+                      : const Icon(AppIcons.personAdd),
                   label: const Text('Invitar'),
                 ),
               ],

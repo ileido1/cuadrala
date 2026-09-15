@@ -66,5 +66,58 @@ void main() {
 
       expect(dto.inscriptionPrice, 15.0);
     });
+
+    //? `distanceKm` sólo viene cuando el listado se filtró con `near`
+    //? (chip "Cerca", M3d); no se inventa cuando el filtro no se aplicó.
+    test('should read distanceKm when the listing was filtered by near', () {
+      final dto = TournamentListItemDto.fromJson(
+        jsonSV(extra: {'distanceKm': 2.5}),
+      );
+
+      expect(dto.distanceKm, 2.5);
+    });
+
+    test('should leave distanceKm null when near was not applied', () {
+      final dto = TournamentListItemDto.fromJson(jsonSV());
+
+      expect(dto.distanceKm, isNull);
+    });
+
+    //? Necesarios para resolver `{org}` del banner de invitación y la fila de
+    //? organizador (M4b-1): `organizerName` viene de S3a, `gender` de S2.
+    test('should read gender and organizerName from the API', () {
+      final dto = TournamentListItemDto.fromJson(jsonSV(extra: {
+        'gender': 'MIXED',
+        'organizerName': 'Padel Country',
+      }));
+
+      expect(dto.gender, 'MIXED');
+      expect(dto.organizerName, 'Padel Country');
+    });
+
+    test('should leave gender and organizerName null when the API omits them',
+        () {
+      final dto = TournamentListItemDto.fromJson(jsonSV());
+
+      expect(dto.gender, isNull);
+      expect(dto.organizerName, isNull);
+    });
+
+    //? Sólo `GET /tournaments/:id` (detalle) manda `formatPresetName`
+    //? (`tournament_query_repository.ts:44`); el listado no lo trae, así que
+    //? el campo tiene que ser opcional en vez de reventar el parseo.
+    test('should read formatPresetName when the API includes it', () {
+      final dto = TournamentListItemDto.fromJson(
+        jsonSV(extra: {'formatPresetName': 'SINGLE_ELIMINATION'}),
+      );
+
+      expect(dto.formatPresetName, 'SINGLE_ELIMINATION');
+    });
+
+    test('should leave formatPresetName null when the API omits it', () {
+      final dto = TournamentListItemDto.fromJson(jsonSV());
+
+      expect(dto.formatPresetName, isNull);
+    });
   });
 }

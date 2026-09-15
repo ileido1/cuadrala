@@ -31,6 +31,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 class _MockTournamentsRepository extends Mock implements TournamentsRepository {
   @override
@@ -111,8 +112,11 @@ Widget _buildTestApp({
 
 /// Se resuelve desde la constante de la pantalla: la etiqueta ya se renombró
 /// dos veces y cada vez dejó esta suite en rojo.
-Finder get _registrationsTab =>
-    find.descendant(of: find.byType(TabBar), matching: find.text('Inscriptos'));
+//? M5b reemplazó el `TabBar` de Material por `SegmentedControl`.
+Finder get _registrationsTab => find.descendant(
+  of: find.byType(SegmentedControl<int>),
+  matching: find.text('Inscriptos'),
+);
 
 void main() {
   late _MockTournamentsRepository tournamentsRepository;

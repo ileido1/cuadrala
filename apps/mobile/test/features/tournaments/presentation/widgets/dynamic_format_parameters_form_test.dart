@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/format_parameter_field_def.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/dynamic_format_parameters_form.dart';
 
@@ -79,7 +80,7 @@ void main() {
         _buildForm(fields: const [field], values: {'rounds': 3}, recorder: recorder),
       );
 
-      await tester.tap(_inForm(find.byIcon(Icons.add)));
+      await tester.tap(_inForm(find.byIcon(AppIcons.add)));
 
       expect(recorder.calls.single.key, 'rounds');
       expect(recorder.calls.single.value, 4);
@@ -90,7 +91,7 @@ void main() {
         _buildForm(fields: const [field], values: {'rounds': 5}, recorder: recorder),
       );
 
-      await tester.tap(_inForm(find.byIcon(Icons.add)));
+      await tester.tap(_inForm(find.byIcon(AppIcons.add)));
 
       expect(recorder.calls, isEmpty);
     });
@@ -98,7 +99,7 @@ void main() {
     testWidgets('should not call onChanged when - is tapped at min', (tester) async {
       await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
 
-      await tester.tap(_inForm(find.byIcon(Icons.remove)));
+      await tester.tap(_inForm(find.byIcon(AppIcons.remove)));
 
       expect(recorder.calls, isEmpty);
     });

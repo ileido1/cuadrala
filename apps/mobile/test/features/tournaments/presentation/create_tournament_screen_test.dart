@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/models/category_dto.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/models/sport_dto.dart';
@@ -221,7 +222,7 @@ void main() {
       await _selectPreset(tester, 'Liga');
       await tester.tap(find.widgetWithText(ChoiceChip, 'Dobles'));
       await tester.pumpAndSettle();
-      await tester.tap(_inForm(find.byIcon(Icons.add)));
+      await tester.tap(_inForm(find.byIcon(AppIcons.add)));
       await tester.pumpAndSettle();
 
       await tester.tap(find.bySubtype<FilledButton>());

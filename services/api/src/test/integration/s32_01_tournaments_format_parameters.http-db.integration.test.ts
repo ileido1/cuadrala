@@ -43,6 +43,28 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 32 — E0-02: formatParameter
     expect(RES.body.code).toBe('VALIDACION_FALLIDA');
   });
 
+  //? These cases used to live in a DB-free contract test. The schema they are
+  //? judged against now comes from the preset row, so they need a real
+  //? category, sport and preset to reach the validator instead of a 404.
+  it.each([
+    ['AMERICANO', { rounds: 0 }],
+    ['ROUND_ROBIN', { doubleRound: true, extra: 1 }],
+  ])('%s: rechaza %j con 400 VALIDACION_FALLIDA', async (_code, _params) => {
+    const RES = await request(APP)
+      .post('/api/v1/tournaments')
+      .send({
+        name: 'Torneo inválido',
+        categoryId,
+        sportId: sportPadelId,
+        formatPresetCode: _code,
+        formatParameters: _params,
+      })
+      .set('Content-Type', 'application/json');
+
+    expect(RES.status).toBe(400);
+    expect(RES.body.code).toBe('VALIDACION_FALLIDA');
+  });
+
   it('acepta parámetros válidos y persiste formatParameters', async () => {
     const FORMAT_PARAMETERS = { rounds: 2, courts: 1 };
 

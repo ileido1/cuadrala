@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../cubit/tournament_registrations_cubit.dart';
 import '../cubit/tournament_registrations_state.dart';
 import '../tournament_status_view.dart';
@@ -72,7 +73,7 @@ class EnrollButton extends StatelessWidget {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.person_add),
+                    : const Icon(AppIcons.personAdd),
                 label: const Text('Inscribirme'),
               )
             else
@@ -111,7 +112,7 @@ class _RegistrationChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(confirmed ? Icons.check_circle : Icons.hourglass_top, size: 15, color: color),
+          Icon(confirmed ? AppIcons.checkCircle : AppIcons.pending, size: 15, color: color),
           const SizedBox(width: 6),
           Text(
             confirmed ? 'Estás dentro' : 'Falta que te acepten',

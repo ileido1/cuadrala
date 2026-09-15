@@ -58,6 +58,10 @@ export function notificationContentForTypeSV(
         title: 'Un partido necesita horario',
         body: 'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
       };
+    //? Copia exacta del handoff (`cuadrala-torneo-org.jsx:342`, requisito
+    //? "Result notification"): no se inventa un cuerpo distinto al título.
+    case 'TOURNAMENT_MATCH_RESULT_RECORDED':
+      return { title: 'Resultado cargado', body: 'Resultado cargado' };
     default:
       return { title: 'Notificación', body: 'Tienes una nueva notificación.' };
   }

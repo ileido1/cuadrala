@@ -5,6 +5,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/tournament_list_item_tile.dart';
 
+import '../handoff_copy.dart' as handoff_copy;
+
 TournamentListItemDto tournamentSV({
   String status = 'OPEN',
   String? venueName,
@@ -13,6 +15,9 @@ TournamentListItemDto tournamentSV({
   DateTime? registrationClosesAt,
   int registrationCount = 11,
   String categoryId = 'cat-1',
+  double? distanceKm,
+  String? organizerName,
+  String? gender,
 }) =>
     TournamentListItemDto(
       id: 'tournament-1',
@@ -27,15 +32,29 @@ TournamentListItemDto tournamentSV({
       inscriptionPrice: inscriptionPrice,
       maxSlots: maxSlots,
       registrationClosesAt: registrationClosesAt,
+      distanceKm: distanceKm,
+      organizerName: organizerName,
+      gender: gender,
     );
 
 void main() {
   setUpAll(() async => initializeDateFormatting('es_ES'));
 
-  Future<void> pump(WidgetTester tester, TournamentListItemDto t) async {
+  Future<void> pump(
+    WidgetTester tester,
+    TournamentListItemDto t, {
+    String? pendingInvitationId,
+    bool isOrganizer = false,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: TournamentListItemTile(tournament: t)),
+        home: Scaffold(
+          body: TournamentListItemTile(
+            tournament: t,
+            pendingInvitationId: pendingInvitationId,
+            isOrganizer: isOrganizer,
+          ),
+        ),
       ),
     );
   }
@@ -123,6 +142,133 @@ void main() {
       );
 
       expect(find.textContaining('cierra'), findsOneWidget);
+    });
+
+    //? "Cerca" (M3d): la tarjeta sólo muestra distancia cuando la API la
+    //? mandó — eso implica que el listado se filtró con `near`.
+    testWidgets('should show the distance next to the venue when the API returned it',
+        (tester) async {
+      await pump(
+        tester,
+        tournamentSV(venueName: 'Club Cuádrala', distanceKm: 2.5),
+      );
+
+      expect(find.text('Club Cuádrala · 2.5 km'), findsOneWidget);
+    });
+
+    testWidgets('should omit the distance when the API did not return it',
+        (tester) async {
+      await pump(tester, tournamentSV(venueName: 'Club Cuádrala'));
+
+      expect(find.textContaining(' km'), findsNothing);
+    });
+
+    //? {org} = venueName, cayendo al nombre del organizador sin sede
+    //? (spec "Listado — invitation banner and organizer row"; D7).
+    group('invitation banner', () {
+      testWidgets(
+          'should show "{venueName} te invitó" and the Ver invitación action '
+          'when there is a pending invitation and a venue', (tester) async {
+        await pump(
+          tester,
+          tournamentSV(venueName: 'Club Cuádrala'),
+          pendingInvitationId: 'invitation-1',
+        );
+
+        expect(
+          find.text(handoff_copy.invitationBannerTitle('Club Cuádrala')),
+          findsOneWidget,
+        );
+        expect(
+          find.text(handoff_copy.invitationBannerAction),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets(
+          "should fall back to the organizer's display name when there is "
+          'no venue', (tester) async {
+        await pump(
+          tester,
+          tournamentSV(organizerName: 'Padel Country'),
+          pendingInvitationId: 'invitation-1',
+        );
+
+        expect(
+          find.text(handoff_copy.invitationBannerTitle('Padel Country')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('should omit the banner without a pending invitation',
+          (tester) async {
+        await pump(tester, tournamentSV(venueName: 'Club Cuádrala'));
+
+        expect(find.textContaining('te invitó'), findsNothing);
+        expect(
+          find.text(handoff_copy.invitationBannerAction),
+          findsNothing,
+        );
+      });
+    });
+
+    //? `gender` llegó al DTO en M4b-1 (S2) pero quedó sin renderizar a
+    //? propósito ("todavía sin renderizar en la tarjeta (M4b-2)") — esta
+    //? tarjeta es la última pieza de fidelidad pendiente en el listado.
+    group('gender tag', () {
+      testWidgets('should show the Spanish gender label next to the category',
+          (tester) async {
+        await pump(tester, tournamentSV(gender: 'MIXED'));
+
+        expect(
+          find.text(handoff_copy.genderTagLabel('MIXED')!),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('should never show the raw gender enum', (tester) async {
+        for (final gender in ['MALE', 'FEMALE', 'MIXED']) {
+          await pump(tester, tournamentSV(gender: gender));
+
+          expect(find.text(gender), findsNothing, reason: '$gender salió crudo');
+        }
+      });
+
+      testWidgets('should omit the tag when no gender was declared',
+          (tester) async {
+        await pump(tester, tournamentSV());
+
+        expect(find.text('Masculino'), findsNothing);
+        expect(find.text('Femenino'), findsNothing);
+        expect(find.text('Mixto'), findsNothing);
+      });
+    });
+
+    group('organizer row', () {
+      testWidgets(
+          'should show the lime shield organizer row with a chevron when '
+          'the viewer organizes the tournament', (tester) async {
+        await pump(tester, tournamentSV(), isOrganizer: true);
+
+        expect(
+          find.text(handoff_copy.organizerRowTitle('Copa Cuádrala')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('tournament.card.organizerRow')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('should omit the organizer row when the viewer does not '
+          'organize the tournament', (tester) async {
+        await pump(tester, tournamentSV());
+
+        expect(
+          find.byKey(const Key('tournament.card.organizerRow')),
+          findsNothing,
+        );
+      });
     });
   });
 }

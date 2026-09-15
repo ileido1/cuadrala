@@ -17,6 +17,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_invitation_screen.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 class _MockRegistrationsCubit extends MockCubit<TournamentRegistrationsState>
     implements TournamentRegistrationsCubit {}
@@ -30,21 +31,25 @@ class _MockScoreboardCubit extends MockCubit<TournamentScoreboardState>
 class _MockTournamentsRepository extends Mock
     implements TournamentsRepository {}
 
-TournamentListItemDto _tournament({String? organizerUserId}) =>
-    TournamentListItemDto(
-      id: 't-1',
-      name: 'Copa Cuádrala',
-      status: 'OPEN',
-      sportName: 'Pádel',
-      categoryName: 'Mixto 7ma',
-      categoryId: 'cat-1',
-      startsAt: DateTime(2026, 9, 12, 9),
-      registrationCount: 4,
-      organizerUserId: organizerUserId,
-      inscriptionPrice: 12.5,
-      maxSlots: 16,
-      venueName: 'Club Cuádrala',
-    );
+TournamentListItemDto _tournament({
+  String? organizerUserId,
+  String? venueName = 'Club Cuádrala',
+  String? organizerName,
+}) => TournamentListItemDto(
+  id: 't-1',
+  name: 'Copa Cuádrala',
+  status: 'OPEN',
+  sportName: 'Pádel',
+  categoryName: 'Mixto 7ma',
+  categoryId: 'cat-1',
+  startsAt: DateTime(2026, 9, 12, 9),
+  registrationCount: 4,
+  organizerUserId: organizerUserId,
+  inscriptionPrice: 12.5,
+  maxSlots: 16,
+  venueName: venueName,
+  organizerName: organizerName,
+);
 
 TournamentRegistrationDto _registration() => TournamentRegistrationDto(
   id: 'r-1',
@@ -101,17 +106,18 @@ void main() {
 
     expect(
       find.descendant(
-        of: find.byType(TabBar),
+        //? M5b reemplazó el `TabBar` de Material por `SegmentedControl`.
+        of: find.byType(SegmentedControl<int>),
         matching: find.text('Inscriptos'),
       ),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: find.byType(TabBar), matching: find.text('Cuadro')),
+      find.descendant(of: find.byType(SegmentedControl<int>), matching: find.text('Cuadro')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: find.byType(TabBar), matching: find.text('Publicar')),
+      find.descendant(of: find.byType(SegmentedControl<int>), matching: find.text('Publicar')),
       findsOneWidget,
     );
     expect(find.text('Confirmar 1 pendientes'), findsOneWidget);
@@ -157,11 +163,60 @@ void main() {
       await tester.pump();
 
       expect(find.text('Invitación'), findsOneWidget);
-      expect(find.text('Copa Cuádrala te invitó'), findsOneWidget);
+      //? {org} resuelve igual que el banner del Listado: `venueName`, nunca
+      //? el nombre del propio torneo (D7, `tournament_list_item_tile.dart`
+      //? `_invitationOrg`).
+      expect(find.text('Club Cuádrala te invitó'), findsOneWidget);
+      expect(find.text('Copa Cuádrala te invitó'), findsNothing);
       expect(find.text('Rechazar'), findsOneWidget);
       expect(find.text('Aceptar'), findsOneWidget);
       expect(find.text('NIVEL'), findsOneWidget);
       expect(find.text('DÓNDE'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'invitation banner falls back to the organizer name with no venue',
+    (tester) async {
+      final registrationsCubit = _MockRegistrationsCubit();
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: const [],
+          total: 0,
+          invitations: [
+            TournamentInvitationDto(
+              id: 'i-1',
+              tournamentId: 't-1',
+              invitedUserId: 'player-1',
+              createdByUserId: 'organizer-1',
+              status: 'PENDING',
+              createdAt: DateTime(2026),
+            ),
+          ],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('player-1');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<TournamentRegistrationsCubit>.value(
+            value: registrationsCubit,
+            child: TournamentInvitationBody(
+              tournament: _tournament(
+                venueName: null,
+                organizerName: 'Juan Pérez',
+              ),
+              invitation:
+                  (registrationsCubit.state as TournamentRegistrationsLoaded)
+                      .invitations
+                      .single,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Juan Pérez te invitó'), findsOneWidget);
     },
   );
 }

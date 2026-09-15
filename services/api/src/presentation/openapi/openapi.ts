@@ -166,6 +166,50 @@ const OPENAPI_CONST = {
       },
     },
     '/api/v1/tournaments': {
+      get: {
+        tags: ['Tournaments'],
+        summary: 'Listar torneos del catálogo público',
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: ['DRAFT', 'OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+            },
+          },
+          { name: 'sportId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'categoryId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'venueId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'startsAtFrom', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+          { name: 'startsAtTo', in: 'query', required: false, schema: { type: 'string', format: 'date-time' } },
+          {
+            name: 'near',
+            in: 'query',
+            required: false,
+            description:
+              'Coordenadas "lat,lng". Filtra por la sede del torneo dentro de radiusKm y habilita distanceKm en cada item; sin este parámetro ningún item lo incluye.',
+            schema: { type: 'string', example: '-34.6,-58.4' },
+          },
+          {
+            name: 'radiusKm',
+            in: 'query',
+            required: false,
+            description: 'Solo aplica junto a near. Default 10 cuando near está presente.',
+            schema: { type: 'number', exclusiveMinimum: 0, maximum: 200, default: 10 },
+          },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+        ],
+        responses: {
+          '200': {
+            description:
+              'OK. Cada item de `data.items` incluye `distanceKm` (number, opcional): presente solo cuando se envió `near`; `gender` ("MALE"|"FEMALE"|"MIXED"|null): `null` cuando el torneo no lo declaró; y `organizerName` (string|null): nombre del organizador, `null` cuando el torneo no tiene uno asignado.',
+          },
+          '400': { description: 'Validación fallida' },
+        },
+      },
       post: {
         tags: ['Tournaments'],
         summary: 'Crear torneo parametrizado',
@@ -231,6 +275,12 @@ const OPENAPI_CONST = {
                     format: 'date-time',
                     description:
                       'Cierre informativo de la inscripción; no puede ser posterior a startsAt. La ventana real la gobierna status (DRAFT/OPEN).',
+                  },
+                  gender: {
+                    type: 'string',
+                    enum: ['MALE', 'FEMALE', 'MIXED'],
+                    description:
+                      'Género del torneo (reusa MatchGender). Opcional: ausente equivale a `null` (sin declarar); no invalida clientes legacy.',
                   },
                 },
                 anyOf: [{ required: ['formatPresetId'] }, { required: ['formatPresetCode'] }],
@@ -366,7 +416,7 @@ const OPENAPI_CONST = {
         tags: ['Tournaments'],
         summary: 'Los partidos del jugador en el torneo',
         description:
-          'Día, hora, cancha, compañero y rivales de cada partido del jugador autenticado, en orden de juego. En duplas fijas expande la pareja. Devuelve vacío —no 404— cuando el calendario todavía no se generó: es un estado normal del torneo. `myResponse` es lo que ya contestó y `decision` cómo quedó el partido con las respuestas de todos.',
+          'Día, hora, cancha, compañero y rivales de cada partido del jugador autenticado, en orden de juego. En duplas fijas expande la pareja. Devuelve vacío —no 404— cuando el calendario todavía no se generó: es un estado normal del torneo. `myResponse` es lo que ya contestó y `decision` cómo quedó el partido con las respuestas de todos. `roundName` es el nombre cualitativo de la ronda ("Cuartos de final", "Semifinal", "Final", "Tercer puesto") para torneos de eliminación simple; `null` para cualquier otro formato, donde el cliente debe caer a "Ronda {roundNumber}".',
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -578,6 +628,8 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Tournaments'],
         summary: 'Consultar calendario generado (genérico)',
+        description:
+          'Cada partido en `data.rounds[].matches` trae `matchId` y `matchStatus` (`null` sin materializar aún), `decision` (`PENDING`/`ACCEPTED`/`REJECTED`, según las respuestas de los jugadores al turno propuesto) con `rejectedByName` cuando fue rechazado, `sides` (agrupados por `MatchParticipant.teamLabel ?? userId`, vacío sin materializar) y `scores` (vacío sin resultado cargado).',
         parameters: [
           {
             name: 'tournamentId',
@@ -597,6 +649,8 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Tournaments'],
         summary: 'Consultar scoreboard de un torneo',
+        description:
+          '`data.rows` trae `userId/name/points/gamesPlayed/gamesWon/rank`. `gamesWon` suma 1 por partido donde el lado del usuario (agrupado por `MatchParticipant.teamLabel` en duplas, o el propio jugador en singles) sumó estrictamente más puntos que cualquier otro lado; un empate entre lados no le suma a nadie, aunque `gamesPlayed` sí cuenta ese partido para todos.',
         parameters: [
           {
             name: 'tournamentId',
@@ -1578,6 +1632,19 @@ const OPENAPI_CONST = {
         responses: {
           '200': { description: 'OK' },
           '400': { description: 'Validación fallida' },
+          '401': { description: 'No autorizado' },
+        },
+      },
+    },
+    '/api/v1/users/me/tournaments': {
+      get: {
+        tags: ['Tournaments'],
+        summary: 'Listar los torneos del usuario actual (inscripto, invitado u organizador)',
+        description:
+          'Devuelve, por cada torneo en el que el usuario esta inscripto (registrationStatus), tiene una invitacion pendiente (pendingInvitationId), o que organiza (isOrganizer), un item con esos datos. pendingRegistrationsCount solo tiene valor cuando isOrganizer es true.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'OK' },
           '401': { description: 'No autorizado' },
         },
       },
