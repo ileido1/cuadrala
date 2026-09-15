@@ -168,6 +168,12 @@ final class _InvitationBanner extends StatelessWidget {
 
   final TournamentListItemDto tournament;
 
+  /// `{org}`: `venueName`, cayendo al nombre del organizador sin sede
+  /// declarada (D7). Nunca el nombre del propio torneo — misma resolución
+  /// que el banner del Listado (`tournament_list_item_tile.dart
+  /// ._invitationOrg`).
+  String? get _org => tournament.venueName ?? tournament.organizerName;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -199,7 +205,7 @@ final class _InvitationBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${tournament.name} te invitó',
+                  '${_org ?? tournament.name} te invitó',
                   style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,

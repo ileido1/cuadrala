@@ -5,6 +5,17 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.17] - 2026-09-14
+
+### Corregido
+
+- **Banner de invitación con la resolución de {org} del Listado (M9c)**: la
+  pantalla de invitación ahora arma "{org} te invitó" con la misma regla
+  que el banner del Listado (D7) — `venueName`, cayendo al nombre del
+  organizador sin sede declarada — en vez de mostrar siempre el nombre del
+  propio torneo. Cierra M9 y la Fase 4 (detalle móvil) del rediseño de
+  torneos.
+
 ## [1.7.16] - 2026-09-14
 
 ### Corregido
