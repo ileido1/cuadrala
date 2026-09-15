@@ -28,6 +28,7 @@ import '../data/models/tournament_registration_dto.dart';
 import '../data/models/tournament_schedule_dto.dart';
 import '../data/models/tournament_scoreboard_dto.dart';
 import '../data/tournaments_repository.dart';
+import '../domain/tournament_status_transitions.dart';
 import 'cubit/tournament_registrations_cubit.dart';
 import 'cubit/tournament_registrations_state.dart';
 import 'cubit/tournament_publish_cubit.dart';

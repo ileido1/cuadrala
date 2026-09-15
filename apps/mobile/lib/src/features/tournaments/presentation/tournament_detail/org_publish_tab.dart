@@ -111,6 +111,7 @@ final class _OrganizerPublishTab extends StatelessWidget {
                   tournamentId: tournamentId,
                   organizerUserId: organizerUserId!,
                   currentStatus: tournament!.status,
+                  tournamentsRepository: tournamentsRepository,
                 ),
               const SizedBox(height: 12),
               const Text(
@@ -139,37 +140,6 @@ TextStyle _sectionStyle(ColorScheme scheme) => TextStyle(
   letterSpacing: 0.4,
 );
 
-/// Legal next statuses for the current one, mirroring the backend's
-/// `tournament_status_machine.ts` (table-driven edges: DRAFT→OPEN,
-/// OPEN→IN_PROGRESS, IN_PROGRESS→COMPLETED, {DRAFT,OPEN}→CANCELLED).
-List<String> _legalNextStatuses(String currentStatus) {
-  switch (currentStatus.toUpperCase()) {
-    case 'DRAFT':
-      return const ['OPEN', 'CANCELLED'];
-    case 'OPEN':
-      return const ['IN_PROGRESS', 'CANCELLED'];
-    case 'IN_PROGRESS':
-      return const ['COMPLETED'];
-    default:
-      return const [];
-  }
-}
-
-String _statusActionLabel(String status) {
-  switch (status) {
-    case 'OPEN':
-      return 'Abrir inscripciones';
-    case 'IN_PROGRESS':
-      return 'Iniciar torneo';
-    case 'COMPLETED':
-      return 'Finalizar torneo';
-    case 'CANCELLED':
-      return 'Cancelar torneo';
-    default:
-      return status;
-  }
-}
-
 /// Organizer-only status-transition control. Only the tournament organizer
 /// (`organizerUserId == currentUserId`) sees this; the backend enforces the
 /// same guard independently, so this is a UX affordance, not the source of
@@ -179,56 +149,19 @@ String _statusActionLabel(String status) {
 /// dragging in the rest of [TournamentDetailBody] (see
 /// `tournament_detail_screen_test.dart`).
 @visibleForTesting
-final class OrganizerStatusControl extends StatefulWidget {
+final class OrganizerStatusControl extends StatelessWidget {
   const OrganizerStatusControl({
     super.key,
     required this.tournamentId,
     required this.organizerUserId,
     required this.currentStatus,
-    this.onStatusChanged,
+    required this.tournamentsRepository,
   });
 
   final String tournamentId;
   final String organizerUserId;
   final String currentStatus;
-  final VoidCallback? onStatusChanged;
-
-  @override
-  State<OrganizerStatusControl> createState() => _OrganizerStatusControlState();
-}
-
-final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
-  bool _submitting = false;
-  String? _error;
-
-  Future<void> _submitSV(String nextStatus) async {
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-    try {
-      await getIt<TournamentsRepository>().updateTournamentStatus(
-        tournamentId: widget.tournamentId,
-        status: nextStatus,
-      );
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      // Notificar al padre para que actualice el estado del torneo
-      widget.onStatusChanged?.call();
-    } on AppFailure catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error = e.message;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error = 'No se pudo cambiar el estado del torneo.';
-      });
-    }
-  }
+  final TournamentsRepository tournamentsRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -239,73 +172,93 @@ final class _OrganizerStatusControlState extends State<OrganizerStatusControl> {
       builder: (context, state) {
         final cubit = context.read<TournamentRegistrationsCubit>();
         if (cubit.currentUserId == null ||
-            cubit.currentUserId != widget.organizerUserId) {
+            cubit.currentUserId != organizerUserId) {
           return const SizedBox.shrink();
         }
 
-        final nextStatuses = _legalNextStatuses(widget.currentStatus);
-        if (nextStatuses.isEmpty) {
-          return const SizedBox.shrink();
-        }
+        return BlocProvider(
+          create: (_) => TournamentPublishCubit(
+            tournamentsRepository: tournamentsRepository,
+            tournamentId: tournamentId,
+            status: currentStatus,
+            visibility: 'PUBLIC',
+          ),
+          child: const _OrganizerStatusSegmented(),
+        );
+      },
+    );
+  }
+}
 
-        final scheme = Theme.of(context).colorScheme;
+final class _OrganizerStatusSegmented extends StatelessWidget {
+  const _OrganizerStatusSegmented();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return BlocBuilder<TournamentPublishCubit, TournamentPublishState>(
+      builder: (context, state) {
+        final enabled = enabledStatusOptions(state.status);
+        final explanation = _statusExplanation(state.status);
 
         return Column(
           key: const Key('tournament.organizerStatusControl'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //? Aclaración de estado para el organizador: deja claro que un
-            //? torneo en DRAFT no es visible para el público hasta publicarlo.
-            if (widget.currentStatus == 'DRAFT')
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'Tu torneo está en borrador: todavía no es visible para los jugadores. '
-                  'Publicalo cuando esté listo.',
-                  style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+            IgnorePointer(
+              ignoring: state.submitting,
+              child: SegmentedControl<String>(
+                key: const Key('tournament.statusControl'),
+                value: state.status,
+                options: [
+                  SegmentedOption(
+                    value: 'DRAFT',
+                    label: 'Borrador',
+                    enabled: enabled.contains('DRAFT'),
                   ),
+                  SegmentedOption(
+                    value: 'OPEN',
+                    label: 'Abierta',
+                    enabled: enabled.contains('OPEN'),
+                  ),
+                  SegmentedOption(
+                    value: 'IN_PROGRESS',
+                    label: 'En juego',
+                    enabled: enabled.contains('IN_PROGRESS'),
+                  ),
+                ],
+                onChanged: context.read<TournamentPublishCubit>().updateStatus,
+              ),
+            ),
+            if (explanation != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                explanation,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: 12.5,
+                  height: 1.5,
                 ),
               ),
-            if (_error != null) ...[
+            ],
+            if (state.error != null) ...[
+              const SizedBox(height: 8),
               Text(
-                _error!,
+                state.error!,
                 style: TextStyle(color: scheme.error, fontSize: 12),
               ),
-              const SizedBox(height: 4),
             ],
-            Row(
-              children: [
-                Text(
-                  'Acciones',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Spacer(),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final next in nextStatuses)
-                      FilledButton.tonal(
-                        //? Ancho acotado: el theme global (Size.fromHeight) no
-                        //? puede usarse dentro de un Row.
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(0, 40),
-                        ),
-                        onPressed: _submitting ? null : () => _submitSV(next),
-                        child: Text(_statusActionLabel(next)),
-                      ),
-                  ],
-                ),
-              ],
-            ),
           ],
         );
       },
     );
   }
 }
+
+String? _statusExplanation(String status) => switch (status) {
+  'DRAFT' => 'Podés seguir cargando gente, pero nadie se anota solo.',
+  'OPEN' => 'Cualquiera de la categoría puede anotarse. Entra como pendiente.',
+  'IN_PROGRESS' =>
+    'Se cierran las inscripciones: ya no entra ni sale nadie del plantel.',
+  _ => null,
+};

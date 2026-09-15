@@ -381,11 +381,12 @@ void main() {
       return MaterialApp(
         home: BlocProvider<TournamentRegistrationsCubit>.value(
           value: registrationsCubit,
-          child: const Scaffold(
+          child: Scaffold(
             body: OrganizerStatusControl(
               tournamentId: 't-1',
               organizerUserId: 'organizer-1',
               currentStatus: 'OPEN',
+              tournamentsRepository: _MockTournamentsRepository(),
             ),
           ),
         ),
@@ -534,6 +535,151 @@ void main() {
         expect(find.text('Sólo lo ven los que invitás'), findsOneWidget);
       },
     );
+  });
+
+  group('Organizer status control (M12c)', () {
+    Future<void> pumpOrganizerPublishTab(
+      WidgetTester tester, {
+      required TournamentsRepository tournamentsRepository,
+      required String status,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(
+            organizerUserId: 'organizer-1',
+            status: status,
+          ),
+          tournamentsRepository: tournamentsRepository,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SegmentedControl<int>),
+          matching: find.text('Publicar'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('removes Cancelar torneo from a draft tournament', (tester) async {
+      await pumpOrganizerPublishTab(
+        tester,
+        tournamentsRepository: _MockTournamentsRepository(),
+        status: 'DRAFT',
+      );
+
+      expect(find.text('Cancelar torneo'), findsNothing);
+    });
+
+    testWidgets('removes Finalizar torneo from an in-progress tournament', (
+      tester,
+    ) async {
+      await pumpOrganizerPublishTab(
+        tester,
+        tournamentsRepository: _MockTournamentsRepository(),
+        status: 'IN_PROGRESS',
+      );
+
+      expect(find.text('Finalizar torneo'), findsNothing);
+    });
+
+    testWidgets('selects an enabled status and shows its explanation', (
+      tester,
+    ) async {
+      final repository = _MockTournamentsRepository();
+      when(
+        () => repository.updateTournamentStatus(
+          tournamentId: 't-1',
+          status: 'OPEN',
+        ),
+      ).thenAnswer((_) async {});
+
+      await pumpOrganizerPublishTab(
+        tester,
+        tournamentsRepository: repository,
+        status: 'DRAFT',
+      );
+
+      final statusControl = find.byKey(const Key('tournament.statusControl'));
+      expect(
+        find.descendant(of: statusControl, matching: find.text('Borrador')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: statusControl, matching: find.text('Abierta')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: statusControl, matching: find.text('En juego')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Podés seguir cargando gente, pero nadie se anota solo.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.descendant(of: statusControl, matching: find.text('Abierta')),
+      );
+      await tester.pump();
+
+      verify(
+        () => repository.updateTournamentStatus(
+          tournamentId: 't-1',
+          status: 'OPEN',
+        ),
+      ).called(1);
+      expect(
+        find.text(
+          'Cualquiera de la categoría puede anotarse. Entra como pendiente.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows the En juego explanation after opening registrations', (
+      tester,
+    ) async {
+      final repository = _MockTournamentsRepository();
+      when(
+        () => repository.updateTournamentStatus(
+          tournamentId: 't-1',
+          status: 'IN_PROGRESS',
+        ),
+      ).thenAnswer((_) async {});
+
+      await pumpOrganizerPublishTab(
+        tester,
+        tournamentsRepository: repository,
+        status: 'OPEN',
+      );
+
+      final statusControl = find.byKey(const Key('tournament.statusControl'));
+      await tester.tap(
+        find.descendant(of: statusControl, matching: find.text('En juego')),
+      );
+      await tester.pump();
+
+      expect(
+        find.text(
+          'Se cierran las inscripciones: ya no entra ni sale nadie del plantel.',
+        ),
+        findsOneWidget,
+      );
+    });
   });
 
   group('Guest registrations (Slice 1: tournament-guest-registration)', () {
