@@ -18,8 +18,6 @@ String tournamentFormatLabel(String? presetCode) => switch (presetCode) {
   'Single Elimination' => 'Eliminación simple',
   'ROUND_ROBIN' => 'Round robin',
   'Round Robin' => 'Round robin',
-  'AMERICANO' => 'Americano',
-  'Americano' => 'Americano',
   null => '',
   final other => other,
 };
