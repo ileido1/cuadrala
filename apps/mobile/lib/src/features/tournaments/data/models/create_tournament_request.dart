@@ -42,7 +42,8 @@ final class CreateTournamentRequest extends Equatable {
     'formatPresetId': formatPresetId,
     'visibility': visibility,
     if (formatParameters != null) 'formatParameters': formatParameters,
-    if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
+    // The API requires an ISO datetime with an explicit offset.
+    if (startsAt != null) 'startsAt': startsAt!.toUtc().toIso8601String(),
     if (venueId != null) 'venueId': venueId,
     if (gender != null) 'gender': gender,
     'pairedRegistration': pairedRegistration,

@@ -397,6 +397,7 @@ void main() {
       final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
       expect(request.toJson()['gender'], 'FEMALE');
       expect(request.toJson()['venueId'], 'venue-2');
+      expect(request.toJson()['startsAt'], endsWith('Z'));
     });
 
     testWidgets('should map Mixto to MIXED when submitted', (tester) async {
