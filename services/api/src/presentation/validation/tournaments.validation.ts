@@ -72,3 +72,18 @@ export const UPDATE_TOURNAMENT_VISIBILITY_BODY_SCHEMA = z
     visibility: z.enum(['PUBLIC', 'PRIVATE']),
   })
   .strict();
+
+export const UPDATE_TOURNAMENT_SETTINGS_BODY_SCHEMA = z.object({
+  name: z.string().trim().min(1).max(160).optional(),
+  sportId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional(),
+  formatPresetId: z.string().uuid().optional(),
+  formatParameters: z.record(z.string(), z.unknown()).nullable().optional(),
+  startsAt: z.string().datetime().nullable().optional(),
+  venueId: z.string().uuid().nullable().optional(),
+  gender: z.enum(['MALE', 'FEMALE', 'MIXED']).nullable().optional(),
+  pairedRegistration: z.boolean().optional(),
+  inscriptionPrice: z.number().finite().min(0).nullable().optional(),
+  maxSlots: z.number().int().positive().nullable().optional(),
+  registrationClosesAt: z.string().datetime().nullable().optional(),
+}).strict();

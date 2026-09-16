@@ -74,4 +74,30 @@ class TournamentPublishCubit extends Cubit<TournamentPublishState> {
       );
     }
   }
+
+  Future<void> updateSettings(Map<String, Object?> settings) async {
+    if (state.submitting) return;
+    emit(state.copyWith(submitting: true, clearError: true));
+    try {
+      final updated = await _tournamentsRepository.updateTournamentSettings(
+        tournamentId: _tournamentId,
+        settings: settings,
+      );
+      emit(
+        state.copyWith(
+          submitting: false,
+          settings: updated.toJsonForSettings(),
+        ),
+      );
+    } on AppFailure catch (error) {
+      emit(state.copyWith(submitting: false, error: error.message));
+    } catch (_) {
+      emit(
+        state.copyWith(
+          submitting: false,
+          error: 'No se pudo guardar la configuración del torneo.',
+        ),
+      );
+    }
+  }
 }

@@ -16,7 +16,7 @@ import 'tournaments_api.dart';
 
 class TournamentsRepository {
   TournamentsRepository({required TournamentsApi tournamentsApi})
-      : _tournamentsApi = tournamentsApi;
+    : _tournamentsApi = tournamentsApi;
 
   final TournamentsApi _tournamentsApi;
 
@@ -60,10 +60,10 @@ class TournamentsRepository {
     final raw = data['presets'] ?? data['items'];
     final items = raw is List
         ? raw
-            .whereType<Map>()
-            .map((e) => Map<String, Object?>.from(e))
-            .map(TournamentPresetDto.fromJson)
-            .toList()
+              .whereType<Map>()
+              .map((e) => Map<String, Object?>.from(e))
+              .map(TournamentPresetDto.fromJson)
+              .toList()
         : <TournamentPresetDto>[];
     return items;
   }
@@ -157,7 +157,10 @@ class TournamentsRepository {
     );
     final rawItems = data['items'];
     if (rawItems is! List) {
-      throw const AppFailure(code: 'INVALID_RESPONSE', message: 'Respuesta inválida del servidor.');
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
     }
     return rawItems
         .whereType<Map<String, Object?>>()
@@ -206,6 +209,17 @@ class TournamentsRepository {
     );
   }
 
+  Future<TournamentListItemDto> updateTournamentSettings({
+    required String tournamentId,
+    required Map<String, Object?> settings,
+  }) async {
+    final data = await _tournamentsApi.updateTournamentSettingsEnvelope(
+      tournamentId: tournamentId,
+      body: settings,
+    );
+    return TournamentListItemDto.fromJson(decodeEnvelopeDataMap(data));
+  }
+
   Future<List<TournamentInvitationDto>> listInvitations({
     required String tournamentId,
   }) async {
@@ -215,7 +229,10 @@ class TournamentsRepository {
     //? La respuesta viene como envelope {success, message, data: [...]}
     final rawItems = data['data'] ?? data['items'];
     if (rawItems is! List) {
-      throw const AppFailure(code: 'INVALID_RESPONSE', message: 'Respuesta inválida del servidor.');
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
     }
     return rawItems
         .whereType<Map<String, Object?>>()
@@ -268,11 +285,7 @@ class TournamentsRepository {
   }) async {
     final data = await _tournamentsApi.inviteGuestTournamentParticipantEnvelope(
       tournamentId: tournamentId,
-      body: {
-        'name': name,
-        'phone': ?phone,
-        'email': ?email,
-      },
+      body: {'name': name, 'phone': ?phone, 'email': ?email},
     );
     return TournamentRegistrationDto.fromJson(decodeEnvelopeDataMap(data));
   }
@@ -284,11 +297,12 @@ class TournamentsRepository {
     required String tournamentId,
     required String registrationId,
   }) async {
-    final data = await _tournamentsApi.updateTournamentRegistrationStatusEnvelope(
-      tournamentId: tournamentId,
-      registrationId: registrationId,
-      body: {'status': 'CONFIRMED'},
-    );
+    final data = await _tournamentsApi
+        .updateTournamentRegistrationStatusEnvelope(
+          tournamentId: tournamentId,
+          registrationId: registrationId,
+          body: {'status': 'CONFIRMED'},
+        );
     return TournamentRegistrationDto.fromJson(decodeEnvelopeDataMap(data));
   }
 

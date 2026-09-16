@@ -24,11 +24,16 @@ export class PrismaTournamentRepository implements TournamentRepository {
     pairedRegistration: boolean;
     isCompetitive: boolean;
     inscriptionPrice: number | null;
-    gender: TournamentGender | null;
+      gender: TournamentGender | null;
+    maxSlots: number | null;
+    registrationClosesAt: Date | null;
+    registrationCount: number;
+    hasSchedule: boolean;
+    matchCount: number;
     createdAt: Date;
     updatedAt: Date;
   } | null> {
-    const ROW = await PRISMA.tournament.findUnique({ where: { id: _id } });
+    const ROW = await PRISMA.tournament.findUnique({ where: { id: _id }, include: { _count: { select: { registrations: true, matches: true } }, schedule: { select: { id: true } } } });
     if (ROW === null) return null;
     return {
       id: ROW.id,
@@ -47,6 +52,11 @@ export class PrismaTournamentRepository implements TournamentRepository {
       isCompetitive: ROW.isCompetitive,
       inscriptionPrice: ROW.inscriptionPrice === null ? null : ROW.inscriptionPrice.toNumber(),
       gender: ROW.gender,
+      maxSlots: ROW.maxSlots,
+      registrationClosesAt: ROW.registrationClosesAt,
+      registrationCount: ROW._count.registrations,
+      hasSchedule: ROW.schedule !== null,
+      matchCount: ROW._count.matches,
       createdAt: ROW.createdAt,
       updatedAt: ROW.updatedAt,
     };
@@ -134,5 +144,20 @@ export class PrismaTournamentRepository implements TournamentRepository {
       data: { visibility: _visibility },
       select: { id: true, name: true, visibility: true },
     });
+  }
+
+  async updateSettingsSV(_input: { tournamentId: string; settings: Record<string, unknown> }) {
+    const UPDATED = await PRISMA.tournament.update({
+      where: { id: _input.tournamentId },
+      data: {
+        ..._input.settings,
+        ...(Object.hasOwn(_input.settings, 'formatParameters') ? { formatParameters: _input.settings.formatParameters as never } : {}),
+        ...(Object.hasOwn(_input.settings, 'startsAt') ? { startsAt: _input.settings.startsAt as Date | null } : {}),
+        ...(Object.hasOwn(_input.settings, 'registrationClosesAt') ? { registrationClosesAt: _input.settings.registrationClosesAt as Date | null } : {}),
+        ...(Object.hasOwn(_input.settings, 'gender') ? { gender: _input.settings.gender as never } : {}),
+      },
+      select: { id: true, name: true, status: true, formatPresetId: true, presetSchemaVersion: true, formatParameters: true, startsAt: true, venueId: true, gender: true, pairedRegistration: true, inscriptionPrice: true, maxSlots: true, registrationClosesAt: true },
+    });
+    return { ...UPDATED, inscriptionPrice: UPDATED.inscriptionPrice?.toNumber() ?? null, formatParameters: UPDATED.formatParameters as unknown | null };
   }
 }

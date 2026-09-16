@@ -24,6 +24,9 @@ final class TournamentListItemDto extends Equatable {
     this.gender,
     this.organizerName,
     this.formatPresetName,
+    this.formatPresetId,
+    this.presetSchemaVersion,
+    this.formatParameters,
   });
 
   final String id;
@@ -86,6 +89,9 @@ final class TournamentListItemDto extends Equatable {
   /// (`tournament_query_repository.ts:44`); el listado no lo trae, por eso
   /// es `null` en una tarjeta de `GET /tournaments`.
   final String? formatPresetName;
+  final String? formatPresetId;
+  final int? presetSchemaVersion;
+  final Map<String, Object?>? formatParameters;
 
   factory TournamentListItemDto.fromJson(Map<String, Object?> json) {
     return TournamentListItemDto(
@@ -98,18 +104,15 @@ final class TournamentListItemDto extends Equatable {
       categoryName:
           (json['categoryName'] ?? json['category_name'] ?? '') as String,
       startsAt: json['startsAt'] != null || json['starts_at'] != null
-          ? DateTime.tryParse(
-              (json['startsAt'] ?? json['starts_at']) as String)
+          ? DateTime.tryParse((json['startsAt'] ?? json['starts_at']) as String)
           : null,
       registrationCount:
-          (json['registrationCount'] ??
-                  json['registration_count'] ??
-                  0) as int,
+          (json['registrationCount'] ?? json['registration_count'] ?? 0) as int,
       imageUrl: json['imageUrl'] as String? ?? json['image_url'] as String?,
       organizerUserId:
-          json['organizerUserId'] as String? ?? json['organizer_user_id'] as String?,
-      visibility:
-          (json['visibility'] as String?) ?? 'PUBLIC',
+          json['organizerUserId'] as String? ??
+          json['organizer_user_id'] as String?,
+      visibility: (json['visibility'] as String?) ?? 'PUBLIC',
       venueId: json['venueId'] as String? ?? json['venue_id'] as String?,
       venueName: json['venueName'] as String? ?? json['venue_name'] as String?,
       //? Decimal serializado: puede llegar int (15) o double (12.5).
@@ -122,15 +125,25 @@ final class TournamentListItemDto extends Equatable {
         json['registrationClosesAt'],
         json['registration_closes_at'],
       ),
-      distanceKm: _parseNumericFieldSV(
-        json['distanceKm'],
-        json['distance_km'],
-      ),
+      distanceKm: _parseNumericFieldSV(json['distanceKm'], json['distance_km']),
       gender: json['gender'] as String?,
       organizerName:
           json['organizerName'] as String? ?? json['organizer_name'] as String?,
-      formatPresetName: json['formatPresetName'] as String? ??
+      formatPresetName:
+          json['formatPresetName'] as String? ??
           json['format_preset_name'] as String?,
+      formatPresetId:
+          json['formatPresetId'] as String? ??
+          json['format_preset_id'] as String?,
+      presetSchemaVersion:
+          (json['presetSchemaVersion'] ?? json['preset_schema_version'])
+              as int?,
+      formatParameters:
+          (json['formatParameters'] ?? json['format_parameters']) is Map
+          ? Map<String, Object?>.from(
+              (json['formatParameters'] ?? json['format_parameters']) as Map,
+            )
+          : null,
     );
   }
 
@@ -150,28 +163,43 @@ final class TournamentListItemDto extends Equatable {
     return null;
   }
 
+  Map<String, Object?> toJsonForSettings() => {
+    'name': name,
+    'startsAt': startsAt?.toUtc().toIso8601String(),
+    'venueId': venueId,
+    'gender': gender,
+    'inscriptionPrice': inscriptionPrice,
+    'maxSlots': maxSlots,
+    'registrationClosesAt': registrationClosesAt?.toUtc().toIso8601String(),
+    'formatPresetId': formatPresetId,
+    'formatParameters': formatParameters,
+  };
+
   @override
   List<Object?> get props => [
-        id,
-        name,
-        status,
-        visibility,
-        sportName,
-        categoryId,
-        categoryName,
-        startsAt,
-        registrationCount,
-        imageUrl,
-        organizerUserId,
-        pairedRegistration,
-        venueId,
-        venueName,
-        inscriptionPrice,
-        maxSlots,
-        registrationClosesAt,
-        distanceKm,
-        gender,
-        organizerName,
-        formatPresetName,
-      ];
+    id,
+    name,
+    status,
+    visibility,
+    sportName,
+    categoryId,
+    categoryName,
+    startsAt,
+    registrationCount,
+    imageUrl,
+    organizerUserId,
+    pairedRegistration,
+    venueId,
+    venueName,
+    inscriptionPrice,
+    maxSlots,
+    registrationClosesAt,
+    distanceKm,
+    gender,
+    organizerName,
+    formatPresetName,
+    formatPresetId,
+    presetSchemaVersion,
+    formatParameters,
+  ];
 }

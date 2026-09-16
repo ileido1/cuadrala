@@ -30,6 +30,11 @@ export interface TournamentRepository {
     isCompetitive: boolean;
     inscriptionPrice: number | null;
     gender: TournamentGender | null;
+    maxSlots: number | null;
+    registrationClosesAt: Date | null;
+    registrationCount: number;
+    hasSchedule: boolean;
+    matchCount: number;
     createdAt: Date;
     updatedAt: Date;
   } | null>;
@@ -61,4 +66,9 @@ export interface TournamentRepository {
     _id: string,
     _visibility: TournamentVisibility,
   ): Promise<{ id: string; name: string; visibility: TournamentVisibility } | null>;
+
+  updateSettingsSV?(_input: {
+    tournamentId: string;
+    settings: Record<string, unknown>;
+  }): Promise<{ id: string; name: string; status: string; formatPresetId: string; presetSchemaVersion: number; formatParameters: unknown | null; startsAt: Date | null; venueId: string | null; gender: TournamentGender | null; pairedRegistration: boolean; inscriptionPrice: number | null; maxSlots: number | null; registrationClosesAt: Date | null }>;
 }

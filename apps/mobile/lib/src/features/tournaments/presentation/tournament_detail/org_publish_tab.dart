@@ -130,7 +130,265 @@ final class _OrganizerPublishTab extends StatelessWidget {
           message:
               'No hay un botón de "avisar a todos": el aviso sale solo con cada acción.',
         ),
+        if (tournament != null) ...[
+          const SizedBox(height: 20),
+          Text('Configuración del torneo', style: _sectionStyle(scheme)),
+          const SizedBox(height: 10),
+          BlocProvider(
+            create: (_) => TournamentPublishCubit(
+              tournamentsRepository: tournamentsRepository,
+              tournamentId: tournamentId,
+              status: tournament!.status,
+              visibility: tournament!.visibility,
+            ),
+            child: _TournamentSettingsEditor(tournament: tournament!),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+final class _TournamentSettingsEditor extends StatefulWidget {
+  const _TournamentSettingsEditor({required this.tournament});
+  final TournamentListItemDto tournament;
+
+  @override
+  State<_TournamentSettingsEditor> createState() =>
+      _TournamentSettingsEditorState();
+}
+
+final class _TournamentSettingsEditorState
+    extends State<_TournamentSettingsEditor> {
+  late final TextEditingController _name;
+  late final TextEditingController _price;
+  late final TextEditingController _slots;
+  DateTime? _startsAt;
+  DateTime? _registrationClosesAt;
+  String? _gender;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.tournament.name);
+    _price = TextEditingController(
+      text: widget.tournament.inscriptionPrice?.toString() ?? '',
+    );
+    _slots = TextEditingController(
+      text: widget.tournament.maxSlots?.toString() ?? '',
+    );
+    _startsAt = widget.tournament.startsAt;
+    _registrationClosesAt = widget.tournament.registrationClosesAt;
+    _gender = widget.tournament.gender;
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _price.dispose();
+    _slots.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final locked = widget.tournament.status != 'DRAFT';
+    return BlocBuilder<TournamentPublishCubit, TournamentPublishState>(
+      builder: (context, state) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: scheme.outlineVariant, width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(AppIcons.sliders, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    tournamentFormatLabel(
+                          widget.tournament.formatPresetName,
+                        ).isEmpty
+                        ? 'Formato no informado'
+                        : tournamentFormatLabel(
+                            widget.tournament.formatPresetName,
+                          ),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (locked)
+                  Text(
+                    'Formato bloqueado',
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Deporte: ${widget.tournament.sportName} · Categoría: ${widget.tournament.categoryName}',
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12.5),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Modalidad: ${widget.tournament.pairedRegistration ? 'Duplas fijas' : 'Individual'}',
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12.5),
+            ),
+            if (widget.tournament.formatParameters != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Configuración del formato: ${widget.tournament.formatParameters!.entries.map((entry) => '${entry.key}: ${entry.value}').join(' · ')}',
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: 12.5,
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            TextField(
+              controller: _name,
+              enabled: !state.submitting,
+              decoration: const InputDecoration(labelText: 'Nombre'),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _price,
+                    enabled: !state.submitting,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Precio'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _slots,
+                    enabled: !state.submitting,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Cupo máximo'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              enabled: !state.submitting,
+              title: const Text('Inicio'),
+              subtitle: Text(
+                _startsAt == null
+                    ? 'Sin fecha'
+                    : MaterialLocalizations.of(
+                        context,
+                      ).formatMediumDate(_startsAt!),
+              ),
+              trailing: const Icon(AppIcons.calendar),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 730)),
+                  initialDate: _startsAt ?? DateTime.now(),
+                );
+                if (picked != null) setState(() => _startsAt = picked);
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              enabled: !state.submitting,
+              title: const Text('Cierre de inscripción'),
+              subtitle: Text(
+                _registrationClosesAt == null
+                    ? 'Manual'
+                    : MaterialLocalizations.of(
+                        context,
+                      ).formatMediumDate(_registrationClosesAt!),
+              ),
+              trailing: const Icon(AppIcons.calendarBusy),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 730)),
+                  initialDate: _registrationClosesAt ?? DateTime.now(),
+                );
+                if (picked != null) {
+                  setState(() => _registrationClosesAt = picked);
+                }
+              },
+            ),
+            const SizedBox(height: 4),
+            Text('Género', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 6),
+            SegmentedControl<String?>(
+              value: _gender,
+              options: const [
+                SegmentedOption(value: null, label: 'Todos'),
+                SegmentedOption(value: 'MALE', label: 'Masculino'),
+                SegmentedOption(value: 'FEMALE', label: 'Femenino'),
+                SegmentedOption(value: 'MIXED', label: 'Mixto'),
+              ],
+              onChanged: (value) => setState(() => _gender = value),
+            ),
+            if (widget.tournament.venueName != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Sede: ${widget.tournament.venueName}',
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: 12.5,
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: state.submitting
+                    ? null
+                    : () {
+                        final settings = <String, Object?>{
+                          'name': _name.text.trim(),
+                          'inscriptionPrice': double.tryParse(_price.text),
+                          'maxSlots': int.tryParse(_slots.text),
+                          'startsAt': _startsAt?.toUtc().toIso8601String(),
+                          'registrationClosesAt': _registrationClosesAt
+                              ?.toUtc()
+                              .toIso8601String(),
+                          'gender': _gender,
+                        };
+                        context.read<TournamentPublishCubit>().updateSettings(
+                          settings,
+                        );
+                      },
+                child: state.submitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Guardar cambios'),
+              ),
+            ),
+            if (state.error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                state.error!,
+                style: TextStyle(color: scheme.error, fontSize: 12),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

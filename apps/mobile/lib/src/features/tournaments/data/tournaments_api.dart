@@ -52,15 +52,15 @@ final class TournamentListFilters extends Equatable {
 
   @override
   List<Object?> get props => [
-        venueId,
-        startsAtFrom,
-        startsAtTo,
-        status,
-        sportId,
-        categoryId,
-        near,
-        radiusKm,
-      ];
+    venueId,
+    startsAtFrom,
+    startsAtTo,
+    status,
+    sportId,
+    categoryId,
+    near,
+    radiusKm,
+  ];
 }
 
 abstract interface class TournamentsApi {
@@ -115,6 +115,11 @@ abstract interface class TournamentsApi {
   });
 
   Future<Map<String, Object?>> updateTournamentVisibilityEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  });
+
+  Future<Map<String, Object?>> updateTournamentSettingsEnvelope({
     required String tournamentId,
     required Map<String, Object?> body,
   });
@@ -224,9 +229,7 @@ final class DioTournamentsApi implements TournamentsApi {
   Future<Map<String, Object?>> getTournamentByIdEnvelope({
     required String tournamentId,
   }) {
-    return _apiClient.getEnvelopeDataMap(
-      '/api/v1/tournaments/$tournamentId',
-    );
+    return _apiClient.getEnvelopeDataMap('/api/v1/tournaments/$tournamentId');
   }
 
   @override
@@ -249,7 +252,9 @@ final class DioTournamentsApi implements TournamentsApi {
       }
       if (filters.status != null) params['status'] = filters.status!;
       if (filters.sportId != null) params['sportId'] = filters.sportId!;
-      if (filters.categoryId != null) params['categoryId'] = filters.categoryId!;
+      if (filters.categoryId != null) {
+        params['categoryId'] = filters.categoryId!;
+      }
       if (filters.near != null) params['near'] = filters.near!;
       if (filters.radiusKm != null) {
         params['radiusKm'] = filters.radiusKm!.toString();
@@ -357,6 +362,17 @@ final class DioTournamentsApi implements TournamentsApi {
   }) {
     return _apiClient.patchJson(
       '/api/v1/tournaments/$tournamentId/visibility',
+      body: body,
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> updateTournamentSettingsEnvelope({
+    required String tournamentId,
+    required Map<String, Object?> body,
+  }) {
+    return _apiClient.patchJson(
+      '/api/v1/tournaments/$tournamentId/settings',
       body: body,
     );
   }
