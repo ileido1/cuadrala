@@ -52,6 +52,22 @@ export class PrismaUserRepository implements UserRepository {
     return mapUser(ROW);
   }
 
+  async claimGuestTournamentRegistrationsByEmailSV(_emailLower: string, _userId: string): Promise<number> {
+    const RESULT = await PRISMA.tournamentRegistration.updateMany({
+      where: {
+        registrationType: 'GUEST',
+        guestEmail: _emailLower,
+        userId: null,
+      },
+      data: {
+        userId: _userId,
+        registrationType: 'AUTHENTICATED',
+        guestName: null,
+      },
+    });
+    return RESULT.count;
+  }
+
   async updateUserNameSV(_id: string, _name: string): Promise<UserDTO> {
     const ROW = await PRISMA.user.update({
       where: { id: _id },
@@ -89,4 +105,3 @@ export class PrismaUserRepository implements UserRepository {
     }));
   }
 }
-

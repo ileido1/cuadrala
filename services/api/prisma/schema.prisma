@@ -658,30 +658,30 @@ model CourtPricingTier {
 }
 
 model Tournament {
-  id                  String                 @id @default(uuid())
-  name                String
-  categoryId          String
-  category            Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  sportId             String
-  sport               Sport                  @relation(fields: [sportId], references: [id], onDelete: Cascade)
-  formatPresetId      String
-  formatPreset        TournamentFormatPreset @relation(fields: [formatPresetId], references: [id], onDelete: Restrict)
+  id                   String                 @id @default(uuid())
+  name                 String
+  categoryId           String
+  category             Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  sportId              String
+  sport                Sport                  @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  formatPresetId       String
+  formatPreset         TournamentFormatPreset @relation(fields: [formatPresetId], references: [id], onDelete: Restrict)
   /// Parámetros concretos del torneo (pueden sobrescribir defaults del preset).
-  formatParameters    Json?
+  formatParameters     Json?
   /// Copia de schemaVersion del preset al crear el torneo (inmutabilidad lógica).
-  presetSchemaVersion Int                    @default(1)
-  status              TournamentStatus       @default(DRAFT)
+  presetSchemaVersion  Int                    @default(1)
+  status               TournamentStatus       @default(DRAFT)
   /// `PUBLIC` se lista en el catálogo; `PRIVATE` solo por link directo.
-  visibility          TournamentVisibility   @default(PUBLIC)
-  startsAt            DateTime?
+  visibility           TournamentVisibility   @default(PUBLIC)
+  startsAt             DateTime?
   /// Usuario organizador del torneo (nullable para compatibilidad hacia atrás). Habilita los guards R1.
-  organizerUserId     String?
-  organizer           User?                  @relation("TournamentOrganizer", fields: [organizerUserId], references: [id], onDelete: SetNull)
+  organizerUserId      String?
+  organizer            User?                  @relation("TournamentOrganizer", fields: [organizerUserId], references: [id], onDelete: SetNull)
   /// Sede asociada al torneo (nullable; habilita fallback de autorización vía venue-staff).
-  venueId             String?
-  venue               Venue?                 @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  venueId              String?
+  venue                Venue?                 @relation(fields: [venueId], references: [id], onDelete: SetNull)
   /// Slice 1 (tournament-guest-registration): torneo competitivo (aplica Elo) vs recreativo.
-  isCompetitive       Boolean                @default(false)
+  isCompetitive        Boolean                @default(false)
   /// `true` cuando se compite en duplas fijas: los jugadores se inscriben de a
   /// dos y juegan todo el torneo con el mismo companero (padel de parejas).
   ///
@@ -689,17 +689,17 @@ model Tournament {
   /// cada ronda: ahi la inscripcion sigue siendo individual y la dupla existe
   /// solo para ese partido. Por eso el flag habla de la INSCRIPCION y no de
   /// cuantos juegan.
-  pairedRegistration  Boolean                @default(false)
+  pairedRegistration   Boolean                @default(false)
   /// Slice 1 (tournament-guest-registration): precio de inscripción; null = gratuito.
   /// Elo solo se aplica cuando `isCompetitive=true AND inscriptionPrice > 0`.
-  inscriptionPrice    Decimal?               @db.Decimal(10, 2)
+  inscriptionPrice     Decimal?               @db.Decimal(10, 2)
   /// Cupo máximo de inscripciones; null = sin tope declarado.
   ///
   /// El listado muestra "11/16 inscriptos" y una barra de ocupación: sin este
   /// dato el denominador no existe y la barra no se puede dibujar. No se
   /// valida contra el formato acá — un cuadro de 16 con 20 anotados es una
   /// decisión del organizador, no un error de datos.
-  maxSlots            Int?
+  maxSlots             Int?
   /// Momento en que cierra la inscripción; null = cierra cuando el organizador
   /// cambia el estado a mano.
   ///
@@ -709,9 +709,9 @@ model Tournament {
   /// Genero del torneo (reusa MatchGender). null = sin declarar; las filas
   /// existentes y los clientes legacy que no lo mandan quedan en null, sin
   /// backfill.
-  gender              MatchGender?
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  gender               MatchGender?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
 
   registrations      TournamentRegistration[]
   invitations        TournamentInvitation[]
@@ -734,16 +734,16 @@ model Tournament {
 /// recien se materializan al pasar a IN_PROGRESS, y la aceptacion ocurre antes,
 /// mientras las canchas estan apartadas.
 model TournamentSlotResponse {
-  id           String     @id @default(uuid())
+  id           String                      @id @default(uuid())
   tournamentId String
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournament   Tournament                  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   roundNumber  Int
   matchNumber  Int
   userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
   response     TournamentSlotResponseValue
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime                    @default(now())
+  updatedAt    DateTime                    @updatedAt
 
   @@unique([tournamentId, roundNumber, matchNumber, userId])
   @@index([tournamentId, roundNumber, matchNumber])
@@ -796,6 +796,7 @@ model TournamentRegistration {
   createdAt          DateTime           @default(now())
 
   matchParticipants MatchParticipant[]
+  matchResultScores MatchResultScore[]
 
   // Postgres permite múltiples NULL en un índice único ⇒ las filas GUEST (userId=null)
   // nunca colisionan entre sí; solo se deduplican inscripciones AUTHENTICATED reales.
@@ -1029,15 +1030,21 @@ model MatchResult {
 }
 
 model MatchResultScore {
-  id       String      @id @default(uuid())
-  resultId String
-  result   MatchResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  points   Int         @default(0)
+  id                       String                  @id @default(uuid())
+  resultId                 String
+  result                   MatchResult             @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  /// Nullable for invited participants without an account.
+  userId                   String?
+  user                     User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Canonical tournament identity. New results always persist this when available.
+  tournamentRegistrationId String?
+  tournamentRegistration   TournamentRegistration? @relation(fields: [tournamentRegistrationId], references: [id], onDelete: Restrict)
+  points                   Int                     @default(0)
 
   @@unique([resultId, userId])
+  @@unique([resultId, tournamentRegistrationId])
   @@index([userId])
+  @@index([tournamentRegistrationId])
 }
 
 model RankingEntry {

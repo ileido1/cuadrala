@@ -36,6 +36,11 @@ export class RegisterUserUseCase {
       passwordHash: HASH,
     });
 
+    //? La cuenta se asocia automáticamente a las inscripciones de invitado
+    //? cuyo correo fue capturado por el organizador. La inscripción se conserva
+    //? como identidad histórica, incluidos sus partidos y resultados.
+    await this._userRepository.claimGuestTournamentRegistrationsByEmailSV?.(EMAIL, USER.id);
+
     const ACCESS = this._tokenService.signAccessTokenSV(USER.id, USER.email);
     const JTI = randomUUID();
     const SESSION_ID = randomUUID();
@@ -60,4 +65,3 @@ export class RegisterUserUseCase {
     };
   }
 }
-

@@ -2,10 +2,12 @@ export type TournamentMatchStateSideSV = {
   /** `teamLabel` cuando existe; si no, el propio `userId`, o la inscripción del invitado. */
   sideKey: string;
   userIds: Array<string | null>;
+  registrationIds: string[];
 };
 
 export type TournamentMatchStateScoreSV = {
-  userId: string;
+  userId: string | null;
+  tournamentRegistrationId: string | null;
   points: number;
 };
 
@@ -20,6 +22,7 @@ export type TournamentMatchStateSV = {
 
 export type MatchParticipantSideLookupSV = {
   userId: string | null;
+  tournamentRegistrationId: string | null;
   teamLabel: string | null;
 };
 
@@ -39,7 +42,7 @@ export interface TournamentMatchResultRepository {
    */
   registerResultAndAdvanceSV(_input: {
     matchId: string;
-    scores: Array<{ userId: string; points: number }>;
+    scores: Array<{ userId?: string; tournamentRegistrationId?: string; points: number }>;
   }): Promise<{ resultId: string; recordedAt: Date; createdMatchIds: string[] }>;
   /**
    * `userId` + `MatchParticipant.teamLabel` de cada participante de un partido,

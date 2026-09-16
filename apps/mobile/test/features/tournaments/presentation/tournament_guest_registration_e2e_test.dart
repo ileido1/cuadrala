@@ -220,7 +220,7 @@ void main() {
               tournamentId: _tournamentId,
               name: 'Alice',
               phone: null,
-              email: null,
+              email: 'alice@example.com',
             ),
           ).thenAnswer((_) async => alicePending);
           //? After a successful invite, the cubit reloads the roster.
@@ -239,6 +239,10 @@ void main() {
             find.byKey(const Key('tournament.inviteGuestSheet.name')),
             'Alice',
           );
+          await tester.enterText(
+            find.byKey(const Key('tournament.inviteGuestSheet.email')),
+            'alice@example.com',
+          );
           await tester.tap(
             find.byKey(const Key('tournament.inviteGuestSheet.submit')),
           );
@@ -249,7 +253,7 @@ void main() {
               tournamentId: _tournamentId,
               name: 'Alice',
               phone: null,
-              email: null,
+              email: 'alice@example.com',
             ),
           ).called(1);
 

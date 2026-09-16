@@ -75,6 +75,7 @@ export type MatchParticipantSideSV = {
   /** `teamLabel` cuando existe; si no, el propio `userId`, o la inscripción del invitado. */
   sideKey: string;
   userIds: Array<string | null>;
+  registrationIds: string[];
 };
 
 /**
@@ -90,8 +91,9 @@ export function groupMatchParticipantsBySideSV(
 
   for (const _p of _participants) {
     const SIDE_KEY = _p.teamLabel ?? _p.userId ?? _p.tournamentRegistrationId;
-    const CURRENT = BY_SIDE.get(SIDE_KEY) ?? { sideKey: SIDE_KEY, userIds: [] };
+    const CURRENT = BY_SIDE.get(SIDE_KEY) ?? { sideKey: SIDE_KEY, userIds: [], registrationIds: [] };
     CURRENT.userIds.push(_p.userId);
+    CURRENT.registrationIds.push(_p.tournamentRegistrationId);
     BY_SIDE.set(SIDE_KEY, CURRENT);
   }
 

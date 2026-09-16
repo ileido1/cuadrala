@@ -11,10 +11,8 @@ import '../../data/models/tournament_schedule_dto.dart';
 ///
 /// One [CountStepper] per [TournamentScheduleMatchDto.sides] entry drives
 /// that side's point total (`min: 0, max: 9`, mirroring
-/// `cuadrala-torneo-org.jsx:335`). On submit, every non-null `userId` inside
-/// a side gets a score row with that side's points — guest slots (`null`
-/// `userId`) are skipped, since `MatchResultScore.userId` is a required FK
-/// and the API only ever expects rows for participants with an account.
+/// `cuadrala-torneo-org.jsx:335`). On submit, every registration inside a
+/// side gets a score row, including invited participants without an account.
 final class ResultEntrySheet extends StatefulWidget {
   const ResultEntrySheet({
     super.key,
@@ -58,12 +56,11 @@ class _ResultEntrySheetState extends State<ResultEntrySheet> {
 
     final scores = <TournamentScheduleMatchScoreDto>[
       for (final side in widget.match.sides)
-        for (final userId in side.userIds)
-          if (userId != null)
-            TournamentScheduleMatchScoreDto(
-              userId: userId,
-              points: _pointsBySideKey[side.sideKey] ?? 0,
-            ),
+        for (final registrationId in side.registrationIds)
+          TournamentScheduleMatchScoreDto(
+            tournamentRegistrationId: registrationId,
+            points: _pointsBySideKey[side.sideKey] ?? 0,
+          ),
     ];
 
     try {

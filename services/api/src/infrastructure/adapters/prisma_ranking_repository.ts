@@ -40,11 +40,16 @@ async function recalculateInTxSV(
     where: { match: { categoryId: _categoryId } },
     select: {
       matchId: true,
-      scores: { select: { userId: true, points: true } },
+      scores: { where: { userId: { not: null } }, select: { userId: true, points: true } },
     },
   });
 
-  const AGG = aggregateFromResultsSV(RESULTS);
+  const AGG = aggregateFromResultsSV(
+    RESULTS.map((_result) => ({
+      ..._result,
+      scores: _result.scores.filter((_score): _score is { userId: string; points: number } => _score.userId !== null),
+    })),
+  );
 
   await _tx.rankingEntry.deleteMany({ where: { categoryId: _categoryId } });
   if (AGG.length > 0) {
@@ -71,4 +76,3 @@ export class PrismaRankingRepository implements RankingRepository {
     return this._prisma.$transaction(async (_tx) => recalculateInTxSV(_tx, _categoryId));
   }
 }
-

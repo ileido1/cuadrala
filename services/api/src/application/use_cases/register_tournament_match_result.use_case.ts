@@ -13,7 +13,7 @@ import {
 const SINGLE_ELIMINATION_FORMAT_CODE = 'SINGLE_ELIMINATION';
 
 export type ScoreEntryDTO = {
-  scores: { userId: string; points: number }[];
+  scores: { userId?: string; tournamentRegistrationId?: string; points: number }[];
 };
 
 export type RegisterTournamentMatchResultInput = {
@@ -21,7 +21,7 @@ export type RegisterTournamentMatchResultInput = {
   matchId: string;
   matchNumber: number;
   roundNumber: number;
-  scores: { userId: string; points: number }[];
+  scores: { userId?: string; tournamentRegistrationId?: string; points: number }[];
 };
 
 export type RegisterTournamentMatchResultOutput = {
@@ -90,7 +90,7 @@ export class RegisterTournamentMatchResultUseCase {
     }
 
     for (const SCORE of scores) {
-      if (!SCORE.userId || typeof SCORE.points !== 'number' || SCORE.points < 0) {
+      if ((!SCORE.userId && !SCORE.tournamentRegistrationId) || typeof SCORE.points !== 'number' || SCORE.points < 0) {
         throw new AppError(
           'VALIDACION_FALLIDA',
           'Cada score debe tener userId y points (número no negativo).',
@@ -105,13 +105,16 @@ export class RegisterTournamentMatchResultUseCase {
     if (TOURNAMENT.formatPresetName === SINGLE_ELIMINATION_FORMAT_CODE) {
       const PARTICIPANT_SIDES =
         await this._tournamentMatchResultRepository.listMatchParticipantSidesSV(matchId);
-      const TEAM_LABEL_BY_USER_ID = new Map(
-        PARTICIPANT_SIDES.map((_p) => [_p.userId, _p.teamLabel]),
+      const TEAM_LABEL_BY_REF = new Map(
+        PARTICIPANT_SIDES.flatMap((_p) => [
+          [_p.userId, _p.teamLabel] as const,
+          [_p.tournamentRegistrationId, _p.teamLabel] as const,
+        ]),
       );
 
       const SIDE_SCORES: MatchParticipantScoreSV[] = scores.map((_score) => ({
-        userId: _score.userId,
-        teamLabel: TEAM_LABEL_BY_USER_ID.get(_score.userId) ?? null,
+        userId: _score.tournamentRegistrationId ?? _score.userId!,
+        teamLabel: TEAM_LABEL_BY_REF.get(_score.tournamentRegistrationId ?? _score.userId!) ?? null,
         points: _score.points,
       }));
 
@@ -135,9 +138,8 @@ export class RegisterTournamentMatchResultUseCase {
     });
 
     //? Mejor esfuerzo, después del commit (S9): una notificación fallida nunca
-    //? tira abajo un resultado ya guardado. `MatchResultScore.userId` es NOT
-    //? NULL en el schema, así que un lado invitado nunca aparece en `scores` —
-    //? no hace falta distinguirlo aparte ni consultar participantes.
+    //? tira abajo un resultado ya guardado. Los invitados no reciben eventos
+    //? hasta reclamar su inscripción con una cuenta.
     if (this._createTournamentNotificationEvent !== null) {
       try {
         await this._createTournamentNotificationEvent.executeSV({
@@ -145,7 +147,7 @@ export class RegisterTournamentMatchResultUseCase {
           tournamentId,
           categoryId: TOURNAMENT.categoryId,
           payload: { tournamentName: TOURNAMENT.name },
-          userIds: [...new Set(scores.map((_s) => _s.userId))],
+          userIds: [...new Set(scores.flatMap((_s) => (_s.userId ? [_s.userId] : [])))],
         });
       } catch {
         // No bloquear ni revertir el resultado si falla la notificación.

@@ -185,6 +185,7 @@ final class TournamentScheduleMatchSideDto extends Equatable {
   const TournamentScheduleMatchSideDto({
     required this.sideKey,
     required this.userIds,
+    this.registrationIds = const [],
   });
 
   /// `teamLabel` when it exists; otherwise the participant's own `userId`,
@@ -193,13 +194,18 @@ final class TournamentScheduleMatchSideDto extends Equatable {
 
   /// `null` entries are guests with no user account.
   final List<String?> userIds;
+  final List<String> registrationIds;
 
   factory TournamentScheduleMatchSideDto.fromJson(Map<String, Object?> json) {
     final rawUserIds = json['userIds'];
+    final rawRegistrationIds = json['registrationIds'];
     return TournamentScheduleMatchSideDto(
       sideKey: (json['sideKey'] ?? '').toString(),
       userIds: rawUserIds is List
           ? rawUserIds.map((e) => e as String?).toList()
+          : const [],
+      registrationIds: rawRegistrationIds is List
+          ? rawRegistrationIds.whereType<String>().toList()
           : const [],
     );
   }
@@ -207,34 +213,40 @@ final class TournamentScheduleMatchSideDto extends Equatable {
   Map<String, Object?> toJson() => {
         'sideKey': sideKey,
         'userIds': userIds,
+        'registrationIds': registrationIds,
       };
 
   @override
-  List<Object?> get props => [sideKey, userIds];
+  List<Object?> get props => [sideKey, userIds, registrationIds];
 }
 
 final class TournamentScheduleMatchScoreDto extends Equatable {
   const TournamentScheduleMatchScoreDto({
-    required this.userId,
+    this.userId,
+    this.tournamentRegistrationId,
     required this.points,
   });
 
-  final String userId;
+  final String? userId;
+  final String? tournamentRegistrationId;
   final int points;
 
   factory TournamentScheduleMatchScoreDto.fromJson(Map<String, Object?> json) {
     final rawPoints = json['points'];
     return TournamentScheduleMatchScoreDto(
-      userId: (json['userId'] ?? '').toString(),
+      userId: json['userId'] as String?,
+      tournamentRegistrationId: json['tournamentRegistrationId'] as String?,
       points: rawPoints is int ? rawPoints : int.tryParse('$rawPoints') ?? 0,
     );
   }
 
   Map<String, Object?> toJson() => {
-        'userId': userId,
+        if (userId != null) 'userId': userId,
+        if (tournamentRegistrationId != null)
+          'tournamentRegistrationId': tournamentRegistrationId,
         'points': points,
       };
 
   @override
-  List<Object?> get props => [userId, points];
+  List<Object?> get props => [userId, tournamentRegistrationId, points];
 }

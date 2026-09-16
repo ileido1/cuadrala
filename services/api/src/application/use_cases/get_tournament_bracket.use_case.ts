@@ -22,7 +22,7 @@ export type BracketMatchDTO = {
   playerA: PlayerBracketSlotDTO;
   playerB: PlayerBracketSlotDTO;
   winnerId: string | null;
-  score: { userId: string; points: number }[] | null;
+  score: { userId: string | null; tournamentRegistrationId: string | null; points: number }[] | null;
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'BYE';
   matchId: string | null;
 };
@@ -63,17 +63,16 @@ function mapMatchStatusToBracketStatusSV(
 function resolveBracketWinnerIdSV(_state: TournamentMatchStateSV): string | null {
   if (_state.scores.length === 0) return null;
 
-  const SIDE_KEY_BY_USER_ID = new Map<string, string>();
+  const SIDE_KEY_BY_REF = new Map<string, string>();
   for (const SIDE of _state.sides) {
-    for (const USER_ID of SIDE.userIds) {
-      if (USER_ID !== null) SIDE_KEY_BY_USER_ID.set(USER_ID, SIDE.sideKey);
-    }
+    for (const USER_ID of SIDE.userIds) if (USER_ID !== null) SIDE_KEY_BY_REF.set(USER_ID, SIDE.sideKey);
+    for (const REGISTRATION_ID of SIDE.registrationIds ?? []) SIDE_KEY_BY_REF.set(REGISTRATION_ID, SIDE.sideKey);
   }
 
   const WINNING_USER_IDS = resolveMatchWinningUserIdsSV(
     _state.scores.map((_s) => ({
-      userId: _s.userId,
-      teamLabel: SIDE_KEY_BY_USER_ID.get(_s.userId) ?? null,
+      userId: _s.tournamentRegistrationId ?? _s.userId ?? '',
+      teamLabel: SIDE_KEY_BY_REF.get(_s.tournamentRegistrationId ?? _s.userId ?? '') ?? null,
       points: _s.points,
     })),
   );

@@ -414,12 +414,13 @@ final class _OrganizerMatchRow extends StatelessWidget {
     final isRejected = match.decision == 'REJECTED';
     final isLive = match.matchStatus == 'IN_PROGRESS';
     final isDone = match.matchStatus == 'FINISHED' && match.scores.isNotEmpty;
-    //? Cargar disabled without a user id (spec): a side is "guest-only" when
-    //? every one of its userIds is null — no participant on that side has an
-    //? account, so no MatchResultScore row could ever be written for it.
+    //? Registrations are the canonical identity, so invited-only sides are
+    //? also eligible for result entry.
     final hasGuestOnlySide = match.sides.any(
       (side) =>
-          side.userIds.isNotEmpty && side.userIds.every((id) => id == null),
+          side.registrationIds.isEmpty &&
+              side.userIds.isNotEmpty &&
+              side.userIds.every((id) => id == null),
     );
     const rejectColor = Color(0xFFF59E0B);
 
@@ -562,7 +563,11 @@ String _scoreLabel(TournamentScheduleMatchDto match) {
   return match.sides
       .map(
         (side) => match.scores
-            .where((score) => side.userIds.contains(score.userId))
+            .where(
+              (score) =>
+                  side.registrationIds.contains(score.tournamentRegistrationId) ||
+                  side.userIds.contains(score.userId),
+            )
             .fold<int>(0, (sum, score) => sum + score.points),
       )
       .join('-');

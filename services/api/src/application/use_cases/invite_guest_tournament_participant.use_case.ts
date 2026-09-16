@@ -18,7 +18,7 @@ export class InviteGuestTournamentParticipantUseCase {
     tournamentId: string;
     guestName: string;
     guestPhone?: string | null;
-    guestEmail?: string | null;
+    guestEmail: string;
     actorUserId: string;
   }): Promise<TournamentRegistrationDTO> {
     //? 1. Cargar el torneo y validar que exista
@@ -59,7 +59,7 @@ export class InviteGuestTournamentParticipantUseCase {
       tournamentId: _input.tournamentId,
       guestName: _input.guestName,
       guestPhone: _input.guestPhone ?? null,
-      guestEmail: _input.guestEmail ?? null,
+      guestEmail: _input.guestEmail.toLowerCase(),
       registeredByUserId: _input.actorUserId,
     });
   }

@@ -23,6 +23,8 @@ export interface UserRepository {
     name: string;
     passwordHash: string | null;
   }): Promise<UserDTO>;
+  /** Vincula inscripciones de invitado al crear una cuenta con el mismo correo. */
+  claimGuestTournamentRegistrationsByEmailSV?(_emailLower: string, _userId: string): Promise<number>;
   updateUserNameSV(_id: string, _name: string): Promise<UserDTO>;
 
   /** Conteo de usuarios existentes por IDs (validación de input). */
@@ -30,4 +32,3 @@ export interface UserRepository {
 
   findByDocumentNumberSV(_documentNumber: string): Promise<UserDocumentSearchResultDTO[]>;
 }
-

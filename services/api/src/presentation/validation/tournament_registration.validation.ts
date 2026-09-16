@@ -27,7 +27,7 @@ export const INVITE_GUEST_TOURNAMENT_PARTICIPANT_BODY_SCHEMA = z
   .object({
     name: z.string().min(1, 'name es requerido.').max(100, 'name no puede superar los 100 caracteres.'),
     phone: z.string().regex(GUEST_PHONE_REGEX, 'phone debe tener formato E.164 (8 a 15 dígitos).').optional(),
-    email: z.string().email('email debe ser un correo válido.').optional(),
+    email: z.string().email('email debe ser un correo válido.'),
   })
   .strict();
 

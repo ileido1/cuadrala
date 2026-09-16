@@ -34,7 +34,8 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
 
   void _submitSV(BuildContext context) {
     final name = _nameController.text.trim();
-    if (name.isEmpty) return;
+    final email = _emailController.text.trim();
+    if (name.isEmpty || !email.contains('@')) return;
 
     setState(() => _submitted = true);
     context.read<TournamentRegistrationsCubit>().inviteGuest(
@@ -42,9 +43,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
       phone: _phoneController.text.trim().isEmpty
           ? null
           : _phoneController.text.trim(),
-      email: _emailController.text.trim().isEmpty
-          ? null
-          : _emailController.text.trim(),
+      email: email,
     );
   }
 
@@ -142,7 +141,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                       key: const Key('tournament.inviteGuestSheet.email'),
                       controller: _emailController,
                       decoration: const InputDecoration(
-                        hintText: 'Email (opcional)',
+                        hintText: 'Email *',
                       ),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.done,

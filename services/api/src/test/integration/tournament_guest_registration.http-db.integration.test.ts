@@ -64,11 +64,12 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     async function inviteGuestSV(
       _tournamentId: string,
       _token: string,
-      _body: { name?: string; phone?: string; email?: string } = { name: 'Carlos', phone: '+584121234567' },
+      _body: { name?: string; phone?: string; email?: string } = {},
     ) {
+      const BODY = { name: 'Carlos', phone: '+584121234567', email: 'guest@example.com', ..._body };
       return request(APP)
         .post(`/api/v1/tournaments/${_tournamentId}/invite-guest`)
-        .send(_body)
+        .send(BODY)
         .set('Authorization', `Bearer ${_token}`)
         .set('Content-Type', 'application/json');
     }

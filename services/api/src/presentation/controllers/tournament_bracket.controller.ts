@@ -34,7 +34,13 @@ export async function postTournamentMatchResultCON(_req: Request, _res: Response
     matchId: PARAMS.matchId,
     matchNumber: 0, // No se usa actualmente pero se requiere en el input
     roundNumber: 0, // No se usa actualmente pero se requiere en el input
-    scores: BODY.scores,
+    scores: BODY.scores.map((_score) => ({
+      points: _score.points,
+      ...(_score.userId !== undefined ? { userId: _score.userId } : {}),
+      ...(_score.tournamentRegistrationId !== undefined
+        ? { tournamentRegistrationId: _score.tournamentRegistrationId }
+        : {}),
+    })),
     requestingUserId: _req.authUser.id,
   });
 

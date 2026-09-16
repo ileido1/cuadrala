@@ -1026,9 +1026,10 @@ const OPENAPI_CONST = {
                     maxItems: 4,
                     items: {
                       type: 'object',
-                      required: ['userId', 'points'],
+                      required: ['points'],
                       properties: {
-                        userId: { type: 'string', format: 'uuid' },
+                        userId: { type: 'string', format: 'uuid', nullable: true },
+                        tournamentRegistrationId: { type: 'string', format: 'uuid', nullable: true },
                         points: { type: 'integer', minimum: 0, maximum: 10000 },
                       },
                     },
@@ -1115,9 +1116,10 @@ const OPENAPI_CONST = {
                     maxItems: 4,
                     items: {
                       type: 'object',
-                      required: ['userId', 'points'],
+                      required: ['points'],
                       properties: {
-                        userId: { type: 'string', format: 'uuid' },
+                        userId: { type: 'string', format: 'uuid', nullable: true },
+                        tournamentRegistrationId: { type: 'string', format: 'uuid', nullable: true },
                         points: { type: 'integer', minimum: 0, maximum: 10000 },
                       },
                     },

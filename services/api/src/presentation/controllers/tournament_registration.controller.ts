@@ -92,7 +92,7 @@ export async function postInviteGuestTournamentParticipantCON(
     tournamentId: PARAMS.tournamentId,
     guestName: BODY.name,
     guestPhone: BODY.phone ?? null,
-    guestEmail: BODY.email ?? null,
+    guestEmail: BODY.email,
     actorUserId: ACTOR_USER_ID,
   });
 

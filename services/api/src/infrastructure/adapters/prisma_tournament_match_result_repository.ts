@@ -57,7 +57,7 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
 
   async registerResultAndAdvanceSV(_input: {
     matchId: string;
-    scores: Array<{ userId: string; points: number }>;
+    scores: Array<{ userId?: string; tournamentRegistrationId?: string; points: number }>;
   }): Promise<{ resultId: string; recordedAt: Date; createdMatchIds: string[] }> {
     return PRISMA.$transaction(async (_tx) => {
       const MATCH = await _tx.match.findUnique({
@@ -93,14 +93,41 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
         throw new AppError('RESULTADO_YA_CARGADO', 'Este partido ya tiene un resultado cargado.', 409);
       }
 
+      const PARTICIPANTS = await _tx.matchParticipant.findMany({
+        where: { matchId: _input.matchId },
+        select: { userId: true, tournamentRegistrationId: true },
+      });
+      const PARTICIPANT_BY_REF = new Map<string, (typeof PARTICIPANTS)[number]>();
+      for (const PARTICIPANT of PARTICIPANTS) {
+        PARTICIPANT_BY_REF.set(PARTICIPANT.tournamentRegistrationId ?? '', PARTICIPANT);
+        if (PARTICIPANT.userId !== null) PARTICIPANT_BY_REF.set(PARTICIPANT.userId, PARTICIPANT);
+      }
+      const RESOLVED_SCORES = _input.scores.map((_score) => {
+        const REF = _score.tournamentRegistrationId ?? _score.userId;
+        const PARTICIPANT = REF === undefined ? undefined : PARTICIPANT_BY_REF.get(REF);
+        if (PARTICIPANT === undefined) {
+          throw new AppError('VALIDACION_FALLIDA', 'El score no pertenece al partido.', 400);
+        }
+        return {
+          userId: PARTICIPANT.userId,
+          tournamentRegistrationId: PARTICIPANT.tournamentRegistrationId,
+          points: _score.points,
+        };
+      });
+      const UNIQUE_REGISTRATIONS = new Set(RESOLVED_SCORES.map((_score) => _score.tournamentRegistrationId));
+      if (UNIQUE_REGISTRATIONS.size !== RESOLVED_SCORES.length) {
+        throw new AppError('VALIDACION_FALLIDA', 'No puede repetir participantes en scores.', 400);
+      }
+
       const CREATED_RESULT = await _tx.matchResult.create({
         data: { matchId: _input.matchId },
       });
 
       await _tx.matchResultScore.createMany({
-        data: _input.scores.map((_s) => ({
+        data: RESOLVED_SCORES.map((_s) => ({
           resultId: CREATED_RESULT.id,
           userId: _s.userId,
+          tournamentRegistrationId: _s.tournamentRegistrationId,
           points: _s.points,
         })),
       });
@@ -254,7 +281,7 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
         participants: {
           select: { userId: true, teamLabel: true, tournamentRegistrationId: true },
         },
-        results: { take: 1, select: { scores: { select: { userId: true, points: true } } } },
+        results: { take: 1, select: { scores: { select: { userId: true, tournamentRegistrationId: true, points: true } } } },
       },
     });
 
@@ -263,12 +290,13 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
       const SCORES = MATCH.results[0]?.scores ?? [];
       if (SCORES.length === 0) continue;
 
-      const SIDE_KEY_BY_USER_ID = new Map<string, string>();
+      const SIDE_KEY_BY_REF = new Map<string, string>();
       const REGISTRATION_REF_BY_SIDE_KEY = new Map<string, string>();
       for (const P of MATCH.participants) {
         if (P.tournamentRegistrationId === null) continue;
         const SIDE_KEY = P.teamLabel ?? P.tournamentRegistrationId;
-        if (P.userId !== null) SIDE_KEY_BY_USER_ID.set(P.userId, SIDE_KEY);
+        if (P.userId !== null) SIDE_KEY_BY_REF.set(P.userId, SIDE_KEY);
+        SIDE_KEY_BY_REF.set(P.tournamentRegistrationId, SIDE_KEY);
         if (!REGISTRATION_REF_BY_SIDE_KEY.has(SIDE_KEY)) {
           REGISTRATION_REF_BY_SIDE_KEY.set(SIDE_KEY, P.tournamentRegistrationId);
         }
@@ -276,7 +304,7 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
 
       const TOTAL_BY_SIDE_KEY = new Map<string, number>();
       for (const SCORE of SCORES) {
-        const SIDE_KEY = SIDE_KEY_BY_USER_ID.get(SCORE.userId);
+        const SIDE_KEY = SIDE_KEY_BY_REF.get(SCORE.tournamentRegistrationId ?? SCORE.userId ?? '');
         if (SIDE_KEY === undefined) continue;
         TOTAL_BY_SIDE_KEY.set(SIDE_KEY, (TOTAL_BY_SIDE_KEY.get(SIDE_KEY) ?? 0) + SCORE.points);
       }
@@ -308,9 +336,9 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
   async listMatchParticipantSidesSV(_matchId: string): Promise<MatchParticipantSideLookupSV[]> {
     const PARTICIPANTS = await PRISMA.matchParticipant.findMany({
       where: { matchId: _matchId },
-      select: { userId: true, teamLabel: true },
+      select: { userId: true, tournamentRegistrationId: true, teamLabel: true },
     });
-    return PARTICIPANTS.map((_p) => ({ userId: _p.userId, teamLabel: _p.teamLabel }));
+    return PARTICIPANTS.map((_p) => ({ userId: _p.userId, tournamentRegistrationId: _p.tournamentRegistrationId, teamLabel: _p.teamLabel }));
   }
 
   async listTournamentMatchStatesSV(_input: {
@@ -333,7 +361,7 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
         },
         results: {
           take: 1,
-          select: { scores: { select: { userId: true, points: true } } },
+          select: { scores: { select: { userId: true, tournamentRegistrationId: true, points: true } } },
         },
       },
     });
@@ -358,6 +386,7 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
         ),
         scores: (_match.results[0]?.scores ?? []).map((_s) => ({
           userId: _s.userId,
+          tournamentRegistrationId: _s.tournamentRegistrationId,
           points: _s.points,
         })),
       };

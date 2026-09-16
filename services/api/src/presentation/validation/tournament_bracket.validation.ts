@@ -27,8 +27,11 @@ export const SCORE_ENTRY_SCHEMA = z
     scores: z
       .array(
         z.object({
-          userId: z.string().uuid('userId debe ser un UUID valido.'),
+          userId: z.string().uuid('userId debe ser un UUID valido.').optional(),
+          tournamentRegistrationId: z.string().uuid('tournamentRegistrationId debe ser un UUID valido.').optional(),
           points: z.number().int().min(0, 'points debe ser un número no negativo.'),
+        }).refine((_score) => _score.userId !== undefined || _score.tournamentRegistrationId !== undefined, {
+          message: 'Cada score debe incluir userId o tournamentRegistrationId.',
         }),
       )
       .min(1, 'Debe proporcionar al menos un score.'),

@@ -13,7 +13,7 @@ export class PrismaMatchResultReadRepository implements MatchResultReadRepositor
         id: true,
         matchId: true,
         match: { select: { categoryId: true } },
-        scores: { select: { userId: true, points: true } },
+        scores: { where: { userId: { not: null } }, select: { userId: true, points: true } },
       },
     });
 
@@ -23,8 +23,7 @@ export class PrismaMatchResultReadRepository implements MatchResultReadRepositor
       resultId: RESULT.id,
       matchId: RESULT.matchId,
       categoryId: RESULT.match.categoryId,
-      scores: RESULT.scores,
+      scores: RESULT.scores.filter((_score): _score is { userId: string; points: number } => _score.userId !== null),
     };
   }
 }
-

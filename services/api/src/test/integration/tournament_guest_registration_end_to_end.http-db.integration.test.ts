@@ -109,9 +109,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       _organizerToken: string,
       _body: { name: string; phone?: string; email?: string },
     ) {
+      const BODY = { email: 'guest@example.com', ..._body };
       const RES = await request(APP)
         .post(`/api/v1/tournaments/${_tournamentId}/invite-guest`)
-        .send(_body)
+        .send(BODY)
         .set('Authorization', `Bearer ${_organizerToken}`)
         .set('Content-Type', 'application/json');
       expect(RES.status).toBe(201);
