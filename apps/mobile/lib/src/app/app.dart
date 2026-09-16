@@ -74,9 +74,6 @@ final class WebMobileFrame extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: colors.surfaceContainerLowest,
-                border: Border.all(
-                  color: colors.outlineVariant.withValues(alpha: 0.6),
-                ),
                 borderRadius: BorderRadius.circular(_cornerRadius),
                 boxShadow: [
                   BoxShadow(

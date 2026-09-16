@@ -22,7 +22,7 @@ void main() {
 
       expect(
         tester.getSize(find.byKey(const ValueKey('content'))),
-        const Size(388, 998),
+        const Size(390, 1000),
       );
       expect(tester.takeException(), isNull);
     });
@@ -44,7 +44,7 @@ void main() {
 
       expect(
         tester.getSize(find.byKey(const ValueKey('content'))),
-        const Size(318, 1200),
+        const Size(320, 1200),
       );
       expect(tester.takeException(), isNull);
     });
