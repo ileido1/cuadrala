@@ -29,10 +29,6 @@ const mockVenueRepository = {
   findByIdSV: vi.fn(),
 };
 
-const mockVenueStaffRepository = {
-  isUserStaffOfVenueSV: vi.fn(),
-};
-
 const useCase = new CreateParametrizedTournamentUseCase(
   mockCategoryRepository as never,
   mockSportRepository as never,
@@ -40,7 +36,6 @@ const useCase = new CreateParametrizedTournamentUseCase(
   mockTournamentRepository as never,
   mockValidator as never,
   mockVenueRepository as never,
-  mockVenueStaffRepository as never,
 );
 
 const CATEGORY = { id: 'category-1', name: 'Categoría', sportId: 'sport-1' };
@@ -108,6 +103,26 @@ describe('CreateParametrizedTournamentUseCase', () => {
 
     expect(mockTournamentRepository.createTournamentSV).toHaveBeenCalledWith(
       expect.objectContaining({ gender: 'FEMALE' }),
+    );
+  });
+
+  it('should allow an authenticated user to create a tournament at any existing venue', async () => {
+    mockVenueRepository.findByIdSV.mockResolvedValue({
+      id: 'venue-1',
+      name: 'Club Norte',
+    });
+
+    await useCase.executeSV({
+      name: 'Torneo de Otoño',
+      categoryId: 'category-1',
+      sportId: 'sport-1',
+      formatPresetId: 'preset-1',
+      organizerUserId: 'user-42',
+      venueId: 'venue-1',
+    });
+
+    expect(mockTournamentRepository.createTournamentSV).toHaveBeenCalledWith(
+      expect.objectContaining({ organizerUserId: 'user-42', venueId: 'venue-1' }),
     );
   });
 

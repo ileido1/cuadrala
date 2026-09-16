@@ -27,7 +27,8 @@ const SPORT_REPOSITORY = new PrismaSportRepository();
 const FORMAT_PRESET_REPOSITORY = new PrismaFormatPresetRepository();
 const TOURNAMENT_REPOSITORY = new PrismaTournamentRepository();
 const TOURNAMENT_SCHEDULE_REPOSITORY = new PrismaTournamentScheduleRepository();
-const TOURNAMENT_MATCH_MATERIALIZATION_REPOSITORY = new PrismaTournamentMatchMaterializationRepository();
+const TOURNAMENT_MATCH_MATERIALIZATION_REPOSITORY =
+  new PrismaTournamentMatchMaterializationRepository();
 const TOURNAMENT_REGISTRATION_REPOSITORY = new PrismaTournamentRegistrationRepository();
 const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
 const VENUE_REPOSITORY = new PrismaVenueRepository(PRISMA);
@@ -46,7 +47,9 @@ export const LIST_TOURNAMENTS_UC = new ListTournamentsUseCase(
   MATCHMAKING_DEFAULT_RADIUS_KM,
 );
 export const GET_TOURNAMENT_UC = new GetTournamentUseCase(TOURNAMENT_QUERY_REPOSITORY);
-export const LIST_TOURNAMENTS_BY_VENUE_UC = new ListTournamentsByVenueUseCase(TOURNAMENT_QUERY_REPOSITORY);
+export const LIST_TOURNAMENTS_BY_VENUE_UC = new ListTournamentsByVenueUseCase(
+  TOURNAMENT_QUERY_REPOSITORY,
+);
 export const CREATE_PARAMETRIZED_TOURNAMENT_UC = new CreateParametrizedTournamentUseCase(
   CATEGORY_REPOSITORY,
   SPORT_REPOSITORY,
@@ -54,7 +57,6 @@ export const CREATE_PARAMETRIZED_TOURNAMENT_UC = new CreateParametrizedTournamen
   TOURNAMENT_REPOSITORY,
   FORMAT_VALIDATOR,
   VENUE_REPOSITORY,
-  VENUE_STAFF_REPOSITORY,
 );
 export const UPDATE_TOURNAMENT_STATUS_UC = new UpdateTournamentStatusUseCase(
   TOURNAMENT_REPOSITORY,

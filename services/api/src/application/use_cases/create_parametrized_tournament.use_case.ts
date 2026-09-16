@@ -5,7 +5,6 @@ import type { SportRepository } from '../../domain/ports/sport_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 import type { TournamentFormatParametersValidator } from '../../domain/ports/tournament_format_parameters_validator.js';
 import type { VenueRepository } from '../../domain/ports/venue_repository.js';
-import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 
 export type CreateParametrizedTournamentInput = {
   name: string;
@@ -40,18 +39,14 @@ export class CreateParametrizedTournamentUseCase {
     private readonly _tournamentRepository: TournamentRepository,
     private readonly _tournamentFormatParametersValidator: TournamentFormatParametersValidator,
     private readonly _venueRepository: VenueRepository,
-    private readonly _venueStaffRepository: VenueStaffRepository,
   ) {}
 
   /**
-   * Valida que quien crea el torneo pueda ponerle esa sede.
+   * Valida que la sede exista y que el torneo tenga un usuario organizador.
    *
-   * `venueId` no es un dato de vitrina: `AssertTournamentOrganizerAccessUseCase`
-   * trata al staff de la sede como organizador del torneo. Aceptarlo sin
-   * permiso deja que cualquiera publique un torneo a nombre de un club ajeno
-   * —el listado lo muestra con su `venueName`— y de paso le entregue el control
-   * al staff de ese club. La ruta es `optionalAuth`, así que sin sesión no hay
-   * a quién atribuirle la sede.
+   * Los jugadores pueden organizar torneos en cualquier sede publicada; esto
+   * no les concede permisos administrativos sobre la sede. La administración
+   * de la sede sigue protegida por las reglas de staff en sus propios endpoints.
    */
   private async _assertVenueAuthoritySV(
     _venueId: string,
@@ -68,18 +63,6 @@ export class CreateParametrizedTournamentUseCase {
     const VENUE = await this._venueRepository.findByIdSV(_venueId);
     if (VENUE === null) {
       throw new AppError('SEDE_NO_ENCONTRADA', 'La sede indicada no existe.', 404);
-    }
-
-    const IS_STAFF = await this._venueStaffRepository.isUserStaffOfVenueSV(
-      _actorUserId,
-      _venueId,
-    );
-    if (!IS_STAFF) {
-      throw new AppError(
-        'NO_AUTORIZADO',
-        'No tienes permisos para crear torneos en esa sede.',
-        403,
-      );
     }
   }
 
@@ -131,10 +114,11 @@ export class CreateParametrizedTournamentUseCase {
       );
     }
 
-    const NORMALIZED_FORMAT_PARAMETERS = this._tournamentFormatParametersValidator.validateAndNormalizeSV({
-      parametersSchema: PRESET.parametersSchema ?? [],
-      formatParameters: _input.formatParameters,
-    });
+    const NORMALIZED_FORMAT_PARAMETERS =
+      this._tournamentFormatParametersValidator.validateAndNormalizeSV({
+        parametersSchema: PRESET.parametersSchema ?? [],
+        formatParameters: _input.formatParameters,
+      });
 
     const CREATED = await this._tournamentRepository.createTournamentSV({
       name: _input.name,
@@ -142,9 +126,7 @@ export class CreateParametrizedTournamentUseCase {
       sportId: _input.sportId,
       formatPresetId: PRESET.id,
       presetSchemaVersion: PRESET.schemaVersion,
-      ...(_input.organizerUserId !== undefined
-        ? { organizerUserId: _input.organizerUserId }
-        : {}),
+      ...(_input.organizerUserId !== undefined ? { organizerUserId: _input.organizerUserId } : {}),
       ...(_input.visibility !== undefined ? { visibility: _input.visibility } : {}),
       ...(NORMALIZED_FORMAT_PARAMETERS !== undefined
         ? { formatParameters: NORMALIZED_FORMAT_PARAMETERS }
