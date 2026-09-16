@@ -28,7 +28,13 @@ class TournamentsRepository {
     final data = await _tournamentsApi.getTournamentByIdEnvelope(
       tournamentId: tournamentId,
     );
-    return TournamentListItemDto.fromJson(data);
+    // GET /tournaments/:id returns { tournament, registrations }.
+    // Keep the fallback for legacy API responses that returned the item directly.
+    final rawTournament = data['tournament'];
+    final tournamentJson = rawTournament is Map
+        ? Map<String, Object?>.from(rawTournament)
+        : data;
+    return TournamentListItemDto.fromJson(tournamentJson);
   }
 
   Future<TournamentListPage> listTournaments({

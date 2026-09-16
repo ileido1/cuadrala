@@ -9,6 +9,33 @@ class _MockTournamentsApi extends Mock implements TournamentsApi {}
 
 void main() {
   group('TournamentsRepository', () {
+    test('getTournamentById unwraps the tournament detail envelope', () async {
+      final api = _MockTournamentsApi();
+      final repo = TournamentsRepository(tournamentsApi: api);
+
+      when(
+        () => api.getTournamentByIdEnvelope(tournamentId: 't-1'),
+      ).thenAnswer(
+        (_) async => {
+          'tournament': {
+            'id': 't-1',
+            'name': 'Torneo de Otoño',
+            'status': 'DRAFT',
+            'sportName': 'Pádel',
+            'categoryId': 'cat-1',
+            'categoryName': '7ma',
+            'registrationCount': 0,
+          },
+          'registrations': <Object?>[],
+        },
+      );
+
+      final result = await repo.getTournamentById(tournamentId: 't-1');
+
+      expect(result.id, 't-1');
+      expect(result.name, 'Torneo de Otoño');
+    });
+
     test('getTournamentSchedule (404) devuelve empty en vez de lanzar', () async {
       final api = _MockTournamentsApi();
       final repo = TournamentsRepository(tournamentsApi: api);
@@ -387,4 +414,3 @@ void main() {
     });
   });
 }
-
