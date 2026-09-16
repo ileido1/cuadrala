@@ -26,13 +26,22 @@ void main() {
     // `colorScheme.surface` es el color de card (`--surface`) a propósito —
     // el fondo de scaffold (`--bg`) vive en `surfaceContainerLowest`. Ver
     // el comentario en `AppTheme.dark()` (rampa de superficies del rediseño).
-    test('surfaceContainerLowest is BrandColors.darkSurface (--bg, scaffold)', () {
-      expect(dark.colorScheme.surfaceContainerLowest, BrandColors.darkSurface);
-    });
+    test(
+      'surfaceContainerLowest is BrandColors.darkSurface (--bg, scaffold)',
+      () {
+        expect(
+          dark.colorScheme.surfaceContainerLowest,
+          BrandColors.darkSurface,
+        );
+      },
+    );
 
-    test('surface is BrandColors.darkSurfaceContainer (--surface, card color)', () {
-      expect(dark.colorScheme.surface, BrandColors.darkSurfaceContainer);
-    });
+    test(
+      'surface is BrandColors.darkSurfaceContainer (--surface, card color)',
+      () {
+        expect(dark.colorScheme.surface, BrandColors.darkSurfaceContainer);
+      },
+    );
 
     test('tertiary is BrandColors.limeAccent', () {
       expect(dark.colorScheme.tertiary, BrandColors.limeAccent);
@@ -42,8 +51,11 @@ void main() {
       final onSurface = dark.colorScheme.onSurface;
       final surface = dark.colorScheme.surface;
       final contrast = _contrastRatio(onSurface, surface);
-      expect(contrast, greaterThanOrEqualTo(4.5),
-          reason: 'onSurface on dark surface must meet WCAG AA 4.5:1');
+      expect(
+        contrast,
+        greaterThanOrEqualTo(4.5),
+        reason: 'onSurface on dark surface must meet WCAG AA 4.5:1',
+      );
     });
 
     test('onPrimary contrast against primary is >= 3.0 (WCAG AA large text)', () {
@@ -52,8 +64,11 @@ void main() {
       final onPrimary = dark.colorScheme.onPrimary;
       final primary = dark.colorScheme.primary;
       final contrast = _contrastRatio(onPrimary, primary);
-      expect(contrast, greaterThanOrEqualTo(3.0),
-          reason: 'onPrimary on primary must meet WCAG AA large-text 3:1');
+      expect(
+        contrast,
+        greaterThanOrEqualTo(3.0),
+        reason: 'onPrimary on primary must meet WCAG AA large-text 3:1',
+      );
     });
 
     test('BrandGradients extension is registered', () {
@@ -87,8 +102,11 @@ void main() {
       final onSurface = light.colorScheme.onSurface;
       final surface = light.colorScheme.surface;
       final contrast = _contrastRatio(onSurface, surface);
-      expect(contrast, greaterThanOrEqualTo(4.5),
-          reason: 'onSurface on light surface must meet WCAG AA 4.5:1');
+      expect(
+        contrast,
+        greaterThanOrEqualTo(4.5),
+        reason: 'onSurface on light surface must meet WCAG AA 4.5:1',
+      );
     });
 
     test('onPrimary contrast against primary is >= 3.0 (WCAG AA large text)', () {
@@ -97,9 +115,24 @@ void main() {
       final onPrimary = light.colorScheme.onPrimary;
       final primary = light.colorScheme.primary;
       final contrast = _contrastRatio(onPrimary, primary);
-      expect(contrast, greaterThanOrEqualTo(3.0),
-          reason: 'onPrimary on primary must meet WCAG AA large-text 3:1');
+      expect(
+        contrast,
+        greaterThanOrEqualTo(3.0),
+        reason: 'onPrimary on primary must meet WCAG AA large-text 3:1',
+      );
     });
+  });
+
+  test('card theme keeps surface and radius without a visible side', () {
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      final shape = theme.cardTheme.shape! as RoundedRectangleBorder;
+
+      expect(theme.cardTheme.color, theme.colorScheme.surfaceContainer);
+      expect(theme.cardTheme.elevation, 1);
+      expect(theme.cardTheme.margin, EdgeInsets.zero);
+      expect(shape.borderRadius, BorderRadius.circular(18));
+      expect(shape.side, BorderSide.none);
+    }
   });
 }
 

@@ -28,27 +28,32 @@ class _MockNotificationsCubit extends MockCubit<NotificationsState>
 // ---------------------------------------------------------------------------
 
 List<ShellTabConfig> _stubTabs() => [
-      const ShellTabConfig(
-        activeIcon: Icons.home,
-        inactiveIcon: Icons.home_outlined,
-        label: 'Inicio',
-      ),
-      const ShellTabConfig(
-        activeIcon: Icons.sports_tennis,
-        inactiveIcon: Icons.sports_tennis_outlined,
-        label: 'Partidas',
-      ),
-      const ShellTabConfig(
-        activeIcon: Icons.notifications,
-        inactiveIcon: Icons.notifications_outlined,
-        label: 'Avisos',
-      ),
-      const ShellTabConfig(
-        activeIcon: Icons.person,
-        inactiveIcon: Icons.person_outlined,
-        label: 'Perfil',
-      ),
-    ];
+  const ShellTabConfig(
+    activeIcon: Icons.home,
+    inactiveIcon: Icons.home_outlined,
+    label: 'Inicio',
+  ),
+  const ShellTabConfig(
+    activeIcon: Icons.sports_tennis,
+    inactiveIcon: Icons.sports_tennis_outlined,
+    label: 'Partidas',
+  ),
+  const ShellTabConfig(
+    activeIcon: Icons.emoji_events,
+    inactiveIcon: Icons.emoji_events_outlined,
+    label: 'Torneos',
+  ),
+  const ShellTabConfig(
+    activeIcon: Icons.notifications,
+    inactiveIcon: Icons.notifications_outlined,
+    label: 'Avisos',
+  ),
+  const ShellTabConfig(
+    activeIcon: Icons.person,
+    inactiveIcon: Icons.person_outlined,
+    label: 'Perfil',
+  ),
+];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -123,75 +128,50 @@ void main() {
   // ── 1. Active / inactive icon shapes ─────────────────────────────────────
 
   group('active tab uses filled icon; inactive tabs use outlined icons', () {
-    testWidgets('tab 0 (Inicio) active: filled home icon visible', (tester) async {
+    testWidgets('tab 0 (Inicio) active: filled home icon visible', (
+      tester,
+    ) async {
       when(() => notifCubit.state).thenReturn(_notifState());
 
-      await tester.pumpWidget(
-          _wrap(notifCubit: notifCubit, currentIndex: 0));
+      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 0));
 
       expect(find.byIcon(Icons.home), findsOneWidget);
     });
 
-    testWidgets('tab 1 (Partidas) active: filled sports_tennis icon visible',
-        (tester) async {
+    testWidgets('tab 1 (Partidas) active: filled sports_tennis icon visible', (
+      tester,
+    ) async {
       when(() => notifCubit.state).thenReturn(_notifState());
 
-      await tester.pumpWidget(
-          _wrap(notifCubit: notifCubit, currentIndex: 1));
+      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 1));
 
       expect(find.byIcon(Icons.sports_tennis), findsOneWidget);
     });
 
-    testWidgets('when tab 0 is active, Avisos shows outlined icon (index 2)',
-        (tester) async {
+    testWidgets('when tab 0 is active, Avisos shows outlined icon (index 2)', (
+      tester,
+    ) async {
       when(() => notifCubit.state).thenReturn(_notifState());
 
-      await tester.pumpWidget(
-          _wrap(notifCubit: notifCubit, currentIndex: 0));
+      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 0));
 
       expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
     });
 
-    testWidgets('Avisos active (index 2): filled notifications icon visible',
-        (tester) async {
+    testWidgets('Avisos active (index 3): filled notifications icon visible', (
+      tester,
+    ) async {
       when(() => notifCubit.state).thenReturn(_notifState());
 
-      await tester.pumpWidget(
-          _wrap(notifCubit: notifCubit, currentIndex: 2));
+      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 3));
 
       expect(find.byIcon(Icons.notifications), findsOneWidget);
     });
   });
 
-  // ── 2. Torneos feature flag ───────────────────────────────────────────────
+  // ── 2. Real default tab order and icons ───────────────────────────────────
 
-  group('Torneos feature flag', () {
-    testWidgets('Torneos tab is absent from nav bar when flag is false',
-        (tester) async {
-      when(() => notifCubit.state).thenReturn(_notifState());
-
-      await tester.pumpWidget(_wrap(notifCubit: notifCubit));
-
-      expect(find.text('Torneos'), findsNothing);
-    });
-
-    testWidgets('nav bar shows exactly Inicio, Partidas, Avisos, Perfil',
-        (tester) async {
-      when(() => notifCubit.state).thenReturn(_notifState());
-
-      await tester.pumpWidget(_wrap(notifCubit: notifCubit));
-
-      expect(find.text('Inicio'), findsAtLeastNWidgets(1));
-      expect(find.text('Partidas'), findsAtLeastNWidgets(1));
-      expect(find.text('Avisos'), findsAtLeastNWidgets(1));
-      expect(find.text('Perfil'), findsAtLeastNWidgets(1));
-      expect(find.text('Torneos'), findsNothing);
-    });
-  });
-
-  // ── 2b. Descubrir tab (real _defaultTabs, no stub) ────────────────────────
-
-  group('Descubrir tab', () {
+  group('real default tabs', () {
     Widget buildWithRealTabs() {
       return MaterialApp(
         theme: AppTheme.light(),
@@ -206,20 +186,36 @@ void main() {
       );
     }
 
-    testWidgets('Descubrir tab is present in the real tab list', (tester) async {
+    testWidgets('nav bar uses the requested tab order', (tester) async {
       when(() => notifCubit.state).thenReturn(_notifState());
 
       await tester.pumpWidget(buildWithRealTabs());
 
-      expect(find.text('Descubrir'), findsOneWidget);
+      final nav = tester.widget<BottomNavigationBar>(
+        find.byType(BottomNavigationBar),
+      );
+      expect(nav.items.map((item) => item.label), [
+        'Inicio',
+        'Partidas',
+        'Torneos',
+        'Avisos',
+        'Perfil',
+      ]);
     });
 
-    testWidgets('Descubrir tab uses the explore (compass) icon', (tester) async {
+    testWidgets('Partidas uses the calendar icon and Descubrir is absent', (
+      tester,
+    ) async {
       when(() => notifCubit.state).thenReturn(_notifState());
 
       await tester.pumpWidget(buildWithRealTabs());
 
-      expect(find.byIcon(AppIcons.explore), findsOneWidget);
+      final nav = tester.widget<BottomNavigationBar>(
+        find.byType(BottomNavigationBar),
+      );
+      final partidas = nav.items[1];
+      expect((partidas.icon as Icon).icon, AppIcons.calendar);
+      expect(find.text('Descubrir'), findsNothing);
     });
   });
 
@@ -247,8 +243,9 @@ void main() {
       expect(find.text('99+'), findsNothing);
     });
 
-    testWidgets('badge rendered with correct count when unreadCount = 3',
-        (tester) async {
+    testWidgets('badge rendered with correct count when unreadCount = 3', (
+      tester,
+    ) async {
       when(() => notifCubit.state).thenReturn(_notifState(unread: 3));
 
       await tester.pumpWidget(_wrap(notifCubit: notifCubit));
@@ -264,13 +261,12 @@ void main() {
       expect(find.text('99+'), findsOneWidget);
     });
 
-    testWidgets(
-        'badge renders on active Avisos tab when unread > 0',
-        (tester) async {
+    testWidgets('badge renders on active Avisos tab when unread > 0', (
+      tester,
+    ) async {
       when(() => notifCubit.state).thenReturn(_notifState(unread: 5));
 
-      await tester.pumpWidget(
-          _wrap(notifCubit: notifCubit, currentIndex: 2));
+      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 3));
 
       expect(find.text('5'), findsOneWidget);
     });
@@ -279,48 +275,53 @@ void main() {
   // ── 5. Tab tap calls onSelectTab callback ─────────────────────────────────
 
   group('tapping a tab calls onSelectTab with the correct index', () {
-    testWidgets('tapping Perfil tab calls onSelectTab(3)', (tester) async {
+    testWidgets('tapping Perfil tab calls onSelectTab(4)', (tester) async {
       when(() => notifCubit.state).thenReturn(_notifState());
       final tappedIndexes = <int>[];
 
-      await tester.pumpWidget(_wrap(
-        notifCubit: notifCubit,
-        currentIndex: 0,
-        onSelectTab: tappedIndexes.add,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          notifCubit: notifCubit,
+          currentIndex: 0,
+          onSelectTab: tappedIndexes.add,
+        ),
+      );
 
       await tester.tap(find.text('Perfil'));
       await tester.pump();
 
-      // With Torneos hidden, Perfil is index 3
-      expect(tappedIndexes, [3]);
+      expect(tappedIndexes, [4]);
     });
 
-    testWidgets('tapping Avisos tab calls onSelectTab(2)', (tester) async {
+    testWidgets('tapping Avisos tab calls onSelectTab(3)', (tester) async {
       when(() => notifCubit.state).thenReturn(_notifState());
       final tappedIndexes = <int>[];
 
-      await tester.pumpWidget(_wrap(
-        notifCubit: notifCubit,
-        currentIndex: 0,
-        onSelectTab: tappedIndexes.add,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          notifCubit: notifCubit,
+          currentIndex: 0,
+          onSelectTab: tappedIndexes.add,
+        ),
+      );
 
       await tester.tap(find.text('Avisos'));
       await tester.pump();
 
-      expect(tappedIndexes, [2]);
+      expect(tappedIndexes, [3]);
     });
 
     testWidgets('tapping Inicio tab calls onSelectTab(0)', (tester) async {
       when(() => notifCubit.state).thenReturn(_notifState());
       final tappedIndexes = <int>[];
 
-      await tester.pumpWidget(_wrap(
-        notifCubit: notifCubit,
-        currentIndex: 2,
-        onSelectTab: tappedIndexes.add,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          notifCubit: notifCubit,
+          currentIndex: 2,
+          onSelectTab: tappedIndexes.add,
+        ),
+      );
 
       await tester.tap(find.text('Inicio'));
       await tester.pump();

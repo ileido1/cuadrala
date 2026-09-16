@@ -36,19 +36,14 @@ final _defaultTabs = [
     label: 'Inicio',
   ),
   const ShellTabConfig(
-    activeIcon: AppIcons.racquetSport,
-    inactiveIcon: AppIcons.racquetSport,
+    activeIcon: AppIcons.calendar,
+    inactiveIcon: AppIcons.calendar,
     label: 'Partidas',
   ),
   const ShellTabConfig(
     activeIcon: AppIcons.trophy,
     inactiveIcon: AppIcons.trophy,
     label: 'Torneos',
-  ),
-  const ShellTabConfig(
-    activeIcon: AppIcons.explore,
-    inactiveIcon: AppIcons.explore,
-    label: 'Descubrir',
   ),
   const ShellTabConfig(
     activeIcon: AppIcons.bell,
@@ -63,9 +58,9 @@ final _defaultTabs = [
 ];
 
 List<ShellTabConfig> _filterTabs(List<ShellTabConfig> tabs) => [
-      for (final t in tabs)
-        if (t.label != 'Torneos' || FeatureFlags.torneosEnabled) t,
-    ];
+  for (final t in tabs)
+    if (t.label != 'Torneos' || FeatureFlags.torneosEnabled) t,
+];
 
 // ---------------------------------------------------------------------------
 // Shell entry point — wires DI-owned cubits and bridges to StatefulShellRoute
@@ -73,10 +68,7 @@ List<ShellTabConfig> _filterTabs(List<ShellTabConfig> tabs) => [
 
 final class ShellScreen extends StatelessWidget {
   /// Called by StatefulShellRoute.indexedStack builder.
-  const ShellScreen({
-    super.key,
-    required this.navigationShell,
-  });
+  const ShellScreen({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
@@ -86,9 +78,7 @@ final class ShellScreen extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => getIt<HomeCubit>()),
         BlocProvider(create: (_) => getIt<OpenMatchesCubit>()),
-        BlocProvider(
-          create: (_) => getIt<NotificationsCubit>()..load(),
-        ),
+        BlocProvider(create: (_) => getIt<NotificationsCubit>()..load()),
         BlocProvider(create: (_) => getIt<ProfileCubit>()),
       ],
       child: ShellBody(
@@ -236,7 +226,7 @@ Widget _buildIcon({
 }
 
 // ---------------------------------------------------------------------------
-// Bottom nav — handoff: bg-2, borde superior, safe area inferior
+// Bottom nav — handoff: bg-2 with safe area spacing.
 // ---------------------------------------------------------------------------
 
 final class _ShellBottomNav extends StatelessWidget {
@@ -248,12 +238,7 @@ final class _ShellBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        border: Border(
-          top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
-        ),
-      ),
+      decoration: BoxDecoration(color: scheme.surfaceContainerLow),
       child: SafeArea(
         top: false,
         minimum: const EdgeInsets.only(bottom: 8),

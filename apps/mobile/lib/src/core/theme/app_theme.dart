@@ -13,29 +13,30 @@ final class AppTheme {
 
   // ─── Light ─────────────────────────────────────────────────────────────────
   static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: BrandColors.padelGreen,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: BrandColors.padelGreen,
-      onPrimary: BrandColors.onHero,
-      secondary: BrandColors.navy,
-      onSecondary: BrandColors.onHero,
-      tertiary: BrandColors.limeAccent,
-      onTertiary: BrandColors.navy,
-      surface: BrandColors.lightSurface,
-      surfaceContainerLowest: BrandColors.lightSurface,
-      surfaceContainerLow: BrandColors.lightSurface,
-      surfaceContainer: BrandColors.lightSurface,
-      surfaceContainerHigh: BrandColors.lightSurfaceContainer,
-      surfaceContainerHighest: BrandColors.lightSurfaceContainer,
-      // `outline` = `--line-strong` (OutlineBtn, toggle off…), `outlineVariant`
-      // = `--line` (cards, chips, segmented, inputs) — antes ninguno de los
-      // dos estaba fijado al token real del diseño.
-      outline: BrandColors.lightOutlineStrong,
-      outlineVariant: BrandColors.lightOutline,
-      onSurfaceVariant: BrandColors.lightMuted,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: BrandColors.padelGreen,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: BrandColors.padelGreen,
+          onPrimary: BrandColors.onHero,
+          secondary: BrandColors.navy,
+          onSecondary: BrandColors.onHero,
+          tertiary: BrandColors.limeAccent,
+          onTertiary: BrandColors.navy,
+          surface: BrandColors.lightSurface,
+          surfaceContainerLowest: BrandColors.lightSurface,
+          surfaceContainerLow: BrandColors.lightSurface,
+          surfaceContainer: BrandColors.lightSurface,
+          surfaceContainerHigh: BrandColors.lightSurfaceContainer,
+          surfaceContainerHighest: BrandColors.lightSurfaceContainer,
+          // `outline` = `--line-strong` (OutlineBtn, toggle off…), `outlineVariant`
+          // = `--line` (cards, chips, segmented, inputs) — antes ninguno de los
+          // dos estaba fijado al token real del diseño.
+          outline: BrandColors.lightOutlineStrong,
+          outlineVariant: BrandColors.lightOutline,
+          onSurfaceVariant: BrandColors.lightMuted,
+        );
 
     return _buildTheme(
       scheme,
@@ -46,32 +47,33 @@ final class AppTheme {
 
   // ─── Dark ──────────────────────────────────────────────────────────────────
   static ThemeData dark() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: BrandColors.padelGreen,
-      brightness: Brightness.dark,
-    ).copyWith(
-      primary: BrandColors.padelGreen,
-      onPrimary: BrandColors.onHero,
-      secondary: BrandColors.navy,
-      onSecondary: BrandColors.onHero,
-      tertiary: BrandColors.limeAccent,
-      onTertiary: BrandColors.navy,
-      // `scheme.surface` = `--surface` (#131C2E, color de card). El fondo de
-      // scaffold (`--bg` #0B1220) se aplica vía `scaffoldBackground` aparte.
-      surface: BrandColors.darkSurfaceContainer,
-      surfaceContainerLowest: BrandColors.darkSurface, // --bg
-      surfaceContainerLow: BrandColors.darkSurfaceLow, // --bg-2
-      surfaceContainer: BrandColors.darkSurfaceContainer, // --surface
-      surfaceContainerHigh: BrandColors.darkSurfaceHigh,
-      surfaceContainerHighest: BrandColors.darkSurface2, // --surface-2
-      // `outline` = `--line-strong` (OutlineBtn, toggle off…), `outlineVariant`
-      // = `--line` (cards, chips, segmented, inputs) — antes ninguno de los
-      // dos estaba fijado al token real del diseño.
-      outline: BrandColors.darkOutlineStrong,
-      outlineVariant: BrandColors.darkOutline,
-      onSurface: BrandColors.darkOnSurface,
-      onSurfaceVariant: BrandColors.darkMuted,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: BrandColors.padelGreen,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: BrandColors.padelGreen,
+          onPrimary: BrandColors.onHero,
+          secondary: BrandColors.navy,
+          onSecondary: BrandColors.onHero,
+          tertiary: BrandColors.limeAccent,
+          onTertiary: BrandColors.navy,
+          // `scheme.surface` = `--surface` (#131C2E, color de card). El fondo de
+          // scaffold (`--bg` #0B1220) se aplica vía `scaffoldBackground` aparte.
+          surface: BrandColors.darkSurfaceContainer,
+          surfaceContainerLowest: BrandColors.darkSurface, // --bg
+          surfaceContainerLow: BrandColors.darkSurfaceLow, // --bg-2
+          surfaceContainer: BrandColors.darkSurfaceContainer, // --surface
+          surfaceContainerHigh: BrandColors.darkSurfaceHigh,
+          surfaceContainerHighest: BrandColors.darkSurface2, // --surface-2
+          // `outline` = `--line-strong` (OutlineBtn, toggle off…), `outlineVariant`
+          // = `--line` (cards, chips, segmented, inputs) — antes ninguno de los
+          // dos estaba fijado al token real del diseño.
+          outline: BrandColors.darkOutlineStrong,
+          outlineVariant: BrandColors.darkOutline,
+          onSurface: BrandColors.darkOnSurface,
+          onSurfaceVariant: BrandColors.darkMuted,
+        );
 
     return _buildTheme(
       scheme,
@@ -106,7 +108,10 @@ final class AppTheme {
         filled: true,
         // `Field` del prototipo va sobre `--surface`, no `--surface-2`.
         fillColor: scheme.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
           borderSide: BorderSide(color: scheme.outlineVariant, width: 1.5),
@@ -159,7 +164,7 @@ final class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_radiusLg),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6), width: 1.5),
+          side: BorderSide.none,
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -209,10 +214,7 @@ final class AppTheme {
   /// Usa `fontFamily` en el [TextTheme] sin descargar fuentes en build:
   /// [google_fonts] resuelve el glyph en runtime al pintar texto.
   static TextTheme _textTheme(ColorScheme scheme) {
-    final base = ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-    ).textTheme;
+    final base = ThemeData(useMaterial3: true, colorScheme: scheme).textTheme;
     return base.apply(
       fontFamily: plusJakartaFontFamily,
       bodyColor: scheme.onSurface,
