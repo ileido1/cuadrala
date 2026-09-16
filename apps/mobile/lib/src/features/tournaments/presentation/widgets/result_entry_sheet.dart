@@ -54,14 +54,31 @@ class _ResultEntrySheetState extends State<ResultEntrySheet> {
       _error = null;
     });
 
-    final scores = <TournamentScheduleMatchScoreDto>[
-      for (final side in widget.match.sides)
-        for (final registrationId in side.registrationIds)
-          TournamentScheduleMatchScoreDto(
-            tournamentRegistrationId: registrationId,
-            points: _pointsBySideKey[side.sideKey] ?? 0,
+    final scores = <TournamentScheduleMatchScoreDto>[];
+    for (final side in widget.match.sides) {
+      // Older cached schedules only contain userIds. Keep them submit-able;
+      // newly materialized matches always provide registrationIds, including
+      // invited participants without accounts.
+      if (side.registrationIds.isNotEmpty) {
+        scores.addAll(
+          side.registrationIds.map(
+            (registrationId) => TournamentScheduleMatchScoreDto(
+              tournamentRegistrationId: registrationId,
+              points: _pointsBySideKey[side.sideKey] ?? 0,
+            ),
           ),
-    ];
+        );
+      } else {
+        scores.addAll(
+          side.userIds.whereType<String>().map(
+            (userId) => TournamentScheduleMatchScoreDto(
+              userId: userId,
+              points: _pointsBySideKey[side.sideKey] ?? 0,
+            ),
+          ),
+        );
+      }
+    }
 
     try {
       await widget.onSubmit(scores);
