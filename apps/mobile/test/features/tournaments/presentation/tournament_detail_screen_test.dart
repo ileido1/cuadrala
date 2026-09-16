@@ -82,14 +82,19 @@ TournamentListItemDto _tournament({
   pairedRegistration: pairedRegistration,
 );
 
-TournamentRegistrationDto _authRegistration({String userId = 'user-2'}) =>
-    TournamentRegistrationDto(
-      id: 'reg-auth-1',
-      tournamentId: 't-1',
-      userId: userId,
-      status: 'CONFIRMED',
-      createdAt: DateTime(2024),
-    );
+TournamentRegistrationDto _authRegistration({
+  String id = 'reg-auth-1',
+  String userId = 'user-2',
+  String status = 'CONFIRMED',
+  String? partnerRegistrationId,
+}) => TournamentRegistrationDto(
+  id: id,
+  tournamentId: 't-1',
+  userId: userId,
+  status: status,
+  createdAt: DateTime(2024),
+  partnerRegistrationId: partnerRegistrationId,
+);
 
 TournamentRegistrationDto _guestRegistration({
   String id = 'reg-guest-1',
@@ -870,8 +875,15 @@ void main() {
           find.byKey(const Key('tournament.registrationsGroup.confirmed')),
           findsOneWidget,
         );
-        expect(find.text('Pendiente'), findsOneWidget);
-        expect(find.text('Confirmado', skipOffstage: false), findsNWidgets(2));
+        expect(find.text('Pendiente'), findsNothing);
+        expect(find.text('Confirmado', skipOffstage: false), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('tournament.registrationTile.reg-auth-1')),
+            matching: find.text('Mixto'),
+          ),
+          findsOneWidget,
+        );
 
         //? Orden: la sección "Pendientes" se dibuja antes que "Confirmados".
         final pendingHeaderY = tester
@@ -930,6 +942,74 @@ void main() {
         //? "38px" per spec: ambos botones de la fila PENDING miden 38x38.
         expect(tester.getSize(confirmButton), const Size(38, 38));
         expect(tester.getSize(removeButton), const Size(38, 38));
+      },
+    );
+
+    testWidgets(
+      'shows pairing state only for fixed doubles and keeps category on rows',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [
+              _authRegistration(
+                id: 'reg-paired',
+                userId: 'player-a',
+                partnerRegistrationId: 'reg-partner',
+              ),
+              _authRegistration(id: 'reg-partner', userId: 'player-b'),
+              _authRegistration(id: 'reg-unpaired', userId: 'player-c'),
+            ],
+            total: 2,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
+
+        await pumpAndOpenRegistrationsTab(
+          tester,
+          tournament: _tournament(
+            organizerUserId: 'organizer-1',
+            pairedRegistration: true,
+          ),
+        );
+
+        expect(find.text('Mixto · en dupla'), findsOneWidget);
+        expect(find.text('Mixto · sin dupla'), findsOneWidget);
+
+        // The individual roster still renders the category and never exposes
+        // a pairing state, even when stale partner data is present.
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [
+              _authRegistration(
+                id: 'reg-individual',
+                userId: 'player-c',
+                partnerRegistrationId: 'stale-partner',
+              ),
+            ],
+            total: 1,
+          ),
+        );
+        await pumpAndOpenRegistrationsTab(
+          tester,
+          tournament: _tournament(organizerUserId: 'organizer-1'),
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(
+              const Key('tournament.registrationTile.reg-individual'),
+            ),
+            matching: find.text('Mixto'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('dupla'), findsNothing);
       },
     );
 

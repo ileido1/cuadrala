@@ -5,12 +5,14 @@ final class _RegistrationsTab extends StatelessWidget {
     required this.tournamentId,
     required this.organizerUserId,
     required this.tournamentStatus,
+    required this.categoryName,
     required this.pairedRegistration,
   });
 
   final String tournamentId;
   final String? organizerUserId;
   final String? tournamentStatus;
+  final String? categoryName;
   final bool pairedRegistration;
 
   @override
@@ -114,6 +116,7 @@ final class _RegistrationsTab extends StatelessWidget {
                         registrations: activeItems,
                         paired: true,
                       ),
+                      categoryName: categoryName,
                       canManage: canManageGuests,
                       busyRegistrationId: loaded.busyRegistrationId,
                       onPair: (first, second) =>
@@ -124,6 +127,8 @@ final class _RegistrationsTab extends StatelessWidget {
                     _OrganizerRosterCard(
                       pendingItems: pendingItems,
                       confirmedItems: confirmedItems,
+                      categoryName: categoryName,
+                      pairedRegistration: pairedRegistration,
                       canManage: canManageGuests,
                       busyRegistrationId: loaded.busyRegistrationId,
                     ),
@@ -250,12 +255,16 @@ final class _OrganizerRosterCard extends StatelessWidget {
   const _OrganizerRosterCard({
     required this.pendingItems,
     required this.confirmedItems,
+    required this.categoryName,
+    required this.pairedRegistration,
     required this.canManage,
     required this.busyRegistrationId,
   });
 
   final List<TournamentRegistrationDto> pendingItems;
   final List<TournamentRegistrationDto> confirmedItems;
+  final String? categoryName;
+  final bool pairedRegistration;
   final bool canManage;
   final String? busyRegistrationId;
 
@@ -281,6 +290,8 @@ final class _OrganizerRosterCard extends StatelessWidget {
             for (final registration in pendingItems)
               _RegistrationTile(
                 registration: registration,
+                categoryName: categoryName,
+                pairedRegistration: pairedRegistration,
                 canManage: canManage,
                 busy: busyRegistrationId == registration.id,
               ),
@@ -304,6 +315,8 @@ final class _OrganizerRosterCard extends StatelessWidget {
             for (final registration in confirmedItems)
               _RegistrationTile(
                 registration: registration,
+                categoryName: categoryName,
+                pairedRegistration: pairedRegistration,
                 canManage: canManage,
                 busy: busyRegistrationId == registration.id,
               ),
@@ -456,11 +469,15 @@ final class _OrganizerCount extends StatelessWidget {
 final class _RegistrationTile extends StatelessWidget {
   const _RegistrationTile({
     required this.registration,
+    required this.categoryName,
+    required this.pairedRegistration,
     required this.canManage,
     required this.busy,
   });
 
   final TournamentRegistrationDto registration;
+  final String? categoryName;
+  final bool pairedRegistration;
   final bool canManage;
   final bool busy;
 
@@ -494,9 +511,18 @@ final class _RegistrationTile extends StatelessWidget {
           ? registration.guestPhone!
           : 'Invitado sin teléfono';
     }
-    return registration.hasPartner
-        ? 'Jugador · en dupla'
-        : 'Jugador registrado';
+    return _categorySubtitle() ?? 'Jugador registrado';
+  }
+
+  String? _categorySubtitle() {
+    final category = categoryName?.trim();
+    if (registration.status == 'CONFIRMED' && pairedRegistration) {
+      final pairingLabel = registration.hasPartner ? 'en dupla' : 'sin dupla';
+      return category?.isNotEmpty == true
+          ? '$category · $pairingLabel'
+          : pairingLabel;
+    }
+    return category?.isNotEmpty == true ? category : null;
   }
 
   @override
@@ -570,19 +596,6 @@ final class _RegistrationTile extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(width: 6),
-                    Text(
-                      registration.status == 'PENDING'
-                          ? 'Pendiente'
-                          : 'Confirmado',
-                      style: TextStyle(
-                        color: registration.status == 'PENDING'
-                            ? scheme.onSurfaceVariant
-                            : scheme.primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -595,6 +608,18 @@ final class _RegistrationTile extends StatelessWidget {
                     fontSize: 12.5,
                   ),
                 ),
+                if (registration.isGuest &&
+                    registration.status == 'CONFIRMED' &&
+                    _categorySubtitle() != null)
+                  Text(
+                    _categorySubtitle()!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 12.5,
+                    ),
+                  ),
               ],
             ),
           ),

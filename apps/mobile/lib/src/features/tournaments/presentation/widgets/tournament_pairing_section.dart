@@ -17,6 +17,7 @@ class TournamentPairingSection extends StatefulWidget {
   const TournamentPairingSection({
     super.key,
     required this.roster,
+    this.categoryName,
     required this.canManage,
     required this.busyRegistrationId,
     required this.onPair,
@@ -24,6 +25,7 @@ class TournamentPairingSection extends StatefulWidget {
   });
 
   final TournamentRoster roster;
+  final String? categoryName;
 
   /// El emparejamiento es del organizador; el resto solo mira.
   final bool canManage;
@@ -103,6 +105,7 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _PairTile(
                     pair: pair,
+                    categoryName: widget.categoryName,
                     canManage: widget.canManage,
                     busy:
                         widget.busyRegistrationId == pair.first.id ||
@@ -145,6 +148,7 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
                     child: _UnpairedTile(
                       key: Key('tournament.unpaired.${reg.id}'),
                       registration: reg,
+                      categoryName: widget.categoryName,
                       selected: _selectedId == reg.id,
                       enabled:
                           widget.canManage && widget.busyRegistrationId == null,
@@ -175,12 +179,14 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
 class _PairTile extends StatelessWidget {
   const _PairTile({
     required this.pair,
+    required this.categoryName,
     required this.canManage,
     required this.busy,
     required this.onUnpair,
   });
 
   final TournamentPair pair;
+  final String? categoryName;
   final bool canManage;
   final bool busy;
   final VoidCallback onUnpair;
@@ -198,11 +204,27 @@ class _PairTile extends StatelessWidget {
         ),
         const SizedBox(width: 2),
         Expanded(
-          child: Text(
-            pair.label,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                pair.label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (pair.isConfirmed && categoryName?.trim().isNotEmpty == true)
+                Text(
+                  '${categoryName!.trim()} · en dupla',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12.5,
+                  ),
+                ),
+            ],
           ),
         ),
         if (canManage)
@@ -250,12 +272,14 @@ class _UnpairedTile extends StatelessWidget {
   const _UnpairedTile({
     super.key,
     required this.registration,
+    required this.categoryName,
     required this.selected,
     required this.enabled,
     required this.onTap,
   });
 
   final TournamentRegistrationDto registration;
+  final String? categoryName;
   final bool selected;
   final bool enabled;
   final VoidCallback onTap;
@@ -288,13 +312,29 @@ class _UnpairedTile extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                registration.displayName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    registration.displayName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (!registration.isGuest &&
+                      categoryName?.trim().isNotEmpty == true)
+                    Text(
+                      registration.status == 'CONFIRMED'
+                          ? '${categoryName!.trim()} · sin dupla'
+                          : categoryName!.trim(),
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                ],
               ),
             ),
           ],

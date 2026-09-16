@@ -270,7 +270,8 @@ void main() {
             findsOneWidget,
           );
           expect(find.text('Alice', skipOffstage: false), findsOneWidget);
-          expect(find.text('Pendiente', skipOffstage: false), findsOneWidget);
+          expect(find.text('Pendiente', skipOffstage: false), findsNothing);
+          expect(find.text('Confirmado', skipOffstage: false), findsNothing);
 
           //? --- Confirm Alice ----------------------------------------------------
           final aliceConfirmed = _guestRegistration(
@@ -308,10 +309,7 @@ void main() {
               registrationId: 'reg-alice',
             ),
           ).called(1);
-          expect(
-            find.text('Confirmado', skipOffstage: false),
-            findsNWidgets(2),
-          );
+          expect(find.text('Confirmado', skipOffstage: false), findsNothing);
           expect(find.text('Pendiente'), findsNothing);
 
           //? --- Remove Alice (behind the AlertDialog confirm) ---------------------

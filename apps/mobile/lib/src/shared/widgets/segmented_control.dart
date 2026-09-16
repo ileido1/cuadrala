@@ -90,7 +90,9 @@ class SegmentedControl<T> extends StatelessWidget {
                       child: _SegmentButton(
                         option: options[i],
                         active: i == index,
-                        onTap: options[i].enabled ? () => onChanged(options[i].value) : null,
+                        onTap: options[i].enabled
+                            ? () => onChanged(options[i].value)
+                            : null,
                       ),
                     ),
                 ],
@@ -120,28 +122,32 @@ class _SegmentButton<T> extends StatelessWidget {
     final color = !option.enabled
         ? scheme.onSurface.withValues(alpha: 0.38)
         : active
-            ? scheme.onSurface
-            : scheme.onSurfaceVariant;
+        ? scheme.onSurface
+        : scheme.onSurfaceVariant;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (option.icon != null) ...[
-            Icon(option.icon, size: 16, color: color),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            option.label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
+      child: SizedBox.expand(
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (option.icon != null) ...[
+                Icon(option.icon, size: 16, color: color),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                option.label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

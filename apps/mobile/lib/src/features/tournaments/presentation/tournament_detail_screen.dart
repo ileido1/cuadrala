@@ -172,7 +172,8 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     final viewerTournament = widget.extra is ViewerTournamentDto
         ? widget.extra as ViewerTournamentDto
         : null;
-    _tournament = viewerTournament?.tournament ??
+    _tournament =
+        viewerTournament?.tournament ??
         (widget.extra is TournamentListItemDto
             ? widget.extra as TournamentListItemDto
             : null);
@@ -307,7 +308,8 @@ final class TournamentDetailBody extends StatelessWidget {
             registrationsCubit.currentUserId != null
         ? registrationsState.registrationFor(registrationsCubit.currentUserId!)
         : null;
-    final isOrganizer = viewerIsOrganizer ??
+    final isOrganizer =
+        viewerIsOrganizer ??
         _isOrganizer(
           tournament?.organizerUserId,
           registrationsCubit.currentUserId,
@@ -430,6 +432,7 @@ final class TournamentDetailBody extends StatelessWidget {
                       tournamentId: tournamentId,
                       organizerUserId: tournament?.organizerUserId,
                       tournamentStatus: tournament?.status,
+                      categoryName: tournament?.categoryName,
                       pairedRegistration:
                           tournament?.pairedRegistration ?? false,
                     ),

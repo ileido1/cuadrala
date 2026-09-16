@@ -48,7 +48,6 @@ final class WebMobileFrame extends StatelessWidget {
   const WebMobileFrame({required this.child, super.key});
 
   static const _maxWidth = 390.0;
-  static const _maxHeight = 844.0;
   static const _cornerRadius = 28.0;
 
   final Widget child;
@@ -65,8 +64,8 @@ final class WebMobileFrame extends StatelessWidget {
               ? math.min(_maxWidth, constraints.maxWidth)
               : _maxWidth;
           final height = constraints.hasBoundedHeight
-              ? math.min(_maxHeight, constraints.maxHeight)
-              : _maxHeight;
+              ? constraints.maxHeight
+              : null;
 
           return Center(
             child: Container(

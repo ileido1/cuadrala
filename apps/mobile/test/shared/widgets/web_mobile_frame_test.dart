@@ -5,7 +5,9 @@ import 'package:cuadrala_mobile/src/app/app.dart';
 
 void main() {
   group('WebMobileFrame', () {
-    testWidgets('caps the content to a phone-sized surface', (tester) async {
+    testWidgets('caps width but fills the available browser height', (
+      tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -20,7 +22,7 @@ void main() {
 
       expect(
         tester.getSize(find.byKey(const ValueKey('content'))),
-        const Size(388, 842),
+        const Size(388, 998),
       );
       expect(tester.takeException(), isNull);
     });
