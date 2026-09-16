@@ -12,6 +12,7 @@ import '../../catalog/data/models/category_dto.dart';
 import '../../catalog/data/models/sport_dto.dart';
 import '../../venues/data/models/venue_dto.dart';
 import '../../venues/data/venues_repository.dart';
+import '../../venues/presentation/widgets/venue_explorer_sheet.dart';
 import '../data/models/create_tournament_request.dart';
 import '../data/models/tournament_preset_dto.dart';
 import 'cubit/create_tournament_cubit.dart';
@@ -123,39 +124,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       'Elegí sede';
 
   Future<void> _selectVenue() async {
-    final selectedVenueId = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Seleccioná una sede',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              ..._venuesForSport.map(
-                (venue) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(AppIcons.pin),
-                  title: Text(venue.name),
-                  subtitle: venue.address == null ? null : Text(venue.address!),
-                  trailing: venue.id == _selectedVenueId
-                      ? const Icon(Icons.check)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(venue.id),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final selectedVenueId = await VenueExplorerSheet.show(
+      context,
+      venues: _venuesForSport,
+      selectedVenueId: _selectedVenueId,
     );
 
     if (selectedVenueId != null && mounted) {
