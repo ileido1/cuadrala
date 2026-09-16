@@ -27,6 +27,7 @@ abstract final class AppIcons {
   static const warning = PhosphorIconsLight.warning;
   static const chevronRight = PhosphorIconsLight.caretRight;
   static const chevronLeft = PhosphorIconsLight.caretLeft;
+  static const chevronDown = PhosphorIconsLight.caretDown;
   static const arrowForward = PhosphorIconsLight.arrowRight;
   static const arrowBack = PhosphorIconsLight.arrowLeft;
   static const moreHoriz = PhosphorIconsLight.dotsThree;

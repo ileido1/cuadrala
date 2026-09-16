@@ -467,7 +467,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                   child: InputDecorator(
                     decoration: const InputDecoration(
                       prefixIcon: Icon(AppIcons.pin),
-                      suffixIcon: Icon(Icons.keyboard_arrow_down),
+                      suffixIcon: Icon(AppIcons.chevronDown),
                     ),
                     isEmpty: _selectedVenueId == null,
                     child: Text(
