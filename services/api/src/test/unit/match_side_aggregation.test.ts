@@ -81,8 +81,8 @@ describe('groupMatchParticipantsBySideSV', () => {
     expect(B_SIDE?.userIds.sort()).toEqual(['b1', 'b2']);
   });
 
-  //? Huésped en singles: sin teamLabel ni userId, cae a tournamentRegistrationId
-  //? para no colisionar dos huéspedes distintos en el mismo lado.
+  //? Invitado en singles: sin teamLabel ni userId, cae a tournamentRegistrationId
+  //? para no colisionar dos invitados distintos en el mismo lado.
   it('should fall back to tournamentRegistrationId for a guest with no userId', () => {
     const SIDES = groupMatchParticipantsBySideSV([
       { userId: null, teamLabel: null, tournamentRegistrationId: 'reg-guest-1' },

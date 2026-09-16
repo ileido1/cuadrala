@@ -125,8 +125,8 @@ describe('GenerateTournamentScheduleUseCase — guest + authenticated tokens', (
   });
 });
 
-describe('GenerateTournamentScheduleUseCase — guests excluded from single elimination only', () => {
-  it('seeds only authenticated registrations into a single-elimination bracket', async () => {
+describe('GenerateTournamentScheduleUseCase — invited participants enter every format', () => {
+  it('seeds confirmed invited registrations into a single-elimination bracket', async () => {
     mockTournamentRepository.findByIdSV.mockResolvedValue({
       id: 'tournament-1',
       organizerUserId: 'organizer-1',
@@ -165,14 +165,14 @@ describe('GenerateTournamentScheduleUseCase — guests excluded from single elim
     }
 
     for (const GUEST of GUEST_REGISTRATIONS) {
-      expect(PAYLOAD_TOKENS.has(GUEST.id)).toBe(false);
+      expect(PAYLOAD_TOKENS.has(GUEST.id)).toBe(true);
     }
     for (const AUTH of AUTH_REGISTRATIONS) {
       expect(PAYLOAD_TOKENS.has(AUTH.id)).toBe(true);
     }
   });
 
-  it('still includes guests in round-robin generation (unchanged)', async () => {
+  it('includes invited participants in round-robin generation', async () => {
     mockTournamentRepository.findByIdSV.mockResolvedValue({
       id: 'tournament-1',
       organizerUserId: 'organizer-1',

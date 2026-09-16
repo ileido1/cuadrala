@@ -10,7 +10,8 @@ import type {
 } from '../../domain/ports/tournament_match_result_repository.js';
 
 export type PlayerBracketSlotDTO = {
-  userId: string;
+  registrationId: string;
+  userId: string | null;
   displayName: string;
   seedPosition: number;
 } | null;
@@ -117,11 +118,10 @@ export class GetTournamentBracketUseCase {
 
     // Ordenar por createdAt para tener orden determinista (seed por posición)
     const SORTED_CONFIRMED = [...CONFIRMED].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    //? Solo los jugadores autenticados entran al bracket (los GUEST no tienen
-    //? `userId` y no participan en brackets con ELO).
-    const PARTICIPANT_IDS = SORTED_CONFIRMED.map((r) => r.userId).filter(
-      (_id): _id is string => _id !== null,
-    );
+    //? El cuadro usa el id de inscripción para incluir jugadores autenticados
+    //? e invitados. El userId sigue viajando aparte para resultados y estado.
+    const PARTICIPANT_IDS = SORTED_CONFIRMED.map((r) => r.id);
+    const REGISTRATION_BY_ID = new Map(SORTED_CONFIRMED.map((r) => [r.id, r]));
 
     // Generar bracket usando la función del dominio
     const SCHEDULE = generateSingleEliminationScheduleSV({ participantRegistrationIds: PARTICIPANT_IDS });
@@ -149,25 +149,26 @@ export class GetTournamentBracketUseCase {
       roundNumber: _round.roundNumber,
       name: _round.name,
       matches: _round.matches.map((_match) => {
-        const PLAYER_A_SLOT: PlayerBracketSlotDTO =
-          _match.playerA !== null
-            ? {
-                userId: _match.playerA,
-                displayName:
-                  SORTED_CONFIRMED.find((r) => r.userId === _match.playerA)?.userName ?? 'Jugador desconocido',
-                seedPosition: _match.seedPositionA ?? 0,
-              }
-            : null;
-
-        const PLAYER_B_SLOT: PlayerBracketSlotDTO =
-          _match.playerB !== null
-            ? {
-                userId: _match.playerB,
-                displayName:
-                  SORTED_CONFIRMED.find((r) => r.userId === _match.playerB)?.userName ?? 'Jugador desconocido',
-                seedPosition: _match.seedPositionB ?? 0,
-              }
-            : null;
+        const PLAYER_A_REGISTRATION =
+          _match.playerA === null ? null : REGISTRATION_BY_ID.get(_match.playerA);
+        const PLAYER_B_REGISTRATION =
+          _match.playerB === null ? null : REGISTRATION_BY_ID.get(_match.playerB);
+        const PLAYER_A_SLOT: PlayerBracketSlotDTO = PLAYER_A_REGISTRATION === undefined || PLAYER_A_REGISTRATION === null
+          ? null
+          : {
+              registrationId: PLAYER_A_REGISTRATION.id,
+              userId: PLAYER_A_REGISTRATION.userId,
+              displayName: PLAYER_A_REGISTRATION.userName ?? PLAYER_A_REGISTRATION.guestName ?? 'Jugador desconocido',
+              seedPosition: _match.seedPositionA ?? 0,
+            };
+        const PLAYER_B_SLOT: PlayerBracketSlotDTO = PLAYER_B_REGISTRATION === undefined || PLAYER_B_REGISTRATION === null
+          ? null
+          : {
+              registrationId: PLAYER_B_REGISTRATION.id,
+              userId: PLAYER_B_REGISTRATION.userId,
+              displayName: PLAYER_B_REGISTRATION.userName ?? PLAYER_B_REGISTRATION.guestName ?? 'Jugador desconocido',
+              seedPosition: _match.seedPositionB ?? 0,
+            };
 
         const REAL_STATE = MATCH_STATE_BY_SLOT.get(`${_round.roundNumber}:${_match.matchNumber}`);
 

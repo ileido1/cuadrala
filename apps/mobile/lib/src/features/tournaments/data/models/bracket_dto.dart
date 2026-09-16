@@ -4,19 +4,23 @@
 /// "Por definir" (depende del cuadro anterior).
 final class BracketPlayerDto {
   const BracketPlayerDto({
+    this.registrationId,
     required this.userId,
     required this.displayName,
     required this.seedPosition,
   });
 
-  final String userId;
+  final String? registrationId;
+  final String? userId;
   final String displayName;
   final int seedPosition;
 
   static BracketPlayerDto? fromJson(Map<String, Object?>? json) {
     if (json == null) return null;
     return BracketPlayerDto(
-      userId: json['userId'] as String,
+      registrationId:
+          json['registrationId'] as String? ?? json['userId'] as String?,
+      userId: json['userId'] as String?,
       displayName: json['displayName'] as String,
       seedPosition: (json['seedPosition'] as num).toInt(),
     );
@@ -70,16 +74,18 @@ final class BracketMatchDto {
     return BracketMatchDto(
       matchNumber: (json['matchNumber'] as num).toInt(),
       roundNumber: (json['roundNumber'] as num).toInt(),
-      playerA:
-          BracketPlayerDto.fromJson(json['playerA'] as Map<String, Object?>?),
-      playerB:
-          BracketPlayerDto.fromJson(json['playerB'] as Map<String, Object?>?),
+      playerA: BracketPlayerDto.fromJson(
+        json['playerA'] as Map<String, Object?>?,
+      ),
+      playerB: BracketPlayerDto.fromJson(
+        json['playerB'] as Map<String, Object?>?,
+      ),
       winnerId: json['winnerId'] as String?,
       score: json['score'] is List
           ? (json['score'] as List)
-              .whereType<Map<String, Object?>>()
-              .map(BracketScoreEntryDto.fromJson)
-              .toList()
+                .whereType<Map<String, Object?>>()
+                .map(BracketScoreEntryDto.fromJson)
+                .toList()
           : null,
       status: json['status'] as String? ?? 'PENDING',
       matchId: json['matchId'] as String?,
@@ -103,7 +109,8 @@ final class BracketRoundDto {
     return BracketRoundDto(
       roundNumber: (json['roundNumber'] as num).toInt(),
       name: json['name'] as String,
-      matches: (json['matches'] as List?)
+      matches:
+          (json['matches'] as List?)
               ?.whereType<Map<String, Object?>>()
               .map(BracketMatchDto.fromJson)
               .toList() ??
@@ -134,7 +141,8 @@ final class BracketDto {
       tournamentName: json['tournamentName'] as String,
       totalRounds: (json['totalRounds'] as num).toInt(),
       bracketSize: (json['bracketSize'] as num).toInt(),
-      rounds: (json['rounds'] as List?)
+      rounds:
+          (json['rounds'] as List?)
               ?.whereType<Map<String, Object?>>()
               .map(BracketRoundDto.fromJson)
               .toList() ??

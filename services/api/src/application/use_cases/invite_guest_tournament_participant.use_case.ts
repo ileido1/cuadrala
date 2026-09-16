@@ -49,7 +49,7 @@ export class InviteGuestTournamentParticipantUseCase {
     if (TOURNAMENT.isCompetitive && (TOURNAMENT.inscriptionPrice ?? 0) > 0) {
       throw new AppError(
         'TORNEO_RESTRINGIDO',
-        'Los huéspedes no pueden inscribirse en torneos competitivos con costo de inscripción.',
+        'Los invitados no pueden inscribirse en torneos competitivos con costo de inscripción.',
         403,
       );
     }

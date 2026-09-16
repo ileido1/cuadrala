@@ -60,7 +60,7 @@ String? genderTagLabel(String gender) => switch (gender) {
 /// `cuadrala-torneo-org.jsx:112` — status label on a row of the organizer's
 /// "Invitaciones enviadas" list: `'Sin responder'` while PENDING, `'Rechazó'`
 /// once REJECTED (spec "Org invitations — Rechazó/Sin responder, names,
-/// Huésped/Invitar"; M10b). Rejected invitations render this label instead of
+/// Invitado/Invitar"; M10b). Rejected invitations render this label instead of
 /// being filtered out of the list.
 String sentInvitationStatusLabel(bool isPending) =>
     isPending ? 'Sin responder' : 'Rechazó';

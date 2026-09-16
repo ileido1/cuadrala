@@ -387,9 +387,9 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       });
     });
 
-    //? MatchResultScore.userId es NOT NULL en el schema: un lado huésped nunca
+    //? MatchResultScore.userId es NOT NULL en el schema: un lado invitado nunca
     //? aparece en `scores`, así que basta con derivar los destinatarios de ahí
-    //? — sin consultar participantes ni distinguir huésped explícitamente.
+    //? — sin consultar participantes ni distinguir invitado explícitamente.
     it('skips a guest side because it never appears in the recorded scores', async () => {
       resetMocksSV();
       mockTournamentMatchResultRepository.registerResultAndAdvanceSV.mockResolvedValue({

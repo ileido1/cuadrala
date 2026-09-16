@@ -308,6 +308,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
       select: {
         id: true,
         userId: true,
+        guestName: true,
         status: true,
         createdAt: true,
         user: { select: { name: true } },
@@ -319,6 +320,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
       id: _r.id,
       userId: _r.userId,
       userName: _r.user?.name ?? null,
+      guestName: _r.guestName,
       status: _r.status,
       createdAt: _r.createdAt.toISOString(),
     }));

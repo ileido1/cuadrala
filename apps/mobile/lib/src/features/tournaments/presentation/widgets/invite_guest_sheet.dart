@@ -105,7 +105,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                       ),
                     ),
                     Text(
-                      'Invitar huésped',
+                      'Invitar invitado',
                       key: const Key('tournament.inviteGuestSheet.title'),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -149,7 +149,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Entra como pendiente igual que el resto. Los huéspedes no entran al cuadro de eliminación.',
+                      'Entra como pendiente igual que el resto. Al confirmarlo, participa del cuadro de eliminación.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.45,

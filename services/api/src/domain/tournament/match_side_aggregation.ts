@@ -72,7 +72,7 @@ export type MatchParticipantSideMemberSV = {
 };
 
 export type MatchParticipantSideSV = {
-  /** `teamLabel` cuando existe; si no, el propio `userId`, o la inscripción del huésped. */
+  /** `teamLabel` cuando existe; si no, el propio `userId`, o la inscripción del invitado. */
   sideKey: string;
   userIds: Array<string | null>;
 };
@@ -80,8 +80,8 @@ export type MatchParticipantSideSV = {
 /**
  * Agrupa participantes de un partido por lado, con la misma regla que
  * `aggregateMatchSideTotalsSV` (`teamLabel ?? userId`), pero tolerante a
- * huéspedes sin `userId`: en ese caso cae a `tournamentRegistrationId` para no
- * juntar dos huéspedes de singles distintos en el mismo lado.
+ * invitados sin `userId`: en ese caso cae a `tournamentRegistrationId` para no
+ * juntar dos invitados de singles distintos en el mismo lado.
  */
 export function groupMatchParticipantsBySideSV(
   _participants: MatchParticipantSideMemberSV[],

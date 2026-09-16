@@ -1,5 +1,5 @@
 export type TournamentMatchStateSideSV = {
-  /** `teamLabel` cuando existe; si no, el propio `userId`, o la inscripción del huésped. */
+  /** `teamLabel` cuando existe; si no, el propio `userId`, o la inscripción del invitado. */
   sideKey: string;
   userIds: Array<string | null>;
 };

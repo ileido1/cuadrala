@@ -142,24 +142,13 @@ export class GenerateTournamentScheduleUseCase {
 
     const FORMAT_CODE = PRESET.code;
 
-    //? Los huéspedes quedan fuera del cuadro de eliminación simple (spec
-    //? "Guests excluded from single-elimination schedule generation");
-    //? round robin y americano no cambian. Si esto deja a alguien sin su
-    //? pareja, `collapsePairsToCompetitorsSV` ya lo trata como no emparejado
-    //? y dispara el mismo `DUPLAS_INCOMPLETAS` de siempre — no se reinventa
-    //? un error nuevo para "pareja con un huésped".
-    const REGISTRATIONS_FOR_BRACKET =
-      FORMAT_CODE === 'SINGLE_ELIMINATION'
-        ? CONFIRMED_REGISTRATIONS.filter((_r) => _r.userId !== null)
-        : CONFIRMED_REGISTRATIONS;
-
     //? En un torneo de duplas fijas el competidor es la pareja, no la persona:
     //? el cuadro cruza duplas. Una inscripcion sin companero queda afuera —
     //? media pareja no compite— y el organizador tiene que emparejarla o
     //? sacarla antes de generar.
     const COLLAPSED = TOURNAMENT.pairedRegistration
-      ? collapsePairsToCompetitorsSV(REGISTRATIONS_FOR_BRACKET)
-      : { competitorIds: REGISTRATIONS_FOR_BRACKET.map((_r) => _r.id), unpairedIds: [] };
+      ? collapsePairsToCompetitorsSV(CONFIRMED_REGISTRATIONS)
+      : { competitorIds: CONFIRMED_REGISTRATIONS.map((_r) => _r.id), unpairedIds: [] };
 
     if (TOURNAMENT.pairedRegistration && COLLAPSED.unpairedIds.length > 0) {
       throw new AppError(
@@ -269,4 +258,3 @@ export class GenerateTournamentScheduleUseCase {
     throw new AppError('FORMATO_NO_SOPORTADO', 'Formato no soportado aún.', 501);
   }
 }
-

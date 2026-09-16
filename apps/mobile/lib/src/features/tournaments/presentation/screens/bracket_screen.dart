@@ -126,11 +126,10 @@ class _BracketView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          //? Nota al pie verbatim (`README.md:90`): "Los huéspedes
-          //? (inscritos sin cuenta) no entran al cuadro." — sin la cláusula
-          //? ": sólo jugadores con cuenta" que estaba agregada de más.
+          //? Los invitados sin cuenta participan del cuadro como cualquier
+          //? otro participante confirmado.
           Text(
-            'Los huéspedes (inscritos sin cuenta) no entran al cuadro.',
+            'Los invitados participan del cuadro como cualquier participante confirmado.',
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 12,

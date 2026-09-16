@@ -92,9 +92,7 @@ void main() {
       expect(find.text('Player B'), findsOneWidget);
     });
 
-    testWidgets('shows a back action, not swipe-only dismiss', (
-      tester,
-    ) async {
+    testWidgets('shows a back action, not swipe-only dismiss', (tester) async {
       final repository = _TestTournamentsRepository(
         bracketProvider: () async => BracketDto(
           tournamentId: 't-1',
@@ -128,12 +126,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Los huéspedes (inscritos sin cuenta) no entran al cuadro.'),
+        find.text(
+          'Los invitados participan del cuadro como cualquier participante confirmado.',
+        ),
         findsOneWidget,
       );
       expect(
         find.text(
-          'Los huéspedes (inscritos sin cuenta) no entran al cuadro: sólo jugadores con cuenta.',
+          'Los invitados (inscritos sin cuenta) no entran al cuadro: sólo jugadores con cuenta.',
         ),
         findsNothing,
       );

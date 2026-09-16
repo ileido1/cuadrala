@@ -310,10 +310,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(AUTH_PARTICIPANTS.every((_p) => [AUTH_A, AUTH_B].includes(_p.userId as string))).toBe(true);
     });
 
-    it('excludes guest registrations from single-elimination bracket generation, keeping them for americano/round-robin (S8a)', async () => {
+    it('includes invited registrations in single-elimination bracket generation', async () => {
       const TOURNAMENT = await PRISMA.tournament.create({
         data: {
-          name: `Torneo SE Guest Exclusion ${Date.now()}`,
+          name: `Torneo SE Invited Participants ${Date.now()}`,
           categoryId,
           sportId,
           formatPresetId: presetSingleEliminationId,
@@ -326,8 +326,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const AUTH_B = await createConfirmedPlayerSV('se-guest-auth-b', TOURNAMENT.id);
       const AUTH_C = await createConfirmedPlayerSV('se-guest-auth-c', TOURNAMENT.id);
       const AUTH_D = await createConfirmedPlayerSV('se-guest-auth-d', TOURNAMENT.id);
-      await createGuestRegistrationSV(TOURNAMENT.id, 'Guest Excluded A');
-      await createGuestRegistrationSV(TOURNAMENT.id, 'Guest Excluded B');
+      await createGuestRegistrationSV(TOURNAMENT.id, 'Invitado A');
+      await createGuestRegistrationSV(TOURNAMENT.id, 'Invitado B');
 
       await request(APP)
         .patch(`/api/v1/tournaments/${TOURNAMENT.id}/status`)
@@ -355,9 +355,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       });
       const ALL_PARTICIPANTS = MATCHES.flatMap((_m) => _m.participants);
 
-      //? Bracket de 4: solo los autenticados entran, ningún participante huésped.
-      expect(ALL_PARTICIPANTS).toHaveLength(4);
-      expect(ALL_PARTICIPANTS.every((_p) => _p.userId !== null)).toBe(true);
+      //? El cuadro incluye las 4 cuentas y los 2 invitados confirmados.
+      expect(ALL_PARTICIPANTS).toHaveLength(6);
+      expect(ALL_PARTICIPANTS.filter((_p) => _p.userId === null)).toHaveLength(2);
       expect(ALL_PARTICIPANTS.map((_p) => _p.userId).sort()).toEqual(
         [AUTH_A, AUTH_B, AUTH_C, AUTH_D].sort(),
       );

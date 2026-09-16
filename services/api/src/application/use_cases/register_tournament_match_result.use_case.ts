@@ -136,7 +136,7 @@ export class RegisterTournamentMatchResultUseCase {
 
     //? Mejor esfuerzo, después del commit (S9): una notificación fallida nunca
     //? tira abajo un resultado ya guardado. `MatchResultScore.userId` es NOT
-    //? NULL en el schema, así que un lado huésped nunca aparece en `scores` —
+    //? NULL en el schema, así que un lado invitado nunca aparece en `scores` —
     //? no hace falta distinguirlo aparte ni consultar participantes.
     if (this._createTournamentNotificationEvent !== null) {
       try {

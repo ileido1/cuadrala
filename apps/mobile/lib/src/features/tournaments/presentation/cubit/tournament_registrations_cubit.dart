@@ -232,7 +232,7 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
     } catch (_) {
       emit(current.copyWith(
         invitingGuest: false,
-        guestInviteError: 'No se pudo invitar al huésped.',
+        guestInviteError: 'No se pudo invitar al invitado.',
       ));
     }
   }

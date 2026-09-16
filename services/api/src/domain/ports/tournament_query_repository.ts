@@ -52,6 +52,7 @@ export type RegistrationDTO = {
   id: string;
   userId: string | null;
   userName: string | null;
+  guestName?: string | null;
   status: RegistrationStatus;
   createdAt: string;
 };

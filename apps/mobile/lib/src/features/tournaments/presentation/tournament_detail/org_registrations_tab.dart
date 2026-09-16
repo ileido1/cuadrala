@@ -147,7 +147,7 @@ final class _RegistrationsTab extends StatelessWidget {
                             key: const Key('tournament.inviteGuestButton'),
                             onPressed: () => showInviteGuestSheet(context),
                             icon: const Icon(AppIcons.add, size: 18),
-                            label: const Text('Huésped'),
+                            label: const Text('Invitado'),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -594,7 +594,7 @@ final class _RegistrationTile extends StatelessWidget {
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: const Text(
-                          'HUESPED',
+                          'INVITADO',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,

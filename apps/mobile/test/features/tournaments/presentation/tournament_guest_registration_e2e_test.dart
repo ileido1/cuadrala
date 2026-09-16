@@ -6,7 +6,7 @@
 // `TournamentsRepository`/`ProfileRepository`, and pumps it into the real
 // `TournamentDetailBody` widget tree. Only the network boundary (repository) is faked — state
 // management and rendering are the genuine production code, driven through real user
-// interactions (tap "Invitar huésped", fill the sheet, submit, tap confirm/remove). This is
+// interactions (tap "Invitar invitado", fill the sheet, submit, tap confirm/remove). This is
 // the closest equivalent to T21's "full guest lifecycle" and T22's "guest-only roster" at the
 // mobile layer, since this repo has no full-stack (real HTTP) Flutter integration harness.
 import 'package:bloc_test/bloc_test.dart';

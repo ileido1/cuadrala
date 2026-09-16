@@ -23,7 +23,8 @@ final class _OrganizerBracketTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSingleElimination = formatPresetName == _singleEliminationFormatCode;
+    final isSingleElimination =
+        formatPresetName == _singleEliminationFormatCode;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
       child: BlocBuilder<TournamentScheduleCubit, TournamentScheduleState>(
@@ -40,8 +41,8 @@ final class _OrganizerBracketTab extends StatelessWidget {
           final pending = registrations
               .where((r) => r.status == 'PENDING')
               .length;
-          final confirmedWithAccount = registrations
-              .where((r) => r.status == 'CONFIRMED' && !r.isGuest)
+          final confirmedParticipants = registrations
+              .where((r) => r.status == 'CONFIRMED')
               .length;
           final registrationsCubit = context
               .read<TournamentRegistrationsCubit>();
@@ -85,13 +86,13 @@ final class _OrganizerBracketTab extends StatelessWidget {
                 ),
                 TournamentScheduleInitial() ||
                 TournamentScheduleEmpty() => _OrganizerGenerateCard(
-                  confirmedWithAccount: confirmedWithAccount,
+                  confirmedParticipants: confirmedParticipants,
                   canGenerate:
                       _isOrganizer(
                         organizerUserId,
                         registrationsCubit.currentUserId,
                       ) &&
-                      confirmedWithAccount >= 2,
+                      confirmedParticipants >= 2,
                   onGenerate: () =>
                       context.read<TournamentScheduleCubit>().generate(),
                 ),
@@ -106,12 +107,12 @@ final class _OrganizerBracketTab extends StatelessWidget {
 
 final class _OrganizerGenerateCard extends StatelessWidget {
   const _OrganizerGenerateCard({
-    required this.confirmedWithAccount,
+    required this.confirmedParticipants,
     required this.canGenerate,
     required this.onGenerate,
   });
 
-  final int confirmedWithAccount;
+  final int confirmedParticipants;
   final bool canGenerate;
   final VoidCallback onGenerate;
 
@@ -134,11 +135,7 @@ final class _OrganizerGenerateCard extends StatelessWidget {
               color: scheme.primary.withValues(alpha: .12),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: Icon(
-              AppIcons.trophy,
-              color: scheme.primary,
-              size: 26,
-            ),
+            child: Icon(AppIcons.trophy, color: scheme.primary, size: 26),
           ),
           const SizedBox(height: 12),
           const Text(
@@ -147,7 +144,7 @@ final class _OrganizerGenerateCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Eliminación simple con los $confirmedWithAccount confirmados con cuenta. Los huéspedes quedan fuera del cuadro.',
+            'Eliminación simple con los $confirmedParticipants confirmados, incluidos los invitados.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: scheme.onSurfaceVariant,
@@ -266,10 +263,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
             style: _sectionStyle(Theme.of(context).colorScheme),
           ),
           const SizedBox(height: 10),
-          _OrganizerScheduleList(
-            schedule: schedule,
-            venueId: venueId,
-          ),
+          _OrganizerScheduleList(schedule: schedule, venueId: venueId),
         ] else ...[
           const SizedBox(height: 14),
           const _InfoBox(
@@ -340,10 +334,7 @@ final class _OrganizerWarningBanner extends StatelessWidget {
 /// plus a status-dependent subtitle and trailing action, driven by M11a's
 /// enriched fields (`matchStatus`/`decision`/`rejectedByName`/`sides`/`scores`).
 final class _OrganizerScheduleList extends StatelessWidget {
-  const _OrganizerScheduleList({
-    required this.schedule,
-    required this.venueId,
-  });
+  const _OrganizerScheduleList({required this.schedule, required this.venueId});
 
   static final _timeFormat = DateFormat('HH:mm', 'es_ES');
 
@@ -427,7 +418,8 @@ final class _OrganizerMatchRow extends StatelessWidget {
     //? every one of its userIds is null — no participant on that side has an
     //? account, so no MatchResultScore row could ever be written for it.
     final hasGuestOnlySide = match.sides.any(
-      (side) => side.userIds.isNotEmpty && side.userIds.every((id) => id == null),
+      (side) =>
+          side.userIds.isNotEmpty && side.userIds.every((id) => id == null),
     );
     const rejectColor = Color(0xFFF59E0B);
 
@@ -499,7 +491,10 @@ final class _OrganizerMatchRow extends StatelessWidget {
             )
           else if (isRejected)
             OutlinedButton(
-              onPressed: venueId == null || match.roundNumber == null || match.matchNumber == null
+              onPressed:
+                  venueId == null ||
+                      match.roundNumber == null ||
+                      match.matchNumber == null
                   ? null
                   : () => _openRescheduleSheet(context),
               style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34)),
@@ -520,9 +515,8 @@ final class _OrganizerMatchRow extends StatelessWidget {
       await showRescheduleSheet(
         context,
         courts: courts,
-        onSubmit: ({required courtId, required scheduledAt}) => context
-            .read<TournamentScheduleCubit>()
-            .rescheduleMatch(
+        onSubmit: ({required courtId, required scheduledAt}) =>
+            context.read<TournamentScheduleCubit>().rescheduleMatch(
               roundNumber: match.roundNumber!,
               matchNumber: match.matchNumber!,
               courtId: courtId,
@@ -531,9 +525,9 @@ final class _OrganizerMatchRow extends StatelessWidget {
       );
     } on AppFailure catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 }
