@@ -46,6 +46,11 @@ final _defaultTabs = [
     label: 'Torneos',
   ),
   const ShellTabConfig(
+    activeIcon: AppIcons.explore,
+    inactiveIcon: AppIcons.explore,
+    label: 'Descubrir',
+  ),
+  const ShellTabConfig(
     activeIcon: AppIcons.bell,
     inactiveIcon: AppIcons.bell,
     label: 'Avisos',

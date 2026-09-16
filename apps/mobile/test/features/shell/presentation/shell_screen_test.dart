@@ -198,12 +198,13 @@ void main() {
         'Inicio',
         'Partidas',
         'Torneos',
+        'Descubrir',
         'Avisos',
         'Perfil',
       ]);
     });
 
-    testWidgets('Partidas uses the calendar icon and Descubrir is absent', (
+    testWidgets('Partidas uses the calendar icon and Descubrir is present', (
       tester,
     ) async {
       when(() => notifCubit.state).thenReturn(_notifState());
@@ -215,7 +216,7 @@ void main() {
       );
       final partidas = nav.items[1];
       expect((partidas.icon as Icon).icon, AppIcons.calendar);
-      expect(find.text('Descubrir'), findsNothing);
+      expect(find.text('Descubrir'), findsOneWidget);
     });
   });
 
