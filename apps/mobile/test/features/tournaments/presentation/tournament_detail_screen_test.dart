@@ -939,6 +939,16 @@ void main() {
         );
         expect(confirmButton, findsOneWidget);
         expect(removeButton, findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(
+              const Key('tournament.registrationTile.reg-auth-pending-1'),
+            ),
+            matching: find.text('Mixto'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Pendiente'), findsNothing);
         //? "38px" per spec: ambos botones de la fila PENDING miden 38x38.
         expect(tester.getSize(confirmButton), const Size(38, 38));
         expect(tester.getSize(removeButton), const Size(38, 38));
@@ -963,7 +973,7 @@ void main() {
               _authRegistration(id: 'reg-partner', userId: 'player-b'),
               _authRegistration(id: 'reg-unpaired', userId: 'player-c'),
             ],
-            total: 2,
+            total: 3,
           ),
         );
         when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
