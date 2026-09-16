@@ -134,22 +134,24 @@ final class TournamentListItemTile extends StatelessWidget {
                 spacing: 14,
                 runSpacing: 4,
                 children: [
-                  if (tournament.startsAt != null)
-                    _MetaRow(
-                      icon: AppIcons.calendar,
-                      label: _formatStartSV(tournament.startsAt!),
-                    ),
-                  if (tournament.venueName != null)
-                    _MetaRow(
-                      key: const Key('tournament.card.venue'),
-                      icon: AppIcons.pin,
-                      //? "Cerca" (M3d): `distanceKm` sólo viene cuando el
-                      //? listado se filtró por cercanía (cuadrala-torneos.jsx:128,
-                      //? `{venue} · {dist}`); sin ese filtro no se inventa.
-                      label: tournament.distanceKm != null
-                          ? '${tournament.venueName} · ${tournament.distanceKm!.toStringAsFixed(1)} km'
-                          : tournament.venueName!,
-                    ),
+                  _MetaRow(
+                    key: const Key('tournament.card.date'),
+                    icon: AppIcons.calendar,
+                    label: tournament.startsAt == null
+                        ? 'Fecha por confirmar'
+                        : _formatStartSV(tournament.startsAt!),
+                  ),
+                  _MetaRow(
+                    key: const Key('tournament.card.venue'),
+                    icon: AppIcons.pin,
+                    //? La tarjeta mantiene la misma estructura aunque el
+                    //? organizador todavía no haya completado esos datos.
+                    label: tournament.venueName == null
+                        ? 'Sede por confirmar'
+                        : tournament.distanceKm != null
+                            ? '${tournament.venueName} · ${tournament.distanceKm!.toStringAsFixed(1)} km'
+                            : tournament.venueName!,
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -163,7 +165,10 @@ final class TournamentListItemTile extends StatelessWidget {
                       key: const Key('tournament.card.price'),
                       amount: tournament.inscriptionPrice!,
                     ),
-                  ],
+                  ] else
+                    const _PricePlaceholder(
+                      key: Key('tournament.card.pricePlaceholder'),
+                    ),
                 ],
               ),
             ],
@@ -371,6 +376,23 @@ final class _Price extends StatelessWidget {
     return DualPrice(
       primaryLabel: formatMoneyFromMajor(amount, CurrencyCode.usd),
       suffix: 'p/p',
+    );
+  }
+}
+
+final class _PricePlaceholder extends StatelessWidget {
+  const _PricePlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Precio por confirmar',
+      textAlign: TextAlign.end,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }

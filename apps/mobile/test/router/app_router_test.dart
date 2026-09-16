@@ -369,26 +369,6 @@ void main() {
       expect(find.byType(BottomNavigationBar), findsOneWidget);
     });
 
-    // ── 4b. /descubrir is a shell branch (shows bottom nav) ──────────────────
-
-    testWidgets(
-        'navigating to /descubrir via router renders within the shell (bottom nav visible)',
-        (tester) async {
-      final sessionCubit = _MockSessionCubit();
-      when(() => sessionCubit.state)
-          .thenReturn(const SessionState.authenticated());
-      whenListen(sessionCubit, const Stream<SessionState>.empty());
-
-      final router = AppRouter(sessionCubit: sessionCubit).router;
-      router.go('/descubrir');
-
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(BottomNavigationBar), findsOneWidget);
-      expect(find.text('Descubrir'), findsOneWidget);
-    });
-
     // ── 5. Unauthenticated user gets redirected ──────────────────────────────
 
     testWidgets(

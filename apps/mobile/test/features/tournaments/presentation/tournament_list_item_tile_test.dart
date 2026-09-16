@@ -84,11 +84,10 @@ void main() {
       expect(find.text('Club Cuádrala'), findsOneWidget);
     });
 
-    //? Sin sede declarada no se inventa una fila vacía con el pin.
-    testWidgets('should omit the venue row when there is none', (tester) async {
+    testWidgets('should show the venue placeholder when there is none', (tester) async {
       await pump(tester, tournamentSV());
 
-      expect(find.byKey(const Key('tournament.card.venue')), findsNothing);
+      expect(find.text('Sede por confirmar'), findsOneWidget);
     });
 
     testWidgets('should show occupancy against the declared slots',
@@ -127,11 +126,12 @@ void main() {
       expect(find.text('Gratis'), findsOneWidget);
     });
 
-    testWidgets('should omit the price when it was not declared',
+    testWidgets('should show a placeholder when the price was not declared',
         (tester) async {
       await pump(tester, tournamentSV());
 
       expect(find.byKey(const Key('tournament.card.price')), findsNothing);
+      expect(find.text('Precio por confirmar'), findsOneWidget);
       expect(find.text('Gratis'), findsNothing);
     });
 
