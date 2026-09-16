@@ -63,22 +63,30 @@ final class _OrganizerBracketTab extends StatelessWidget {
               switch (scheduleState) {
                 TournamentScheduleLoading() || TournamentScheduleGenerating() =>
                   const Center(child: CircularProgressIndicator()),
-                TournamentScheduleUnsupported() => const _InfoBox(
-                  message:
-                      'Este torneo no arma cuadro. El cuadro existe sólo para eliminación simple.',
+                TournamentScheduleUnsupported() => _ScoreboardTab(
+                  tournamentId: tournamentId,
+                  tournamentsRepository: tournamentsRepository,
+                  showBracketButton: false,
                 ),
                 TournamentScheduleError(:final message) => _ErrorBox(
                   message: message,
                   onRetry: () => context.read<TournamentScheduleCubit>().load(),
                 ),
                 TournamentScheduleSuccess(:final schedule) =>
-                  _OrganizerGeneratedSchedule(
-                    schedule: schedule,
-                    tournamentId: tournamentId,
-                    tournamentsRepository: tournamentsRepository,
-                    isSingleElimination: isSingleElimination,
-                    venueId: venueId,
-                  ),
+                  isSingleElimination
+                      ? _OrganizerGeneratedSchedule(
+                          schedule: schedule,
+                          tournamentId: tournamentId,
+                          tournamentsRepository: tournamentsRepository,
+                          isSingleElimination: true,
+                          venueId: venueId,
+                        )
+                      : _OrganizerRoundRobinContent(
+                          schedule: schedule,
+                          tournamentId: tournamentId,
+                          tournamentsRepository: tournamentsRepository,
+                          venueId: venueId,
+                        ),
                 TournamentScheduleConflict() => _OrganizerGeneratedCard(
                   tournamentId: tournamentId,
                   tournamentsRepository: tournamentsRepository,
@@ -101,6 +109,42 @@ final class _OrganizerBracketTab extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+final class _OrganizerRoundRobinContent extends StatelessWidget {
+  const _OrganizerRoundRobinContent({
+    required this.schedule,
+    required this.tournamentId,
+    required this.tournamentsRepository,
+    required this.venueId,
+  });
+
+  final TournamentScheduleDto schedule;
+  final String tournamentId;
+  final TournamentsRepository tournamentsRepository;
+  final String? venueId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ScoreboardTab(
+          tournamentId: tournamentId,
+          tournamentsRepository: tournamentsRepository,
+          showBracketButton: false,
+        ),
+        const SizedBox(height: 8),
+        _OrganizerGeneratedSchedule(
+          schedule: schedule,
+          tournamentId: tournamentId,
+          tournamentsRepository: tournamentsRepository,
+          isSingleElimination: false,
+          venueId: venueId,
+        ),
+      ],
     );
   }
 }
@@ -419,8 +463,8 @@ final class _OrganizerMatchRow extends StatelessWidget {
     final hasGuestOnlySide = match.sides.any(
       (side) =>
           side.registrationIds.isEmpty &&
-              side.userIds.isNotEmpty &&
-              side.userIds.every((id) => id == null),
+          side.userIds.isNotEmpty &&
+          side.userIds.every((id) => id == null),
     );
     const rejectColor = Color(0xFFF59E0B);
 
@@ -565,7 +609,9 @@ String _scoreLabel(TournamentScheduleMatchDto match) {
         (side) => match.scores
             .where(
               (score) =>
-                  side.registrationIds.contains(score.tournamentRegistrationId) ||
+                  side.registrationIds.contains(
+                    score.tournamentRegistrationId,
+                  ) ||
                   side.userIds.contains(score.userId),
             )
             .fold<int>(0, (sum, score) => sum + score.points),

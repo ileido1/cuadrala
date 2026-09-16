@@ -254,10 +254,12 @@ final class _ScoreboardTab extends StatelessWidget {
   const _ScoreboardTab({
     required this.tournamentId,
     required this.tournamentsRepository,
+    this.showBracketButton = true,
   });
 
   final String tournamentId;
   final TournamentsRepository tournamentsRepository;
+  final bool showBracketButton;
 
   @override
   Widget build(BuildContext context) {
@@ -302,24 +304,26 @@ final class _ScoreboardTab extends StatelessWidget {
                       .read<TournamentRegistrationsCubit>()
                       .currentUserId,
                 ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () {
-                    showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => SizedBox(
-                        height: MediaQuery.sizeOf(context).height * 0.9,
-                        child: BracketScreen(
-                          tournamentId: tournamentId,
-                          tournamentsRepository: tournamentsRepository,
+                if (showBracketButton) ...[
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => SizedBox(
+                          height: MediaQuery.sizeOf(context).height * 0.9,
+                          child: BracketScreen(
+                            tournamentId: tournamentId,
+                            tournamentsRepository: tournamentsRepository,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(AppIcons.scoreboard),
-                  label: const Text('Ver el cuadro completo'),
-                ),
+                      );
+                    },
+                    icon: const Icon(AppIcons.scoreboard),
+                    label: const Text('Ver el cuadro completo'),
+                  ),
+                ],
               ],
             ),
           };
@@ -508,7 +512,11 @@ final class _ScoreboardTable extends StatelessWidget {
                       TextSpan(
                         children: [
                           TextSpan(
-                            text: r.name.isEmpty ? r.userId : r.name,
+                            text: r.name.isEmpty
+                                ? (r.userId ??
+                                      r.tournamentRegistrationId ??
+                                      'Invitado')
+                                : r.name,
                             style: TextStyle(
                               fontWeight: isViewerRow
                                   ? FontWeight.w800
@@ -545,4 +553,3 @@ final class _ScoreboardTable extends StatelessWidget {
     );
   }
 }
-

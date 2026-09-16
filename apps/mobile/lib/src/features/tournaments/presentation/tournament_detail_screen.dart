@@ -213,6 +213,20 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     if (index == 1 && _scheduleCubit.state is TournamentScheduleInitial) {
       _scheduleCubit.load();
     }
+    // En la pestaña Cuadro del organizador los formatos round-robin muestran
+    // la tabla, no el bracket. Cargarla al entrar evita dejar al usuario en
+    // la tarjeta de "Cuadro generado" sin ningún contenido navegable.
+    final isOrganizer =
+        _viewerIsOrganizer ??
+        _isOrganizer(
+          _tournament?.organizerUserId,
+          _registrationsCubit.currentUserId,
+        );
+    if (index == 1 &&
+        isOrganizer &&
+        _scoreboardCubit.state is TournamentScoreboardInitial) {
+      _scoreboardCubit.load();
+    }
     if (index == 2 && _scoreboardCubit.state is TournamentScoreboardInitial) {
       _scoreboardCubit.load();
     }

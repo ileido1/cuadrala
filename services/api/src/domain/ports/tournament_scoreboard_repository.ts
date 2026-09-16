@@ -1,5 +1,6 @@
 export type TournamentScoreboardRow = {
-  userId: string;
+  userId: string | null;
+  tournamentRegistrationId?: string;
   name: string;
   points: number;
   gamesPlayed: number;
@@ -15,4 +16,3 @@ export type TournamentScoreboardRow = {
 export interface TournamentScoreboardRepository {
   listScoreboardByTournamentIdSV(_tournamentId: string): Promise<TournamentScoreboardRow[]>;
 }
-

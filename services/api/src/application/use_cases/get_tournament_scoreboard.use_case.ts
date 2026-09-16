@@ -24,11 +24,14 @@ export class GetTournamentScoreboardUseCase {
     const ROWS = await this._scoreboardRepository.listScoreboardByTournamentIdSV(_tournamentId);
     if (ROWS.length === 0) return [];
 
-    // Determinista: points desc, name asc, userId asc
+    // Determinista: points desc, name asc, identidad asc. Los invitados no
+    // tienen userId: su identidad estable es tournamentRegistrationId.
     const SORTED = [...ROWS].sort((_a, _b) => {
       if (_b.points !== _a.points) return _b.points - _a.points;
       if (_a.name !== _b.name) return _a.name.localeCompare(_b.name);
-      return _a.userId.localeCompare(_b.userId);
+      return (_a.userId ?? _a.tournamentRegistrationId ?? '').localeCompare(
+        _b.userId ?? _b.tournamentRegistrationId ?? '',
+      );
     });
 
     let rank = 0;
@@ -43,4 +46,3 @@ export class GetTournamentScoreboardUseCase {
     });
   }
 }
-
