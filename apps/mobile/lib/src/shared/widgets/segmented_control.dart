@@ -137,12 +137,18 @@ class _SegmentButton<T> extends StatelessWidget {
                 Icon(option.icon, size: 16, color: color),
                 const SizedBox(width: 6),
               ],
-              Text(
-                option.label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: color,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    option.label,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
                 ),
               ),
             ],

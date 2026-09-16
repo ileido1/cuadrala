@@ -67,6 +67,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
     maxSlots?: number;
     registrationClosesAt?: Date;
     gender?: TournamentGender;
+    pairedRegistration?: boolean;
   }): Promise<TournamentCreatedDTO> {
     const CREATED = await PRISMA.tournament.create({
       data: {
@@ -88,6 +89,9 @@ export class PrismaTournamentRepository implements TournamentRepository {
           ? { registrationClosesAt: _data.registrationClosesAt }
           : {}),
         ...(_data.gender !== undefined ? { gender: _data.gender } : {}),
+        ...(_data.pairedRegistration !== undefined
+          ? { pairedRegistration: _data.pairedRegistration }
+          : {}),
       },
     });
 
@@ -132,4 +136,3 @@ export class PrismaTournamentRepository implements TournamentRepository {
     });
   }
 }
-

@@ -282,6 +282,11 @@ const OPENAPI_CONST = {
                     description:
                       'Género del torneo (reusa MatchGender). Opcional: ausente equivale a `null` (sin declarar); no invalida clientes legacy.',
                   },
+                  pairedRegistration: {
+                    type: 'boolean',
+                    description:
+                      'Indica si el torneo se juega con duplas. El organizador arma las duplas después de la inscripción.',
+                  },
                 },
                 anyOf: [{ required: ['formatPresetId'] }, { required: ['formatPresetCode'] }],
               },

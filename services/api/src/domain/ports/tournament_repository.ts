@@ -49,6 +49,7 @@ export interface TournamentRepository {
     maxSlots?: number;
     registrationClosesAt?: Date;
     gender?: TournamentGender;
+    pairedRegistration?: boolean;
   }): Promise<TournamentCreatedDTO>;
 
   updateStatusSV(
@@ -61,4 +62,3 @@ export interface TournamentRepository {
     _visibility: TournamentVisibility,
   ): Promise<{ id: string; name: string; visibility: TournamentVisibility } | null>;
 }
-

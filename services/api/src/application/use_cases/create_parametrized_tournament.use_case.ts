@@ -28,6 +28,8 @@ export type CreateParametrizedTournamentInput = {
   registrationClosesAt?: Date;
   /** Reusa `MatchGender`; ausente = sin declarar (`null` en la base). */
   gender?: 'MALE' | 'FEMALE' | 'MIXED';
+  /** `true` cuando la inscripción se organiza en duplas fijas. */
+  pairedRegistration?: boolean;
 };
 
 export class CreateParametrizedTournamentUseCase {
@@ -157,6 +159,9 @@ export class CreateParametrizedTournamentUseCase {
         ? { registrationClosesAt: _input.registrationClosesAt }
         : {}),
       ...(_input.gender !== undefined ? { gender: _input.gender } : {}),
+      ...(_input.pairedRegistration !== undefined
+        ? { pairedRegistration: _input.pairedRegistration }
+        : {}),
     });
 
     return {
@@ -168,4 +173,3 @@ export class CreateParametrizedTournamentUseCase {
     };
   }
 }
-

@@ -20,6 +20,7 @@ export const CREATE_PARAMETRIZED_TOURNAMENT_BODY_SCHEMA = z
     gender: z.enum(['MALE', 'FEMALE', 'MIXED'], {
       message: 'gender debe ser MALE, FEMALE o MIXED.',
     }).optional(),
+    pairedRegistration: z.boolean().optional(),
     venueId: z.string().uuid('venueId debe ser un UUID valido.').optional(),
     //? Precio por jugador. 0 es un valor legitimo: "gratis" declarado no es lo
     //? mismo que "no lo declararon" (null).

@@ -12,7 +12,6 @@ import '../../catalog/data/models/category_dto.dart';
 import '../../catalog/data/models/sport_dto.dart';
 import '../../venues/data/models/venue_dto.dart';
 import '../../venues/data/venues_repository.dart';
-import '../../venues/presentation/widgets/venue_card.dart';
 import '../data/models/create_tournament_request.dart';
 import '../data/models/tournament_preset_dto.dart';
 import 'cubit/create_tournament_cubit.dart';
@@ -65,6 +64,7 @@ final class CreateTournamentScreen extends StatefulWidget {
 
 class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   final _nameController = TextEditingController();
+  final _registrationPriceController = TextEditingController(text: '15');
 
   late final CreateTournamentCubit _createTournamentCubit;
   late final TournamentPresetsCubit _tournamentPresetsCubit;
@@ -80,6 +80,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   bool _publishOnCreate = false;
   int _maxSlots = 16;
   int _registrationPrice = 15;
+  bool _pairedRegistration = false;
   String _gender = 'MALE';
   late final List<DateStripDay> _days;
   late String _selectedDateKey;
@@ -89,13 +90,33 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   String? _submitError;
   bool _nameFieldTouched = false;
 
+  List<VenueDto> get _venuesForSport {
+    final sport = _sports
+        .where((item) => item.id == _selectedSportId)
+        .firstOrNull;
+    if (sport == null) return _venues;
+    final accepted = {
+      sport.id.toLowerCase(),
+      sport.code.toLowerCase(),
+      sport.name.toLowerCase(),
+    };
+    return _venues.where((venue) {
+      // Empty sports is a legacy-compatible venue: it remains selectable.
+      return venue.sports.isEmpty ||
+          venue.sports.any((value) => accepted.contains(value.toLowerCase()));
+    }).toList();
+  }
+
+  int? get _parsedRegistrationPrice =>
+      int.tryParse(_registrationPriceController.text.trim());
+
   /// Categorías del deporte actualmente seleccionado (cada categoría
   /// pertenece a un único deporte según `sportId`).
   List<CategoryDto> get _categoriesForSport =>
       _categories.where((c) => c.sportId == _selectedSportId).toList();
 
   String get _selectedVenueName =>
-      _venues
+      _venuesForSport
           .where((venue) => venue.id == _selectedVenueId)
           .firstOrNull
           ?.name ??
@@ -127,6 +148,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _registrationPriceController.dispose();
     _createTournamentCubit.close();
     _tournamentPresetsCubit.close();
     super.dispose();
@@ -183,6 +205,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       _selectedCategoryId = _categoriesForSport.isEmpty
           ? null
           : _categoriesForSport.first.id;
+      if (!_venuesForSport.any((venue) => venue.id == _selectedVenueId)) {
+        _selectedVenueId = null;
+      }
     });
     _tournamentPresetsCubit.load(sportId: sportId);
   }
@@ -237,6 +262,9 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         startsAt: DateTime.parse(_selectedDateKey),
         venueId: _selectedVenueId,
         gender: _gender,
+        pairedRegistration: _pairedRegistration,
+        inscriptionPrice: _parsedRegistrationPrice,
+        maxSlots: _maxSlots,
         publishOnCreate: _publishOnCreate,
       ),
       error: null,
@@ -337,6 +365,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               ),
               const SizedBox(height: 8),
               TextField(
+                key: const Key('create.tournament.name'),
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
                 onChanged: (_) => setState(() {
@@ -372,53 +401,6 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               ),
               const SizedBox(height: 14),
               Text(
-                'Dónde',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              if (_isLoadingSports)
-                const Center(child: CircularProgressIndicator())
-              else if (_venues.isEmpty)
-                const _EmptyBox(message: 'No hay sedes disponibles.')
-              else
-                Column(
-                  children: [
-                    for (final venue in _venues) ...[
-                      VenueCard(
-                        name: venue.name,
-                        imageUrl: venue.imageUrl,
-                        rating: venue.averageRating,
-                        subtitle: venue.address,
-                        tags: venue.sports,
-                        selected: _selectedVenueId == venue.id,
-                        onTap: () =>
-                            setState(() => _selectedVenueId = venue.id),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                  ],
-                ),
-              const SizedBox(height: 14),
-              Text(
-                'Género',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              SegmentedControl<String>(
-                value: _gender,
-                onChanged: (value) => setState(() => _gender = value),
-                options: const [
-                  SegmentedOption(value: 'MALE', label: 'Masculino'),
-                  SegmentedOption(value: 'FEMALE', label: 'Femenino'),
-                  SegmentedOption(value: 'MIXED', label: 'Mixto'),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
                 'Deporte',
                 style: Theme.of(
                   context,
@@ -450,6 +432,61 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       )
                       .toList(),
                 ),
+              const SizedBox(height: 14),
+              Text(
+                'Dónde',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              if (_isLoadingSports)
+                const Center(child: CircularProgressIndicator())
+              else if (_venuesForSport.isEmpty)
+                const _EmptyBox(
+                  message: 'No hay sedes disponibles para este deporte.',
+                )
+              else
+                DropdownButtonFormField<String>(
+                  key: const Key('create.tournament.venue'),
+                  initialValue:
+                      _venuesForSport.any(
+                        (venue) => venue.id == _selectedVenueId,
+                      )
+                      ? _selectedVenueId
+                      : null,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Seleccioná una sede',
+                    prefixIcon: Icon(AppIcons.pin),
+                  ),
+                  items: [
+                    for (final venue in _venuesForSport)
+                      DropdownMenuItem(
+                        value: venue.id,
+                        child: Text(venue.name),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _selectedVenueId = value),
+                ),
+              const SizedBox(height: 14),
+              Text(
+                'Género',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              SegmentedControl<String>(
+                value: _gender,
+                onChanged: (value) => setState(() => _gender = value),
+                options: const [
+                  SegmentedOption(value: 'MALE', label: 'Masculino'),
+                  SegmentedOption(value: 'FEMALE', label: 'Femenino'),
+                  SegmentedOption(value: 'MIXED', label: 'Mixto'),
+                ],
+              ),
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -503,13 +540,41 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       ],
                     ),
                   ),
-                  CountStepper(
-                    value: _registrationPrice,
-                    min: 0,
-                    max: 60,
-                    onChanged: (value) =>
-                        setState(() => _registrationPrice = value),
+                  SizedBox(
+                    width: 128,
+                    child: TextField(
+                      key: const Key('create.tournament.inscriptionPrice'),
+                      controller: _registrationPriceController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: false,
+                      ),
+                      textAlign: TextAlign.center,
+                      decoration: const InputDecoration(
+                        prefixText: 'US\$ ',
+                        hintText: '0',
+                      ),
+                      onChanged: (value) => setState(() {
+                        _registrationPrice = int.tryParse(value) ?? 0;
+                      }),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Modalidad',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              SegmentedControl<bool>(
+                value: _pairedRegistration,
+                onChanged: (value) =>
+                    setState(() => _pairedRegistration = value),
+                options: const [
+                  SegmentedOption(value: false, label: 'Singles'),
+                  SegmentedOption(value: true, label: 'Duplas'),
                 ],
               ),
               const SizedBox(height: 14),

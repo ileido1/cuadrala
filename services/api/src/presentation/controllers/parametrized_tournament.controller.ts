@@ -46,6 +46,9 @@ export async function postParametrizedTournamentCON(_req: Request, _res: Respons
   if (BODY.gender !== undefined) {
     INPUT.gender = BODY.gender;
   }
+  if (BODY.pairedRegistration !== undefined) {
+    INPUT.pairedRegistration = BODY.pairedRegistration;
+  }
 
   const RESULT = await CREATE_PARAMETRIZED_TOURNAMENT_UC.executeSV(INPUT);
 

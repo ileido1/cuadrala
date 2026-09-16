@@ -10,6 +10,9 @@ final class CreateTournamentRequest extends Equatable {
     this.startsAt,
     this.venueId,
     this.gender,
+    this.pairedRegistration = false,
+    this.inscriptionPrice,
+    this.maxSlots,
     this.visibility = 'PUBLIC',
     this.publishOnCreate = false,
   });
@@ -22,6 +25,9 @@ final class CreateTournamentRequest extends Equatable {
   final DateTime? startsAt;
   final String? venueId;
   final String? gender;
+  final bool pairedRegistration;
+  final int? inscriptionPrice;
+  final int? maxSlots;
 
   /// `PUBLIC` (aparece en el catálogo) o `PRIVATE` (solo por link).
   final String visibility;
@@ -39,6 +45,9 @@ final class CreateTournamentRequest extends Equatable {
     if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
     if (venueId != null) 'venueId': venueId,
     if (gender != null) 'gender': gender,
+    'pairedRegistration': pairedRegistration,
+    if (inscriptionPrice != null) 'inscriptionPrice': inscriptionPrice,
+    if (maxSlots != null) 'maxSlots': maxSlots,
   };
 
   @override
@@ -51,6 +60,9 @@ final class CreateTournamentRequest extends Equatable {
     startsAt,
     venueId,
     gender,
+    pairedRegistration,
+    inscriptionPrice,
+    maxSlots,
     visibility,
     publishOnCreate,
   ];

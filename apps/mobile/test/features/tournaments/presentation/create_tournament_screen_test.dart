@@ -18,7 +18,6 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/dynamic_format_parameters_form.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
-import 'package:cuadrala_mobile/src/features/venues/presentation/widgets/venue_card.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/count_stepper.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/date_strip.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/dual_price.dart';
@@ -137,7 +136,14 @@ Future<void> _pumpScreen(WidgetTester tester) async {
 }
 
 Future<void> _enterName(WidgetTester tester) async {
-  await tester.enterText(find.byType(TextField), 'Torneo de Otoño');
+  await tester.enterText(find.byKey(const Key('create.tournament.name')), 'Torneo de Otoño');
+  await tester.pumpAndSettle();
+}
+
+Future<void> _selectVenue(WidgetTester tester, String name) async {
+  await tester.tap(find.byKey(const Key('create.tournament.venue')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(name).last);
   await tester.pumpAndSettle();
 }
 
@@ -355,18 +361,17 @@ void main() {
       expect(find.byType(SelectableChip), findsNWidgets(2));
       expect(find.byType(RadioListTile), findsNothing);
       await tester.tap(find.widgetWithText(SelectableChip, 'Tenis'));
-      await tester.tap(find.text('Pádel Centro'));
-      await tester.pumpAndSettle();
+      await _selectVenue(tester, 'Pádel Centro');
 
       expect(find.text('Pádel Centro · Tenis Libre Masculino · 16 cupos'), findsOneWidget);
       expect(find.descendant(of: find.byType(SafeArea), matching: find.text(r'US$15')), findsOneWidget);
     });
 
-    testWidgets('should render DateStrip and selectable venue cards instead of unavailable venue field', (tester) async {
+    testWidgets('should render DateStrip and a sport-filtered venue input', (tester) async {
       await _pumpScreen(tester);
 
       expect(find.byType(DateStrip), findsOneWidget);
-      expect(find.byType(VenueCard), findsNWidgets(2));
+      expect(find.byKey(const Key('create.tournament.venue')), findsOneWidget);
       expect(find.text('La sede se asigna después de crear el torneo. El API todavía no expone este campo.'), findsNothing);
 
       final dateStrip = tester.widget<DateStrip>(find.byType(DateStrip));
@@ -374,9 +379,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.widget<DateStrip>(find.byType(DateStrip)).value, dateStrip.days[1].key);
 
-      await tester.tap(find.text('Pádel Centro'));
-      await tester.pumpAndSettle();
-      expect(tester.widget<VenueCard>(find.byType(VenueCard).at(1)).selected, isTrue);
+      await _selectVenue(tester, 'Pádel Centro');
+      expect(find.text('Pádel Centro'), findsOneWidget);
     });
 
     testWidgets('should default gender to Masculino and send the selected API value', (tester) async {
@@ -384,7 +388,7 @@ void main() {
       expect(tester.widget<SegmentedControl<String>>(find.byWidgetPredicate((widget) => widget is SegmentedControl<String> && widget.options.any((option) => option.label == 'Masculino'))).value, 'MALE');
 
       await tester.tap(find.text('Femenino'));
-      await tester.tap(find.text('Pádel Centro'));
+      await _selectVenue(tester, 'Pádel Centro');
       await _enterName(tester);
       await _selectPreset(tester, 'Llaves');
       await tester.tap(find.bySubtype<FilledButton>());
@@ -407,21 +411,33 @@ void main() {
       expect(request.toJson()['gender'], 'MIXED');
     });
 
+    testWidgets('should send the selected singles or doubles registration mode', (tester) async {
+      await _pumpScreen(tester);
+      await tester.tap(find.text('Duplas'));
+      await _enterName(tester);
+      await _selectPreset(tester, 'Llaves');
+      await tester.tap(find.bySubtype<FilledButton>());
+      await tester.pumpAndSettle();
 
-    testWidgets('should render interactive cupos and inscription steppers with dual price', (tester) async {
+      final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
+      expect(request.toJson()['pairedRegistration'], isTrue);
+    });
+
+
+    testWidgets('should render interactive cupos and inscription input with dual price', (tester) async {
       await _pumpScreen(tester);
 
-      expect(find.byType(CountStepper), findsNWidgets(2));
+      expect(find.byType(CountStepper), findsOneWidget);
       expect(tester.widget<CountStepper>(find.byType(CountStepper).first).value, 16);
-      expect(tester.widget<CountStepper>(find.byType(CountStepper).at(1)).value, 15);
+      expect(find.byKey(const Key('create.tournament.inscriptionPrice')), findsOneWidget);
       expect(find.byType(DualPrice), findsOneWidget);
 
       await tester.tap(find.descendant(of: find.byType(CountStepper).first, matching: find.byIcon(AppIcons.add)));
-      await tester.tap(find.descendant(of: find.byType(CountStepper).at(1), matching: find.byIcon(AppIcons.remove)));
+      await tester.enterText(find.byKey(const Key('create.tournament.inscriptionPrice')), '14');
       await tester.pumpAndSettle();
 
       expect(tester.widget<CountStepper>(find.byType(CountStepper).first).value, 17);
-      expect(tester.widget<CountStepper>(find.byType(CountStepper).at(1)).value, 14);
+      expect(find.text('US\$14'), findsNWidgets(2));
     });
 
     testWidgets('should default Publicar al crear to draft and describe both states', (tester) async {
