@@ -120,6 +120,9 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
+  web:
+    generate: true
+    image_path: assets/images/logo.png
   image_path: assets/images/logo.png
   min_sdk_android: 21
   remove_alpha_ios: true

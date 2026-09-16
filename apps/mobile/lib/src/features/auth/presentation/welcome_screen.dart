@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
-import '../../../shared/widgets/cuadrala_mark.dart';
+import '../../../shared/widgets/cuadrala_logo.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -24,11 +24,8 @@ class WelcomeScreen extends StatelessWidget {
                 children: [
                   const SizedBox(height: 26),
                   Center(
-                    child: Container(
-                      width: 96,
-                      height: 96,
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: scheme.primary,
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
@@ -38,16 +35,7 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.all(8),
-                      child: ClipOval(
-                        child: Container(
-                          // Blanco fijo (#fff) en el prototipo, no
-                          // `scheme.surface` — en dark mode ese rol es
-                          // oscuro y el mark quedaría invisible.
-                          color: Colors.white,
-                          child: const Center(child: CuadralaMark(size: 48)),
-                        ),
-                      ),
+                      child: const CuadralaLogo(size: 96, borderRadius: 22),
                     ),
                   ),
                   const SizedBox(height: 12),
