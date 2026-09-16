@@ -19,6 +19,14 @@ final class _OrganizerPublishTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
       children: [
+        if (tournament != null) ...[
+          _TournamentSettingsEntry(
+            tournament: tournament!,
+            tournamentId: tournamentId,
+            tournamentsRepository: tournamentsRepository,
+          ),
+          const SizedBox(height: 20),
+        ],
         Text('Quién lo ve', style: _sectionStyle(scheme)),
         const SizedBox(height: 10),
         if (tournament != null)
@@ -130,21 +138,75 @@ final class _OrganizerPublishTab extends StatelessWidget {
           message:
               'No hay un botón de "avisar a todos": el aviso sale solo con cada acción.',
         ),
-        if (tournament != null) ...[
-          const SizedBox(height: 20),
-          Text('Configuración del torneo', style: _sectionStyle(scheme)),
-          const SizedBox(height: 10),
-          BlocProvider(
-            create: (_) => TournamentPublishCubit(
-              tournamentsRepository: tournamentsRepository,
-              tournamentId: tournamentId,
-              status: tournament!.status,
-              visibility: tournament!.visibility,
-            ),
-            child: _TournamentSettingsEditor(tournament: tournament!),
-          ),
-        ],
       ],
+    );
+  }
+}
+
+final class _TournamentSettingsEntry extends StatelessWidget {
+  const _TournamentSettingsEntry({
+    required this.tournament,
+    required this.tournamentId,
+    required this.tournamentsRepository,
+  });
+
+  final TournamentListItemDto tournament;
+  final String tournamentId;
+  final TournamentsRepository tournamentsRepository;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final format = tournamentFormatLabel(tournament.formatPresetName);
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: const Icon(AppIcons.sliders),
+        title: const Text(
+          'Formato del torneo',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        subtitle: Text(
+          [
+            if (format.isNotEmpty) format,
+            tournament.sportName,
+            tournament.categoryName,
+            tournament.pairedRegistration ? 'Duplas fijas' : 'Individual',
+          ].where((value) => value.isNotEmpty).join(' · '),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        ),
+        trailing: const Icon(AppIcons.chevronRight),
+        onTap: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: BlocProvider(
+                  create: (_) => TournamentPublishCubit(
+                    tournamentsRepository: tournamentsRepository,
+                    tournamentId: tournamentId,
+                    status: tournament.status,
+                    visibility: tournament.visibility,
+                  ),
+                  child: _TournamentSettingsEditor(tournament: tournament),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

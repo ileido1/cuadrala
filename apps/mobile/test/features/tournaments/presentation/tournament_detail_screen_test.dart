@@ -768,6 +768,8 @@ void main() {
         schedule: scheduleWith(4),
       );
 
+      await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+      await tester.pumpAndSettle();
       expect(find.text('Confirmaste a 3 jugadores'), findsOneWidget);
       expect(
         find.text('Cada uno recibió su aviso al confirmarlo'),
@@ -800,6 +802,8 @@ void main() {
         schedule: scheduleWith(1),
       );
 
+      await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+      await tester.pumpAndSettle();
       expect(find.text('Confirmaste a 1 jugadores'), findsOneWidget);
       expect(find.text('Se enviaron 1 horarios'), findsOneWidget);
       expect(find.text('3 invitaciones sin responder'), findsOneWidget);
