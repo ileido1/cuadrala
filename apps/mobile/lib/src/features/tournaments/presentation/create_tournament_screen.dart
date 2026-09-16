@@ -122,6 +122,47 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
           ?.name ??
       'Elegí sede';
 
+  Future<void> _selectVenue() async {
+    final selectedVenueId = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Seleccioná una sede',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              ..._venuesForSport.map(
+                (venue) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(AppIcons.pin),
+                  title: Text(venue.name),
+                  subtitle: venue.address == null ? null : Text(venue.address!),
+                  trailing: venue.id == _selectedVenueId
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(venue.id),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selectedVenueId != null && mounted) {
+      setState(() => _selectedVenueId = selectedVenueId);
+    }
+  }
+
   String get _selectedCategoryName =>
       _categoriesForSport
           .where((category) => category.id == _selectedCategoryId)
@@ -447,28 +488,22 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                   message: 'No hay sedes disponibles para este deporte.',
                 )
               else
-                DropdownButtonFormField<String>(
+                InkWell(
                   key: const Key('create.tournament.venue'),
-                  initialValue:
-                      _venuesForSport.any(
-                        (venue) => venue.id == _selectedVenueId,
-                      )
-                      ? _selectedVenueId
-                      : null,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Seleccioná una sede',
-                    prefixIcon: Icon(AppIcons.pin),
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _selectVenue,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(AppIcons.pin),
+                      suffixIcon: Icon(Icons.keyboard_arrow_down),
+                    ),
+                    isEmpty: _selectedVenueId == null,
+                    child: Text(
+                      _selectedVenueId == null
+                          ? 'Seleccioná una sede'
+                          : _selectedVenueName,
+                    ),
                   ),
-                  items: [
-                    for (final venue in _venuesForSport)
-                      DropdownMenuItem(
-                        value: venue.id,
-                        child: Text(venue.name),
-                      ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _selectedVenueId = value),
                 ),
               const SizedBox(height: 14),
               Text(
