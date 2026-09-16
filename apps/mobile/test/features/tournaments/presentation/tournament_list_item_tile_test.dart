@@ -94,7 +94,7 @@ void main() {
         (tester) async {
       await pump(tester, tournamentSV(maxSlots: 16));
 
-      expect(find.text('11/16 inscriptos'), findsOneWidget);
+      expect(find.text('11/16 inscritos'), findsOneWidget);
     });
 
     //? Sin cupo declarado hay numerador pero no denominador: se dice cuántos
@@ -103,14 +103,14 @@ void main() {
         (tester) async {
       await pump(tester, tournamentSV());
 
-      expect(find.text('11 inscriptos'), findsOneWidget);
+      expect(find.text('11 inscritos'), findsOneWidget);
       expect(find.byKey(const Key('tournament.card.slots')), findsNothing);
     });
 
     testWidgets('should read a single registration in singular', (tester) async {
       await pump(tester, tournamentSV(registrationCount: 1));
 
-      expect(find.text('1 inscripto'), findsOneWidget);
+      expect(find.text('1 inscrito'), findsOneWidget);
     });
 
     testWidgets('should show the price when one was declared', (tester) async {

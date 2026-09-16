@@ -821,7 +821,7 @@ void main() {
         ),
       );
       await tester.pump();
-      //? El guard busca "Inscriptos" ya acotado al `SegmentedControl` (no un
+      //? El guard busca "Inscritos" ya acotado al `SegmentedControl` (no un
       //? `find.text` suelto): el mismo texto también encabeza una sección
       //? del tab "Info" del jugador, y con el header estático (M5) esa
       //? sección ya no queda offstage por defecto — un guard sin acotar
@@ -829,7 +829,7 @@ void main() {
       //? → `SegmentedControl`) mueve la búsqueda al widget nuevo.
       final organizerTab = find.descendant(
         of: find.byType(SegmentedControl<int>),
-        matching: find.text('Inscriptos'),
+        matching: find.text('Inscritos'),
       );
       if (organizerTab.evaluate().isNotEmpty) {
         await tester.tap(organizerTab);
@@ -1585,8 +1585,8 @@ void main() {
     });
   });
 
-  group('Inscriptos summary (M6b-3)', () {
-    Future<void> pumpInscriptos(
+  group('Inscritos summary (M6b-3)', () {
+    Future<void> pumpInscritos(
       WidgetTester tester, {
       required TournamentRegistrationsState state,
       bool pairedRegistration = false,
@@ -1617,12 +1617,12 @@ void main() {
     //? El resumen usa confirmados/pendientes de `items`, no el
     //? `registrationCount` crudo del torneo (que en este fixture es 99: el
     //? mismo número sigue apareciendo, sin cambios, en la tarjeta
-    //? "Anotados" — lo que no debe pasar es que el resumen de Inscriptos lo
+    //? "Anotados" — lo que no debe pasar es que el resumen de Inscritos lo
     //? reutilice como si fueran confirmados).
     testWidgets(
       'shows confirmed and pending counts from registrations items, not registrationCount',
       (tester) async {
-        await pumpInscriptos(
+        await pumpInscritos(
           tester,
           state: TournamentRegistrationsLoaded(
             items: [
@@ -1634,16 +1634,16 @@ void main() {
           ),
         );
 
-        expect(find.text(inscriptosConfirmedLabel(2)), findsOneWidget);
-        expect(find.text(inscriptosPendingLabel(1)), findsOneWidget);
-        expect(find.text(inscriptosConfirmedLabel(99)), findsNothing);
+        expect(find.text(inscritosConfirmedLabel(2)), findsOneWidget);
+        expect(find.text(inscritosPendingLabel(1)), findsOneWidget);
+        expect(find.text(inscritosConfirmedLabel(99)), findsNothing);
       },
     );
 
     testWidgets(
       'omits the pending line when nobody is waiting on the organizer',
       (tester) async {
-        await pumpInscriptos(
+        await pumpInscritos(
           tester,
           state: TournamentRegistrationsLoaded(
             items: [_authRegistration(userId: 'p1')],
@@ -1651,7 +1651,7 @@ void main() {
           ),
         );
 
-        expect(find.text(inscriptosConfirmedLabel(1)), findsOneWidget);
+        expect(find.text(inscritosConfirmedLabel(1)), findsOneWidget);
         expect(find.textContaining('esperando al organizador'), findsNothing);
       },
     );
@@ -1659,21 +1659,21 @@ void main() {
     //? Diseño D17: "The section is hidden until the registrations are
     //? Loaded" — antes de eso no hay confirmados/pendientes que mostrar.
     testWidgets(
-      'hides the Inscriptos section before registrations finish loading',
+      'hides the Inscritos section before registrations finish loading',
       (tester) async {
-        await pumpInscriptos(
+        await pumpInscritos(
           tester,
           state: const TournamentRegistrationsLoading(),
         );
 
-        expect(find.text('Inscriptos'), findsNothing);
+        expect(find.text('Inscritos'), findsNothing);
       },
     );
 
     testWidgets(
       'tapping the summary opens a roster sheet listing registrant names',
       (tester) async {
-        await pumpInscriptos(
+        await pumpInscritos(
           tester,
           state: TournamentRegistrationsLoaded(
             items: [
@@ -1685,7 +1685,7 @@ void main() {
         );
 
         //? La tarjeta vive debajo del fold del área de 800x600 del test.
-        final summaryFinder = find.text(inscriptosConfirmedLabel(1));
+        final summaryFinder = find.text(inscritosConfirmedLabel(1));
         await tester.ensureVisible(summaryFinder);
         await tester.tap(summaryFinder);
         await tester.pumpAndSettle();

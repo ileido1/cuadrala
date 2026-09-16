@@ -302,7 +302,7 @@ const OPENAPI_CONST = {
     '/api/v1/tournaments/{tournamentId}/registrations/confirm-pending': {
       post: {
         tags: ['Tournaments'],
-        summary: 'El organizador confirma a todos los inscriptos pendientes',
+        summary: 'El organizador confirma a todos los inscritos pendientes',
         description:
           'Solo el organizador o staff de la sede. Confirma cada inscripción PENDING del torneo; en torneos de duplas fijas mueve también al compañero. Emite el mismo aviso que la confirmación individual, en un solo evento. `data.confirmed` es cuántas se confirmaron.',
         security: [{ bearerAuth: [] }],
@@ -1644,9 +1644,9 @@ const OPENAPI_CONST = {
     '/api/v1/users/me/tournaments': {
       get: {
         tags: ['Tournaments'],
-        summary: 'Listar los torneos del usuario actual (inscripto, invitado u organizador)',
+        summary: 'Listar los torneos del usuario actual (inscrito, invitado u organizador)',
         description:
-          'Devuelve, por cada torneo en el que el usuario esta inscripto (registrationStatus), tiene una invitacion pendiente (pendingInvitationId), o que organiza (isOrganizer), un item con esos datos. pendingRegistrationsCount solo tiene valor cuando isOrganizer es true.',
+          'Devuelve, por cada torneo en el que el usuario esta inscrito (registrationStatus), tiene una invitacion pendiente (pendingInvitationId), o que organiza (isOrganizer), un item con esos datos. pendingRegistrationsCount solo tiene valor cuando isOrganizer es true.',
         security: [{ bearerAuth: [] }],
         responses: {
           '200': { description: 'OK' },

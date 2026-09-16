@@ -5,7 +5,7 @@
  * el organizador lo confirmaba en silencio, el cuadro salía en silencio y el
  * torneo arrancaba en silencio. Los dos esperaban al otro.
  *
- * Todos son de audiencia explícita —el organizador, o los inscriptos
+ * Todos son de audiencia explícita —el organizador, o los inscritos
  * confirmados—, nunca de audiencia geográfica: a diferencia de una vacante en
  * una partida, acá ya se sabe a quién le importa.
  */

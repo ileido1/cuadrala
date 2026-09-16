@@ -108,7 +108,7 @@ export interface TournamentQueryRepository {
   ): Promise<{ items: TournamentListItemDTO[]; total: number }>;
 
   /**
-   * Torneos en los que el usuario esta inscripto, invitado (PENDING), o que
+   * Torneos en los que el usuario esta inscrito, invitado (PENDING), o que
    * organiza. Un torneo puede aparecer una sola vez aunque el usuario cumpla
    * mas de un rol a la vez (p. ej. organizador que tambien se autoinscribio).
    */

@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 describe('ConfirmPendingTournamentRegistrationsUseCase', () => {
-  //? Con dieciseis inscriptos, saltearse uno deja a ese jugador fuera del
+  //? Con dieciseis inscritos, saltearse uno deja a ese jugador fuera del
   //? cuadro sin que nadie se entere.
   it('should confirm every pending registration at once', async () => {
     const R = await useCase.executeSV(BASE);

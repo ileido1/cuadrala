@@ -7,7 +7,7 @@ import { LIST_MY_TOURNAMENTS_UC } from '../composition/profile.composition.js';
  * @name    :getMyTournamentsCON
  * @version :1.0.0
  * @description :Devuelve los torneos del usuario actual: en los que esta
- * inscripto, invitado, o que organiza.
+ * inscrito, invitado, o que organiza.
  * @param {Request} _req - Request de Express
  * @param {Response} _res - Response de Express
  * @return {Promise<void>}

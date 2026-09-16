@@ -32,12 +32,12 @@ const String invitationBannerAction = 'Ver invitación →';
 String organizerRowTitle(String tournamentName) => 'Organizás $tournamentName';
 
 /// `cuadrala-torneos.jsx:281` — `` `${t.confirmed} confirmados` `` on the
-/// Inscriptos summary row.
-String inscriptosConfirmedLabel(int confirmed) => '$confirmed confirmados';
+/// Inscritos summary row.
+String inscritosConfirmedLabel(int confirmed) => '$confirmed confirmados';
 
 /// `cuadrala-torneos.jsx:282` — `` `${t.pending} esperando al organizador` ``,
 /// only rendered when `t.pending > 0`.
-String inscriptosPendingLabel(int pending) =>
+String inscritosPendingLabel(int pending) =>
     '$pending esperando al organizador';
 
 /// `cuadrala-torneos.jsx:268` — `` `${t.size} jugadores` `` on the "Cuadro"

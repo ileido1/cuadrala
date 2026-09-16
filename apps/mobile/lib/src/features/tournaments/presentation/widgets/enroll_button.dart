@@ -12,7 +12,7 @@ import '../tournament_status_view.dart';
 /// siempre, y fuera de DRAFT/OPEN la API lo cortaba con 409 TORNEO_CERRADO. Y
 /// como el único texto era "Cancelar inscripción", el jugador tampoco sabía si
 /// ya lo habían aceptado o seguía esperando — distinción que importa, porque el
-/// cuadro se arma solo con los inscriptos confirmados.
+/// cuadro se arma solo con los inscritos confirmados.
 ///
 /// Ahora responde dos preguntas de una: si puede entrar, y si ya está adentro.
 class EnrollButton extends StatelessWidget {

@@ -4,7 +4,7 @@ import '../../../../core/theme/app_icons.dart';
 import '../../data/models/tournament_registration_dto.dart';
 import '../tournament_roster_grouping.dart';
 
-/// Read-only roster sheet behind the Inscriptos chevron for players
+/// Read-only roster sheet behind the Inscritos chevron for players
 /// (`cuadrala-torneos.jsx:284`; design assumption A2 — the handoff draws the
 /// chevron but no destination).
 ///
@@ -48,7 +48,7 @@ final class TournamentRosterSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Inscriptos',
+              'Inscritos',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
               ),

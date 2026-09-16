@@ -90,7 +90,7 @@ final class _InfoTab extends StatelessWidget {
   final List<UserRatingDto>? playerRatings;
   final TournamentRegistrationDto? registration;
 
-  /// Fuente de los confirmados/pendientes del resumen de Inscriptos
+  /// Fuente de los confirmados/pendientes del resumen de Inscritos
   /// (diseño D17): la sección se oculta hasta que este estado sea
   /// [TournamentRegistrationsLoaded], para no mostrar un conteo a medio
   /// cargar.
@@ -157,7 +157,7 @@ final class _InfoTab extends StatelessWidget {
               tone: _BannerTone.warning,
               title: 'Te anotaste. Falta que te acepten.',
               body:
-                  'El organizador confirma los inscriptos. Te avisamos apenas quedés adentro — no tenés que volver a entrar.',
+                  'El organizador confirma los inscritos. Te avisamos apenas quedés adentro — no tenés que volver a entrar.',
             ),
             const SizedBox(height: 16),
           ],
@@ -191,17 +191,17 @@ final class _InfoTab extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _ComoSeJuegaTiles(tournament: tournament!),
-          //? D17: la sección se oculta hasta que los inscriptos terminen de
+          //? D17: la sección se oculta hasta que los inscritos terminen de
           //? cargar — mostrar un conteo a medio cargar sería peor que no
           //? mostrar nada.
           if (loadedRegistrations is TournamentRegistrationsLoaded) ...[
             const SizedBox(height: 20),
             Text(
-              'Inscriptos',
+              'Inscritos',
               style: _sectionStyle(Theme.of(context).colorScheme),
             ),
             const SizedBox(height: 10),
-            _InscriptosSummary(
+            _InscritosSummary(
               registrationsState: loadedRegistrations,
               pairedRegistration: tournament!.pairedRegistration,
             ),
@@ -323,15 +323,15 @@ final class _ComoSeJuegaTiles extends StatelessWidget {
   }
 }
 
-/// Resumen de Inscriptos (`cuadrala-torneos.jsx:277-285`): `AvatarStack` +
+/// Resumen de Inscritos (`cuadrala-torneos.jsx:277-285`): `AvatarStack` +
 /// "{N} confirmados" / "{M} esperando al organizador" + chevron que abre el
 /// roster (design D17, assumption A2).
 ///
 /// Los conteos salen de `TournamentRegistrationsLoaded.items` (excluyendo
 /// WITHDRAWN vía `summarizeRoster`), nunca del `registrationCount` crudo del
 /// torneo: ese número no distingue confirmados de pendientes.
-final class _InscriptosSummary extends StatelessWidget {
-  const _InscriptosSummary({
+final class _InscritosSummary extends StatelessWidget {
+  const _InscritosSummary({
     required this.registrationsState,
     required this.pairedRegistration,
   });
@@ -349,7 +349,7 @@ final class _InscriptosSummary extends StatelessWidget {
     final filled = math.min(6, summary.confirmed);
 
     return InkWell(
-      key: const Key('tournament.inscriptosSummary'),
+      key: const Key('tournament.inscritosSummary'),
       borderRadius: BorderRadius.circular(18),
       onTap: () => showTournamentRosterSheet(
         context,
@@ -373,7 +373,7 @@ final class _InscriptosSummary extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _inscriptosConfirmedLabel(summary.confirmed),
+                    _inscritosConfirmedLabel(summary.confirmed),
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
@@ -381,7 +381,7 @@ final class _InscriptosSummary extends StatelessWidget {
                   ),
                   if (summary.pending > 0)
                     Text(
-                      _inscriptosPendingLabel(summary.pending),
+                      _inscritosPendingLabel(summary.pending),
                       style: TextStyle(
                         fontSize: 12.5,
                         color: scheme.onSurfaceVariant,
@@ -399,11 +399,11 @@ final class _InscriptosSummary extends StatelessWidget {
 }
 
 /// "{N} confirmados" (`cuadrala-torneos.jsx:281`).
-String _inscriptosConfirmedLabel(int confirmed) => '$confirmed confirmados';
+String _inscritosConfirmedLabel(int confirmed) => '$confirmed confirmados';
 
 /// "{M} esperando al organizador" (`cuadrala-torneos.jsx:282`), sólo
 /// renderizado cuando `pending > 0`.
-String _inscriptosPendingLabel(int pending) =>
+String _inscritosPendingLabel(int pending) =>
     '$pending esperando al organizador';
 
 final class _InfoTile extends StatelessWidget {

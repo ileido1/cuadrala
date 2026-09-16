@@ -61,7 +61,7 @@ part 'tournament_detail/info_tab.dart';
 ///
 /// Público a propósito: los tests navegan tocando estas etiquetas, y el
 /// nombre de la tercera cambió dos veces en dos días
-/// (Inscripciones → Inscriptos → Registrados) dejando la suite en rojo cada
+/// (Inscripciones → Inscritos → Registrados) dejando la suite en rojo cada
 /// vez, porque el texto estaba duplicado en los tests. Renombrar acá ahora
 /// arrastra a los tests con él.
 const tournamentDetailTabLabels = <String>['Info', 'Mis partidos', 'Tabla'];
@@ -318,7 +318,7 @@ final class TournamentDetailBody extends StatelessWidget {
         currentRegistration?.status == 'CONFIRMED' ||
         tournament?.status == 'IN_PROGRESS';
     final tabs = isOrganizer
-        ? const <String>['Inscriptos', 'Cuadro', 'Publicar']
+        ? const <String>['Inscritos', 'Cuadro', 'Publicar']
         : showPlayerTabs
         ? tournamentDetailTabLabels
         : const <String>['Info'];
@@ -431,6 +431,7 @@ final class TournamentDetailBody extends StatelessWidget {
                     _RegistrationsTab(
                       tournamentId: tournamentId,
                       organizerUserId: tournament?.organizerUserId,
+                      organizerName: tournament?.organizerName,
                       tournamentStatus: tournament?.status,
                       categoryName: tournament?.categoryName,
                       pairedRegistration:

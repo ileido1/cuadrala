@@ -69,7 +69,7 @@ TOURNAMENT_REGISTRATION_ROUTER.delete(
   asyncHandler(deleteTournamentRegistrationPairCON),
 );
 
-//? Confirmar de a uno con dieciseis inscriptos son dieciseis toques, y
+//? Confirmar de a uno con dieciseis inscritos son dieciseis toques, y
 //? saltearse uno deja a ese jugador fuera del cuadro sin que nadie se entere.
 TOURNAMENT_REGISTRATION_ROUTER.post(
   '/tournaments/:tournamentId/registrations/confirm-pending',

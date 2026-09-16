@@ -58,7 +58,7 @@ final class TournamentListItemDto extends Equatable {
   /// y la tarjeta los pinta distinto: uno dice Gratis, el otro no muestra fila.
   final double? inscriptionPrice;
 
-  /// Cupo máximo declarado. Sin esto no hay denominador para "11/16 inscriptos"
+  /// Cupo máximo declarado. Sin esto no hay denominador para "11/16 inscritos"
   /// ni barra de ocupación.
   final int? maxSlots;
 

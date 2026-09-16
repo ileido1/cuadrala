@@ -56,7 +56,7 @@ final class TournamentsListLoaded extends TournamentsListState {
   /// renderizar el copy verbatim "Mi categoría {N}" (`cuadrala-torneos.jsx:188`).
   final String? ownCategoryLabel;
 
-  /// "Mis torneos" (M4a): torneos donde el visor está inscripto, invitado, o
+  /// "Mis torneos" (M4a): torneos donde el visor está inscrito, invitado, o
   /// que organiza, sourced de `GET /api/v1/users/me/tournaments`. Vacío
   /// mientras carga o si la llamada falla — nunca inventado.
   final List<ViewerTournamentDto> myTournaments;

@@ -109,7 +109,7 @@ void main() {
 
       final tabs = find.byType(SegmentedControl<int>);
       expect(
-        find.descendant(of: tabs, matching: find.text('Inscriptos')),
+        find.descendant(of: tabs, matching: find.text('Inscritos')),
         findsOneWidget,
       );
       expect(
@@ -156,7 +156,10 @@ void main() {
           ],
           child: TournamentDetailBody(
             tournamentId: 't-1',
-            tournament: _tournament(organizerUserId: 'organizer-1'),
+            tournament: _tournament(
+              organizerUserId: 'organizer-1',
+              organizerName: 'Juan Pérez',
+            ),
             tournamentsRepository: repository,
           ),
         ),
@@ -168,7 +171,7 @@ void main() {
       find.descendant(
         //? M5b reemplazó el `TabBar` de Material por `SegmentedControl`.
         of: find.byType(SegmentedControl<int>),
-        matching: find.text('Inscriptos'),
+        matching: find.text('Inscritos'),
       ),
       findsOneWidget,
     );
@@ -188,6 +191,8 @@ void main() {
     );
     expect(find.text('Confirmar 1 pendientes'), findsOneWidget);
     expect(find.text('Pendientes'), findsOneWidget);
+    expect(find.text('Juan Pérez'), findsOneWidget);
+    expect(find.text('organizer-1'), findsNothing);
   });
 
   testWidgets(
@@ -410,7 +415,7 @@ void main() {
   );
 
   testWidgets(
-    'org Inscriptos shows Rechazó for rejected invitations and invitee names, '
+    'org Inscritos shows Rechazó for rejected invitations and invitee names, '
     'not filtered out',
     (tester) async {
       final registrationsCubit = _MockRegistrationsCubit();
@@ -476,7 +481,7 @@ void main() {
       await tester.pump();
 
       //? Rejected invitations render "Rechazó" instead of being filtered
-      //? out of "Invitaciones enviadas" (spec "Org Inscriptos — grouping and
+      //? out of "Invitaciones enviadas" (spec "Org Inscritos — grouping and
       //? per-row actions" cross-reference; M10b).
       expect(find.text('Ana López'), findsOneWidget);
       expect(find.text('Carlos Ruiz'), findsOneWidget);

@@ -128,12 +128,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Los huéspedes (inscriptos sin cuenta) no entran al cuadro.'),
+        find.text('Los huéspedes (inscritos sin cuenta) no entran al cuadro.'),
         findsOneWidget,
       );
       expect(
         find.text(
-          'Los huéspedes (inscriptos sin cuenta) no entran al cuadro: sólo jugadores con cuenta.',
+          'Los huéspedes (inscritos sin cuenta) no entran al cuadro: sólo jugadores con cuenta.',
         ),
         findsNothing,
       );

@@ -159,7 +159,7 @@ abstract interface class TournamentsApi {
     required String registrationId,
   });
 
-  /// El organizador confirma a todos los inscriptos pendientes.
+  /// El organizador confirma a todos los inscritos pendientes.
   Future<void> confirmPendingTournamentRegistrations({
     required String tournamentId,
   });
@@ -195,7 +195,7 @@ abstract interface class TournamentsApi {
     required String tournamentId,
   });
 
-  /// Los torneos del usuario actual: en los que está inscripto, invitado, o
+  /// Los torneos del usuario actual: en los que está inscrito, invitado, o
   /// que organiza ("Mis torneos", M4a).
   Future<Map<String, Object?>> getMyTournamentsEnvelope();
 

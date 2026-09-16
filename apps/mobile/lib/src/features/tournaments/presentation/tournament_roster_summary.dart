@@ -3,7 +3,7 @@ import 'tournament_roster_grouping.dart';
 
 /// Lo que el organizador necesita saber antes de generar el cuadro.
 ///
-/// El calendario se arma solo con los inscriptos confirmados, y en torneos de
+/// El calendario se arma solo con los inscritos confirmados, y en torneos de
 /// duplas fijas además exige que todos tengan compañero. Enterarse de eso al
 /// recibir un error es tarde: cuando falta gente por resolver, el aviso tiene
 /// que estar antes de tocar el botón.

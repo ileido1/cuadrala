@@ -4,6 +4,7 @@ final class _RegistrationsTab extends StatelessWidget {
   const _RegistrationsTab({
     required this.tournamentId,
     required this.organizerUserId,
+    required this.organizerName,
     required this.tournamentStatus,
     required this.categoryName,
     required this.pairedRegistration,
@@ -11,6 +12,7 @@ final class _RegistrationsTab extends StatelessWidget {
 
   final String tournamentId;
   final String? organizerUserId;
+  final String? organizerName;
   final String? tournamentStatus;
   final String? categoryName;
   final bool pairedRegistration;
@@ -102,7 +104,10 @@ final class _RegistrationsTab extends StatelessWidget {
                         (registration) =>
                             registration.userId == organizerUserId,
                       )) ...[
-                    _OrganizerRosterOwner(userId: organizerUserId!),
+                    _OrganizerRosterOwner(
+                      userId: organizerUserId!,
+                      name: organizerName,
+                    ),
                     const SizedBox(height: 12),
                   ],
                   if (activeItems.isEmpty)
@@ -208,9 +213,10 @@ final class _RosterError extends StatelessWidget {
 }
 
 final class _OrganizerRosterOwner extends StatelessWidget {
-  const _OrganizerRosterOwner({required this.userId});
+  const _OrganizerRosterOwner({required this.userId, this.name});
 
   final String userId;
+  final String? name;
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +238,7 @@ final class _OrganizerRosterOwner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              userId,
+              name ?? userId,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
@@ -375,7 +381,7 @@ final class _OrganizerRosterHeader extends StatelessWidget {
             Expanded(
               child: _OrganizerCount(
                 key: const Key('tournament.organizer.stats.total'),
-                label: 'Inscriptos',
+                label: 'Inscritos',
                 value: total,
               ),
             ),

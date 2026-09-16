@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Guards the cross-cutting copy-fidelity rule (spec "Verbatim UI copy,
 /// including spelling and accents"): the handoff consistently spells
-/// "inscriptos"/"inscripto" (`cuadrala-torneos.jsx:133,180,232,277,425,452`;
-/// `cuadrala-torneo-org.jsx:58,255`), never "inscrito(s)". A later slice
+/// "inscritos"/"inscrito" (`cuadrala-torneos.jsx:133,180,232,277,425,452`;
+/// `cuadrala-torneo-org.jsx:58,255`), never "inscripto(s)". A later slice
 /// reintroducing the wrong spelling would only fail here, not at compile
 /// time — plain Spanish text is perfectly valid Dart.
 ///
@@ -16,10 +16,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// argument, preserving the exact same match set.
 void main() {
   test(
-    'no "inscrito(s)" spelling remains under lib/src/features/tournaments',
+    'no "inscripto(s)" spelling remains under lib/src/features/tournaments',
     () {
       final root = Directory('lib/src/features/tournaments');
-      final pattern = RegExp(r'\binscrit[oa]s?\b', caseSensitive: false);
+      final pattern = RegExp(r'\binscript[oa]s?\b', caseSensitive: false);
       final offenders = <String>[];
 
       for (final entity in root.listSync(recursive: true)) {
@@ -32,7 +32,7 @@ void main() {
         offenders,
         isEmpty,
         reason:
-            'Handoff spelling is "inscriptos"/"inscripto", never "inscrito(s)": $offenders',
+            'Handoff spelling is "inscritos"/"inscrito", never "inscripto(s)": $offenders',
       );
     },
   );

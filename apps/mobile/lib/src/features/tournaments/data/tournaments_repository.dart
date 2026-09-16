@@ -359,7 +359,7 @@ class TournamentsRepository {
     );
   }
 
-  /// El organizador confirma a todos los inscriptos pendientes de una vez.
+  /// El organizador confirma a todos los inscritos pendientes de una vez.
   Future<void> confirmPendingRegistrations({required String tournamentId}) {
     return _tournamentsApi.confirmPendingTournamentRegistrations(
       tournamentId: tournamentId,
@@ -370,7 +370,7 @@ class TournamentsRepository {
   ///
   /// Devuelve un AppError si:
   /// - El formato no es SINGLE_ELIMINATION (400 FORMATO_NO_SOPORTADO)
-  /// - Hay menos de 2 inscriptos confirmados (400 VALIDACION_FALLIDA)
+  /// - Hay menos de 2 inscritos confirmados (400 VALIDACION_FALLIDA)
   Future<BracketDto> getBracket({required String tournamentId}) async {
     final data = await _tournamentsApi.getTournamentBracketEnvelope(
       tournamentId: tournamentId,
@@ -378,7 +378,7 @@ class TournamentsRepository {
     return BracketDto.fromJson(data);
   }
 
-  /// "Mis torneos" (M4a): torneos en los que el visor está inscripto,
+  /// "Mis torneos" (M4a): torneos en los que el visor está inscrito,
   /// invitado, o que organiza, con su estado por torneo.
   Future<List<ViewerTournamentDto>> listMyTournaments() async {
     final data = await _tournamentsApi.getMyTournamentsEnvelope();

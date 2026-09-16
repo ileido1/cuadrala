@@ -10,7 +10,7 @@ import type { TournamentNotificationEventType } from '../../domain/notifications
  * le llega, y ambas cosas son datos.
  *
  * La audiencia siempre viene dada por quien dispara el evento —el organizador,
- * o los inscriptos confirmados—, nunca por proximidad geográfica: acá ya se
+ * o los inscritos confirmados—, nunca por proximidad geográfica: acá ya se
  * sabe a quién le importa.
  */
 export class CreateTournamentNotificationEventUseCase {

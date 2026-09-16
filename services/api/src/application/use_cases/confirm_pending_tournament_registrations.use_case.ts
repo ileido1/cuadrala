@@ -6,9 +6,9 @@ import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament
 import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
 
 /**
- * El organizador confirma de una vez a todos los inscriptos pendientes.
+ * El organizador confirma de una vez a todos los inscritos pendientes.
  *
- * Con dieciseis inscriptos, confirmar de a uno son dieciseis toques, y saltearse
+ * Con dieciseis inscritos, confirmar de a uno son dieciseis toques, y saltearse
  * uno deja a ese jugador fuera del cuadro sin que nadie se entere: el calendario
  * se arma solo con los CONFIRMED. El lote elimina esa clase de error.
  *

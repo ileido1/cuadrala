@@ -103,7 +103,7 @@ export function buildViewerTournamentItemsSV(_input: {
       pendingInvitationId: PENDING_INVITATION_ID_BY_TOURNAMENT_ID.get(_tournament.id) ?? null,
       isOrganizer: IS_ORGANIZER,
       //? El conteo solo tiene sentido para quien administra el torneo: a un
-      //? inscripto o invitado no le corresponde ver cuanta gente espera.
+      //? inscrito o invitado no le corresponde ver cuanta gente espera.
       pendingRegistrationsCount: IS_ORGANIZER
         ? PENDING_COUNT_BY_TOURNAMENT_ID.get(_tournament.id) ?? 0
         : null,

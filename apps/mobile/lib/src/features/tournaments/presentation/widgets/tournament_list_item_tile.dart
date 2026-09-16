@@ -13,9 +13,9 @@ import 'tournament_status_pill.dart';
 
 String _occupancyLabel(int count, int? max) {
   if (max == null) {
-    return count == 1 ? '$count inscripto' : '$count inscriptos';
+    return count == 1 ? '$count inscrito' : '$count inscritos';
   }
-  return '$count/$max inscriptos';
+  return '$count/$max inscritos';
 }
 
 /// `MALE`/`FEMALE`/`MIXED` (`MatchGender`, S2) → la etiqueta en español del

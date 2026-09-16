@@ -75,7 +75,7 @@ export class GenerateTournamentScheduleUseCase {
   }
 
   /**
-   * Avisa a los inscriptos confirmados que ya pueden ver cuándo juegan.
+   * Avisa a los inscritos confirmados que ya pueden ver cuándo juegan.
    * Nunca bloquea la generación del cuadro.
    */
   private async _notifyScheduleSV(

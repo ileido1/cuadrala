@@ -20,7 +20,7 @@ export class UpdateTournamentStatusUseCase {
   ) {}
 
   /**
-   * Avisa a los inscriptos confirmados que el torneo arrancó.
+   * Avisa a los inscritos confirmados que el torneo arrancó.
    * Nunca bloquea la transición de estado.
    */
   private async _notifyStartedSV(_tournament: {

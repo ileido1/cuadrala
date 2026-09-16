@@ -115,7 +115,7 @@ Widget _buildTestApp({
 //? M5b reemplazó el `TabBar` de Material por `SegmentedControl`.
 Finder get _registrationsTab => find.descendant(
   of: find.byType(SegmentedControl<int>),
-  matching: find.text('Inscriptos'),
+  matching: find.text('Inscritos'),
 );
 
 void main() {

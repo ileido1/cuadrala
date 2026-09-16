@@ -18,7 +18,7 @@ const REGISTRATION_REPO = new PrismaTournamentRegistrationRepository();
 const VENUE_STAFF_REPO = new PrismaVenueStaffRepository(PRISMA);
 const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAccessUseCase(VENUE_STAFF_REPO);
 
-/** El organizador confirma de una vez a todos los inscriptos pendientes. */
+/** El organizador confirma de una vez a todos los inscritos pendientes. */
 export const CONFIRM_PENDING_TOURNAMENT_REGISTRATIONS_UC =
   new ConfirmPendingTournamentRegistrationsUseCase(
     TOURNAMENT_REPO,

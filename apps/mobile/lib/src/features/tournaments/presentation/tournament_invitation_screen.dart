@@ -213,7 +213,7 @@ final class _InvitationBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Si aceptás quedás inscripto directo, sin esperar confirmación.',
+                  'Si aceptás quedás inscrito directo, sin esperar confirmación.',
                   style: TextStyle(
                     color: scheme.onSurfaceVariant,
                     fontSize: 13,

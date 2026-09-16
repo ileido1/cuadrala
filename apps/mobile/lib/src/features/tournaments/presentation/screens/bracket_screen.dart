@@ -76,7 +76,7 @@ class _BracketScreenState extends State<BracketScreen> {
             return _EmptyState(
               icon: AppIcons.group,
               title: 'Todavía no hay cuadro',
-              subtitle: 'Hacen falta al menos 2 inscriptos confirmados.',
+              subtitle: 'Hacen falta al menos 2 inscritos confirmados.',
             );
           default:
             return _EmptyState(
@@ -127,10 +127,10 @@ class _BracketView extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           //? Nota al pie verbatim (`README.md:90`): "Los huéspedes
-          //? (inscriptos sin cuenta) no entran al cuadro." — sin la cláusula
+          //? (inscritos sin cuenta) no entran al cuadro." — sin la cláusula
           //? ": sólo jugadores con cuenta" que estaba agregada de más.
           Text(
-            'Los huéspedes (inscriptos sin cuenta) no entran al cuadro.',
+            'Los huéspedes (inscritos sin cuenta) no entran al cuadro.',
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 12,

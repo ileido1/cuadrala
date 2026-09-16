@@ -58,7 +58,7 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
   bool _appliedOwnCategoryDefault = false;
   static const _pageLimit = 20;
 
-  /// "Mis torneos" (M4a): torneos donde el visor está inscripto, invitado, o
+  /// "Mis torneos" (M4a): torneos donde el visor está inscrito, invitado, o
   /// que organiza. Se recarga en cada [load] (incluye pull-to-refresh); una
   /// falla la deja vacía sin romper el resto del listado.
   List<ViewerTournamentDto> _myTournaments = [];

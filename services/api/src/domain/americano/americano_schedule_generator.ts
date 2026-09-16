@@ -34,7 +34,7 @@ function normalizeParticipantIdsSV(_participantRegistrationIds: string[]): strin
  * @version :2.0.0
  * @description :Valida las reglas de participantes del formato AMERICANO.
  * Lanza `AppError` y no `Error` a secas: el roster sale de las inscripciones
- * CONFIRMED, así que "6 inscriptos" es un estado de negocio esperado y debe
+ * CONFIRMED, así que "6 inscritos" es un estado de negocio esperado y debe
  * responder 409, no un 500 con el mensaje tragado.
  * @param {string[]} _participantRegistrationIds - IDs de inscripción del roster
  * @return {void}
