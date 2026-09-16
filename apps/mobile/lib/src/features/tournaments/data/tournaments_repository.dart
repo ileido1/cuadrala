@@ -120,6 +120,12 @@ class TournamentsRepository {
         tournamentId: tournamentId,
         body: body,
       );
+      // The POST response confirms creation and returns the raw schedule
+      // metadata. The displayable rounds (names, courts, decisions and
+      // materialized match state) are produced by the GET view endpoint.
+      if (data['schedule'] is Map) {
+        return getTournamentSchedule(tournamentId: tournamentId);
+      }
       return TournamentScheduleDto.fromJson(data);
     } on AppFailure catch (e) {
       if (e.code == 'HTTP_501') {

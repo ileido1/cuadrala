@@ -24,7 +24,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSingleElimination =
-        formatPresetName == _singleEliminationFormatCode;
+        tournamentFormatCode(formatPresetName) == _singleEliminationFormatCode;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
       child: BlocBuilder<TournamentScheduleCubit, TournamentScheduleState>(

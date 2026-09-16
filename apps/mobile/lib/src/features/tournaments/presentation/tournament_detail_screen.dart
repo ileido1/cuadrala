@@ -179,12 +179,14 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             : null);
     _viewerIsOrganizer =
         widget.viewerIsOrganizer ?? viewerTournament?.isOrganizer;
-    //? Solo fetch si: 1) no tenemos extra, O 2) extra existe pero sin organizerUserId
+    //? Solo fetch si: 1) no tenemos extra, 2) falta organizerUserId, o
+    //? 3) el item del listado todavía no trae el preset de formato.
     //? Con organizerUserId en el listado DTO, evitamos spinner en 90% de los casos.
     if (_tournament == null) {
       _loadingTournament = true;
       _fetchTournament();
-    } else if (_tournament!.organizerUserId == null) {
+    } else if (_tournament!.organizerUserId == null ||
+        _tournament!.formatPresetName == null) {
       //? Raro pero posible: tournament viene sin organizerUserId (API old version?)
       //? Fetch para asegurar que se carga
       _loadingTournament = true;

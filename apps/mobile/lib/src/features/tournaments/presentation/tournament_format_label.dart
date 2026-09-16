@@ -15,7 +15,18 @@
 /// inválido que haya que esconder.
 String tournamentFormatLabel(String? presetCode) => switch (presetCode) {
   'SINGLE_ELIMINATION' => 'Eliminación simple',
+  'Single Elimination' => 'Eliminación simple',
   'ROUND_ROBIN' => 'Round robin',
+  'Round Robin' => 'Round robin',
+  'AMERICANO' => 'Americano',
+  'Americano' => 'Americano',
   null => '',
   final other => other,
+};
+
+String tournamentFormatCode(String? preset) => switch (preset) {
+  'Single Elimination' => 'SINGLE_ELIMINATION',
+  'Round Robin' => 'ROUND_ROBIN',
+  'Americano' => 'AMERICANO',
+  final value => value ?? '',
 };

@@ -279,7 +279,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
         registrationClosesAt: true,
         gender: true,
         formatPresetId: true,
-        formatPreset: { select: { name: true } },
+        formatPreset: { select: { code: true } },
         presetSchemaVersion: true,
         formatParameters: true,
         createdAt: true,
@@ -294,7 +294,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
     return {
       ...BASE,
       formatPresetId: ROW.formatPresetId,
-      formatPresetName: ROW.formatPreset.name,
+      formatPresetName: ROW.formatPreset.code,
       presetSchemaVersion: ROW.presetSchemaVersion,
       formatParameters: ROW.formatParameters as Record<string, unknown> | null,
       createdAt: ROW.createdAt.toISOString(),
