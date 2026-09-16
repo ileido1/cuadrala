@@ -9,6 +9,8 @@ import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map_cubit.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map_state.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/models/user_location_dto.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/onboarding_repository.dart';
 
 class _MockVenuesRepository extends Mock implements VenuesRepository {}
 
@@ -16,31 +18,34 @@ class _MockLocationService extends Mock implements LocationService {}
 
 class _MockSavedZonesRepository extends Mock implements SavedZonesRepository {}
 
+class _MockOnboardingRepository extends Mock implements OnboardingRepository {}
+
 VenueDto _venue({
   String id = 'v1',
   String name = 'Club Padel Norte',
   String? address = 'Av. Corrientes 1234',
   double? latitude = -34.6,
   double? longitude = -58.4,
-}) =>
-    VenueDto(
-      id: id,
-      name: name,
-      address: address,
-      latitude: latitude,
-      longitude: longitude,
-    );
+}) => VenueDto(
+  id: id,
+  name: name,
+  address: address,
+  latitude: latitude,
+  longitude: longitude,
+);
 
 void main() {
   group('VenueMapCubit', () {
     late _MockVenuesRepository repository;
     late _MockLocationService locationService;
     late _MockSavedZonesRepository zonesRepository;
+    late _MockOnboardingRepository onboardingRepository;
 
     setUp(() {
       repository = _MockVenuesRepository();
       locationService = _MockLocationService();
       zonesRepository = _MockSavedZonesRepository();
+      onboardingRepository = _MockOnboardingRepository();
       // Default: listZones returns empty, no-op
       when(() => zonesRepository.listZones()).thenAnswer((_) async => []);
     });
@@ -69,8 +74,11 @@ void main() {
       },
       act: (cubit) => cubit.load(),
       expect: () => [
-        isA<VenueMapState>()
-            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.loaded)
             .having((s) => s.userLat, 'userLat', -34.6)
@@ -102,8 +110,9 @@ void main() {
           () => repository.listVenues(near: '-34.6,-58.4', radiusKm: 25),
         ).thenAnswer((_) async => const <VenueDto>[]);
         // Fallback sin near → lista completa.
-        when(() => repository.listVenues())
-            .thenAnswer((_) async => [_venue(id: 'far-away')]);
+        when(
+          () => repository.listVenues(),
+        ).thenAnswer((_) async => [_venue(id: 'far-away')]);
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
@@ -141,8 +150,9 @@ void main() {
         when(
           () => repository.listVenues(near: '-34.6,-58.4', radiusKm: 25),
         ).thenAnswer((_) async => const <VenueDto>[]);
-        when(() => repository.listVenues())
-            .thenAnswer((_) async => const <VenueDto>[]);
+        when(
+          () => repository.listVenues(),
+        ).thenAnswer((_) async => const <VenueDto>[]);
         return VenueMapCubit(
           repository: repository,
           locationService: locationService,
@@ -151,8 +161,11 @@ void main() {
       },
       act: (cubit) => cubit.load(),
       expect: () => [
-        isA<VenueMapState>()
-            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.loaded)
             .having((s) => s.filtered.length, 'empty', 0)
@@ -181,8 +194,11 @@ void main() {
       },
       act: (cubit) => cubit.load(),
       expect: () => [
-        isA<VenueMapState>()
-            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.failure)
             .having((s) => s.error, 'error message', 'Sin conexión.'),
@@ -200,7 +216,10 @@ void main() {
       'load() — GPS denied (LocationFailure) → emits [loading, loaded] with null coords',
       build: () {
         when(() => locationService.getCurrentLocation()).thenThrow(
-          const LocationFailure(code: 'LOCATION_DENIED', message: 'Permiso denegado'),
+          const LocationFailure(
+            code: 'LOCATION_DENIED',
+            message: 'Permiso denegado',
+          ),
         );
         when(
           () => repository.listVenues(
@@ -217,8 +236,11 @@ void main() {
       },
       act: (cubit) => cubit.load(),
       expect: () => [
-        isA<VenueMapState>()
-            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.loaded)
             .having((s) => s.userLat, 'userLat', isNull)
@@ -228,6 +250,47 @@ void main() {
       verify: (_) {
         verify(() => repository.listVenues()).called(1);
       },
+    );
+
+    blocTest<VenueMapCubit, VenueMapState>(
+      'load() — GPS unavailable → uses the saved profile location',
+      build: () {
+        when(() => locationService.getCurrentLocation()).thenThrow(
+          const LocationFailure(
+            code: 'LOCATION_DENIED',
+            message: 'Permiso denegado',
+          ),
+        );
+        when(() => onboardingRepository.getLocation()).thenAnswer(
+          (_) async => const UserLocationDto(
+            label: 'Caracas',
+            latitude: 10.4806,
+            longitude: -66.9036,
+            radiusKm: 25,
+          ),
+        );
+        when(
+          () => repository.listVenues(near: '10.4806,-66.9036', radiusKm: 25),
+        ).thenAnswer((_) async => [_venue(latitude: 10.48, longitude: -66.9)]);
+        return VenueMapCubit(
+          repository: repository,
+          locationService: locationService,
+          zonesRepository: zonesRepository,
+          onboardingRepository: onboardingRepository,
+        );
+      },
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
+        isA<VenueMapState>()
+            .having((s) => s.status, 'status', VenueMapStatus.loaded)
+            .having((s) => s.userLat, 'userLat', 10.4806)
+            .having((s) => s.userLng, 'userLng', -66.9036),
+      ],
     );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -256,8 +319,11 @@ void main() {
       },
       act: (cubit) => cubit.load(),
       expect: () => [
-        isA<VenueMapState>()
-            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.loaded)
             .having((s) => s.venues.length, 'only v1 kept', 1)
@@ -287,8 +353,11 @@ void main() {
       },
       act: (cubit) => cubit.load(),
       expect: () => [
-        isA<VenueMapState>()
-            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.failure)
             .having((s) => s.error, 'error message', 'Sin conexión.'),
@@ -322,7 +391,11 @@ void main() {
         cubit.search('CLUB');
       },
       expect: () => [
-        isA<VenueMapState>().having((s) => s.status, 'loading', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'loading',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'loaded', VenueMapStatus.loaded)
             .having((s) => s.filtered.length, 'all 2', 2),
@@ -357,7 +430,11 @@ void main() {
         cubit.search('');
       },
       expect: () => [
-        isA<VenueMapState>().having((s) => s.status, 'loading', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'loading',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>().having((s) => s.filtered.length, 'all 2', 2),
         isA<VenueMapState>().having((s) => s.filtered.length, 'filtered 1', 1),
         isA<VenueMapState>()
@@ -389,7 +466,11 @@ void main() {
         cubit.search('xyz');
       },
       expect: () => [
-        isA<VenueMapState>().having((s) => s.status, 'loading', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'loading',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>().having((s) => s.filtered.length, 'all 2', 2),
         isA<VenueMapState>().having((s) => s.filtered.length, 'no matches', 0),
       ],
@@ -420,8 +501,11 @@ void main() {
       },
       act: (cubit) => cubit.load(sportType: 'PADEL'),
       expect: () => [
-        isA<VenueMapState>()
-            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.loaded)
             .having((s) => s.sportType, 'sportType', 'PADEL'),
@@ -491,8 +575,11 @@ void main() {
       seed: () => const VenueMapState(sportType: 'PADEL'),
       act: (cubit) => cubit.load(sportType: null),
       expect: () => [
-        isA<VenueMapState>()
-            .having((s) => s.status, 'status', VenueMapStatus.loading),
+        isA<VenueMapState>().having(
+          (s) => s.status,
+          'status',
+          VenueMapStatus.loading,
+        ),
         isA<VenueMapState>()
             .having((s) => s.status, 'status', VenueMapStatus.loaded)
             .having((s) => s.sportType, 'sportType', isNull),
@@ -538,7 +625,11 @@ void main() {
       seed: () => VenueMapState(selectedVenue: _venue()),
       act: (cubit) => cubit.selectVenue(null),
       expect: () => [
-        isA<VenueMapState>().having((s) => s.selectedVenue, 'selectedVenue null', isNull),
+        isA<VenueMapState>().having(
+          (s) => s.selectedVenue,
+          'selectedVenue null',
+          isNull,
+        ),
       ],
     );
   });

@@ -157,6 +157,7 @@ Future<void> setupDependencies() async {
       repository: getIt<VenuesRepository>(),
       locationService: getIt<LocationService>(),
       zonesRepository: getIt<SavedZonesRepository>(),
+      onboardingRepository: getIt<OnboardingRepository>(),
     ),
   );
 
@@ -334,4 +335,3 @@ Future<void> setupDependencies() async {
     () => AvailabilityCubit(repository: getIt<AvailabilityRepository>()),
   );
 }
-

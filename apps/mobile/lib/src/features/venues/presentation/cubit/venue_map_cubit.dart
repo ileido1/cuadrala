@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/failures/app_failure.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/storage/saved_zones_repository.dart';
+import '../../../onboarding/data/onboarding_repository.dart';
 import '../../data/models/venue_dto.dart';
 import '../../data/venues_repository.dart';
 import 'venue_map_state.dart';
@@ -12,25 +13,32 @@ class VenueMapCubit extends Cubit<VenueMapState> {
     required VenuesRepository repository,
     required LocationService locationService,
     required SavedZonesRepository zonesRepository,
-  })  : _repository = repository,
-        _locationService = locationService,
-        _zonesRepository = zonesRepository,
-        super(const VenueMapState());
+    OnboardingRepository? onboardingRepository,
+  }) : _repository = repository,
+       _locationService = locationService,
+       _zonesRepository = zonesRepository,
+       _onboardingRepository = onboardingRepository,
+       super(const VenueMapState());
 
   final VenuesRepository _repository;
   final LocationService _locationService;
   final SavedZonesRepository _zonesRepository;
+  final OnboardingRepository? _onboardingRepository;
 
   /// Sentinel para distinguir "sportType no pasado" (preservar filtro actual)
   /// de "sportType: null" (limpiar filtro → Todos).
   static const Object _sportSentinel = Object();
 
   /// Loads saved zones from storage, then loads venues.
-  Future<void> load({int radiusKm = 25, Object? sportType = _sportSentinel}) async {
+  Future<void> load({
+    int radiusKm = 25,
+    Object? sportType = _sportSentinel,
+  }) async {
     emit(state.copyWith(status: VenueMapStatus.loading, fellBackToAll: false));
 
-    final effectiveSportType =
-        sportType == _sportSentinel ? state.sportType : sportType as String?;
+    final effectiveSportType = sportType == _sportSentinel
+        ? state.sportType
+        : sportType as String?;
 
     // Load saved zones first
     List<SavedZone> savedZones;
@@ -60,14 +68,29 @@ class VenueMapCubit extends Cubit<VenueMapState> {
       } on LocationFailure {
         // Graceful fallback — proceed without GPS coords.
       } catch (_) {
-        // Any unexpected location error also falls back gracefully.
+        // Any unexpected location error falls back to the saved profile location.
+      }
+
+      if (near == null && _onboardingRepository != null) {
+        try {
+          final saved = await _onboardingRepository.getLocation();
+          if (saved != null) {
+            lat = saved.latitude;
+            lng = saved.longitude;
+            near = '${saved.latitude},${saved.longitude}';
+          }
+        } catch (_) {
+          // The complete venue list remains available when no location resolves.
+        }
       }
     }
 
     try {
       final all = await _repository.listVenues(
         near: near,
-        radiusKm: near != null ? (state.selectedZone?.radiusKm ?? radiusKm) : null,
+        radiusKm: near != null
+            ? (state.selectedZone?.radiusKm ?? radiusKm)
+            : null,
         sportType: effectiveSportType,
       );
 
@@ -80,7 +103,9 @@ class VenueMapCubit extends Cubit<VenueMapState> {
       // vez sin `near` (lista completa) para no dejar al usuario sin resultados
       // cuando su ubicación está lejos del catálogo disponible.
       if (near != null && withCoords.isEmpty) {
-        final fallback = await _repository.listVenues(sportType: effectiveSportType);
+        final fallback = await _repository.listVenues(
+          sportType: effectiveSportType,
+        );
         withCoords = fallback
             .where((v) => v.latitude != null && v.longitude != null)
             .toList();
@@ -103,12 +128,14 @@ class VenueMapCubit extends Cubit<VenueMapState> {
         ),
       );
     } on AppFailure catch (e) {
-      emit(state.copyWith(
-        status: VenueMapStatus.failure,
-        error: e.message,
-        savedZones: savedZones,
-        sportType: effectiveSportType,
-      ));
+      emit(
+        state.copyWith(
+          status: VenueMapStatus.failure,
+          error: e.message,
+          savedZones: savedZones,
+          sportType: effectiveSportType,
+        ),
+      );
     } catch (_) {
       emit(
         state.copyWith(
@@ -159,7 +186,9 @@ class VenueMapCubit extends Cubit<VenueMapState> {
       );
       await loadSavedZones();
     } on LocationFailure catch (e) {
-      emit(state.copyWith(error: 'No pudimos obtener tu ubicación: ${e.message}'));
+      emit(
+        state.copyWith(error: 'No pudimos obtener tu ubicación: ${e.message}'),
+      );
     } catch (_) {
       emit(state.copyWith(error: 'No pudimos guardar la zona.'));
     }

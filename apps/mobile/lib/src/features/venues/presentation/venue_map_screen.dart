@@ -58,9 +58,7 @@ class _Loading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
 
@@ -91,7 +89,11 @@ class _MapView extends StatelessWidget {
 
   final VenueMapState state;
 
-  Future<void> _showZonesSheet(BuildContext context, VenueMapCubit cubit, List<SavedZone> zones) async {
+  Future<void> _showZonesSheet(
+    BuildContext context,
+    VenueMapCubit cubit,
+    List<SavedZone> zones,
+  ) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -105,9 +107,10 @@ class _MapView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<VenueMapCubit>();
+    final firstVenue = state.filtered.isEmpty ? null : state.filtered.first;
     final center = LatLng(
-      state.userLat ?? -34.6037,
-      state.userLng ?? -58.3816,
+      state.userLat ?? firstVenue?.latitude ?? 0,
+      state.userLng ?? firstVenue?.longitude ?? 0,
     );
 
     return Scaffold(
@@ -181,7 +184,8 @@ class _MapView extends StatelessWidget {
                   savedZones: state.savedZones,
                   selectedZone: state.selectedZone,
                   onSelect: (z) => cubit.selectZone(z),
-                  onManage: () => _showZonesSheet(context, cubit, state.savedZones),
+                  onManage: () =>
+                      _showZonesSheet(context, cubit, state.savedZones),
                 ),
               ],
             ),
@@ -203,9 +207,8 @@ class _MapView extends StatelessWidget {
               child: _VenueMiniSheet(
                 venue: state.selectedVenue!,
                 onClose: () => cubit.selectVenue(null),
-                onViewDetails: () => context.push(
-                  Routes.venueDetail(state.selectedVenue!.id),
-                ),
+                onViewDetails: () =>
+                    context.push(Routes.venueDetail(state.selectedVenue!.id)),
               ),
             ),
         ],
@@ -219,10 +222,7 @@ class _MapView extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _SportFilterChips extends StatelessWidget {
-  const _SportFilterChips({
-    required this.selected,
-    required this.onSelect,
-  });
+  const _SportFilterChips({required this.selected, required this.onSelect});
 
   final String? selected;
   final ValueChanged<String?> onSelect;
@@ -302,9 +302,8 @@ class _ZoneChips extends StatelessWidget {
                 ),
                 label: Text(zone.name),
                 selected: selectedZone?.id == zone.id,
-                onSelected: (_) => onSelect(
-                  selectedZone?.id == zone.id ? null : zone,
-                ),
+                onSelected: (_) =>
+                    onSelect(selectedZone?.id == zone.id ? null : zone),
               ),
             ),
           // Add zone button
@@ -388,8 +387,8 @@ class _ZonesBottomSheet extends StatelessWidget {
                 Text(
                   'Zonas guardadas',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -413,15 +412,15 @@ class _ZonesBottomSheet extends StatelessWidget {
                       Text(
                         'No hay zonas guardadas',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Guardá tu ubicación para encontrar sedes más rápido',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -518,8 +517,8 @@ class _VenueMiniSheet extends StatelessWidget {
                     child: Text(
                       venue.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
