@@ -175,10 +175,13 @@ final class _VenueMap extends StatelessWidget {
                   point: LatLng(venue.latitude!, venue.longitude!),
                   width: 42,
                   height: 42,
-                  child: Icon(
-                    AppIcons.pin,
-                    size: 36,
-                    color: Theme.of(context).colorScheme.primary,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(venue.id),
+                    child: Icon(
+                      AppIcons.pin,
+                      size: 36,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
             ],

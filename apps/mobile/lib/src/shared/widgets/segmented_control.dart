@@ -130,17 +130,18 @@ class _SegmentButton<T> extends StatelessWidget {
       onTap: onTap,
       child: SizedBox.expand(
         child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (option.icon != null) ...[
-                Icon(option.icon, size: 16, color: color),
-                const SizedBox(width: 6),
-              ],
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (option.icon != null) ...[
+                    Icon(option.icon, size: 16, color: color),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
                     option.label,
                     maxLines: 1,
                     style: TextStyle(
@@ -149,9 +150,9 @@ class _SegmentButton<T> extends StatelessWidget {
                       color: color,
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
