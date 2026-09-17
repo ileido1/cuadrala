@@ -91,6 +91,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
                   tournamentId: tournamentId,
                   tournamentsRepository: tournamentsRepository,
                   isSingleElimination: isSingleElimination,
+                  showBracketButton: isSingleElimination,
                 ),
                 TournamentScheduleInitial() ||
                 TournamentScheduleEmpty() => _OrganizerGenerateCard(
@@ -143,6 +144,7 @@ final class _OrganizerRoundRobinContent extends StatelessWidget {
           tournamentsRepository: tournamentsRepository,
           isSingleElimination: false,
           venueId: venueId,
+          showBracketButton: false,
         ),
       ],
     );
@@ -213,11 +215,13 @@ final class _OrganizerGeneratedCard extends StatelessWidget {
     required this.tournamentId,
     required this.tournamentsRepository,
     required this.isSingleElimination,
+    required this.showBracketButton,
   });
 
   final String tournamentId;
   final TournamentsRepository tournamentsRepository;
   final bool isSingleElimination;
+  final bool showBracketButton;
 
   @override
   Widget build(BuildContext context) {
@@ -227,6 +231,7 @@ final class _OrganizerGeneratedCard extends StatelessWidget {
       tournamentsRepository: tournamentsRepository,
       isSingleElimination: isSingleElimination,
       venueId: null,
+      showBracketButton: showBracketButton,
       generatedWithoutSchedule: true,
     );
   }
@@ -239,6 +244,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
     required this.tournamentsRepository,
     required this.isSingleElimination,
     required this.venueId,
+    this.showBracketButton = true,
     this.generatedWithoutSchedule = false,
   });
 
@@ -247,6 +253,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
   final TournamentsRepository tournamentsRepository;
   final bool isSingleElimination;
   final String? venueId;
+  final bool showBracketButton;
   final bool generatedWithoutSchedule;
 
   @override
@@ -259,35 +266,36 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
           body: 'A cada jugador le llegó su horario para confirmar.',
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => SizedBox(
-                    height: MediaQuery.sizeOf(context).height * .9,
-                    child: BracketScreen(
-                      tournamentId: tournamentId,
-                      tournamentsRepository: tournamentsRepository,
+        if (showBracketButton)
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => SizedBox(
+                      height: MediaQuery.sizeOf(context).height * .9,
+                      child: BracketScreen(
+                        tournamentId: tournamentId,
+                        tournamentsRepository: tournamentsRepository,
+                      ),
                     ),
                   ),
+                  icon: const Icon(AppIcons.trophy, size: 17),
+                  label: const Text('Ver cuadro'),
                 ),
-                icon: const Icon(AppIcons.trophy, size: 17),
-                label: const Text('Ver cuadro'),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: null,
-                icon: const Icon(AppIcons.add, size: 17),
-                label: const Text('Cargar resultado'),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: null,
+                  icon: const Icon(AppIcons.add, size: 17),
+                  label: const Text('Cargar resultado'),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         //? Org Cuadro — result caption (spec; D12): verbatim, SE-only, always
         //? visible on tab render — not gated behind opening a sheet.
         if (isSingleElimination) ...[
@@ -303,7 +311,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
         if (!generatedWithoutSchedule && schedule.rounds.isNotEmpty) ...[
           const SizedBox(height: 20),
           Text(
-            'Partidos de hoy',
+            'Partidos programados',
             style: _sectionStyle(Theme.of(context).colorScheme),
           ),
           const SizedBox(height: 10),
@@ -380,7 +388,7 @@ final class _OrganizerWarningBanner extends StatelessWidget {
 final class _OrganizerScheduleList extends StatelessWidget {
   const _OrganizerScheduleList({required this.schedule, required this.venueId});
 
-  static final _timeFormat = DateFormat('HH:mm', 'es_ES');
+  static final _timeFormat = DateFormat('dd MMM HH:mm', 'es_ES');
 
   final TournamentScheduleDto schedule;
   final String? venueId;

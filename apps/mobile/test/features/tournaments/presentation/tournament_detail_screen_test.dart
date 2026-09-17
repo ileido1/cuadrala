@@ -1700,7 +1700,7 @@ void main() {
     );
   });
 
-  group('_OrganizerBracketTab — Partidos de hoy rows (M11b)', () {
+  group('_OrganizerBracketTab — Partidos programados rows (M11b)', () {
     testWidgets('shows the recorded score for a finished match', (
       tester,
     ) async {
@@ -1731,7 +1731,7 @@ void main() {
 
       await pumpAndOpenBracketTab(tester, schedule: schedule);
 
-      expect(find.text('Partidos de hoy'), findsOneWidget);
+      expect(find.text('Partidos programados'), findsOneWidget);
       expect(find.text('Daniel R. vs Marcos S.'), findsOneWidget);
       expect(find.text('6-3'), findsOneWidget);
     });
@@ -1758,7 +1758,7 @@ void main() {
 
       await pumpAndOpenBracketTab(tester, schedule: schedule);
 
-      expect(find.text('11:30 · Central'), findsOneWidget);
+      expect(find.text('01 ene 11:30 · Central'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Cargar'), findsOneWidget);
     });
 
@@ -1786,7 +1786,10 @@ void main() {
 
         await pumpAndOpenBracketTab(tester, schedule: schedule);
 
-        expect(find.text('Rafa T. no puede a las 11:30'), findsOneWidget);
+        expect(
+          find.text('Rafa T. no puede a las 01 ene 11:30'),
+          findsOneWidget,
+        );
         expect(find.widgetWithText(OutlinedButton, 'Mover'), findsOneWidget);
       },
     );
@@ -1815,7 +1818,7 @@ void main() {
 
         expect(find.text('CUARTOS DE FINAL'), findsOneWidget);
         expect(find.text('Luis P. vs Jorge Á.'), findsOneWidget);
-        expect(find.text('09:00 · Cancha 2'), findsOneWidget);
+        expect(find.text('01 ene 09:00 · Cancha 2'), findsOneWidget);
       },
     );
   });

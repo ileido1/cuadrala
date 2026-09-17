@@ -179,6 +179,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             : null);
     _viewerIsOrganizer =
         widget.viewerIsOrganizer ?? viewerTournament?.isOrganizer;
+    _loadScoreboardForOrganizer();
     //? Solo fetch si: 1) no tenemos extra, 2) falta organizerUserId, o
     //? 3) el item del listado todavía no trae el preset de formato.
     //? Con organizerUserId en el listado DTO, evitamos spinner en 90% de los casos.
@@ -244,9 +245,22 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
         _tournament = t;
         _loadingTournament = false;
       });
+      _loadScoreboardForOrganizer();
     } catch (_) {
       if (!mounted) return;
       setState(() => _loadingTournament = false);
+    }
+  }
+
+  void _loadScoreboardForOrganizer() {
+    final isOrganizer =
+        _viewerIsOrganizer ??
+        _isOrganizer(
+          _tournament?.organizerUserId,
+          _registrationsCubit.currentUserId,
+        );
+    if (isOrganizer && _scoreboardCubit.state is TournamentScoreboardInitial) {
+      _scoreboardCubit.load();
     }
   }
 
