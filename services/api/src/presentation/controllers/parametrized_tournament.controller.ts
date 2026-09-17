@@ -28,6 +28,9 @@ export async function postParametrizedTournamentCON(_req: Request, _res: Respons
   if (BODY.startsAt !== undefined) {
     INPUT.startsAt = new Date(BODY.startsAt);
   }
+  if (BODY.endsAt !== undefined) {
+    INPUT.endsAt = new Date(BODY.endsAt);
+  }
   if (BODY.visibility !== undefined) {
     INPUT.visibility = BODY.visibility;
   }

@@ -226,6 +226,7 @@ final class _TournamentSettingsEditorState
   late final TextEditingController _price;
   late final TextEditingController _slots;
   DateTime? _startsAt;
+  DateTime? _endsAt;
   DateTime? _registrationClosesAt;
   String? _gender;
 
@@ -240,6 +241,7 @@ final class _TournamentSettingsEditorState
       text: widget.tournament.maxSlots?.toString() ?? '',
     );
     _startsAt = widget.tournament.startsAt;
+    _endsAt = widget.tournament.endsAt;
     _registrationClosesAt = widget.tournament.registrationClosesAt;
     _gender = widget.tournament.gender;
   }
@@ -367,6 +369,28 @@ final class _TournamentSettingsEditorState
             ListTile(
               contentPadding: EdgeInsets.zero,
               enabled: !state.submitting,
+              title: const Text('Fin'),
+              subtitle: Text(
+                _endsAt == null
+                    ? 'Sin fecha'
+                    : MaterialLocalizations.of(
+                        context,
+                      ).formatMediumDate(_endsAt!),
+              ),
+              trailing: const Icon(AppIcons.calendar),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  firstDate: _startsAt ?? DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 730)),
+                  initialDate: _endsAt ?? _startsAt ?? DateTime.now(),
+                );
+                if (picked != null) setState(() => _endsAt = picked);
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              enabled: !state.submitting,
               title: const Text('Cierre de inscripción'),
               subtitle: Text(
                 _registrationClosesAt == null
@@ -423,6 +447,7 @@ final class _TournamentSettingsEditorState
                           'inscriptionPrice': double.tryParse(_price.text),
                           'maxSlots': int.tryParse(_slots.text),
                           'startsAt': _startsAt?.toUtc().toIso8601String(),
+                          'endsAt': _endsAt?.toUtc().toIso8601String(),
                           'registrationClosesAt': _registrationClosesAt
                               ?.toUtc()
                               .toIso8601String(),

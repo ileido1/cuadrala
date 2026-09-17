@@ -293,14 +293,6 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
                   label: const Text('Ver cuadro'),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: null,
-                  icon: const Icon(AppIcons.add, size: 17),
-                  label: const Text('Cargar resultado'),
-                ),
-              ),
             ],
           ),
         //? Org Cuadro — result caption (spec; D12): verbatim, SE-only, always
@@ -326,7 +318,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
         ] else ...[
           const SizedBox(height: 14),
           const _InfoBox(
-            message: 'El calendario todavía no expone partidos de hoy.',
+            message: 'El calendario todavía no tiene partidos programados.',
           ),
         ],
       ],
@@ -486,13 +478,23 @@ final class _OrganizerMatchRowState extends State<_OrganizerMatchRow> {
     final isDone = match.matchStatus == 'FINISHED' && match.scores.isNotEmpty;
     //? Registrations are the canonical identity, so invited-only sides are
     //? also eligible for result entry.
-    final hasGuestOnlySide = match.sides.any(
-      (side) =>
-          side.registrationIds.isEmpty &&
-          side.userIds.isNotEmpty &&
-          side.userIds.every((id) => id == null),
-    );
     const rejectColor = Color(0xFFF59E0B);
+    final isScheduled = match.matchStatus == 'SCHEDULED';
+    final isCancelled = match.matchStatus == 'CANCELLED';
+    final statusLabel = switch (match.matchStatus) {
+      'SCHEDULED' => 'Programado',
+      'IN_PROGRESS' => 'Activo',
+      'FINISHED' => 'Finalizado',
+      'CANCELLED' => 'Cancelado',
+      _ => 'Sin estado',
+    };
+    final statusColor = isCancelled
+        ? scheme.error
+        : isLive
+        ? scheme.primary
+        : isDone
+        ? scheme.onSurfaceVariant
+        : scheme.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -530,6 +532,15 @@ final class _OrganizerMatchRowState extends State<_OrganizerMatchRow> {
                     color: isRejected ? rejectColor : scheme.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(height: 3),
+                Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
               ],
             ),
           ),
@@ -541,7 +552,7 @@ final class _OrganizerMatchRowState extends State<_OrganizerMatchRow> {
             )
           else if (isLive)
             FilledButton(
-              onPressed: hasGuestOnlySide || match.matchId == null
+              onPressed: match.matchId == null
                   ? null
                   : () => showResultEntrySheet(
                       context,
@@ -560,29 +571,39 @@ final class _OrganizerMatchRowState extends State<_OrganizerMatchRow> {
               ),
               child: const Text('Cargar'),
             )
-          else if (isRejected)
-            OutlinedButton(
-              onPressed:
-                  venueId == null ||
-                      match.roundNumber == null ||
-                      match.matchNumber == null
-                  ? null
-                  : () => _openRescheduleSheet(context),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34)),
-              child: const Text('Mover'),
-            )
-          else if (match.matchStatus == 'SCHEDULED' && match.matchId != null)
-            OutlinedButton.icon(
-              onPressed: _starting ? null : () => _startMatch(context),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34)),
-              icon: _starting
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(AppIcons.play, size: 15),
-              label: const Text('Iniciar'),
+          else if (isScheduled || isRejected)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (isScheduled && match.matchId != null)
+                  OutlinedButton.icon(
+                    onPressed: _starting ? null : () => _startMatch(context),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 34),
+                    ),
+                    icon: _starting
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(AppIcons.play, size: 15),
+                    label: const Text('Iniciar'),
+                  ),
+                OutlinedButton(
+                  onPressed:
+                      venueId == null ||
+                          match.roundNumber == null ||
+                          match.matchNumber == null
+                      ? null
+                      : () => _openRescheduleSheet(context),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 34),
+                  ),
+                  child: const Text('Mover'),
+                ),
+              ],
             ),
         ],
       ),

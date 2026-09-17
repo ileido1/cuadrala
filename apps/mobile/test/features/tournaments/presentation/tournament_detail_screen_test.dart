@@ -1861,49 +1861,42 @@ void main() {
   });
 
   group('_OrganizerBracketTab — Cargar resultado (M11c)', () {
-    testWidgets(
-      'disables Cargar when a side has no user id (guest-only side)',
-      (tester) async {
-        final schedule = TournamentScheduleDto(
-          rounds: [
-            TournamentScheduleRoundDto(
-              name: 'Semifinal',
-              matches: [
-                TournamentScheduleMatchDto(
-                  id: 'sched-5',
-                  label: 'Daniel R. vs Invitado',
-                  status: '',
-                  matchId: 'match-5',
-                  matchStatus: 'IN_PROGRESS',
-                  scheduledAt: DateTime(2024, 1, 1, 11, 30),
-                  courtName: 'Central',
-                  sides: const [
-                    TournamentScheduleMatchSideDto(
-                      sideKey: 'a',
-                      userIds: ['u1'],
-                    ),
-                    TournamentScheduleMatchSideDto(
-                      sideKey: 'b',
-                      userIds: [null],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        );
+    testWidgets('enables Cargar when a side is a guest registration', (
+      tester,
+    ) async {
+      final schedule = TournamentScheduleDto(
+        rounds: [
+          TournamentScheduleRoundDto(
+            name: 'Semifinal',
+            matches: [
+              TournamentScheduleMatchDto(
+                id: 'sched-5',
+                label: 'Daniel R. vs Invitado',
+                status: '',
+                matchId: 'match-5',
+                matchStatus: 'IN_PROGRESS',
+                scheduledAt: DateTime(2024, 1, 1, 11, 30),
+                courtName: 'Central',
+                sides: const [
+                  TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
+                  TournamentScheduleMatchSideDto(sideKey: 'b', userIds: [null]),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
 
-        await pumpAndOpenBracketTab(tester, schedule: schedule);
+      await pumpAndOpenBracketTab(tester, schedule: schedule);
 
-        final button = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Cargar'),
-        );
-        expect(button.onPressed, isNull);
-      },
-    );
+      final button = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Cargar'),
+      );
+      expect(button.onPressed, isNotNull);
+    });
 
     testWidgets(
-      'enables Cargar and opens ResultEntrySheet when every side has a user id',
+      'enables Cargar and opens ResultEntrySheet for authenticated sides',
       (tester) async {
         final schedule = TournamentScheduleDto(
           rounds: [

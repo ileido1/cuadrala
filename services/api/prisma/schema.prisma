@@ -674,6 +674,7 @@ model Tournament {
   /// `PUBLIC` se lista en el catálogo; `PRIVATE` solo por link directo.
   visibility           TournamentVisibility   @default(PUBLIC)
   startsAt             DateTime?
+  endsAt               DateTime?
   /// Usuario organizador del torneo (nullable para compatibilidad hacia atrás). Habilita los guards R1.
   organizerUserId      String?
   organizer            User?                  @relation("TournamentOrganizer", fields: [organizerUserId], references: [id], onDelete: SetNull)

@@ -1,0 +1,1 @@
+ALTER TABLE "Tournament" ADD COLUMN "endsAt" TIMESTAMP(3);

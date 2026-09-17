@@ -23,6 +23,7 @@ export type TournamentListItemDTO = {
   categoryId: string;
   categoryName: string;
   startsAt: string | null;
+  endsAt: string | null;
   registrationCount: number;
   /** Sede del torneo; `null` cuando el organizador no la declaró. */
   venueId: string | null;
@@ -98,9 +99,7 @@ export interface TournamentQueryRepository {
 
   getTournamentByIdSV(_tournamentId: string): Promise<TournamentDetailDTO | null>;
 
-  listTournamentRegistrationsSV(
-    _tournamentId: string,
-  ): Promise<RegistrationDTO[]>;
+  listTournamentRegistrationsSV(_tournamentId: string): Promise<RegistrationDTO[]>;
 
   listTournamentsByVenueSV(
     _venueId: string,

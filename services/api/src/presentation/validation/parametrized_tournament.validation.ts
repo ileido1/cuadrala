@@ -14,12 +14,15 @@ export const CREATE_PARAMETRIZED_TOURNAMENT_BODY_SCHEMA = z
       .optional(),
     formatParameters: z.record(z.string(), z.unknown()).optional(),
     startsAt: z.string().datetime({ offset: true }).optional(),
+    endsAt: z.string().datetime({ offset: true }).optional(),
     visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
     //? Reusa MatchGender (schema.prisma). Ausente = null: los torneos viejos y
     //? los clientes legacy que no lo mandan no quedan invalidados.
-    gender: z.enum(['MALE', 'FEMALE', 'MIXED'], {
-      message: 'gender debe ser MALE, FEMALE o MIXED.',
-    }).optional(),
+    gender: z
+      .enum(['MALE', 'FEMALE', 'MIXED'], {
+        message: 'gender debe ser MALE, FEMALE o MIXED.',
+      })
+      .optional(),
     pairedRegistration: z.boolean().optional(),
     venueId: z.string().uuid('venueId debe ser un UUID valido.').optional(),
     //? Precio por jugador. 0 es un valor legitimo: "gratis" declarado no es lo
@@ -60,6 +63,17 @@ export const CREATE_PARAMETRIZED_TOURNAMENT_BODY_SCHEMA = z
         code: z.ZodIssueCode.custom,
         message: 'registrationClosesAt no puede ser posterior a startsAt.',
         path: ['registrationClosesAt'],
+      });
+    }
+    if (
+      _value.startsAt !== undefined &&
+      _value.endsAt !== undefined &&
+      new Date(_value.endsAt).getTime() < new Date(_value.startsAt).getTime()
+    ) {
+      _ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'endsAt debe ser igual o posterior a startsAt.',
+        path: ['endsAt'],
       });
     }
   });

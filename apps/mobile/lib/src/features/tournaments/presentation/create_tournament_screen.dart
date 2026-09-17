@@ -85,6 +85,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   String _gender = 'MALE';
   late final List<DateStripDay> _days;
   late String _selectedDateKey;
+  late String _selectedEndDateKey;
 
   bool _isLoadingSports = false;
   String? _sportsError;
@@ -153,6 +154,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     super.initState();
     _days = buildDateStripDays(21);
     _selectedDateKey = _days.first.key;
+    _selectedEndDateKey = _days.first.key;
     _createTournamentCubit = getIt<CreateTournamentCubit>();
     _tournamentPresetsCubit = getIt<TournamentPresetsCubit>();
     _loadSports();
@@ -248,6 +250,12 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     if (preset == null || preset.id.isEmpty) {
       return (request: null, error: 'Selecciona un formato de torneo.');
     }
+    if (_selectedEndDateKey.compareTo(_selectedDateKey) < 0) {
+      return (
+        request: null,
+        error: 'La fecha de fin no puede ser anterior al inicio.',
+      );
+    }
 
     //? 3. Validar campos requeridos del schema
     if (preset.parametersSchema != null) {
@@ -273,6 +281,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
             ? _formatParameterValues
             : null,
         startsAt: DateTime.parse(_selectedDateKey),
+        endsAt: DateTime.parse(_selectedEndDateKey),
         venueId: _selectedVenueId,
         gender: _gender,
         pairedRegistration: _pairedRegistration,
@@ -411,6 +420,16 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 value: _selectedDateKey,
                 horizontalPadding: 0,
                 onChanged: (value) => setState(() => _selectedDateKey = value),
+              ),
+              const SizedBox(height: 8),
+              Text('Hasta', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 4),
+              DateStrip(
+                days: _days,
+                value: _selectedEndDateKey,
+                horizontalPadding: 0,
+                onChanged: (value) =>
+                    setState(() => _selectedEndDateKey = value),
               ),
               const SizedBox(height: 14),
               Text(

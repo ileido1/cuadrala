@@ -19,12 +19,13 @@ export class PrismaTournamentRepository implements TournamentRepository {
     status: string;
     visibility: TournamentVisibility | null;
     startsAt: Date | null;
+    endsAt: Date | null;
     organizerUserId: string | null;
     venueId: string | null;
     pairedRegistration: boolean;
     isCompetitive: boolean;
     inscriptionPrice: number | null;
-      gender: TournamentGender | null;
+    gender: TournamentGender | null;
     maxSlots: number | null;
     registrationClosesAt: Date | null;
     registrationCount: number;
@@ -33,7 +34,13 @@ export class PrismaTournamentRepository implements TournamentRepository {
     createdAt: Date;
     updatedAt: Date;
   } | null> {
-    const ROW = await PRISMA.tournament.findUnique({ where: { id: _id }, include: { _count: { select: { registrations: true, matches: true } }, schedule: { select: { id: true } } } });
+    const ROW = await PRISMA.tournament.findUnique({
+      where: { id: _id },
+      include: {
+        _count: { select: { registrations: true, matches: true } },
+        schedule: { select: { id: true } },
+      },
+    });
     if (ROW === null) return null;
     return {
       id: ROW.id,
@@ -46,6 +53,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
       status: ROW.status,
       visibility: ROW.visibility,
       startsAt: ROW.startsAt,
+      endsAt: ROW.endsAt,
       organizerUserId: ROW.organizerUserId,
       venueId: ROW.venueId,
       pairedRegistration: ROW.pairedRegistration,
@@ -70,6 +78,7 @@ export class PrismaTournamentRepository implements TournamentRepository {
     formatParameters?: unknown;
     presetSchemaVersion: number;
     startsAt?: Date;
+    endsAt?: Date;
     organizerUserId?: string;
     visibility?: TournamentVisibility;
     venueId?: string;
@@ -88,8 +97,11 @@ export class PrismaTournamentRepository implements TournamentRepository {
         presetSchemaVersion: _data.presetSchemaVersion,
         ...(_data.organizerUserId !== undefined ? { organizerUserId: _data.organizerUserId } : {}),
         ...(_data.visibility !== undefined ? { visibility: _data.visibility } : {}),
-        ...(_data.formatParameters !== undefined ? { formatParameters: _data.formatParameters as never } : {}),
+        ...(_data.formatParameters !== undefined
+          ? { formatParameters: _data.formatParameters as never }
+          : {}),
         ...(_data.startsAt !== undefined ? { startsAt: _data.startsAt } : {}),
+        ...(_data.endsAt !== undefined ? { endsAt: _data.endsAt } : {}),
         ...(_data.venueId !== undefined ? { venueId: _data.venueId } : {}),
         ...(_data.inscriptionPrice !== undefined
           ? { inscriptionPrice: _data.inscriptionPrice }
@@ -151,13 +163,43 @@ export class PrismaTournamentRepository implements TournamentRepository {
       where: { id: _input.tournamentId },
       data: {
         ..._input.settings,
-        ...(Object.hasOwn(_input.settings, 'formatParameters') ? { formatParameters: _input.settings.formatParameters as never } : {}),
-        ...(Object.hasOwn(_input.settings, 'startsAt') ? { startsAt: _input.settings.startsAt as Date | null } : {}),
-        ...(Object.hasOwn(_input.settings, 'registrationClosesAt') ? { registrationClosesAt: _input.settings.registrationClosesAt as Date | null } : {}),
-        ...(Object.hasOwn(_input.settings, 'gender') ? { gender: _input.settings.gender as never } : {}),
+        ...(Object.hasOwn(_input.settings, 'formatParameters')
+          ? { formatParameters: _input.settings.formatParameters as never }
+          : {}),
+        ...(Object.hasOwn(_input.settings, 'startsAt')
+          ? { startsAt: _input.settings.startsAt as Date | null }
+          : {}),
+        ...(Object.hasOwn(_input.settings, 'endsAt')
+          ? { endsAt: _input.settings.endsAt as Date | null }
+          : {}),
+        ...(Object.hasOwn(_input.settings, 'registrationClosesAt')
+          ? { registrationClosesAt: _input.settings.registrationClosesAt as Date | null }
+          : {}),
+        ...(Object.hasOwn(_input.settings, 'gender')
+          ? { gender: _input.settings.gender as never }
+          : {}),
       },
-      select: { id: true, name: true, status: true, formatPresetId: true, presetSchemaVersion: true, formatParameters: true, startsAt: true, venueId: true, gender: true, pairedRegistration: true, inscriptionPrice: true, maxSlots: true, registrationClosesAt: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        formatPresetId: true,
+        presetSchemaVersion: true,
+        formatParameters: true,
+        startsAt: true,
+        endsAt: true,
+        venueId: true,
+        gender: true,
+        pairedRegistration: true,
+        inscriptionPrice: true,
+        maxSlots: true,
+        registrationClosesAt: true,
+      },
     });
-    return { ...UPDATED, inscriptionPrice: UPDATED.inscriptionPrice?.toNumber() ?? null, formatParameters: UPDATED.formatParameters as unknown | null };
+    return {
+      ...UPDATED,
+      inscriptionPrice: UPDATED.inscriptionPrice?.toNumber() ?? null,
+      formatParameters: UPDATED.formatParameters as unknown | null,
+    };
   }
 }

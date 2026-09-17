@@ -11,9 +11,9 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
   TournamentScheduleCubit({
     required TournamentsRepository tournamentsRepository,
     required String tournamentId,
-  })  : _tournamentsRepository = tournamentsRepository,
-        _tournamentId = tournamentId,
-        super(const TournamentScheduleInitial());
+  }) : _tournamentsRepository = tournamentsRepository,
+       _tournamentId = tournamentId,
+       super(const TournamentScheduleInitial());
 
   final TournamentsRepository _tournamentsRepository;
   final String _tournamentId;
@@ -32,14 +32,15 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
     } on AppFailure catch (e) {
       emit(TournamentScheduleError(message: e.message));
     } catch (_) {
-      emit(const TournamentScheduleError(message: 'No se pudo cargar el calendario.'));
+      emit(
+        const TournamentScheduleError(
+          message: 'No se pudo cargar el calendario.',
+        ),
+      );
     }
   }
 
-  Future<void> generate({
-    bool? doubleRound,
-    bool? thirdPlaceMatch,
-  }) async {
+  Future<void> generate({bool? doubleRound, bool? thirdPlaceMatch}) async {
     emit(const TournamentScheduleGenerating());
     try {
       final schedule = await _tournamentsRepository.generateTournamentSchedule(
@@ -58,9 +59,13 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
         return;
       }
       emit(TournamentScheduleError(message: e.message));
-    } catch (e) {
-      //? Re-throw programming errors para logs/debugging
-      rethrow;
+    } catch (_) {
+      emit(
+        const TournamentScheduleError(
+          message:
+              'No se pudo generar el calendario. Revisá las fechas y las canchas disponibles e intentá nuevamente.',
+        ),
+      );
     }
   }
 

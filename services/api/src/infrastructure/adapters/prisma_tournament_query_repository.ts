@@ -28,6 +28,7 @@ export function toListItemDTO(_row: {
   categoryId: string;
   category: { name: string };
   startsAt: Date | null;
+  endsAt: Date | null;
   venueId: string | null;
   venue: { name: string } | null;
   inscriptionPrice: Prisma.Decimal | null;
@@ -49,13 +50,13 @@ export function toListItemDTO(_row: {
     categoryId: _row.categoryId,
     categoryName: _row.category.name,
     startsAt: _row.startsAt != null ? _row.startsAt.toISOString() : null,
+    endsAt: _row.endsAt != null ? _row.endsAt.toISOString() : null,
     registrationCount: _row._count.registrations,
     venueId: _row.venueId,
     venueName: _row.venue?.name ?? null,
     //? Decimal de Prisma no serializa como número en JSON: sin toNumber() el
     //? cliente recibe un objeto y el precio se muestra vacío.
-    inscriptionPrice:
-      _row.inscriptionPrice === null ? null : _row.inscriptionPrice.toNumber(),
+    inscriptionPrice: _row.inscriptionPrice === null ? null : _row.inscriptionPrice.toNumber(),
     maxSlots: _row.maxSlots,
     registrationClosesAt:
       _row.registrationClosesAt != null ? _row.registrationClosesAt.toISOString() : null,
@@ -105,7 +106,7 @@ export function buildViewerTournamentItemsSV(_input: {
       //? El conteo solo tiene sentido para quien administra el torneo: a un
       //? inscrito o invitado no le corresponde ver cuanta gente espera.
       pendingRegistrationsCount: IS_ORGANIZER
-        ? PENDING_COUNT_BY_TOURNAMENT_ID.get(_tournament.id) ?? 0
+        ? (PENDING_COUNT_BY_TOURNAMENT_ID.get(_tournament.id) ?? 0)
         : null,
     };
   });
@@ -123,6 +124,7 @@ const TOURNAMENT_LIST_SELECT = {
   categoryId: true,
   category: { select: { name: true } },
   startsAt: true,
+  endsAt: true,
   venueId: true,
   venue: { select: { name: true } },
   inscriptionPrice: true,
@@ -143,9 +145,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
       sportId?: string;
       categoryId?: string;
       startsAt?: { gte?: Date; lte?: Date };
-      OR?: Array<
-        { venueId: string } | { matches: { some: { court: { venueId: string } } } }
-      >;
+      OR?: Array<{ venueId: string } | { matches: { some: { court: { venueId: string } } } }>;
     } = {
       //? Catálogo público: solo torneos PUBLIC (los PRIVATE solo por link directo).
       visibility: 'PUBLIC',
@@ -170,9 +170,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
               ...(_filters.startsAtFrom !== undefined
                 ? { gte: new Date(_filters.startsAtFrom) }
                 : {}),
-              ...(_filters.startsAtTo !== undefined
-                ? { lte: new Date(_filters.startsAtTo) }
-                : {}),
+              ...(_filters.startsAtTo !== undefined ? { lte: new Date(_filters.startsAtTo) } : {}),
             },
           }
         : {}),
@@ -272,6 +270,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
         categoryId: true,
         category: { select: { name: true } },
         startsAt: true,
+        endsAt: true,
         venueId: true,
         venue: { select: { name: true } },
         inscriptionPrice: true,
@@ -335,16 +334,11 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
       status?: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
       sportId?: string;
       categoryId?: string;
-      OR?: Array<
-        { venueId: string } | { matches: { some: { court: { venueId: string } } } }
-      >;
+      OR?: Array<{ venueId: string } | { matches: { some: { court: { venueId: string } } } }>;
     } = {
       //? Mismo criterio que el listado global: la sede propia del torneo o la
       //? de sus canchas. Ver el comentario en listTournamentsSV.
-      OR: [
-        { venueId: _venueId },
-        { matches: { some: { court: { venueId: _venueId } } } },
-      ],
+      OR: [{ venueId: _venueId }, { matches: { some: { court: { venueId: _venueId } } } }],
       ...(_filters.status !== undefined ? { status: _filters.status } : {}),
       ...(_filters.sportId !== undefined ? { sportId: _filters.sportId } : {}),
       ...(_filters.categoryId !== undefined ? { categoryId: _filters.categoryId } : {}),

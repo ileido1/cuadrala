@@ -23,6 +23,7 @@ export interface TournamentRepository {
     status: string;
     visibility: TournamentVisibility | null;
     startsAt: Date | null;
+    endsAt: Date | null;
     organizerUserId: string | null;
     venueId: string | null;
     /** `true` cuando se compite en duplas fijas (padel de parejas). */
@@ -47,6 +48,7 @@ export interface TournamentRepository {
     formatParameters?: unknown;
     presetSchemaVersion: number;
     startsAt?: Date;
+    endsAt?: Date;
     organizerUserId?: string;
     visibility?: TournamentVisibility;
     venueId?: string;
@@ -70,5 +72,20 @@ export interface TournamentRepository {
   updateSettingsSV?(_input: {
     tournamentId: string;
     settings: Record<string, unknown>;
-  }): Promise<{ id: string; name: string; status: string; formatPresetId: string; presetSchemaVersion: number; formatParameters: unknown | null; startsAt: Date | null; venueId: string | null; gender: TournamentGender | null; pairedRegistration: boolean; inscriptionPrice: number | null; maxSlots: number | null; registrationClosesAt: Date | null }>;
+  }): Promise<{
+    id: string;
+    name: string;
+    status: string;
+    formatPresetId: string;
+    presetSchemaVersion: number;
+    formatParameters: unknown | null;
+    startsAt: Date | null;
+    endsAt: Date | null;
+    venueId: string | null;
+    gender: TournamentGender | null;
+    pairedRegistration: boolean;
+    inscriptionPrice: number | null;
+    maxSlots: number | null;
+    registrationClosesAt: Date | null;
+  }>;
 }

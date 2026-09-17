@@ -8,6 +8,7 @@ final class CreateTournamentRequest extends Equatable {
     required this.formatPresetId,
     this.formatParameters,
     this.startsAt,
+    this.endsAt,
     this.venueId,
     this.gender,
     this.pairedRegistration = false,
@@ -23,6 +24,7 @@ final class CreateTournamentRequest extends Equatable {
   final String formatPresetId;
   final Map<String, Object?>? formatParameters;
   final DateTime? startsAt;
+  final DateTime? endsAt;
   final String? venueId;
   final String? gender;
   final bool pairedRegistration;
@@ -44,6 +46,7 @@ final class CreateTournamentRequest extends Equatable {
     if (formatParameters != null) 'formatParameters': formatParameters,
     // The API requires an ISO datetime with an explicit offset.
     if (startsAt != null) 'startsAt': startsAt!.toUtc().toIso8601String(),
+    if (endsAt != null) 'endsAt': endsAt!.toUtc().toIso8601String(),
     if (venueId != null) 'venueId': venueId,
     if (gender != null) 'gender': gender,
     'pairedRegistration': pairedRegistration,
@@ -59,6 +62,7 @@ final class CreateTournamentRequest extends Equatable {
     formatPresetId,
     formatParameters,
     startsAt,
+    endsAt,
     venueId,
     gender,
     pairedRegistration,

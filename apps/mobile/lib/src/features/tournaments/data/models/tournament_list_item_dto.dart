@@ -10,6 +10,7 @@ final class TournamentListItemDto extends Equatable {
     required this.categoryId,
     required this.categoryName,
     required this.startsAt,
+    this.endsAt,
     required this.registrationCount,
     this.imageUrl,
     this.organizerUserId,
@@ -36,6 +37,7 @@ final class TournamentListItemDto extends Equatable {
   final String categoryId;
   final String categoryName;
   final DateTime? startsAt;
+  final DateTime? endsAt;
   final int registrationCount;
   final String? imageUrl;
 
@@ -106,6 +108,7 @@ final class TournamentListItemDto extends Equatable {
       startsAt: json['startsAt'] != null || json['starts_at'] != null
           ? DateTime.tryParse((json['startsAt'] ?? json['starts_at']) as String)
           : null,
+      endsAt: _parseDateTimeFieldSV(json['endsAt'], json['ends_at']),
       registrationCount:
           (json['registrationCount'] ?? json['registration_count'] ?? 0) as int,
       imageUrl: json['imageUrl'] as String? ?? json['image_url'] as String?,
@@ -166,6 +169,7 @@ final class TournamentListItemDto extends Equatable {
   Map<String, Object?> toJsonForSettings() => {
     'name': name,
     'startsAt': startsAt?.toUtc().toIso8601String(),
+    'endsAt': endsAt?.toUtc().toIso8601String(),
     'venueId': venueId,
     'gender': gender,
     'inscriptionPrice': inscriptionPrice,
@@ -185,6 +189,7 @@ final class TournamentListItemDto extends Equatable {
     categoryId,
     categoryName,
     startsAt,
+    endsAt,
     registrationCount,
     imageUrl,
     organizerUserId,

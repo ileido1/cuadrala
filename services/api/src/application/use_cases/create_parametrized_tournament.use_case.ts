@@ -14,6 +14,7 @@ export type CreateParametrizedTournamentInput = {
   formatPresetCode?: string;
   formatParameters?: unknown;
   startsAt?: Date;
+  endsAt?: Date;
   organizerUserId?: string;
   /** `PUBLIC` (default) se lista en el catálogo; `PRIVATE` solo por link. */
   visibility?: 'PUBLIC' | 'PRIVATE';
@@ -132,6 +133,7 @@ export class CreateParametrizedTournamentUseCase {
         ? { formatParameters: NORMALIZED_FORMAT_PARAMETERS }
         : {}),
       ...(_input.startsAt !== undefined ? { startsAt: _input.startsAt } : {}),
+      ...(_input.endsAt !== undefined ? { endsAt: _input.endsAt } : {}),
       ...(_input.venueId !== undefined ? { venueId: _input.venueId } : {}),
       ...(_input.inscriptionPrice !== undefined
         ? { inscriptionPrice: _input.inscriptionPrice }
