@@ -370,14 +370,15 @@ void main() {
     testWidgets('should render DateStrip and a sport-filtered venue input', (tester) async {
       await _pumpScreen(tester);
 
-      expect(find.byType(DateStrip), findsOneWidget);
+      expect(find.byType(DateStrip), findsNWidgets(2));
       expect(find.byKey(const Key('create.tournament.venue')), findsOneWidget);
       expect(find.text('La sede se asigna después de crear el torneo. El API todavía no expone este campo.'), findsNothing);
 
-      final dateStrip = tester.widget<DateStrip>(find.byType(DateStrip));
-      await tester.tap(find.descendant(of: find.byType(DateStrip), matching: find.text('${dateStrip.days[1].date.day}')));
+      final dateStrips = find.byType(DateStrip);
+      final dateStrip = tester.widget<DateStrip>(dateStrips.at(0));
+      await tester.tap(find.descendant(of: dateStrips.at(0), matching: find.text('${dateStrip.days[1].date.day}')));
       await tester.pumpAndSettle();
-      expect(tester.widget<DateStrip>(find.byType(DateStrip)).value, dateStrip.days[1].key);
+      expect(tester.widget<DateStrip>(dateStrips.at(0)).value, dateStrip.days[1].key);
 
       await _selectVenue(tester, 'Pádel Centro');
       expect(find.text('Pádel Centro'), findsOneWidget);
