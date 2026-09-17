@@ -18,6 +18,7 @@ import '../../../shared/widgets/pill_toggle.dart';
 import '../../../shared/widgets/segmented_control.dart';
 import '../../profile/data/models/user_rating_dto.dart';
 import '../../profile/data/profile_repository.dart';
+import '../../matches/data/matches_repository.dart';
 import '../../venues/data/venues_repository.dart';
 import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';

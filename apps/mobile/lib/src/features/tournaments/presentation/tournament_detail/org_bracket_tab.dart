@@ -454,7 +454,7 @@ final class _OrganizerScheduleList extends StatelessWidget {
 /// - `matchStatus == FINISHED` with recorded scores: the per-side score
 ///   total, e.g. "6-3".
 /// - anything else: just the time/court subtitle, no trailing action.
-final class _OrganizerMatchRow extends StatelessWidget {
+final class _OrganizerMatchRow extends StatefulWidget {
   const _OrganizerMatchRow({
     required this.roundName,
     required this.match,
@@ -468,8 +468,19 @@ final class _OrganizerMatchRow extends StatelessWidget {
   final String? venueId;
 
   @override
+  State<_OrganizerMatchRow> createState() => _OrganizerMatchRowState();
+}
+
+final class _OrganizerMatchRowState extends State<_OrganizerMatchRow> {
+  bool _starting = false;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final roundName = widget.roundName;
+    final match = widget.match;
+    final timeFormat = widget.timeFormat;
+    final venueId = widget.venueId;
     final isRejected = match.decision == 'REJECTED';
     final isLive = match.matchStatus == 'IN_PROGRESS';
     final isDone = match.matchStatus == 'FINISHED' && match.scores.isNotEmpty;
@@ -559,16 +570,47 @@ final class _OrganizerMatchRow extends StatelessWidget {
                   : () => _openRescheduleSheet(context),
               style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34)),
               child: const Text('Mover'),
+            )
+          else if (match.matchStatus == 'SCHEDULED' && match.matchId != null)
+            OutlinedButton.icon(
+              onPressed: _starting ? null : () => _startMatch(context),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34)),
+              icon: _starting
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(AppIcons.play, size: 15),
+              label: const Text('Iniciar'),
             ),
         ],
       ),
     );
   }
 
+  Future<void> _startMatch(BuildContext context) async {
+    final matchId = widget.match.matchId;
+    if (matchId == null) return;
+    setState(() => _starting = true);
+    try {
+      await getIt<MatchesRepository>().startMatch(matchId);
+      if (!context.mounted) return;
+      await context.read<TournamentScheduleCubit>().load();
+    } on AppFailure catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
+  }
+
   Future<void> _openRescheduleSheet(BuildContext context) async {
     try {
       final courts = await getIt<VenuesRepository>().listVenueCourts(
-        venueId: venueId!,
+        venueId: widget.venueId!,
         status: 'ACTIVE',
       );
       if (!context.mounted) return;
@@ -577,8 +619,8 @@ final class _OrganizerMatchRow extends StatelessWidget {
         courts: courts,
         onSubmit: ({required courtId, required scheduledAt}) =>
             context.read<TournamentScheduleCubit>().rescheduleMatch(
-              roundNumber: match.roundNumber!,
-              matchNumber: match.matchNumber!,
+              roundNumber: widget.match.roundNumber!,
+              matchNumber: widget.match.matchNumber!,
               courtId: courtId,
               scheduledAt: scheduledAt,
             ),
