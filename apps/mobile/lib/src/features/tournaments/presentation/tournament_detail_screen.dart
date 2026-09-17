@@ -180,7 +180,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             : null);
     _viewerIsOrganizer =
         widget.viewerIsOrganizer ?? viewerTournament?.isOrganizer;
-    _loadScoreboardForOrganizer();
+    _loadOrganizerData();
     //? Solo fetch si: 1) no tenemos extra, 2) falta organizerUserId, o
     //? 3) el item del listado todavía no trae el preset de formato.
     //? Con organizerUserId en el listado DTO, evitamos spinner en 90% de los casos.
@@ -246,21 +246,25 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
         _tournament = t;
         _loadingTournament = false;
       });
-      _loadScoreboardForOrganizer();
+      _loadOrganizerData();
     } catch (_) {
       if (!mounted) return;
       setState(() => _loadingTournament = false);
     }
   }
 
-  void _loadScoreboardForOrganizer() {
+  void _loadOrganizerData() {
     final isOrganizer =
         _viewerIsOrganizer ??
         _isOrganizer(
           _tournament?.organizerUserId,
           _registrationsCubit.currentUserId,
         );
-    if (isOrganizer && _scoreboardCubit.state is TournamentScoreboardInitial) {
+    if (!isOrganizer) return;
+    if (_scheduleCubit.state is TournamentScheduleInitial) {
+      _scheduleCubit.load();
+    }
+    if (_scoreboardCubit.state is TournamentScoreboardInitial) {
       _scoreboardCubit.load();
     }
   }
@@ -295,15 +299,28 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
         BlocProvider.value(value: _scoreboardCubit),
         BlocProvider.value(value: _registrationsCubit),
       ],
-      child: _loadingTournament
-          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          : TournamentDetailBody(
-              tournamentId: widget.tournamentId,
-              tournament: _tournament,
-              viewerIsOrganizer: _viewerIsOrganizer,
-              playerRatings: _playerRatings,
-              tournamentsRepository: _tournamentsRepository,
-            ),
+      child:
+          BlocListener<
+            TournamentRegistrationsCubit,
+            TournamentRegistrationsState
+          >(
+            listener: (_, state) {
+              if (state is TournamentRegistrationsLoaded) {
+                _loadOrganizerData();
+              }
+            },
+            child: _loadingTournament
+                ? const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  )
+                : TournamentDetailBody(
+                    tournamentId: widget.tournamentId,
+                    tournament: _tournament,
+                    viewerIsOrganizer: _viewerIsOrganizer,
+                    playerRatings: _playerRatings,
+                    tournamentsRepository: _tournamentsRepository,
+                  ),
+          ),
     );
   }
 }
