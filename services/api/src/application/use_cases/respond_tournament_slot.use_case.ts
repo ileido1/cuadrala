@@ -15,7 +15,8 @@ export type TournamentSlotResponseRepository = {
     tournamentId: string;
     roundNumber: number;
     matchNumber: number;
-    userId: string;
+    userId?: string;
+    tournamentRegistrationId?: string;
     response: TournamentSlotResponseValue;
   }): Promise<void>;
 
@@ -23,7 +24,13 @@ export type TournamentSlotResponseRepository = {
     tournamentId: string;
     roundNumber: number;
     matchNumber: number;
-  }): Promise<Array<{ userId: string; response: TournamentSlotResponseValue }>>;
+  }): Promise<
+    Array<{
+      userId: string | null;
+      tournamentRegistrationId: string | null;
+      response: TournamentSlotResponseValue;
+    }>
+  >;
 
   /**
    * Borra las respuestas de un partido.
@@ -68,7 +75,11 @@ export class RespondTournamentSlotUseCase {
    * Comparte evento con el vencimiento del turno: para el organizador son el
    * mismo problema, "reubicalo". Nunca bloquea la respuesta del jugador.
    */
-  private async _notifyOrganizerSV(_tournamentId: string, _roundNumber: number, _matchNumber: number): Promise<void> {
+  private async _notifyOrganizerSV(
+    _tournamentId: string,
+    _roundNumber: number,
+    _matchNumber: number,
+  ): Promise<void> {
     if (this._createTournamentNotificationEvent === null) return;
     if (this._tournamentRepository === null) return;
 
@@ -102,11 +113,7 @@ export class RespondTournamentSlotUseCase {
   }): Promise<{ decision: TournamentSlotDecision }> {
     const SCHEDULE = await this._scheduleRepository.findByTournamentIdSV(_input.tournamentId);
     if (SCHEDULE === null) {
-      throw new AppError(
-        'CALENDARIO_NO_GENERADO',
-        'El torneo todavía no tiene calendario.',
-        404,
-      );
+      throw new AppError('CALENDARIO_NO_GENERADO', 'El torneo todavía no tiene calendario.', 404);
     }
 
     const PARTICIPANT_USER_IDS = await this._participantUserIdsSV(SCHEDULE, _input);
@@ -137,12 +144,15 @@ export class RespondTournamentSlotUseCase {
 
     const DECISION = resolveSlotDecisionSV({
       participantUserIds: PARTICIPANT_USER_IDS,
-      responses: RESPONSES,
+      responses: RESPONSES.flatMap((_response) =>
+        _response.userId === null
+          ? []
+          : [{ userId: _response.userId, response: _response.response }],
+      ),
     });
 
     const SLOT = (SCHEDULE.slotPlan ?? []).find(
-      (_s) =>
-        _s.roundNumber === _input.roundNumber && _s.matchNumber === _input.matchNumber,
+      (_s) => _s.roundNumber === _input.roundNumber && _s.matchNumber === _input.matchNumber,
     );
 
     //? Un partido sin turno apartado (la sede no daba, o se perdio la carrera)
@@ -171,10 +181,7 @@ export class RespondTournamentSlotUseCase {
     const PLAN = buildMaterializedMatchPlansSV({
       formatCode: _schedule.formatCode,
       payload: _schedule.payload,
-    }).find(
-      (_p) =>
-        _p.roundNumber === _match.roundNumber && _p.matchNumber === _match.matchNumber,
-    );
+    }).find((_p) => _p.roundNumber === _match.roundNumber && _p.matchNumber === _match.matchNumber);
 
     if (PLAN === undefined) {
       throw new AppError('PARTIDO_NO_ENCONTRADO', 'Ese partido no existe en el cuadro.', 404);

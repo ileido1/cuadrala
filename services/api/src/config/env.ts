@@ -87,6 +87,9 @@ const ENV_SCHEMA = z.object({
   EXCHANGE_RATES_WORKER_TICK_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   EXCHANGE_RATES_WORKER_COUNTRY_CODE: z.string().min(2).max(2).default('VE'),
   FCM_SERVICE_ACCOUNT_JSON_BASE64: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().email().optional(),
+  PUBLIC_API_URL: z.string().url().default('http://localhost:4000'),
   FCM_DRY_RUN: z
     .enum(['true', 'false'])
     .optional()

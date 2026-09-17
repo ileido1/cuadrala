@@ -20,6 +20,10 @@ import {
   PrismaTournamentSlotHoldLifecycleRepository,
   PrismaTournamentSlotResponseRepository,
 } from '../../infrastructure/adapters/prisma_tournament_slot_response_repository.js';
+import { GuestScheduleActionUseCase } from '../../application/use_cases/guest_schedule_action.use_case.js';
+import { PrismaTournamentGuestScheduleTokenRepository } from '../../infrastructure/adapters/prisma_tournament_guest_schedule_token_repository.js';
+import { ResendEmailSender } from '../../infrastructure/adapters/resend_email_sender.js';
+import { ENV_CONST } from '../../config/env.js';
 
 const TOURNAMENT_REPOSITORY = new PrismaTournamentRepository();
 const FORMAT_PRESET_REPOSITORY = new PrismaFormatPresetRepository();
@@ -56,13 +60,12 @@ export const RESCHEDULE_TOURNAMENT_MATCH_UC = new RescheduleTournamentMatchUseCa
 );
 
 /** El organizador cierra o libera el turno sin esperar a los jugadores. */
-export const SETTLE_TOURNAMENT_SLOT_AS_ORGANIZER_UC =
-  new SettleTournamentSlotAsOrganizerUseCase(
-    TOURNAMENT_REPOSITORY,
-    TOURNAMENT_SCHEDULE_REPOSITORY,
-    ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
-    new PrismaTournamentSlotHoldLifecycleRepository(),
-  );
+export const SETTLE_TOURNAMENT_SLOT_AS_ORGANIZER_UC = new SettleTournamentSlotAsOrganizerUseCase(
+  TOURNAMENT_REPOSITORY,
+  TOURNAMENT_SCHEDULE_REPOSITORY,
+  ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+  new PrismaTournamentSlotHoldLifecycleRepository(),
+);
 
 /** El jugador contesta si le sirve el horario que le toco. */
 export const RESPOND_TOURNAMENT_SLOT_UC = new RespondTournamentSlotUseCase(
@@ -74,6 +77,13 @@ export const RESPOND_TOURNAMENT_SLOT_UC = new RespondTournamentSlotUseCase(
   CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
 );
 
+export const GUEST_SCHEDULE_ACTION_UC = new GuestScheduleActionUseCase(
+  new PrismaTournamentGuestScheduleTokenRepository(),
+  TOURNAMENT_SCHEDULE_REPOSITORY,
+  new PrismaTournamentSlotResponseRepository(),
+  new PrismaTournamentSlotHoldLifecycleRepository(),
+);
+
 export const GENERATE_TOURNAMENT_SCHEDULE_UC = new GenerateTournamentScheduleUseCase(
   TOURNAMENT_REPOSITORY,
   FORMAT_PRESET_REPOSITORY,
@@ -82,6 +92,9 @@ export const GENERATE_TOURNAMENT_SCHEDULE_UC = new GenerateTournamentScheduleUse
   ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
   CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC,
   RESERVE_TOURNAMENT_SCHEDULE_SLOTS_UC,
+  new PrismaTournamentGuestScheduleTokenRepository(),
+  new ResendEmailSender(),
+  ENV_CONST.PUBLIC_API_URL,
 );
 
 /** El calendario de "hoy" para el organizador: partido, lado y resultado. */
@@ -93,4 +106,3 @@ export const GET_TOURNAMENT_SCHEDULE_UC = new GetTournamentScheduleUseCase(
   new PrismaTournamentMatchResultRepository(),
   new PrismaTournamentSlotResponseRepository(),
 );
-

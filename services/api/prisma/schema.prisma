@@ -740,14 +740,31 @@ model TournamentSlotResponse {
   tournament   Tournament                  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   roundNumber  Int
   matchNumber  Int
-  userId       String
-  user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournamentRegistrationId String?
+  tournamentRegistration   TournamentRegistration? @relation(fields: [tournamentRegistrationId], references: [id], onDelete: Cascade)
   response     TournamentSlotResponseValue
   createdAt    DateTime                    @default(now())
   updatedAt    DateTime                    @updatedAt
 
-  @@unique([tournamentId, roundNumber, matchNumber, userId])
+  @@unique([tournamentId, roundNumber, matchNumber, userId], map: "TournamentSlotResponse_user_key")
+  @@unique([tournamentId, roundNumber, matchNumber, tournamentRegistrationId], map: "TournamentSlotResponse_registration_key")
   @@index([tournamentId, roundNumber, matchNumber])
+}
+
+/// Token de un invitado para responder su horario sin tener cuenta.
+model TournamentGuestScheduleToken {
+  id                 String                 @id @default(uuid())
+  tournamentRegistrationId String
+  tournamentRegistration   TournamentRegistration @relation(fields: [tournamentRegistrationId], references: [id], onDelete: Cascade)
+  tokenHash          String                 @unique
+  expiresAt          DateTime
+  createdAt          DateTime               @default(now())
+  usedAt             DateTime?
+
+  @@index([tournamentRegistrationId])
+  @@index([expiresAt])
 }
 
 /// Schedule genérico por torneo (MVP: reutiliza payload JSON).
@@ -798,6 +815,8 @@ model TournamentRegistration {
 
   matchParticipants MatchParticipant[]
   matchResultScores MatchResultScore[]
+  slotResponses     TournamentSlotResponse[]
+  guestScheduleTokens TournamentGuestScheduleToken[]
 
   // Postgres permite múltiples NULL en un índice único ⇒ las filas GUEST (userId=null)
   // nunca colisionan entre sí; solo se deduplican inscripciones AUTHENTICATED reales.

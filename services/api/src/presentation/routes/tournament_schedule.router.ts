@@ -7,11 +7,22 @@ import {
   getMyTournamentMatchesCON,
   postRescheduleTournamentMatchCON,
   postSettleTournamentSlotCON,
+  getGuestScheduleActionCON,
+  postGuestScheduleActionCON,
 } from '../controllers/tournament_schedule.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 
 export const TOURNAMENT_SCHEDULE_ROUTER = Router();
+
+TOURNAMENT_SCHEDULE_ROUTER.get(
+  '/public/tournament-guest-schedule/:token',
+  asyncHandler(getGuestScheduleActionCON),
+);
+TOURNAMENT_SCHEDULE_ROUTER.post(
+  '/public/tournament-guest-schedule/:token',
+  asyncHandler(postGuestScheduleActionCON),
+);
 
 TOURNAMENT_SCHEDULE_ROUTER.post(
   '/tournaments/:tournamentId/schedule\\:generate',
@@ -23,7 +34,6 @@ TOURNAMENT_SCHEDULE_ROUTER.get(
   '/tournaments/:tournamentId/schedule',
   asyncHandler(getTournamentScheduleCON),
 );
-
 
 //? El guard de "solo quien juega ese partido" vive en el caso de uso porque
 //? depende del cuadro, que el router no conoce.

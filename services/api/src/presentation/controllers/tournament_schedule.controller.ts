@@ -8,6 +8,7 @@ import {
   SETTLE_TOURNAMENT_SLOT_AS_ORGANIZER_UC,
   RESCHEDULE_TOURNAMENT_MATCH_UC,
   LIST_MY_TOURNAMENT_MATCHES_UC,
+  GUEST_SCHEDULE_ACTION_UC,
 } from '../composition/tournament_schedule.composition.js';
 import {
   GENERATE_TOURNAMENT_SCHEDULE_BODY_SCHEMA,
@@ -16,9 +17,14 @@ import {
   RESCHEDULE_TOURNAMENT_MATCH_BODY_SCHEMA,
   SETTLE_TOURNAMENT_SLOT_BODY_SCHEMA,
   TOURNAMENT_ID_PARAM_SCHEMA,
+  GUEST_SCHEDULE_TOKEN_PARAM_SCHEMA,
+  GUEST_SCHEDULE_ACTION_BODY_SCHEMA,
 } from '../validation/tournament_schedule.validation.js';
 
-export async function postGenerateTournamentScheduleCON(_req: Request, _res: Response): Promise<void> {
+export async function postGenerateTournamentScheduleCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
   if (ACTOR_USER_ID === undefined) {
     throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
@@ -52,6 +58,18 @@ export async function getTournamentScheduleCON(_req: Request, _res: Response): P
   });
 }
 
+export async function getGuestScheduleActionCON(_req: Request, _res: Response): Promise<void> {
+  const PARAMS = GUEST_SCHEDULE_TOKEN_PARAM_SCHEMA.parse(_req.params);
+  const RESULT = await GUEST_SCHEDULE_ACTION_UC.getSV(PARAMS.token);
+  _res.status(200).json({ success: true, message: 'Horario del invitado.', data: RESULT });
+}
+
+export async function postGuestScheduleActionCON(_req: Request, _res: Response): Promise<void> {
+  const PARAMS = GUEST_SCHEDULE_TOKEN_PARAM_SCHEMA.parse(_req.params);
+  const BODY = GUEST_SCHEDULE_ACTION_BODY_SCHEMA.parse(_req.body);
+  const RESULT = await GUEST_SCHEDULE_ACTION_UC.respondSV(PARAMS.token, BODY.response);
+  _res.status(200).json({ success: true, message: 'Respuesta registrada.', data: RESULT });
+}
 
 export async function postRespondTournamentSlotCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;

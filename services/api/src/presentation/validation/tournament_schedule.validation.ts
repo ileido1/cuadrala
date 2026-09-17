@@ -25,6 +25,9 @@ export const RESPOND_TOURNAMENT_SLOT_BODY_SCHEMA = z.object({
   response: z.enum(['ACCEPTED', 'REJECTED']),
 });
 
+export const GUEST_SCHEDULE_TOKEN_PARAM_SCHEMA = z.object({ token: z.string().min(40).max(200) }).strict();
+export const GUEST_SCHEDULE_ACTION_BODY_SCHEMA = z.object({ response: z.enum(['ACCEPTED', 'REJECTED']) }).strict();
+
 /** Decisión del organizador sobre el turno de un partido. */
 export const SETTLE_TOURNAMENT_SLOT_BODY_SCHEMA = z.object({
   decision: z.enum(['CONFIRM', 'RELEASE']),

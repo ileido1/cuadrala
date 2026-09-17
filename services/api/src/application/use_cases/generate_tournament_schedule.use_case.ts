@@ -3,14 +3,25 @@ import { collapsePairsToCompetitorsSV } from '../../domain/tournament/tournament
 import type { CreateTournamentNotificationEventUseCase } from './create_tournament_notification_event.use_case.js';
 import type { ReserveTournamentScheduleSlotsUseCase } from './reserve_tournament_schedule_slots.use_case.js';
 import { buildMaterializedMatchPlansSV } from '../../domain/tournament/tournament_match_materialization.js';
-import { createAmericanoScheduleKeySV, generateAmericanoScheduleSV } from '../../domain/americano/americano_schedule_generator.js';
-import { createRoundRobinScheduleKeySV, generateRoundRobinScheduleSV } from '../../domain/round_robin/round_robin_schedule_generator.js';
-import { createSingleEliminationScheduleKeySV, generateSingleEliminationScheduleSV } from '../../domain/single_elimination/bracket_generator.js';
+import {
+  createAmericanoScheduleKeySV,
+  generateAmericanoScheduleSV,
+} from '../../domain/americano/americano_schedule_generator.js';
+import {
+  createRoundRobinScheduleKeySV,
+  generateRoundRobinScheduleSV,
+} from '../../domain/round_robin/round_robin_schedule_generator.js';
+import {
+  createSingleEliminationScheduleKeySV,
+  generateSingleEliminationScheduleSV,
+} from '../../domain/single_elimination/bracket_generator.js';
 import type { FormatPresetRepository } from '../../domain/ports/format_preset_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 import type { TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
 import type { TournamentScheduleRepository } from '../../domain/ports/tournament_schedule_repository.js';
 import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
+import type { TournamentGuestScheduleTokenRepository } from '../../domain/ports/tournament_guest_schedule_token_repository.js';
+import type { EmailSender } from '../../domain/ports/email_sender.js';
 
 const STATUSES_ALLOWING_SCHEDULE_GENERATION = new Set(['DRAFT', 'OPEN']);
 
@@ -23,6 +34,9 @@ export class GenerateTournamentScheduleUseCase {
     private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
     private readonly _createTournamentNotificationEvent: CreateTournamentNotificationEventUseCase | null = null,
     private readonly _reserveScheduleSlots: ReserveTournamentScheduleSlotsUseCase | null = null,
+    private readonly _guestTokenRepository: TournamentGuestScheduleTokenRepository | null = null,
+    private readonly _emailSender: EmailSender | null = null,
+    private readonly _publicApiUrl = 'http://localhost:4000',
   ) {}
 
   /**
@@ -96,6 +110,30 @@ export class GenerateTournamentScheduleUseCase {
     }
   }
 
+  private async _notifyGuestsSV(
+    _tournament: { name: string },
+    _registrations: Array<{ id: string; guestEmail: string | null; guestName: string | null }>,
+  ): Promise<void> {
+    if (this._guestTokenRepository === null || this._emailSender === null) return;
+    for (const REGISTRATION of _registrations) {
+      if (REGISTRATION.guestEmail === null) continue;
+      try {
+        const TOKEN = await this._guestTokenRepository.issueSV(
+          REGISTRATION.id,
+          new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        );
+        const LINK = `${this._publicApiUrl}/api/v1/public/tournament-guest-schedule/${TOKEN}`;
+        await this._emailSender.sendSV({
+          to: REGISTRATION.guestEmail,
+          subject: `Horario de ${_tournament.name}`,
+          text: `Hola ${REGISTRATION.guestName ?? ''}. Ya está disponible tu horario para ${_tournament.name}. Consultalo y aceptalo o rechazalo aquí: ${LINK}`,
+        });
+      } catch {
+        // El calendario ya quedó generado; un proveedor de email caído no lo revierte.
+      }
+    }
+  }
+
   async executeSV(_input: {
     tournamentId: string;
     actorUserId: string;
@@ -130,10 +168,11 @@ export class GenerateTournamentScheduleUseCase {
     //? El token de cada participante es `registration.id`, no `userId`: desde Slice 1
     //? (tournament-guest-registration) las inscripciones GUEST no tienen `userId`, así que el
     //? calendario debe referenciar la inscripción (resuelta luego en materialización), no al usuario.
-    const CONFIRMED_REGISTRATIONS = await this._tournamentRegistrationRepository.listByTournamentIdAndStatusSV(
-      TOURNAMENT.id,
-      'CONFIRMED',
-    );
+    const CONFIRMED_REGISTRATIONS =
+      await this._tournamentRegistrationRepository.listByTournamentIdAndStatusSV(
+        TOURNAMENT.id,
+        'CONFIRMED',
+      );
 
     const PRESET = await this._formatPresetRepository.findByIdSV(TOURNAMENT.formatPresetId);
     if (PRESET === null) {
@@ -166,8 +205,12 @@ export class GenerateTournamentScheduleUseCase {
     );
 
     if (FORMAT_CODE === 'AMERICANO') {
-      const SCHEDULE_KEY = createAmericanoScheduleKeySV({ participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS });
-      const PAYLOAD = generateAmericanoScheduleSV({ participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS });
+      const SCHEDULE_KEY = createAmericanoScheduleKeySV({
+        participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS,
+      });
+      const PAYLOAD = generateAmericanoScheduleSV({
+        participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS,
+      });
       const RES = await this._tournamentScheduleRepository.createOrValidateIdempotencySV({
         tournamentId: TOURNAMENT.id,
         formatCode: FORMAT_CODE,
@@ -177,8 +220,17 @@ export class GenerateTournamentScheduleUseCase {
       //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
       //? y volver a avisar por cada intento sería ruido.
       if (RES.created) {
-        await this._reserveSlotsSV(TOURNAMENT, FORMAT_CODE, RES.schedule.payload, _input.actorUserId);
+        await this._reserveSlotsSV(
+          TOURNAMENT,
+          FORMAT_CODE,
+          RES.schedule.payload,
+          _input.actorUserId,
+        );
         await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
+        await this._notifyGuestsSV(
+          TOURNAMENT,
+          CONFIRMED_REGISTRATIONS.filter((_r) => _r.registrationType === 'GUEST'),
+        );
       }
       return {
         created: RES.created,
@@ -209,8 +261,17 @@ export class GenerateTournamentScheduleUseCase {
       //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
       //? y volver a avisar por cada intento sería ruido.
       if (RES.created) {
-        await this._reserveSlotsSV(TOURNAMENT, FORMAT_CODE, RES.schedule.payload, _input.actorUserId);
+        await this._reserveSlotsSV(
+          TOURNAMENT,
+          FORMAT_CODE,
+          RES.schedule.payload,
+          _input.actorUserId,
+        );
         await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
+        await this._notifyGuestsSV(
+          TOURNAMENT,
+          CONFIRMED_REGISTRATIONS.filter((_r) => _r.registrationType === 'GUEST'),
+        );
       }
       return {
         created: RES.created,
@@ -241,8 +302,17 @@ export class GenerateTournamentScheduleUseCase {
       //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
       //? y volver a avisar por cada intento sería ruido.
       if (RES.created) {
-        await this._reserveSlotsSV(TOURNAMENT, FORMAT_CODE, RES.schedule.payload, _input.actorUserId);
+        await this._reserveSlotsSV(
+          TOURNAMENT,
+          FORMAT_CODE,
+          RES.schedule.payload,
+          _input.actorUserId,
+        );
         await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
+        await this._notifyGuestsSV(
+          TOURNAMENT,
+          CONFIRMED_REGISTRATIONS.filter((_r) => _r.registrationType === 'GUEST'),
+        );
       }
       return {
         created: RES.created,
