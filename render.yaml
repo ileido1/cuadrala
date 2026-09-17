@@ -43,3 +43,11 @@ services:
         generateValue: true
       - key: ADMIN_DISPATCH_SECRET
         generateValue: true
+      # URL publica usada para construir los enlaces de acciones de invitados.
+      - key: PUBLIC_API_URL
+        value: https://api.cuadrala.app
+      # Resend: cargar el valor real manualmente en Render; no versionar el secreto.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@mail.cuadrala.app
