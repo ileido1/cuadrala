@@ -1,11 +1,5 @@
 part of '../tournament_detail_screen.dart';
 
-/// `tournament_format_preset.code` for single elimination (D12); gates the
-/// "El ganador pasa de ronda..." caption and matches
-/// `SINGLE_ELIMINATION_FORMAT_CODE` in
-/// `register_tournament_match_result.use_case.ts`.
-const _singleEliminationFormatCode = 'SINGLE_ELIMINATION';
-
 final class _OrganizerBracketTab extends StatelessWidget {
   const _OrganizerBracketTab({
     required this.tournamentId,
@@ -23,8 +17,9 @@ final class _OrganizerBracketTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final formatPresentation = tournamentFormatPresentation(formatPresetName);
     final isSingleElimination =
-        tournamentFormatCode(formatPresetName) == _singleEliminationFormatCode;
+        formatPresentation == TournamentFormatPresentation.bracket;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
       child: BlocBuilder<TournamentScheduleCubit, TournamentScheduleState>(
@@ -73,20 +68,32 @@ final class _OrganizerBracketTab extends StatelessWidget {
                   onRetry: () => context.read<TournamentScheduleCubit>().load(),
                 ),
                 TournamentScheduleSuccess(:final schedule) =>
-                  isSingleElimination
-                      ? _OrganizerGeneratedSchedule(
-                          schedule: schedule,
-                          tournamentId: tournamentId,
-                          tournamentsRepository: tournamentsRepository,
-                          isSingleElimination: true,
-                          venueId: venueId,
-                        )
-                      : _OrganizerRoundRobinContent(
-                          schedule: schedule,
-                          tournamentId: tournamentId,
-                          tournamentsRepository: tournamentsRepository,
-                          venueId: venueId,
-                        ),
+                  switch (formatPresentation) {
+                    TournamentFormatPresentation.bracket =>
+                      _OrganizerGeneratedSchedule(
+                        schedule: schedule,
+                        tournamentId: tournamentId,
+                        tournamentsRepository: tournamentsRepository,
+                        isSingleElimination: true,
+                        venueId: venueId,
+                      ),
+                    TournamentFormatPresentation.standings =>
+                      _OrganizerStandingsContent(
+                        schedule: schedule,
+                        tournamentId: tournamentId,
+                        tournamentsRepository: tournamentsRepository,
+                        venueId: venueId,
+                      ),
+                    TournamentFormatPresentation.schedule =>
+                      _OrganizerGeneratedSchedule(
+                        schedule: schedule,
+                        tournamentId: tournamentId,
+                        tournamentsRepository: tournamentsRepository,
+                        isSingleElimination: false,
+                        venueId: venueId,
+                        showBracketButton: false,
+                      ),
+                  },
                 TournamentScheduleConflict() => _OrganizerGeneratedCard(
                   tournamentId: tournamentId,
                   tournamentsRepository: tournamentsRepository,
@@ -114,8 +121,8 @@ final class _OrganizerBracketTab extends StatelessWidget {
   }
 }
 
-final class _OrganizerRoundRobinContent extends StatelessWidget {
-  const _OrganizerRoundRobinContent({
+final class _OrganizerStandingsContent extends StatelessWidget {
+  const _OrganizerStandingsContent({
     required this.schedule,
     required this.tournamentId,
     required this.tournamentsRepository,

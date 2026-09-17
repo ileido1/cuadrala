@@ -28,3 +28,12 @@ String tournamentFormatCode(String? preset) => switch (preset) {
   'Americano' => 'AMERICANO',
   final value => value ?? '',
 };
+
+enum TournamentFormatPresentation { bracket, standings, schedule }
+
+TournamentFormatPresentation tournamentFormatPresentation(String? preset) =>
+    switch (tournamentFormatCode(preset)) {
+      'SINGLE_ELIMINATION' => TournamentFormatPresentation.bracket,
+      'ROUND_ROBIN' || 'AMERICANO' => TournamentFormatPresentation.standings,
+      _ => TournamentFormatPresentation.schedule,
+    };
