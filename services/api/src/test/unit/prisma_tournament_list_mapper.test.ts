@@ -5,7 +5,7 @@ import { toListItemDTO } from '../../infrastructure/adapters/prisma_tournament_q
 const ROW = {
   id: 't1', name: 'Torneo', status: 'OPEN' as const, visibility: 'PUBLIC' as const,
   organizerUserId: null, sportId: 's', sport: { name: 'Padel' }, categoryId: 'c',
-  category: { name: 'Masculino' }, startsAt: null, venueId: null, venue: null,
+  category: { name: 'Masculino' }, startsAt: null, endsAt: null, venueId: null, venue: null,
   inscriptionPrice: null, maxSlots: null, registrationClosesAt: null,
   gender: null, organizer: null,
   _count: { registrations: 0 },

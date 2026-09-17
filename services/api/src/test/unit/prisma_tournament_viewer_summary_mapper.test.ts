@@ -16,6 +16,7 @@ function tournamentSV(_id: string): TournamentListItemDTO {
     categoryId: 'c1',
     categoryName: 'Masculino',
     startsAt: null,
+    endsAt: null,
     registrationCount: 0,
     venueId: null,
     venueName: null,

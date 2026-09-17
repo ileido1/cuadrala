@@ -34,14 +34,16 @@ export class PrismaTournamentSlotResponseRepository implements TournamentSlotRes
               tournamentRegistrationId: _input.tournamentRegistrationId!,
             },
           };
+    const USER_ID = _input.userId ?? null;
+    const TOURNAMENT_REGISTRATION_ID = _input.tournamentRegistrationId ?? null;
     await PRISMA.tournamentSlotResponse.upsert({
       where: WHERE,
       create: {
         tournamentId: _input.tournamentId,
         roundNumber: _input.roundNumber,
         matchNumber: _input.matchNumber,
-        userId: _input.userId,
-        tournamentRegistrationId: _input.tournamentRegistrationId,
+        userId: USER_ID,
+        tournamentRegistrationId: TOURNAMENT_REGISTRATION_ID,
         response: _input.response,
       },
       update: { response: _input.response },

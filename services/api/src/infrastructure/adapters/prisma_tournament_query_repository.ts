@@ -366,6 +366,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           categoryId: true,
           category: { select: { name: true } },
           startsAt: true,
+          endsAt: true,
           venueId: true,
           venue: { select: { name: true } },
           inscriptionPrice: true,

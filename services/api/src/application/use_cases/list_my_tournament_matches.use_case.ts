@@ -129,6 +129,11 @@ export class ListMyTournamentMatchesUseCase {
         roundNumber: PLAN.roundNumber,
         matchNumber: PLAN.matchNumber,
       });
+      const ACCOUNT_RESPONSES = RESPONSES.flatMap((_response) =>
+        _response.userId === null
+          ? []
+          : [{ userId: _response.userId, response: _response.response }],
+      );
 
       const PARTICIPANT_USER_IDS = SIDES.flat()
         .map((_r) => _r.userId)
@@ -152,7 +157,7 @@ export class ListMyTournamentMatchesUseCase {
           RESPONSES.find((_r) => _r.userId === _input.actorUserId)?.response ?? null,
         decision: resolveSlotDecisionSV({
           participantUserIds: PARTICIPANT_USER_IDS,
-          responses: RESPONSES,
+          responses: ACCOUNT_RESPONSES,
         }),
       });
     }

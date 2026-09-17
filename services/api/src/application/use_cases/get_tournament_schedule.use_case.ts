@@ -183,11 +183,16 @@ export class GetTournamentScheduleUseCase {
               roundNumber: PLAN.roundNumber,
               matchNumber: PLAN.matchNumber,
             });
+      const ACCOUNT_RESPONSES = RESPONSES.flatMap((_response) =>
+        _response.userId === null
+          ? []
+          : [{ userId: _response.userId, response: _response.response }],
+      );
       const DECISION = resolveSlotDecisionSV({
         participantUserIds: PARTICIPANT_USER_IDS,
-        responses: RESPONSES,
+        responses: ACCOUNT_RESPONSES,
       });
-      const REJECTED_RESPONSE = RESPONSES.find(
+      const REJECTED_RESPONSE = ACCOUNT_RESPONSES.find(
         (_r) => _r.response === 'REJECTED' && PARTICIPANT_USER_IDS.includes(_r.userId),
       );
 
