@@ -95,6 +95,187 @@ class DateStrip extends StatefulWidget {
   State<DateStrip> createState() => _DateStripState();
 }
 
+@immutable
+class DateRangeSelection {
+  const DateRangeSelection({required this.startValue, this.endValue});
+
+  final String startValue;
+  final String? endValue;
+}
+
+/// Tira horizontal para elegir un rango completo dentro del mismo componente.
+/// El primer toque define el inicio; el segundo define el fin.
+class DateRangeStrip extends StatelessWidget {
+  const DateRangeStrip({
+    super.key,
+    required this.days,
+    required this.startValue,
+    required this.endValue,
+    required this.onChanged,
+    this.horizontalPadding = 0,
+  });
+
+  final List<DateStripDay> days;
+  final String startValue;
+  final String? endValue;
+  final ValueChanged<DateRangeSelection> onChanged;
+  final double horizontalPadding;
+
+  void _select(String value) {
+    if (endValue == null) {
+      final start = days.firstWhere((day) => day.key == startValue);
+      final selected = days.firstWhere((day) => day.key == value);
+      if (selected.date.isBefore(start.date)) {
+        onChanged(DateRangeSelection(startValue: value, endValue: startValue));
+      } else {
+        onChanged(DateRangeSelection(startValue: startValue, endValue: value));
+      }
+      return;
+    }
+    onChanged(DateRangeSelection(startValue: value));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final start = days.firstWhere((day) => day.key == startValue);
+    final end = endValue == null
+        ? null
+        : days.firstWhere((day) => day.key == endValue);
+    final rangeEnd = end ?? start;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: horizontalPadding, bottom: 8),
+          child: Row(
+            children: [
+              Text(
+                start.monthName,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                end == null
+                    ? 'Elegí la fecha de fin'
+                    : '${start.date.day}–${rangeEnd.date.day}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 76,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            itemCount: days.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final day = days[index];
+              final isStart = day.key == startValue;
+              final isEnd = end != null && day.key == endValue;
+              final isInRange = !day.date.isBefore(start.date) &&
+                  !day.date.isAfter(rangeEnd.date);
+              return _RangeDayColumn(
+                day: day,
+                isStart: isStart,
+                isEnd: isEnd,
+                isInRange: end != null && isInRange,
+                onTap: () => _select(day.key),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RangeDayColumn extends StatelessWidget {
+  const _RangeDayColumn({
+    required this.day,
+    required this.isStart,
+    required this.isEnd,
+    required this.isInRange,
+    required this.onTap,
+  });
+
+  final DateStripDay day;
+  final bool isStart;
+  final bool isEnd;
+  final bool isInRange;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final active = isStart || isEnd;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 46,
+        padding: const EdgeInsets.only(top: 8, bottom: 6),
+        decoration: BoxDecoration(
+          color: isInRange
+              ? scheme.primary.withValues(alpha: 0.16)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              day.dowLabel,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+                color: active ? scheme.onSurface : scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: active ? scheme.primary : Colors.transparent,
+                border: Border.all(
+                  color: day.isToday && !active
+                      ? scheme.primary
+                      : Colors.transparent,
+                  width: 1.5,
+                ),
+              ),
+              child: Text(
+                '${day.date.day}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: active ? BrandColors.onHero : scheme.onSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DateStripState extends State<DateStrip> {
   static const double _itemWidth = 46;
   static const double _gap = 8;

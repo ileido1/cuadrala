@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
 import 'widgets/dynamic_format_parameters_form.dart';
 import '../../../core/failures/app_failure.dart';
+import '../../../core/formatting/fx_price_labels.dart';
+import '../../../core/formatting/money_conversion.dart';
+import '../../../core/models/currency_code.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../catalog/data/catalog_repository.dart';
@@ -77,6 +80,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   List<CategoryDto> _categories = const [];
   String? _selectedCategoryId;
   List<VenueDto> _venues = const [];
+  List<ExchangeRateRow> _exchangeRates = const [];
   String? _selectedVenueId;
   TournamentPresetDto? _selectedPreset;
   Map<String, Object?> _formatParameterValues = {};
@@ -87,7 +91,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   String _gender = 'MALE';
   late final List<DateStripDay> _days;
   late String _selectedDateKey;
-  late String _selectedEndDateKey;
+  String? _selectedEndDateKey;
 
   bool _isLoadingSports = false;
   String? _sportsError;
@@ -156,10 +160,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     super.initState();
     _days = buildDateStripDays(21);
     _selectedDateKey = _days.first.key;
-    _selectedEndDateKey = _days.first.key;
     _createTournamentCubit = getIt<CreateTournamentCubit>();
     _tournamentPresetsCubit = getIt<TournamentPresetsCubit>();
     _loadSports();
+    _loadExchangeRates();
   }
 
   @override
@@ -211,6 +215,21 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     }
   }
 
+  Future<void> _loadExchangeRates() async {
+    final rates = await loadExchangeRatesSafelySV();
+    if (mounted) setState(() => _exchangeRates = rates);
+  }
+
+  String? get _registrationPriceBs {
+    if (_registrationPrice <= 0 || _exchangeRates.isEmpty) return null;
+    return secondaryBsLabelSV(
+      primaryMinor: _registrationPrice * 100,
+      primaryCurrency: CurrencyCode.usd,
+      rates: _exchangeRates,
+      effectiveDateIso: localCalendarDateIsoSV(DateTime.now()),
+    );
+  }
+
   void _onSelectSport(String sportId) {
     setState(() {
       _selectedSportId = sportId;
@@ -252,7 +271,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     if (preset == null || preset.id.isEmpty) {
       return (request: null, error: 'Selecciona un formato de torneo.');
     }
-    if (_selectedEndDateKey.compareTo(_selectedDateKey) < 0) {
+    final endDateKey = _selectedEndDateKey ?? _selectedDateKey;
+    if (endDateKey.compareTo(_selectedDateKey) < 0) {
       return (
         request: null,
         error: 'La fecha de fin no puede ser anterior al inicio.',
@@ -283,7 +303,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
             ? _formatParameterValues
             : null,
         startsAt: DateTime.parse(_selectedDateKey),
-        endsAt: DateTime.parse(_selectedEndDateKey),
+        endsAt: DateTime.parse(endDateKey),
         venueId: _selectedVenueId,
         gender: _gender,
         pairedRegistration: _pairedRegistration,
@@ -417,21 +437,15 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
-              DateStrip(
+              DateRangeStrip(
                 days: _days,
-                value: _selectedDateKey,
+                startValue: _selectedDateKey,
+                endValue: _selectedEndDateKey,
                 horizontalPadding: 0,
-                onChanged: (value) => setState(() => _selectedDateKey = value),
-              ),
-              const SizedBox(height: 8),
-              Text('Hasta', style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 4),
-              DateStrip(
-                days: _days,
-                value: _selectedEndDateKey,
-                horizontalPadding: 0,
-                onChanged: (value) =>
-                    setState(() => _selectedEndDateKey = value),
+                onChanged: (selection) => setState(() {
+                  _selectedDateKey = selection.startValue;
+                  _selectedEndDateKey = selection.endValue;
+                }),
               ),
               const SizedBox(height: 14),
               Text(
@@ -562,7 +576,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                               : 'US\$$_registrationPrice',
                           secondaryLabel: _registrationPrice == 0
                               ? null
-                              : 'Bs ${_registrationPrice * 40}',
+                              : _registrationPriceBs,
                           alignEnd: false,
                         ),
                       ],
