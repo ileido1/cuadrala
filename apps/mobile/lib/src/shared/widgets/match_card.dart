@@ -24,8 +24,16 @@ class MatchCard extends StatelessWidget {
     required this.participantCount,
     required this.maxParticipants,
     this.surfaceTag,
+    this.leadingBadge,
+    this.participantSummaryLabel,
+    this.participantTrailingLabel,
+    this.participantSummaryKey,
+    this.avatarDisplayLimit,
     this.locationLabel,
     this.primaryPriceLabel,
+    this.pricePlaceholderLabel,
+    this.priceKey,
+    this.pricePlaceholderKey,
     this.secondaryPriceLabel,
     this.priceSuffix = 'p/p',
     this.live = false,
@@ -47,12 +55,20 @@ class MatchCard extends StatelessWidget {
   final String category;
   final List<String> participantInitials;
   final int participantCount;
-  final int maxParticipants;
+  final int? maxParticipants;
   final String? surfaceTag;
+  final Widget? leadingBadge;
+  final String? participantSummaryLabel;
+  final String? participantTrailingLabel;
+  final Key? participantSummaryKey;
+  final int? avatarDisplayLimit;
   final String? locationLabel;
 
   /// Precio principal ya formateado (p. ej. `US$8`). `null` lo oculta.
   final String? primaryPriceLabel;
+  final String? pricePlaceholderLabel;
+  final Key? priceKey;
+  final Key? pricePlaceholderKey;
 
   /// Precio secundario (p. ej. `Bs 320`). `null` lo oculta.
   final String? secondaryPriceLabel;
@@ -72,9 +88,14 @@ class MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final openSpots =
-        (maxParticipants - participantCount).clamp(0, maxParticipants);
-    final filledSpots = participantCount.clamp(0, maxParticipants);
+    final max = maxParticipants;
+    final avatarMax = avatarDisplayLimit ?? max;
+    final avatarCount = avatarMax == null
+        ? participantCount
+        : participantCount.clamp(0, avatarMax);
+    final openSpots = max == null
+        ? 0
+        : (avatarMax! - avatarCount).clamp(0, avatarMax);
 
     return Material(
       color: scheme.surfaceContainer,
@@ -117,6 +138,10 @@ class MatchCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
+                          if (leadingBadge != null) ...[
+                            leadingBadge!,
+                            const SizedBox(width: 6),
+                          ],
                           InfoBadge(
                             label: category,
                             background: BrandColors.limeAccent,
@@ -135,9 +160,9 @@ class MatchCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14.5,
-                            ),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                        ),
                       ),
                       if (locationLabel != null) ...[
                         const SizedBox(height: 1),
@@ -145,7 +170,8 @@ class MatchCard extends StatelessWidget {
                           locationLabel!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
                                 color: scheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w500,
                                 fontSize: 12.5,
@@ -157,18 +183,20 @@ class MatchCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           AvatarStack(
-                            filledCount: filledSpots,
+                            filledCount: avatarCount,
                             emptySpots: openSpots,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              openSpots == 0
-                                  ? 'Completa'
-                                  : '$openSpots ${openSpots == 1 ? 'cupo' : 'cupos'}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              key: participantSummaryKey,
+                              participantSummaryLabel ??
+                                  (max == null
+                                      ? '$participantCount ${participantCount == 1 ? 'inscrito' : 'inscritos'}'
+                                      : openSpots == 0
+                                      ? 'Completa'
+                                      : '$openSpots ${openSpots == 1 ? 'cupo' : 'cupos'}'),
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: openSpots == 0
                                         ? scheme.onSurfaceVariant
@@ -178,12 +206,46 @@ class MatchCard extends StatelessWidget {
                                   ),
                             ),
                           ),
+                          if (participantTrailingLabel != null) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              participantTrailingLabel!,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11.5,
+                                  ),
+                            ),
+                          ],
                           if (primaryPriceLabel != null)
-                            DualPrice(
-                              primaryLabel: primaryPriceLabel!,
-                              secondaryLabel: secondaryPriceLabel,
-                              suffix: priceSuffix,
-                              primarySize: 15,
+                            primaryPriceLabel == 'Gratis'
+                                ? Text(
+                                    key: priceKey,
+                                    'Gratis',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: scheme.primary,
+                                    ),
+                                  )
+                                : DualPrice(
+                                    key: priceKey,
+                                    primaryLabel: primaryPriceLabel!,
+                                    secondaryLabel: secondaryPriceLabel,
+                                    suffix: priceSuffix,
+                                    primarySize: 15,
+                                  )
+                          else if (pricePlaceholderLabel != null)
+                            Text(
+                              key: pricePlaceholderKey,
+                              pricePlaceholderLabel!,
+                              textAlign: TextAlign.end,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
                         ],
                       ),
@@ -285,4 +347,3 @@ class _DateBlock extends StatelessWidget {
     );
   }
 }
-

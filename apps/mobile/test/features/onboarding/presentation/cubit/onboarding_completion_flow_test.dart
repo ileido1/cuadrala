@@ -40,11 +40,12 @@ void main() {
     });
 
     blocTest<OnboardingCubit, OnboardingState>(
-      'saveAvailability should call repository.completeOnboarding after saving '
-      'so the last onboarding page triggers completion',
+      'saveAvailability completes onboarding exactly once after saving the '
+      'last page',
       build: () {
-        when(() => repository.putAvailability(any()))
-            .thenAnswer((_) async => <UserAvailabilityDto>[]);
+        when(
+          () => repository.putAvailability(any()),
+        ).thenAnswer((_) async => <UserAvailabilityDto>[]);
         return OnboardingCubit(
           repository: repository,
           profileRepository: profileRepository,
@@ -64,8 +65,9 @@ void main() {
       'saveAvailability does NOT call completeOnboarding when onboarding is '
       'already complete (user returned to finish pending steps)',
       build: () {
-        when(() => repository.putAvailability(any()))
-            .thenAnswer((_) async => <UserAvailabilityDto>[]);
+        when(
+          () => repository.putAvailability(any()),
+        ).thenAnswer((_) async => <UserAvailabilityDto>[]);
         // Simulate: onboarding already complete
         when(() => repository.getStatus()).thenAnswer(
           (_) async => const OnboardingStatusDto(

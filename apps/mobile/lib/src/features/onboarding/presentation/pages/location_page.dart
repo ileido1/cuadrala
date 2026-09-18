@@ -10,6 +10,7 @@ import '../../../../shared/widgets/selectable_chip.dart';
 import '../../data/models/onboarding_status_dto.dart';
 import '../cubit/onboarding_cubit.dart';
 import '../cubit/onboarding_state.dart';
+import '../validation/onboarding_input_validators.dart';
 
 class OnboardingLocationPage extends StatefulWidget {
   const OnboardingLocationPage({super.key, required this.onContinue});
@@ -59,14 +60,16 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
       );
     } on LocationFailure catch (f) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(f.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(f.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No pudimos detectar tu ubicación. Inténtalo de nuevo.'),
+          content: Text(
+            'No pudimos detectar tu ubicación. Inténtalo de nuevo.',
+          ),
         ),
       );
     } finally {
@@ -77,17 +80,25 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
   Future<void> _submit() async {
     final lat = double.tryParse(_latController.text.trim());
     final lng = double.tryParse(_lngController.text.trim());
-    if (lat == null || lat < -90 || lat > 90 || lng == null || lng < -180 || lng > 180) {
-      setState(() => _formError = 'Latitud (-90 a 90) y longitud (-180 a 180) inválidas.');
+    if (!isValidLatitude(_latController.text) ||
+        !isValidLongitude(_lngController.text) ||
+        lat == null ||
+        lng == null) {
+      setState(
+        () => _formError =
+            'Latitud (-90 a 90) y longitud (-180 a 180) inválidas.',
+      );
       return;
     }
     setState(() => _formError = null);
     final ok = await context.read<OnboardingCubit>().saveLocation(
-          label: _labelController.text.trim().isEmpty ? null : _labelController.text.trim(),
-          latitude: lat,
-          longitude: lng,
-          radiusKm: _radiusKm,
-        );
+      label: _labelController.text.trim().isEmpty
+          ? null
+          : _labelController.text.trim(),
+      latitude: lat,
+      longitude: lng,
+      radiusKm: _radiusKm,
+    );
     if (!mounted) return;
     if (ok) widget.onContinue();
   }
@@ -104,14 +115,16 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('¿Dónde te queda mejor jugar?',
-                    style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  '¿Dónde te queda mejor jugar?',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 6),
                 Text(
                   'Te avisaremos solo de partidas dentro de tu radio. Podrás cambiarlo cuando quieras.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Expanded(
@@ -128,6 +141,11 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                         const SizedBox(height: 10),
                         TextField(
                           controller: _labelController,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(
+                              onboardingLocationLabelMaxLength,
+                            ),
+                          ],
                           decoration: const InputDecoration(
                             labelText: 'Zona o ciudad (opcional)',
                             hintText: 'Caracas — La Castellana',
@@ -137,10 +155,14 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                         const SizedBox(height: 24),
                         Row(
                           children: [
-                            const Expanded(child: _SectionTitle(title: 'Radio de búsqueda')),
+                            const Expanded(
+                              child: _SectionTitle(title: 'Radio de búsqueda'),
+                            ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 11, vertical: 4),
+                                horizontal: 11,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: scheme.primary.withValues(alpha: .15),
                                 borderRadius: BorderRadius.circular(999),
@@ -176,15 +198,22 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                           max: 100,
                           divisions: 99,
                           label: '$_radiusKm km',
-                          onChanged: (v) => setState(() => _radiusKm = v.round()),
+                          onChanged: (v) =>
+                              setState(() => _radiusKm = v.round()),
                         ),
                         const SizedBox(height: 20),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
                             color: scheme.surface,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: scheme.outlineVariant, width: 1.5),
+                            border: Border.all(
+                              color: scheme.outlineVariant,
+                              width: 1.5,
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -212,7 +241,8 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                               ),
                               Switch(
                                 value: _showAdvanced,
-                                onChanged: (v) => setState(() => _showAdvanced = v),
+                                onChanged: (v) =>
+                                    setState(() => _showAdvanced = v),
                               ),
                             ],
                           ),
@@ -224,13 +254,12 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                               Expanded(
                                 child: TextField(
                                   controller: _latController,
-                                  keyboardType: const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                    signed: true,
-                                  ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[-\d.]')),
-                                  ],
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                        signed: true,
+                                      ),
+                                  inputFormatters: [coordinateInputFormatter()],
                                   decoration: const InputDecoration(
                                     labelText: 'Latitud',
                                     prefixIcon: Icon(AppIcons.myLocation),
@@ -241,13 +270,12 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                               Expanded(
                                 child: TextField(
                                   controller: _lngController,
-                                  keyboardType: const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                    signed: true,
-                                  ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[-\d.]')),
-                                  ],
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                        signed: true,
+                                      ),
+                                  inputFormatters: [coordinateInputFormatter()],
                                   decoration: const InputDecoration(
                                     labelText: 'Longitud',
                                     prefixIcon: Icon(AppIcons.explore),
@@ -259,13 +287,21 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                         ],
                         if (_formError != null) ...[
                           const SizedBox(height: 12),
-                          Text(_formError!,
-                              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                          Text(
+                            _formError!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
                         ],
                         if (state.errorMessage != null && !saving) ...[
                           const SizedBox(height: 8),
-                          Text(state.errorMessage!,
-                              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                          Text(
+                            state.errorMessage!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -325,7 +361,11 @@ class _GpsCard extends StatelessWidget {
                         valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
                     )
-                  : const Icon(AppIcons.myLocation, color: Colors.white, size: 22),
+                  : const Icon(
+                      AppIcons.myLocation,
+                      color: Colors.white,
+                      size: 22,
+                    ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -369,9 +409,9 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
     );
   }
 }

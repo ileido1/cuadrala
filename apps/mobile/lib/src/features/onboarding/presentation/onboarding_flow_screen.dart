@@ -7,7 +7,6 @@ import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../auth/presentation/cubit/session_cubit.dart';
-import '../data/onboarding_repository.dart';
 import 'cubit/onboarding_cubit.dart';
 import 'cubit/onboarding_state.dart';
 import 'pages/availability_page.dart';
@@ -24,9 +23,7 @@ final class OnboardingFlowScreen extends StatelessWidget {
     // En producción, OnboardingCubit se registra en getIt antes de navegar aquí.
     return BlocProvider<OnboardingCubit>(
       create: (_) => getIt<OnboardingCubit>()..load(),
-      child: Builder(
-        builder: (context) => const _OnboardingFlowView(),
-      ),
+      child: Builder(builder: (context) => const _OnboardingFlowView()),
     );
   }
 }
@@ -57,7 +54,6 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
     } else {
       // Capturar el cubit antes del gap async para evitar el warning.
       final sessionCubit = context.read<SessionCubit>();
-      await getIt<OnboardingRepository>().completeOnboarding();
       await sessionCubit.refreshOnboardingStatus();
       if (!mounted) return;
       context.go(Routes.home);
@@ -70,7 +66,8 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
       key: const Key('onboarding.flow.screen'),
       body: BlocBuilder<OnboardingCubit, OnboardingState>(
         builder: (context, state) {
-          if (state.type == OnboardingStatusType.loading || state.type == OnboardingStatusType.initial) {
+          if (state.type == OnboardingStatusType.loading ||
+              state.type == OnboardingStatusType.initial) {
             return const Center(child: CircularProgressIndicator());
           }
           if (state.type == OnboardingStatusType.error) {
@@ -88,9 +85,9 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
                 total: 4,
                 onBack: _currentPage > 0
                     ? () => _pageController.previousPage(
-                          duration: const Duration(milliseconds: 240),
-                          curve: Curves.easeOut,
-                        )
+                        duration: const Duration(milliseconds: 240),
+                        curve: Curves.easeOut,
+                      )
                     : () => context.go(Routes.register),
               ),
               Expanded(
@@ -136,7 +133,9 @@ class _OnboardingHeader extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           decoration: BoxDecoration(
             border: Border(
-              bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+              bottom: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.6),
+              ),
             ),
           ),
           child: Column(
@@ -165,7 +164,10 @@ class _OnboardingHeader extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         Text(
                           'Paso ${currentPage + 1} de $total',

@@ -48,5 +48,27 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('uses the full width on phone-sized browser viewports', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(430, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        Theme(
+          data: ThemeData.dark(),
+          child: const WebMobileFrame(
+            child: SizedBox.expand(key: ValueKey('content')),
+          ),
+        ),
+      );
+
+      expect(
+        tester.getSize(find.byKey(const ValueKey('content'))),
+        const Size(430, 900),
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }

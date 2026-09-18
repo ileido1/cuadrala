@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-
 import '../../../../core/formatting/money_format.dart';
+import '../../../../core/formatting/scheduled_label.dart';
 import '../../../../core/models/currency_code.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/brand_colors.dart';
 import '../../../../router/routes.dart';
-import '../../../../shared/widgets/dual_price.dart';
+import '../../../../shared/widgets/match_card.dart';
 import '../../data/models/tournament_list_item_dto.dart';
 import 'tournament_status_pill.dart';
 
@@ -24,11 +24,11 @@ String _occupancyLabel(int count, int? max) {
 /// desconocido no se inventa: la etiqueta desaparece en vez de mostrar el
 /// enum crudo (mismo criterio que `tournamentStatusLabel`).
 String? _genderTagLabel(String gender) => switch (gender) {
-      'MALE' => 'Masculino',
-      'FEMALE' => 'Femenino',
-      'MIXED' => 'Mixto',
-      _ => null,
-    };
+  'MALE' => 'Masculino',
+  'FEMALE' => 'Femenino',
+  'MIXED' => 'Mixto',
+  _ => null,
+};
 
 /// Tarjeta de torneo del listado (rediseño).
 ///
@@ -72,334 +72,80 @@ final class TournamentListItemTile extends StatelessWidget {
 
   /// `{org}`: `venueName`, cayendo al nombre del organizador sin sede
   /// declarada (D7). Nunca el nombre del propio torneo.
-  String? get _invitationOrg => tournament.venueName ?? tournament.organizerName;
+  String? get _invitationOrg =>
+      tournament.venueName ?? tournament.organizerName;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push(
-          Routes.tournamentDetail(tournament.id),
-          extra: detailExtra ?? tournament,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (pendingInvitationId != null && _invitationOrg != null) ...[
-                _InvitationBanner(
-                  org: _invitationOrg!,
-                  onTap: onViewInvitation,
-                ),
-                const SizedBox(height: 10),
-              ],
-              if (isOrganizer) ...[
-                _OrganizerRow(
-                  tournamentName: tournament.name,
-                  onTap: onOrganizerTap,
-                ),
-                const SizedBox(height: 10),
-              ],
-              Row(
-                children: [
-                  TournamentStatusPill(status: tournament.status),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: _CategoryChip(label: tournament.categoryName),
-                  ),
-                  if (tournament.gender != null &&
-                      _genderTagLabel(tournament.gender!) != null) ...[
-                    const SizedBox(width: 8),
-                    _GenderTag(label: _genderTagLabel(tournament.gender!)!),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                tournament.name,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              //? Cuándo y dónde en una fila que envuelve: en pantallas angostas
-              //? la sede baja sola en vez de recortarse con puntos suspensivos.
-              Wrap(
-                spacing: 14,
-                runSpacing: 4,
-                children: [
-                  _MetaRow(
-                    key: const Key('tournament.card.date'),
-                    icon: AppIcons.calendar,
-                    label: tournament.startsAt == null
-                        ? 'Fecha por confirmar'
-                        : _formatStartSV(tournament.startsAt!),
-                  ),
-                  _MetaRow(
-                    key: const Key('tournament.card.venue'),
-                    icon: AppIcons.pin,
-                    //? La tarjeta mantiene la misma estructura aunque el
-                    //? organizador todavía no haya completado esos datos.
-                    label: tournament.venueName == null
-                        ? 'Sede por confirmar'
-                        : tournament.distanceKm != null
-                            ? '${tournament.venueName} · ${tournament.distanceKm!.toStringAsFixed(1)} km'
-                            : tournament.venueName!,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(child: _Occupancy(tournament: tournament)),
-                  if (tournament.inscriptionPrice != null) ...[
-                    const SizedBox(width: 12),
-                    _Price(
-                      key: const Key('tournament.card.price'),
-                      amount: tournament.inscriptionPrice!,
-                    ),
-                  ] else
-                    const _PricePlaceholder(
-                      key: Key('tournament.card.pricePlaceholder'),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
+    final scheduled = tournament.startsAt;
+    final price = tournament.inscriptionPrice;
+    final gender = _genderTagLabel(tournament.gender ?? '');
+    final card = MatchCard(
+      dowLabel: scheduled == null ? '—' : shortDateLabel(scheduled),
+      timeLabel: scheduled == null ? '—' : formatTimeHm(scheduled),
+      subDateLabel: scheduled == null ? '—' : compactCalendarDate(scheduled),
+      title: tournament.name,
+      category: tournament.categoryName,
+      surfaceTag: gender,
+      leadingBadge: TournamentStatusPill(status: tournament.status),
+      locationLabel: tournament.venueName == null
+          ? 'Sede por confirmar'
+          : tournament.distanceKm == null
+          ? tournament.venueName
+          : '${tournament.venueName} · ${tournament.distanceKm!.toStringAsFixed(1)} km',
+      participantInitials: const [],
+      participantCount: tournament.registrationCount,
+      maxParticipants: tournament.maxSlots,
+      avatarDisplayLimit: 4,
+      participantSummaryLabel: _occupancyLabel(
+        tournament.registrationCount,
+        tournament.maxSlots,
+      ),
+      participantTrailingLabel: tournament.registrationClosesAt == null
+          ? null
+          : 'cierra ${DateFormat('EEE', 'es_ES').format(tournament.registrationClosesAt!.toLocal()).toUpperCase()}',
+      participantSummaryKey: tournament.maxSlots == null
+          ? null
+          : const Key('tournament.card.slots'),
+      primaryPriceLabel: price == null
+          ? null
+          : price == 0
+          ? 'Gratis'
+          : formatMoneyFromMajor(price, CurrencyCode.usd),
+      pricePlaceholderLabel: price == null ? 'Precio por confirmar' : null,
+      priceKey: price == null ? null : const Key('tournament.card.price'),
+      pricePlaceholderKey: price == null
+          ? const Key('tournament.card.pricePlaceholder')
+          : null,
+      priceSuffix: price == 0 ? '' : 'p/p',
+      onTap: () => context.push(
+        Routes.tournamentDetail(tournament.id),
+        extra: detailExtra ?? tournament,
       ),
     );
-  }
 
-  static String _formatStartSV(DateTime startsAt) {
-    final local = startsAt.toLocal();
-    return DateFormat('EEE d MMM · HH:mm', 'es_ES').format(local).toUpperCase();
-  }
-}
-
-final class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.3,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// Etiqueta de género junto a la chip de categoría (`tagStyle`,
-/// `cuadrala-screens.jsx:113`; uso en tarjeta `cuadrala-torneos.jsx:117`).
-final class _GenderTag extends StatelessWidget {
-  const _GenderTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-final class _MetaRow extends StatelessWidget {
-  const _MetaRow({super.key, required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: scheme.onSurfaceVariant),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-final class _Occupancy extends StatelessWidget {
-  const _Occupancy({required this.tournament});
-
-  final TournamentListItemDto tournament;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final count = tournament.registrationCount;
-    final max = tournament.maxSlots;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                _occupancyLabel(count, max),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            if (tournament.registrationClosesAt != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                'cierra ${DateFormat('EEE', 'es_ES').format(tournament.registrationClosesAt!.toLocal()).toUpperCase()}',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
-                ),
-              ),
-            ],
-          ],
-        ),
-        if (max != null) ...[
-          const SizedBox(height: 6),
-          _SlotBar(
-            key: const Key('tournament.card.slots'),
-            filled: count,
-            total: max,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-final class _SlotBar extends StatelessWidget {
-  const _SlotBar({super.key, required this.filled, required this.total});
-
-  final int filled;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    //? Se satura en 1: un torneo con más anotados que cupos es decisión del
-    //? organizador, y la barra no debe desbordar por eso.
-    final ratio = total <= 0 ? 0.0 : (filled / total).clamp(0.0, 1.0);
-    final isFull = ratio >= 1.0;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: LinearProgressIndicator(
-        value: ratio,
-        minHeight: 5,
-        backgroundColor: scheme.surfaceContainerHighest,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          isFull ? scheme.onSurfaceVariant : scheme.primary,
-        ),
-      ),
-    );
-  }
-}
-
-/// Precio de inscripción por jugador.
-///
-/// Un `0` declarado dice **Gratis**: es información, no ausencia de dato. El
-/// secundario en Bs queda fuera a propósito — [DualPrice] es presentacional y
-/// la conversión necesita la tasa real, no un factor fijo.
-final class _Price extends StatelessWidget {
-  const _Price({super.key, required this.amount});
-
-  final double amount;
-
-  @override
-  Widget build(BuildContext context) {
-    if (amount == 0) {
-      return Text(
-        'Gratis',
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w800,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      );
+    if (pendingInvitationId == null && !isOrganizer) {
+      return Padding(padding: const EdgeInsets.only(bottom: 12), child: card);
     }
 
-    return DualPrice(
-      primaryLabel: formatMoneyFromMajor(amount, CurrencyCode.usd),
-      suffix: 'p/p',
-    );
-  }
-}
-
-final class _PricePlaceholder extends StatelessWidget {
-  const _PricePlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      'Precio por confirmar',
-      textAlign: TextAlign.end,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          if (pendingInvitationId != null && _invitationOrg != null)
+            _InvitationBanner(org: _invitationOrg!, onTap: onViewInvitation),
+          if (isOrganizer)
+            _OrganizerRow(
+              tournamentName: tournament.name,
+              onTap: onOrganizerTap,
+            ),
+          card,
+        ],
       ),
     );
   }
 }
 
-/// Banner lime "{org} te invitó" (`cuadrala-torneo-org.jsx:359`,
-/// `README.md:51`): el visor tiene una invitación PENDING a este torneo.
-/// `{org}` nunca es el nombre del torneo (D7).
 final class _InvitationBanner extends StatelessWidget {
   const _InvitationBanner({required this.org, this.onTap});
 

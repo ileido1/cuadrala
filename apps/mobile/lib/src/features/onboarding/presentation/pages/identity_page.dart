@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 
@@ -9,6 +10,7 @@ import '../../../profile/data/profile_repository.dart';
 import '../../data/models/onboarding_status_dto.dart';
 import '../cubit/onboarding_cubit.dart';
 import '../cubit/onboarding_state.dart';
+import '../validation/onboarding_input_validators.dart';
 
 class OnboardingIdentityPage extends StatefulWidget {
   const OnboardingIdentityPage({super.key, required this.onContinue});
@@ -29,6 +31,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
   String? _phoneError;
   String? _birthError;
   String? _documentError;
+  String? _cityError;
   bool _loading = true;
 
   @override
@@ -60,19 +63,25 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
 
   bool _validate() {
     final name = _nameController.text.trim();
-    final nameValid = name.length >= 2;
+    final nameValid = isValidOnboardingName(name);
     final phone = _phoneController.value;
     final phoneValid = phone.isValid();
     final birthValid = _birthDate != null && _birthDate!.year >= 1920;
     final document = _documentController.text.trim();
-    final documentValid = document.isEmpty || document.length >= 6;
+    final documentValid = isValidOnboardingDocument(document);
+    final cityValid = isValidOnboardingCity(_cityController.text);
     setState(() {
-      _nameError = nameValid ? null : 'Ingresa tu nombre completo.';
+      _nameError = nameValid
+          ? null
+          : 'Ingresa tu nombre completo (máximo 200 caracteres).';
       _phoneError = phoneValid ? null : 'Teléfono inválido.';
       _birthError = birthValid ? null : 'Selecciona tu fecha de nacimiento.';
-      _documentError = documentValid ? null : 'Mínimo 6 caracteres.';
+      _documentError = documentValid
+          ? null
+          : 'Usa solo números (máximo 20 caracteres).';
+      _cityError = cityValid ? null : 'Máximo 120 caracteres.';
     });
-    return nameValid && phoneValid && birthValid && documentValid;
+    return nameValid && phoneValid && birthValid && documentValid && cityValid;
   }
 
   Future<void> _submit() async {
@@ -80,13 +89,17 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
     final phoneE164 = _phoneController.value.international;
     final birthYear = _birthDate!.year;
     final ok = await context.read<OnboardingCubit>().saveIdentity(
-          name: _nameController.text.trim(),
-          phone: phoneE164,
-          birthYear: birthYear,
-          birthDate: _birthDate,
-          city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
-          documentNumber: _documentController.text.trim().isEmpty ? null : _documentController.text.trim(),
-        );
+      name: _nameController.text.trim(),
+      phone: phoneE164,
+      birthYear: birthYear,
+      birthDate: _birthDate,
+      city: _cityController.text.trim().isEmpty
+          ? null
+          : _cityController.text.trim(),
+      documentNumber: _documentController.text.trim().isEmpty
+          ? null
+          : _documentController.text.trim(),
+    );
     if (!mounted) return;
     if (ok) widget.onContinue();
   }
@@ -110,13 +123,16 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
     if (raw.isEmpty) return '?';
     final parts = raw.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.length == 1) return parts.first.characters.first.toUpperCase();
-    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
+    return (parts.first.characters.first + parts.last.characters.first)
+        .toUpperCase();
   }
 
   void _onAvatarTap() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Pronto: subir tu foto de perfil con la cámara o galería.'),
+        content: Text(
+          'Pronto: subir tu foto de perfil con la cámara o galería.',
+        ),
       ),
     );
   }
@@ -138,13 +154,16 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tu perfil', style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  'Tu perfil',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 6),
                 Text(
                   'Así te verán los otros jugadores.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Expanded(
@@ -161,6 +180,11 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                         const SizedBox(height: 26),
                         TextField(
                           controller: _nameController,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(
+                              onboardingNameMaxLength,
+                            ),
+                          ],
                           textInputAction: TextInputAction.next,
                           textCapitalization: TextCapitalization.words,
                           onChanged: (_) => setState(() {}),
@@ -179,7 +203,8 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                             hintText: '+58 412 555 1234',
                             prefixIcon: const Icon(AppIcons.phone),
                             errorText: _phoneError,
-                            helperText: 'Te avisamos cuando una partida está cuadrada.',
+                            helperText:
+                                'Te avisamos cuando una partida está cuadrada.',
                           ),
                           isCountrySelectionEnabled: true,
                           isCountryButtonPersistent: true,
@@ -189,6 +214,12 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                         TextFormField(
                           controller: _documentController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(
+                              onboardingDocumentMaxLength,
+                            ),
+                          ],
                           textInputAction: TextInputAction.next,
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
@@ -196,7 +227,8 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                             hintText: 'Ej: 12345678',
                             prefixIcon: const Icon(AppIcons.badge),
                             errorText: _documentError,
-                            helperText: 'Opcional. Solo números sin puntos ni guiones.',
+                            helperText:
+                                'Opcional. Solo números sin puntos ni guiones.',
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -218,7 +250,9 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                                         : '${_birthDate!.year.toString().padLeft(4, '0')}-${_birthDate!.month.toString().padLeft(2, '0')}-${_birthDate!.day.toString().padLeft(2, '0')}',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                     ),
                                   ),
                                 ),
@@ -230,13 +264,20 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                         const SizedBox(height: 16),
                         TextField(
                           controller: _cityController,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(
+                              onboardingCityMaxLength,
+                            ),
+                          ],
                           textCapitalization: TextCapitalization.words,
                           onChanged: (_) => setState(() {}),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Ciudad',
                             hintText: 'Caracas, Venezuela',
                             prefixIcon: Icon(AppIcons.pin),
-                            helperText: 'La usamos para mostrarte partidas y canchas cercanas.',
+                            helperText:
+                                'La usamos para mostrarte partidas y canchas cercanas.',
+                            errorText: _cityError,
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -252,7 +293,9 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                 if (state.errorMessage != null && !saving) ...[
                   Text(
                     state.errorMessage!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -391,16 +434,26 @@ class _ProfilePreviewCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(showName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w900, fontSize: 15)),
+                    Text(
+                      showName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(showCity, style: TextStyle(color: scheme.onSurfaceVariant)),
+                    Text(
+                      showCity,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: scheme.primary.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(12),

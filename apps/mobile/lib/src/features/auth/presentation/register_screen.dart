@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
@@ -27,11 +28,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _showLocalErrors = false;
+  String? _emailError;
+  String? _passwordError;
   String? _confirmError;
 
   @override
   void initState() {
     super.initState();
+    _emailController.addListener(_validateEmail);
     _passwordController.addListener(_onPasswordChanged);
     _confirmController.addListener(_validateConfirm);
   }
@@ -46,15 +51,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _onPasswordChanged() {
     setState(() {});
+    _validatePassword();
     if (_confirmController.text.isNotEmpty) _validateConfirm();
+  }
+
+  void _validateEmail() {
+    if (!_showLocalErrors) return;
+    final email = _emailController.text.trim();
+    setState(() => _emailError = _emailValidationError(email));
+  }
+
+  void _validatePassword() {
+    if (!_showLocalErrors) return;
+    setState(
+      () => _passwordError = _passwordValidationError(_passwordController.text),
+    );
   }
 
   void _validateConfirm() {
     final pw = _passwordController.text;
     final cf = _confirmController.text;
+    if (!_showLocalErrors) return;
     setState(() {
-      _confirmError = (cf.isEmpty || cf == pw) ? null : 'Las contraseñas no coinciden';
+      _confirmError = cf.isEmpty
+          ? 'Confirmá tu contraseña'
+          : cf == pw
+          ? null
+          : 'Las contraseñas no coinciden';
     });
+  }
+
+  static String? _emailValidationError(String email) {
+    if (email.isEmpty) return 'Ingresá tu correo electrónico';
+    final valid = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+    return valid ? null : 'Ingresá un correo electrónico válido';
+  }
+
+  static String? _passwordValidationError(String password) {
+    if (password.isEmpty) return 'Ingresá una contraseña';
+    if (password.length < 8) return 'Usá al menos 8 caracteres';
+    return null;
   }
 
   String _nameFromEmail(String email) {
@@ -71,13 +107,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final email = _emailController.text.trim();
     final pw = _passwordController.text;
     final cf = _confirmController.text;
-    if (pw != cf) {
-      setState(() => _confirmError = 'Las contraseñas no coinciden');
+    final emailError = _emailValidationError(email);
+    final passwordError = _passwordValidationError(pw);
+    final confirmError = cf.isEmpty
+        ? 'Confirmá tu contraseña'
+        : cf == pw
+        ? null
+        : 'Las contraseñas no coinciden';
+    setState(() {
+      _showLocalErrors = true;
+      _emailError = emailError;
+      _passwordError = passwordError;
+      _confirmError = confirmError;
+    });
+    if (emailError != null || passwordError != null || confirmError != null) {
       return;
     }
     context.read<RegisterCubit>().submit(
-          RegisterRequest(email: email, password: pw, name: _nameFromEmail(email)),
-        );
+      RegisterRequest(email: email, password: pw, name: _nameFromEmail(email)),
+    );
   }
 
   @override
@@ -110,111 +158,114 @@ class _RegisterScreenState extends State<RegisterScreen> {
         },
         builder: (context, state) {
           final isLoading = state is RegisterLoading;
-          final fieldErrors = state is RegisterFailure ? state.fieldErrors : null;
+          final fieldErrors = state is RegisterFailure
+              ? state.fieldErrors
+              : null;
           final scheme = Theme.of(context).colorScheme;
 
           Widget content() => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AuthHeader(
+                title: 'Crea tu cuenta',
+                subtitle: 'Usarás este correo para ingresar.',
+              ),
+              const SizedBox(height: 18),
+              AuthTabs(
+                selectedIndex: 1,
+                isDisabled: isLoading,
+                onTabChanged: (i) {
+                  if (i == 0) context.go(Routes.login);
+                },
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                key: const Key('register.email'),
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autocorrect: false,
+                inputFormatters: [LengthLimitingTextInputFormatter(254)],
+                decoration: InputDecoration(
+                  labelText: 'Correo electrónico',
+                  hintText: 'tu@email.com',
+                  prefixIcon: const Icon(AppIcons.mail),
+                  errorText: _emailError ?? fieldErrors?.email,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                key: const Key('register.password'),
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.next,
+                inputFormatters: [LengthLimitingTextInputFormatter(128)],
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  prefixIcon: const Icon(AppIcons.lock),
+                  suffixIcon: IconButton(
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword ? AppIcons.eyeOn : AppIcons.eyeOff,
+                    ),
+                  ),
+                  errorText: _passwordError ?? fieldErrors?.password,
+                ),
+              ),
+              PasswordStrengthIndicator(password: _passwordController.text),
+              const SizedBox(height: 14),
+              TextField(
+                key: const Key('register.confirm_password'),
+                controller: _confirmController,
+                obscureText: _obscureConfirm,
+                textInputAction: TextInputAction.done,
+                inputFormatters: [LengthLimitingTextInputFormatter(128)],
+                decoration: InputDecoration(
+                  labelText: 'Confirmar contraseña',
+                  prefixIcon: const Icon(AppIcons.lock),
+                  suffixIcon: IconButton(
+                    onPressed: () =>
+                        setState(() => _obscureConfirm = !_obscureConfirm),
+                    icon: Icon(
+                      _obscureConfirm ? AppIcons.eyeOn : AppIcons.eyeOff,
+                    ),
+                  ),
+                  errorText: _confirmError,
+                ),
+                onSubmitted: (_) => _submit(),
+              ),
+              const SizedBox(height: 24),
+              PrimaryButton(
+                label: 'Continuar',
+                icon: AppIcons.arrowForward,
+                height: 52,
+                isLoading: isLoading,
+                onPressed: _submit,
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const AuthHeader(
-                    title: 'Crea tu cuenta',
-                    subtitle: 'Usarás este correo para ingresar.',
+                  Text(
+                    '¿Ya tienes cuenta? ',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
                   ),
-                  const SizedBox(height: 18),
-                  AuthTabs(
-                    selectedIndex: 1,
-                    isDisabled: isLoading,
-                    onTabChanged: (i) {
-                      if (i == 0) context.go(Routes.login);
-                    },
-                  ),
-                  const SizedBox(height: 18),
-                  TextField(
-                    key: const Key('register.email'),
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    autocorrect: false,
-                    decoration: InputDecoration(
-                      labelText: 'Correo electrónico',
-                      hintText: 'tu@email.com',
-                      prefixIcon: const Icon(AppIcons.mail),
-                      errorText: fieldErrors?.email,
+                  InkWell(
+                    onTap: isLoading ? null : () => context.go(Routes.login),
+                    child: Text(
+                      'Inicia sesión',
+                      style: TextStyle(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    key: const Key('register.password'),
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: 'Contraseña',
-                      prefixIcon: const Icon(AppIcons.lock),
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                        icon: Icon(
-                          _obscurePassword
-                              ? AppIcons.eyeOn
-                              : AppIcons.eyeOff,
-                        ),
-                      ),
-                      errorText: fieldErrors?.password,
-                    ),
-                  ),
-                  PasswordStrengthIndicator(password: _passwordController.text),
-                  const SizedBox(height: 14),
-                  TextField(
-                    key: const Key('register.confirm_password'),
-                    controller: _confirmController,
-                    obscureText: _obscureConfirm,
-                    textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(
-                      labelText: 'Confirmar contraseña',
-                      prefixIcon: const Icon(AppIcons.lock),
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
-                        icon: Icon(
-                          _obscureConfirm
-                              ? AppIcons.eyeOn
-                              : AppIcons.eyeOff,
-                        ),
-                      ),
-                      errorText: _confirmError,
-                    ),
-                    onSubmitted: (_) => _submit(),
-                  ),
-                  const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: 'Continuar',
-                    icon: AppIcons.arrowForward,
-                    height: 52,
-                    isLoading: isLoading,
-                    onPressed: _submit,
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        '¿Ya tienes cuenta? ',
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
-                      InkWell(
-                        onTap: isLoading ? null : () => context.go(Routes.login),
-                        child: Text(
-                          'Inicia sesión',
-                          style: TextStyle(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
-              );
+              ),
+            ],
+          );
 
           return SafeArea(
             child: LayoutBuilder(
@@ -237,4 +288,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-

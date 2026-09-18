@@ -48,6 +48,7 @@ final class WebMobileFrame extends StatelessWidget {
   const WebMobileFrame({required this.child, super.key});
 
   static const _maxWidth = 390.0;
+  static const _phoneBreakpoint = 600.0;
   static const _cornerRadius = 28.0;
 
   final Widget child;
@@ -60,8 +61,13 @@ final class WebMobileFrame extends StatelessWidget {
       color: colors.surfaceContainerHighest,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final width = constraints.hasBoundedWidth
-              ? math.min(_maxWidth, constraints.maxWidth)
+          final viewportWidth = constraints.maxWidth;
+          final isPhone =
+              constraints.hasBoundedWidth && viewportWidth <= _phoneBreakpoint;
+          final width = isPhone
+              ? viewportWidth
+              : constraints.hasBoundedWidth
+              ? math.min(_maxWidth, viewportWidth)
               : _maxWidth;
           final height = constraints.hasBoundedHeight
               ? constraints.maxHeight
@@ -74,14 +80,18 @@ final class WebMobileFrame extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: colors.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(_cornerRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.24),
-                    blurRadius: 28,
-                    offset: const Offset(0, 16),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(
+                  isPhone ? 0 : _cornerRadius,
+                ),
+                boxShadow: isPhone
+                    ? const []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.24),
+                          blurRadius: 28,
+                          offset: const Offset(0, 16),
+                        ),
+                      ],
               ),
               child: child,
             ),
