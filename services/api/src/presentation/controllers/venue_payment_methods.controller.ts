@@ -48,7 +48,12 @@ export async function postVenuePaymentMethodCON(
   }
 
   const VENUE_ID = _req.params.venueId as string;
-  const BODY = _req.body as { type: string; name: string; config?: unknown };
+  const BODY = _req.body as {
+    type: string;
+    name: string;
+    config?: unknown;
+    settlementCurrency?: string;
+  };
   const CREATED = await CREATE_VENUE_PAYMENT_METHOD_UC.executeSV(
     VENUE_ID,
     ACTOR_USER_ID,
@@ -79,6 +84,7 @@ export async function putVenuePaymentMethodCON(
     config?: unknown;
     isActive?: boolean;
     position?: number;
+    settlementCurrency?: string;
   };
 
   const UPDATED = await UPDATE_VENUE_PAYMENT_METHOD_UC.executeSV(

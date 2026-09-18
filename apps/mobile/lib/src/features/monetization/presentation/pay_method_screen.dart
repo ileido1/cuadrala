@@ -23,6 +23,17 @@ import '../domain/payment_selection_ref.dart';
 import 'upload_receipt_screen.dart';
 import 'waiting_confirmation_screen.dart';
 
+String _currencyLabel(CurrencyCode currency) {
+  switch (currency) {
+    case CurrencyCode.bs:
+      return 'VES · Bs.';
+    case CurrencyCode.usd:
+      return 'USD';
+    case CurrencyCode.eur:
+      return 'EUR';
+  }
+}
+
 final class PayMethodScreen extends StatefulWidget {
   const PayMethodScreen({
     super.key,
@@ -58,7 +69,8 @@ final class PayMethodScreen extends StatefulWidget {
       if (venueId != null && venueId.isNotEmpty) 'venueId': venueId,
       'currency': ?pricingCurrency,
       'displayCurrency': ?displayCurrency,
-      if (scheduledAt != null) 'scheduledAt': scheduledAt.toUtc().toIso8601String(),
+      if (scheduledAt != null)
+        'scheduledAt': scheduledAt.toUtc().toIso8601String(),
     };
     final query = Uri(queryParameters: qp).query;
     return '/matches/$matchId/pay/method?$query';
@@ -87,9 +99,20 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
   CurrencyCode? _settlementCurrency;
 
   CurrencyCode get _displayCurrencyCode => venueDisplayCurrency(
-        displayCurrency: _resolvedDisplayCurrency ?? widget.displayCurrency,
-        pricingCurrency: _resolvedPricingCurrency ?? widget.pricingCurrency,
-      );
+    displayCurrency: _resolvedDisplayCurrency ?? widget.displayCurrency,
+    pricingCurrency: _resolvedPricingCurrency ?? widget.pricingCurrency,
+  );
+
+  CurrencyCode get _currentObligationCurrency => CurrencyCode.fromApiValue(
+    _resolvedPricingCurrency ?? widget.pricingCurrency ?? 'BS',
+  );
+
+  CurrencyCode get _currentAmountCurrency => _settlementMinorCents != null
+      ? (_settlementCurrency ?? _currentObligationCurrency)
+      : _currentObligationCurrency;
+
+  int get _currentAmountMinor =>
+      _settlementMinorCents ?? _obligationMinorForFx();
 
   bool get _isCash => _methodRouteValue == 'CASH';
 
@@ -121,8 +144,9 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
       var countryCode = 'VE';
       if (venueId != null && venueId.isNotEmpty) {
         try {
-          final venue =
-              await getIt<VenuesRepository>().getVenueDetail(venueId: venueId);
+          final venue = await getIt<VenuesRepository>().getVenueDetail(
+            venueId: venueId,
+          );
           pricingCurrency ??= venue.pricingCurrency ?? venue.displayCurrency;
           displayCurrency ??= venue.displayCurrency ?? venue.pricingCurrency;
           countryCode = venue.countryCode ?? 'VE';
@@ -131,8 +155,9 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
 
       DateTime? scheduledAt = widget.scheduledAt;
       try {
-        final match =
-            await getIt<MatchesRepository>().getMatchById(widget.matchId);
+        final match = await getIt<MatchesRepository>().getMatchById(
+          widget.matchId,
+        );
         scheduledAt ??= match.scheduledAt;
       } catch (_) {}
 
@@ -165,10 +190,9 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
 
       final me = await getIt<ProfileRepository>().getMe();
       final txs = await repo.listMyTransactions(limit: 100);
-      final existing = txs.transactions
-          .where((t) => t.matchId == widget.matchId)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final existing =
+          txs.transactions.where((t) => t.matchId == widget.matchId).toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       TransactionDto? pendingTx;
       for (final t in existing) {
@@ -189,7 +213,9 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           _resolvedDisplayCurrency = displayCurrency;
           _matchScheduledAt = scheduledAt;
           _exchangeRates = exchangeRates;
-          _selectedMethodId = methods.isNotEmpty ? methods.first.id : 'TRANSFER';
+          _selectedMethodId = methods.isNotEmpty
+              ? methods.first.id
+              : 'TRANSFER';
           _loading = false;
         });
         _recomputeFx();
@@ -227,7 +253,9 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
             _resolvedDisplayCurrency = displayCurrency;
             _matchScheduledAt = scheduledAt;
             _exchangeRates = exchangeRates;
-            _selectedMethodId = methods.isNotEmpty ? methods.first.id : 'TRANSFER';
+            _selectedMethodId = methods.isNotEmpty
+                ? methods.first.id
+                : 'TRANSFER';
             _loading = false;
           });
           _recomputeFx();
@@ -287,8 +315,16 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
 
     final scheduled = _matchScheduledAt ?? DateTime.now();
     final dateIso = localCalendarDateIsoSV(scheduled);
-    final oblRate = pickExchangeRateForDateSV(_exchangeRates, obligation, dateIso);
-    final setRate = pickExchangeRateForDateSV(_exchangeRates, settlement, dateIso);
+    final oblRate = pickExchangeRateForDateSV(
+      _exchangeRates,
+      obligation,
+      dateIso,
+    );
+    final setRate = pickExchangeRateForDateSV(
+      _exchangeRates,
+      settlement,
+      dateIso,
+    );
 
     if (oblRate == null || setRate == null) {
       setState(() {
@@ -336,10 +372,10 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
           ? _obligationMinorForFx()
           : (_settlementMinorCents ?? _obligationMinorForFx());
       final reportedCurrency =
-          (_isCash ? _obligationCurrency : _settlementCurrency)?.apiValue
-          ?? pricing
-          ?? widget.pricingCurrency
-          ?? 'BS';
+          (_isCash ? _obligationCurrency : _settlementCurrency)?.apiValue ??
+          pricing ??
+          widget.pricingCurrency ??
+          'BS';
 
       final selectionRef = resolvePaymentSelectionRefSV(methodId);
       if (selectionRef != null) {
@@ -369,8 +405,7 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
 
       final amountForUpload =
           _settlementMinorCents ?? widget.amountPerPlayerCents;
-      final currencyForUpload =
-          _settlementCurrency?.apiValue ?? pricing;
+      final currencyForUpload = _settlementCurrency?.apiValue ?? pricing;
 
       context.push(
         UploadReceiptScreen.route(
@@ -410,154 +445,152 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? ErrorState(message: _error!, onRetry: _bootstrap)
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _MatchHeaderCard(
-                      title: widget.matchTitle,
-                      amount: formatMoneyCents(
-                        widget.amountPerPlayerCents,
-                        _displayCurrencyCode,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'SELECCIONA UNA OPCIÓN',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (_methods.isNotEmpty)
-                      ..._methods.map(
-                        (m) {
-                          //? Mostrar banco si hay múltiples transferencias bancarias
-                          final sameTypeCount = _methods
-                              .where((x) => x.type == m.type)
-                              .length;
-                          final bank = m.type == 'BANK_TRANSFER' &&
-                                  sameTypeCount > 1
-                              ? (m.config?['bank'] as String?) ?? ''
-                              : '';
-                          final subtitle = bank.isNotEmpty
-                              ? '$bank · ${m.settlementCurrency}'
-                              : '${m.name} · ${m.settlementCurrency}';
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _MethodOption(
-                              selected: _selectedMethodId == m.id,
-                              title: m.displayLabel,
-                              subtitle: subtitle,
-                              onTap: () {
-                                setState(() => _selectedMethodId = m.id);
-                                _recomputeFx();
-                              },
-                            ),
-                          );
-                        },
-                      )
-                    else ...[
-                      _MethodOption(
-                        selected: _selectedMethodId == 'TRANSFER',
-                        title: 'Transferencia bancaria',
-                        subtitle: 'Recomendado',
-                        onTap: () {
-                          setState(() => _selectedMethodId = 'TRANSFER');
-                          _recomputeFx();
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _MethodOption(
-                        selected: _selectedMethodId == 'CASH',
-                        title: 'Efectivo',
-                        subtitle: 'Coordina con el organizador',
-                        onTap: () {
-                          setState(() => _selectedMethodId = 'CASH');
-                          _recomputeFx();
-                        },
-                      ),
-                    ],
-                    if (_selectedMethod != null)
-                      _PaymentMethodDetailsCard(method: _selectedMethod!)
-                    else if (_selectedMethodId == 'TRANSFER' &&
-                        _legacyPaymentInfo != null)
-                      _BankInfoCard(paymentInfo: _legacyPaymentInfo!),
-                    if (!_isCash &&
-                        _settlementMinorCents != null &&
-                        _obligationCurrency != null &&
-                        _settlementCurrency != null &&
-                        _obligationCurrency != _settlementCurrency)
-                      _SettlementConversionCard(
-                        obligationMinor: widget.amountPerPlayerCents,
-                        obligationCurrency: _obligationCurrency!,
-                        settlementMinor: _settlementMinorCents!,
-                        settlementCurrency: _settlementCurrency!,
-                      ),
-                    if (!_isCash && _fxMissingRate)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          'Falta la tasa de cambio para esta fecha. '
-                          'No puedes continuar hasta que el club la cargue.',
-                          style: TextStyle(
-                            color: scheme.error,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    if (_isCash)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          'Pagarás en efectivo en el club. No necesitas subir '
-                          'comprobante; el staff confirmará tu pago.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                      ),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: FilledButton(
-                        onPressed: (_submitting ||
-                                (!_isCash && _fxMissingRate))
-                            ? null
-                            : _continue,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: scheme.primary,
-                          elevation: 8,
-                          shadowColor: scheme.primary.withValues(alpha: 0.4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _submitting
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Text(
-                                _isCash
-                                    ? 'Confirmar inscripción'
-                                    : 'Ya pagué · Enviar comprobante',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
+          ? ErrorState(message: _error!, onRetry: _bootstrap)
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _MatchHeaderCard(
+                  title: widget.matchTitle,
+                  amount: formatMoneyCents(
+                    widget.amountPerPlayerCents,
+                    _displayCurrencyCode,
+                  ),
                 ),
+                const SizedBox(height: 18),
+                Text(
+                  'SELECCIONA UNA OPCIÓN',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (_methods.isNotEmpty)
+                  ..._methods.map((m) {
+                    //? Mostrar banco si hay múltiples transferencias bancarias
+                    final sameTypeCount = _methods
+                        .where((x) => x.type == m.type)
+                        .length;
+                    final bank = m.type == 'BANK_TRANSFER' && sameTypeCount > 1
+                        ? (m.config?['bank'] as String?) ?? ''
+                        : '';
+                    final settlementLabel = _currencyLabel(
+                      CurrencyCode.fromApiValue(m.settlementCurrency),
+                    );
+                    final subtitle = bank.isNotEmpty
+                        ? '$bank · $settlementLabel'
+                        : '${m.name} · $settlementLabel';
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _MethodOption(
+                        selected: _selectedMethodId == m.id,
+                        title: m.displayLabel,
+                        subtitle: subtitle,
+                        onTap: () {
+                          setState(() => _selectedMethodId = m.id);
+                          _recomputeFx();
+                        },
+                      ),
+                    );
+                  })
+                else ...[
+                  _MethodOption(
+                    selected: _selectedMethodId == 'TRANSFER',
+                    title: 'Transferencia bancaria',
+                    subtitle: 'Recomendado',
+                    onTap: () {
+                      setState(() => _selectedMethodId = 'TRANSFER');
+                      _recomputeFx();
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _MethodOption(
+                    selected: _selectedMethodId == 'CASH',
+                    title: 'Efectivo',
+                    subtitle: 'Coordina con el organizador',
+                    onTap: () {
+                      setState(() => _selectedMethodId = 'CASH');
+                      _recomputeFx();
+                    },
+                  ),
+                ],
+                if (_selectedMethod != null)
+                  _PaymentMethodDetailsCard(
+                    method: _selectedMethod!,
+                    amountMinor: _currentAmountMinor,
+                    amountCurrency: _currentAmountCurrency,
+                    obligationMinor: _obligationMinorForFx(),
+                    obligationCurrency: _currentObligationCurrency,
+                  )
+                else if (_selectedMethodId == 'TRANSFER' &&
+                    _legacyPaymentInfo != null)
+                  _BankInfoCard(
+                    paymentInfo: _legacyPaymentInfo!,
+                    amountMinor: _currentAmountMinor,
+                    amountCurrency: _currentAmountCurrency,
+                  ),
+                if (!_isCash && _fxMissingRate)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      'Falta la tasa de cambio para esta fecha. '
+                      'No puedes continuar hasta que el club la cargue.',
+                      style: TextStyle(
+                        color: scheme.error,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                if (_isCash)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      'Pagarás en efectivo en el club. No necesitas subir '
+                      'comprobante; el staff confirmará tu pago.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton(
+                    onPressed: (_submitting || (!_isCash && _fxMissingRate))
+                        ? null
+                        : _continue,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: scheme.primary,
+                      elevation: 8,
+                      shadowColor: scheme.primary.withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            _isCash
+                                ? 'Confirmar inscripción'
+                                : 'Ya pagué · Enviar comprobante',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -587,8 +620,8 @@ final class _MatchHeaderCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    fontWeight: FontWeight.w800,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -596,9 +629,9 @@ final class _MatchHeaderCard extends StatelessWidget {
                 Text(
                   'Pago por jugador',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -613,9 +646,9 @@ final class _MatchHeaderCard extends StatelessWidget {
             child: Text(
               amount,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: scheme.primary,
-                  ),
+                fontWeight: FontWeight.w900,
+                color: scheme.primary,
+              ),
             ),
           ),
         ],
@@ -625,15 +658,24 @@ final class _MatchHeaderCard extends StatelessWidget {
 }
 
 final class _PaymentMethodDetailsCard extends StatelessWidget {
-  const _PaymentMethodDetailsCard({required this.method});
+  const _PaymentMethodDetailsCard({
+    required this.method,
+    required this.amountMinor,
+    required this.amountCurrency,
+    required this.obligationMinor,
+    required this.obligationCurrency,
+  });
 
   final VenuePaymentMethodDto method;
+  final int amountMinor;
+  final CurrencyCode amountCurrency;
+  final int obligationMinor;
+  final CurrencyCode obligationCurrency;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final rows = method.detailRows;
-    if (rows.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.only(top: 14),
@@ -654,12 +696,27 @@ final class _PaymentMethodDetailsCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   'Datos para pagar',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            _InfoRow(
+              label: 'Monto a pagar',
+              value: formatMoneyCents(amountMinor, amountCurrency),
+            ),
+            if (amountCurrency != obligationCurrency) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Equivale a ${formatMoneyCents(obligationMinor, obligationCurrency)} '
+                'en la moneda de la partida.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
             const SizedBox(height: 10),
             ...rows.map(
               (r) => Padding(
@@ -675,9 +732,15 @@ final class _PaymentMethodDetailsCard extends StatelessWidget {
 }
 
 final class _BankInfoCard extends StatelessWidget {
-  const _BankInfoCard({required this.paymentInfo});
+  const _BankInfoCard({
+    required this.paymentInfo,
+    required this.amountMinor,
+    required this.amountCurrency,
+  });
 
   final MatchPaymentInfoDto paymentInfo;
+  final int amountMinor;
+  final CurrencyCode amountCurrency;
 
   @override
   Widget build(BuildContext context) {
@@ -688,7 +751,8 @@ final class _BankInfoCard extends StatelessWidget {
         paymentInfo.paymentHolder!.isNotEmpty) {
       fields.add(_InfoRow(label: 'Titular', value: paymentInfo.paymentHolder!));
     }
-    if (paymentInfo.paymentBank != null && paymentInfo.paymentBank!.isNotEmpty) {
+    if (paymentInfo.paymentBank != null &&
+        paymentInfo.paymentBank!.isNotEmpty) {
       fields.add(_InfoRow(label: 'Banco', value: paymentInfo.paymentBank!));
     }
     if (paymentInfo.paymentCvu != null && paymentInfo.paymentCvu!.isNotEmpty) {
@@ -718,72 +782,19 @@ final class _BankInfoCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   'Datos para la transferencia',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ],
             ),
             const SizedBox(height: 10),
+            _InfoRow(
+              label: 'Monto a pagar',
+              value: formatMoneyCents(amountMinor, amountCurrency),
+            ),
+            const SizedBox(height: 10),
             ...fields,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-final class _SettlementConversionCard extends StatelessWidget {
-  const _SettlementConversionCard({
-    required this.obligationMinor,
-    required this.obligationCurrency,
-    required this.settlementMinor,
-    required this.settlementCurrency,
-  });
-
-  final int obligationMinor;
-  final CurrencyCode obligationCurrency;
-  final int settlementMinor;
-  final CurrencyCode settlementCurrency;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: scheme.secondaryContainer.withValues(alpha: 0.5),
-          border: Border.all(color: scheme.outlineVariant),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Monto a transferir (${settlementCurrency.apiValue})',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              formatMoneyCents(settlementMinor, settlementCurrency),
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: scheme.primary,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Equivale a ${formatMoneyCents(obligationMinor, obligationCurrency)} '
-              'en moneda de la partida.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-            ),
           ],
         ),
       ),
@@ -906,17 +917,17 @@ final class _InfoRow extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         Expanded(
           child: SelectableText(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
       ],

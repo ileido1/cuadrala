@@ -137,20 +137,53 @@ class MatchCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (leadingBadge != null) ...[
-                            leadingBadge!,
-                            const SizedBox(width: 6),
-                          ],
-                          InfoBadge(
-                            label: category,
-                            background: BrandColors.limeAccent,
-                            foreground: BrandColors.onLime,
-                            fontSize: 11,
+                          Expanded(
+                            child: Row(
+                              children: [
+                                if (leadingBadge != null) ...[
+                                  leadingBadge!,
+                                  const SizedBox(width: 6),
+                                ],
+                                Flexible(
+                                  child: InfoBadge(
+                                    label: category,
+                                    background: BrandColors.limeAccent,
+                                    foreground: BrandColors.onLime,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                if (surfaceTag != null) ...[
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: SurfaceTag(label: surfaceTag!),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
-                          if (surfaceTag != null) ...[
-                            const SizedBox(width: 6),
-                            SurfaceTag(label: surfaceTag!),
+                          if (actionLabel != null && onAction != null) ...[
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              onPressed: onAction,
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size(0, 34),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(11),
+                                ),
+                              ),
+                              child: Text(
+                                actionLabel!,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
                           ],
                         ],
                       ),
@@ -196,6 +229,8 @@ class MatchCard extends StatelessWidget {
                                       : openSpots == 0
                                       ? 'Completa'
                                       : '$openSpots ${openSpots == 1 ? 'cupo' : 'cupos'}'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: openSpots == 0
@@ -210,6 +245,8 @@ class MatchCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               participantTrailingLabel!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: scheme.onSurfaceVariant,
@@ -252,26 +289,6 @@ class MatchCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (actionLabel != null && onAction != null) ...[
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: onAction,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 34),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                    ),
-                    child: Text(
-                      actionLabel!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

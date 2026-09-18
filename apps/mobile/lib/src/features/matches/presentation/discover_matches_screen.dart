@@ -110,7 +110,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
                       child: Text(
-                        'DÍA',
+                        'Día',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -124,12 +124,24 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                       value: _selectedDayKey(state),
                       onChanged: (key) {
                         final day = _days.firstWhere((d) => d.key == key);
-                        context
-                            .read<DiscoverMatchesCubit>()
-                            .selectDate(day.date);
+                        context.read<DiscoverMatchesCubit>().selectDate(
+                          day.date,
+                        );
                       },
                     ),
                     const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'Horario',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: _TimePills(
@@ -140,12 +152,37 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: _GenderPills(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nivel',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          _CategoryPills(items: state.items),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Género',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const _GenderPills(),
+                        ],
+                      ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                       child: _AvailabilityToggle(
                         value: state.onlyAvailable,
                         onChanged: (v) => context
@@ -218,7 +255,8 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                     child: ListView.separated(
                       controller: _scrollController,
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                      itemCount: loaded.visibleItems.length +
+                      itemCount:
+                          loaded.visibleItems.length +
                           (loaded.isLoadingMore ? 1 : 0),
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
@@ -236,15 +274,15 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                           onTap: () => context.push(Routes.matchDetail(m.id)),
                           onJoin: canJoin
                               ? () => showModalBottomSheet<void>(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    useSafeArea: true,
-                                    builder: (_) => _JoinConfirmSheet(
-                                      match: m,
-                                      matchesRepository:
-                                          getIt<MatchesRepository>(),
-                                    ),
-                                  )
+                                  context: context,
+                                  isScrollControlled: true,
+                                  useSafeArea: true,
+                                  builder: (_) => _JoinConfirmSheet(
+                                    match: m,
+                                    matchesRepository:
+                                        getIt<MatchesRepository>(),
+                                  ),
+                                )
                               : null,
                         );
                       },
@@ -296,9 +334,9 @@ final class _DiscoverHeader extends StatelessWidget {
                 Text(
                   'Matchmaking por horario y nivel',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -343,10 +381,7 @@ final class _DiscoverMatchCard extends StatelessWidget {
           .toList(),
       participantCount: match.participantCount,
       maxParticipants: match.maxParticipants,
-      primaryPriceLabel: formatMoneyLabel(
-        match.pricePerPlayerCents,
-        currency,
-      ),
+      primaryPriceLabel: formatMoneyLabel(match.pricePerPlayerCents, currency),
       secondaryPriceLabel: secondaryBsLabelSV(
         primaryMinor: match.pricePerPlayerCents,
         primaryCurrency: currency,
@@ -397,6 +432,49 @@ final class _TimePills extends StatelessWidget {
   }
 }
 
+final class _CategoryPills extends StatelessWidget {
+  const _CategoryPills({required this.items});
+
+  final List<OpenMatchDto> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<DiscoverMatchesCubit>();
+    final state = cubit.state;
+    if (state is! DiscoverMatchesLoaded) return const SizedBox.shrink();
+
+    final categories = <String, String>{};
+    for (final item in items) {
+      categories[item.categoryId] =
+          item.categoryName ?? 'Cat. ${idPreview(item.categoryId)}';
+    }
+    if (categories.isEmpty) return const SizedBox.shrink();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          SelectableChip(
+            label: 'Todos',
+            selected: state.categoryId == null,
+            onTap: () => cubit.setCategoryId(null),
+          ),
+          for (final entry in categories.entries) ...[
+            const SizedBox(width: 8),
+            SelectableChip(
+              label: entry.value,
+              selected: state.categoryId == entry.key,
+              onTap: () => cubit.setCategoryId(
+                state.categoryId == entry.key ? null : entry.key,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _GenderPills extends StatelessWidget {
   const _GenderPills();
 
@@ -408,10 +486,10 @@ class _GenderPills extends StatelessWidget {
     final current = state.gender;
 
     Widget chip(String label, String value) => SelectableChip(
-          label: label,
-          selected: current == value,
-          onTap: () => cubit.setGender(current == value ? null : value),
-        );
+      label: label,
+      selected: current == value,
+      onTap: () => cubit.setGender(current == value ? null : value),
+    );
 
     return Wrap(
       spacing: 8,
@@ -426,10 +504,7 @@ class _GenderPills extends StatelessWidget {
 }
 
 final class _AvailabilityToggle extends StatelessWidget {
-  const _AvailabilityToggle({
-    required this.value,
-    required this.onChanged,
-  });
+  const _AvailabilityToggle({required this.value, required this.onChanged});
 
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -440,9 +515,9 @@ final class _AvailabilityToggle extends StatelessWidget {
       children: [
         Text(
           'Solo con cupos',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         const Spacer(),
         Switch(value: value, onChanged: onChanged),
