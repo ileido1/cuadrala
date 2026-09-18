@@ -15,6 +15,7 @@ describe('Catálogo de parametersSchema de los presets v1 (domain)', () => {
     ['AMERICANO', { rounds: 2, courts: 1 }],
     ['ROUND_ROBIN', { doubleRound: true }],
     ['SINGLE_ELIMINATION', { thirdPlaceMatch: false }],
+    ['GROUPS_PLUS_KNOCKOUT', { groupCount: 2, qualifiersPerGroup: 2 }],
   ] as const)('%s v1 acepta sus parámetros declarados', (_code, _params) => {
     const RESULT = VALIDATOR.validateAndNormalizeSV({
       parametersSchema: FORMAT_PRESET_V1_PARAMETERS_SCHEMAS[_code],

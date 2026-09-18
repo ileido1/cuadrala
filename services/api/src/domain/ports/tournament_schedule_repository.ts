@@ -28,6 +28,12 @@ export interface TournamentScheduleRepository {
     payload: unknown;
   }): Promise<{ created: boolean; schedule: TournamentScheduleDTO }>;
 
+  /** Actualiza solo el payload del cuadro; `scheduleKey` permanece inmutable. */
+  updatePayloadSV(_input: {
+    tournamentId: string;
+    payload: unknown;
+  }): Promise<TournamentScheduleDTO>;
+
   /**
    * Guarda el horario y la cancha de cada partido del cuadro.
    *
@@ -44,4 +50,3 @@ export interface TournamentScheduleRepository {
     }>;
   }): Promise<void>;
 }
-

@@ -15,6 +15,10 @@ import {
   createSingleEliminationScheduleKeySV,
   generateSingleEliminationScheduleSV,
 } from '../../domain/single_elimination/bracket_generator.js';
+import {
+  createGroupsPlusKnockoutScheduleKeySV,
+  generateGroupsPlusKnockoutScheduleSV,
+} from '../../domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
 import type { FormatPresetRepository } from '../../domain/ports/format_preset_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 import type { TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
@@ -301,6 +305,42 @@ export class GenerateTournamentScheduleUseCase {
       });
       //? Solo en la creación real: regenerar un cuadro idéntico es idempotente
       //? y volver a avisar por cada intento sería ruido.
+      if (RES.created) {
+        await this._reserveSlotsSV(
+          TOURNAMENT,
+          FORMAT_CODE,
+          RES.schedule.payload,
+          _input.actorUserId,
+        );
+        await this._notifyScheduleSV(TOURNAMENT, CONFIRMED_USER_IDS);
+        await this._notifyGuestsSV(
+          TOURNAMENT,
+          CONFIRMED_REGISTRATIONS.filter((_r) => _r.registrationType === 'GUEST'),
+        );
+      }
+      return {
+        created: RES.created,
+        schedule: {
+          tournamentId: RES.schedule.tournamentId,
+          formatCode: RES.schedule.formatCode,
+          scheduleKey: RES.schedule.scheduleKey,
+          payload: RES.schedule.payload,
+        },
+      };
+    }
+
+    if (FORMAT_CODE === 'GROUPS_PLUS_KNOCKOUT') {
+      const GPK_INPUT = {
+        participantRegistrationIds: PARTICIPANT_REGISTRATION_IDS,
+      };
+      const SCHEDULE_KEY = createGroupsPlusKnockoutScheduleKeySV(GPK_INPUT);
+      const PAYLOAD = generateGroupsPlusKnockoutScheduleSV(GPK_INPUT);
+      const RES = await this._tournamentScheduleRepository.createOrValidateIdempotencySV({
+        tournamentId: TOURNAMENT.id,
+        formatCode: FORMAT_CODE,
+        scheduleKey: SCHEDULE_KEY,
+        payload: PAYLOAD,
+      });
       if (RES.created) {
         await this._reserveSlotsSV(
           TOURNAMENT,

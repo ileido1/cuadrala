@@ -91,6 +91,10 @@ abstract interface class TournamentsApi {
     required Map<String, Object?> body,
   });
 
+  Future<Map<String, Object?>> advanceGroupsPlusKnockoutEnvelope({
+    required String tournamentId,
+  });
+
   Future<Map<String, Object?>> getTournamentScoreboardEnvelope({
     required String tournamentId,
   });
@@ -300,6 +304,17 @@ final class DioTournamentsApi implements TournamentsApi {
     final json = await _apiClient.postJson(
       '/api/v1/tournaments/$tournamentId/schedule:generate',
       body: body,
+    );
+    return decodeEnvelopeDataMap(json);
+  }
+
+  @override
+  Future<Map<String, Object?>> advanceGroupsPlusKnockoutEnvelope({
+    required String tournamentId,
+  }) async {
+    final json = await _apiClient.postJson(
+      '/api/v1/tournaments/$tournamentId/schedule:advance-groups-plus-knockout',
+      body: const {},
     );
     return decodeEnvelopeDataMap(json);
   }

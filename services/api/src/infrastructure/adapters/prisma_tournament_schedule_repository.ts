@@ -92,6 +92,27 @@ export class PrismaTournamentScheduleRepository implements TournamentScheduleRep
     });
   }
 
+  async updatePayloadSV(_input: {
+    tournamentId: string;
+    payload: unknown;
+  }): Promise<TournamentScheduleDTO> {
+    const UPDATED = await PRISMA.tournamentSchedule.update({
+      where: { tournamentId: _input.tournamentId },
+      data: { payload: _input.payload as never },
+      select: {
+        id: true,
+        tournamentId: true,
+        formatCode: true,
+        scheduleKey: true,
+        payload: true,
+        slotPlan: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    return mapRowSV(UPDATED);
+  }
+
   async createOrValidateIdempotencySV(_input: {
     tournamentId: string;
     formatCode: string;
@@ -145,4 +166,3 @@ export class PrismaTournamentScheduleRepository implements TournamentScheduleRep
     });
   }
 }
-

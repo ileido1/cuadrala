@@ -17,6 +17,7 @@ import {
   SPORT_NAMES,
 } from '../src/domain/services/category/sport_classification_catalog.js';
 import { FORMAT_PRESET_V1_PARAMETERS_SCHEMAS } from '../src/domain/services/tournament/format_preset_parameters_catalog.js';
+import { GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS } from '../src/domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -62,6 +63,13 @@ async function seedCatalogSV(): Promise<void> {
       defaultParameters: { thirdPlaceMatch: false },
       parametersSchema:
         FORMAT_PRESET_V1_PARAMETERS_SCHEMAS.SINGLE_ELIMINATION as Prisma.InputJsonValue,
+    },
+    {
+      code: 'GROUPS_PLUS_KNOCKOUT',
+      name: 'Grupos + eliminación',
+      defaultParameters: GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS as Prisma.InputJsonValue,
+      parametersSchema:
+        FORMAT_PRESET_V1_PARAMETERS_SCHEMAS.GROUPS_PLUS_KNOCKOUT as Prisma.InputJsonValue,
     },
   ];
 

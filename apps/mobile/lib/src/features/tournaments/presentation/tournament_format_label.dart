@@ -16,6 +16,8 @@
 String tournamentFormatLabel(String? presetCode) => switch (presetCode) {
   'SINGLE_ELIMINATION' => 'Eliminación simple',
   'Single Elimination' => 'Eliminación simple',
+  'GROUPS_PLUS_KNOCKOUT' => 'Grupos + eliminación',
+  'Grupos + eliminación' => 'Grupos + eliminación',
   'ROUND_ROBIN' => 'Round robin',
   'Round Robin' => 'Round robin',
   null => '',
@@ -24,16 +26,23 @@ String tournamentFormatLabel(String? presetCode) => switch (presetCode) {
 
 String tournamentFormatCode(String? preset) => switch (preset) {
   'Single Elimination' => 'SINGLE_ELIMINATION',
+  'Grupos + eliminación' => 'GROUPS_PLUS_KNOCKOUT',
   'Round Robin' => 'ROUND_ROBIN',
   'Americano' => 'AMERICANO',
   final value => value ?? '',
 };
 
-enum TournamentFormatPresentation { bracket, standings, schedule }
+enum TournamentFormatPresentation {
+  bracket,
+  groupsPlusKnockout,
+  standings,
+  schedule,
+}
 
 TournamentFormatPresentation tournamentFormatPresentation(String? preset) =>
     switch (tournamentFormatCode(preset)) {
       'SINGLE_ELIMINATION' => TournamentFormatPresentation.bracket,
+      'GROUPS_PLUS_KNOCKOUT' => TournamentFormatPresentation.groupsPlusKnockout,
       'ROUND_ROBIN' || 'AMERICANO' => TournamentFormatPresentation.standings,
       _ => TournamentFormatPresentation.schedule,
     };

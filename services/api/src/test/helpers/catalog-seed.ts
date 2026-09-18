@@ -3,16 +3,22 @@ import {
   SPORT_NAMES,
 } from '../../domain/services/category/sport_classification_catalog.js';
 import { FORMAT_PRESET_V1_PARAMETERS_SCHEMAS } from '../../domain/services/tournament/format_preset_parameters_catalog.js';
+import { GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS } from '../../domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 
 const PRESET_DEFS: Array<{
-  code: 'AMERICANO' | 'ROUND_ROBIN';
+  code: 'AMERICANO' | 'ROUND_ROBIN' | 'GROUPS_PLUS_KNOCKOUT';
   name: string;
   defaultParameters: Prisma.InputJsonValue;
 }> = [
   { code: 'AMERICANO', name: 'Americano', defaultParameters: {} },
   { code: 'ROUND_ROBIN', name: 'Todos contra todos', defaultParameters: { doubleRound: false } },
+  {
+    code: 'GROUPS_PLUS_KNOCKOUT',
+    name: 'Grupos + eliminación',
+    defaultParameters: GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS,
+  },
 ];
 
 /**
@@ -28,7 +34,7 @@ const PRESET_DEFS: Array<{
  */
 async function ensurePresetV1SV(
   _sportId: string,
-  _code: 'AMERICANO' | 'ROUND_ROBIN',
+  _code: 'AMERICANO' | 'ROUND_ROBIN' | 'GROUPS_PLUS_KNOCKOUT',
   _name: string,
   _defaultParameters: Prisma.InputJsonValue,
 ): Promise<{ id: string }> {
@@ -69,7 +75,14 @@ async function ensurePresetV1SV(
  */
 export async function ensureTestCatalogSV(): Promise<{
   sportIdsByCode: Record<string, string>;
-  presetIdsByCode: Record<string, { americano: string; roundRobin: string }>;
+  presetIdsByCode: Record<
+    string,
+    {
+      americano: string;
+      roundRobin: string;
+      groupsPlusKnockout: string;
+    }
+  >;
   sportPadelId: string;
   sportTennisId: string;
   sportPickleballId: string;
@@ -79,9 +92,17 @@ export async function ensureTestCatalogSV(): Promise<{
   presetTennisRoundRobinId: string;
   presetPickleballAmericanoId: string;
   presetPickleballRoundRobinId: string;
+  presetGroupsPlusKnockoutId: string;
 }> {
   const SPORT_IDS_BY_CODE: Record<string, string> = {};
-  const PRESET_IDS_BY_CODE: Record<string, { americano: string; roundRobin: string }> = {};
+  const PRESET_IDS_BY_CODE: Record<
+    string,
+    {
+      americano: string;
+      roundRobin: string;
+      groupsPlusKnockout: string;
+    }
+  > = {};
 
   for (const CODE of RACKET_SPORT_CODES) {
     const SPORT = await PRISMA.sport.upsert({
@@ -104,6 +125,7 @@ export async function ensureTestCatalogSV(): Promise<{
     PRESET_IDS_BY_CODE[CODE] = {
       americano: BY_CODE.get('AMERICANO')!,
       roundRobin: BY_CODE.get('ROUND_ROBIN')!,
+      groupsPlusKnockout: BY_CODE.get('GROUPS_PLUS_KNOCKOUT')!,
     };
   }
 
@@ -120,5 +142,6 @@ export async function ensureTestCatalogSV(): Promise<{
     presetTennisRoundRobinId: PRESET_IDS_BY_CODE['TENNIS']!.roundRobin,
     presetPickleballAmericanoId: PRESET_IDS_BY_CODE['PICKLEBALL']!.americano,
     presetPickleballRoundRobinId: PRESET_IDS_BY_CODE['PICKLEBALL']!.roundRobin,
+    presetGroupsPlusKnockoutId: PRESET_IDS_BY_CODE['PADEL']!.groupsPlusKnockout,
   };
 }

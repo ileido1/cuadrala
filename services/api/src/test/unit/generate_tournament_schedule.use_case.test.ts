@@ -212,4 +212,43 @@ describe('GenerateTournamentScheduleUseCase — invited participants enter every
       expect(PAYLOAD_TOKENS.has(GUEST.id)).toBe(true);
     }
   });
+
+  it('dispatches GROUPS_PLUS_KNOCKOUT with group matches and unresolved knockout slots', async () => {
+    mockTournamentRepository.findByIdSV.mockResolvedValue({
+      id: 'tournament-1',
+      organizerUserId: 'organizer-1',
+      venueId: null,
+      formatPresetId: 'preset-gpk',
+      status: 'DRAFT',
+      pairedRegistration: false,
+    });
+    mockFormatPresetRepository.findByIdSV.mockResolvedValue({
+      id: 'preset-gpk',
+      code: 'GROUPS_PLUS_KNOCKOUT',
+    });
+    mockTournamentRegistrationRepository.listByTournamentIdAndStatusSV.mockResolvedValue(
+      AUTH_REGISTRATIONS,
+    );
+    mockTournamentScheduleRepository.createOrValidateIdempotencySV.mockImplementation(async (_args) => ({
+      created: true,
+      schedule: {
+        tournamentId: _args.tournamentId,
+        formatCode: _args.formatCode,
+        scheduleKey: _args.scheduleKey,
+        payload: _args.payload,
+      },
+    }));
+
+    const RESULT = await useCase.executeSV({ tournamentId: 'tournament-1', actorUserId: 'organizer-1' });
+    const PAYLOAD = RESULT.schedule.payload as {
+      groups: Array<{ participantRegistrationIds: string[] }>;
+      rounds: Array<{ stage: string; matches: Array<{ playerA: string | null; playerB: string | null }> }>;
+    };
+
+    expect(RESULT.schedule.formatCode).toBe('GROUPS_PLUS_KNOCKOUT');
+    expect(PAYLOAD.groups).toHaveLength(2);
+    expect(PAYLOAD.groups.every((_group) => _group.participantRegistrationIds.length === 2)).toBe(true);
+    expect(PAYLOAD.rounds.filter((_round) => _round.stage === 'GROUP')).toHaveLength(2);
+    expect(PAYLOAD.rounds.at(-1)?.matches[0]).toMatchObject({ playerA: null, playerB: null });
+  });
 });

@@ -24,6 +24,8 @@ import { GuestScheduleActionUseCase } from '../../application/use_cases/guest_sc
 import { PrismaTournamentGuestScheduleTokenRepository } from '../../infrastructure/adapters/prisma_tournament_guest_schedule_token_repository.js';
 import { ResendEmailSender } from '../../infrastructure/adapters/resend_email_sender.js';
 import { ENV_CONST } from '../../config/env.js';
+import { AdvanceGroupsPlusKnockoutUseCase } from '../../application/use_cases/advance_groups_plus_knockout.use_case.js';
+import { PrismaTournamentMatchMaterializationRepository } from '../../infrastructure/adapters/prisma_tournament_match_materialization_repository.js';
 
 const TOURNAMENT_REPOSITORY = new PrismaTournamentRepository();
 const FORMAT_PRESET_REPOSITORY = new PrismaFormatPresetRepository();
@@ -105,4 +107,13 @@ export const GET_TOURNAMENT_SCHEDULE_UC = new GetTournamentScheduleUseCase(
   new PrismaMatchCourtAvailabilityRepository(),
   new PrismaTournamentMatchResultRepository(),
   new PrismaTournamentSlotResponseRepository(),
+);
+
+export const ADVANCE_GROUPS_PLUS_KNOCKOUT_UC = new AdvanceGroupsPlusKnockoutUseCase(
+  TOURNAMENT_REPOSITORY,
+  TOURNAMENT_SCHEDULE_REPOSITORY,
+  new PrismaTournamentMatchResultRepository(),
+  TOURNAMENT_REGISTRATION_REPOSITORY,
+  new PrismaTournamentMatchMaterializationRepository(),
+  ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
 );

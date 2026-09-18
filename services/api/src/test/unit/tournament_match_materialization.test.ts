@@ -96,6 +96,42 @@ describe('buildMaterializedMatchPlansSV', () => {
     ]);
   });
 
+  it('materializes group matches and skips unresolved GROUPS_PLUS_KNOCKOUT slots', () => {
+    const PAYLOAD = {
+      groups: [
+        { groupNumber: 1, participantRegistrationIds: ['reg-a', 'reg-b'] },
+        { groupNumber: 2, participantRegistrationIds: ['reg-c', 'reg-d'] },
+      ],
+      rounds: [
+        {
+          roundNumber: 1,
+          name: 'Grupo 1 · Ronda 1',
+          stage: 'GROUP' as const,
+          groupNumber: 1,
+          matches: [{ matchNumber: 1, playerA: 'reg-a', playerB: 'reg-b', bye: false }],
+        },
+        {
+          roundNumber: 2,
+          name: 'Semifinales',
+          stage: 'KNOCKOUT' as const,
+          matches: [{ matchNumber: 1, playerA: null, playerB: null, bye: false }],
+        },
+      ],
+      knockout: { qualifiedParticipantCount: 4, semifinalRoundNumber: 2, finalRoundNumber: 3 },
+    };
+
+    expect(buildMaterializedMatchPlansSV({ formatCode: 'GROUPS_PLUS_KNOCKOUT', payload: PAYLOAD })).toEqual([
+      {
+        roundNumber: 1,
+        matchNumber: 1,
+        participants: [
+          { participantRef: 'reg-a', teamLabel: null },
+          { participantRef: 'reg-b', teamLabel: null },
+        ],
+      },
+    ]);
+  });
+
   it('throws AppError 501 FORMATO_NO_SOPORTADO for an unknown formatCode', () => {
     expect(() =>
       buildMaterializedMatchPlansSV({ formatCode: 'SWISS', payload: { rounds: [] } }),

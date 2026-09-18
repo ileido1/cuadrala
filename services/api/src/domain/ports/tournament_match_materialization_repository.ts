@@ -31,4 +31,19 @@ export interface TournamentMatchMaterializationRepository {
     matchCount: number;
     tournament: { id: string; name: string; status: string };
   }>;
+
+  /** Materializa solo los slots todavía ausentes, sin cambiar el estado del torneo. */
+  materializeMissingSV(_input: {
+    tournamentId: string;
+    scheduleKey: string;
+    sportId: string;
+    categoryId: string;
+    organizerUserId: string;
+    matchType: 'AMERICANO' | 'REGULAR';
+    matches: MatchMaterializationPlanDTO[];
+  }): Promise<{
+    created: boolean;
+    matchCount: number;
+    tournament: { id: string; name: string; status: string };
+  }>;
 }

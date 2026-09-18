@@ -9,6 +9,7 @@ import {
   RESCHEDULE_TOURNAMENT_MATCH_UC,
   LIST_MY_TOURNAMENT_MATCHES_UC,
   GUEST_SCHEDULE_ACTION_UC,
+  ADVANCE_GROUPS_PLUS_KNOCKOUT_UC,
 } from '../composition/tournament_schedule.composition.js';
 import {
   GENERATE_TOURNAMENT_SCHEDULE_BODY_SCHEMA,
@@ -54,6 +55,26 @@ export async function getTournamentScheduleCON(_req: Request, _res: Response): P
   _res.status(200).json({
     success: true,
     message: 'Calendario obtenido correctamente.',
+    data: RESULT,
+  });
+}
+
+export async function postAdvanceGroupsPlusKnockoutCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+  const PARAMS = TOURNAMENT_ID_PARAM_SCHEMA.parse(_req.params);
+  const RESULT = await ADVANCE_GROUPS_PLUS_KNOCKOUT_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    actorUserId: ACTOR_USER_ID,
+  });
+  _res.status(200).json({
+    success: true,
+    message: RESULT.advanced ? 'Cuadro final generado.' : 'La transición no realizó cambios.',
     data: RESULT,
   });
 }

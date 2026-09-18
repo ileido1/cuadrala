@@ -80,4 +80,78 @@ export class PrismaTournamentMatchMaterializationRepository
       return { created: true, matchCount: _input.matches.length, tournament: UPDATED_TOURNAMENT };
     });
   }
+
+  async materializeMissingSV(_input: {
+    tournamentId: string;
+    scheduleKey: string;
+    sportId: string;
+    categoryId: string;
+    organizerUserId: string;
+    matchType: 'AMERICANO' | 'REGULAR';
+    matches: MatchMaterializationPlanDTO[];
+  }): Promise<{
+    created: boolean;
+    matchCount: number;
+    tournament: { id: string; name: string; status: string };
+  }> {
+    return PRISMA.$transaction(async (_tx) => {
+      //? Serializa la transición para que dos requests concurrentes no creen el
+      //? mismo slot semifinal antes de que la otra transacción confirme.
+      await _tx.$executeRaw`SELECT id FROM "Tournament" WHERE id = ${_input.tournamentId} FOR UPDATE`;
+
+      const TOURNAMENT = await _tx.tournament.findUniqueOrThrow({
+        where: { id: _input.tournamentId },
+        select: { id: true, name: true, status: true },
+      });
+      let CREATED_COUNT = 0;
+
+      for (const PLAN of _input.matches) {
+        const EXISTING = await _tx.match.findFirst({
+          where: {
+            tournamentId: _input.tournamentId,
+            AND: [
+              { formatParameters: { path: ['scheduleKey'], equals: _input.scheduleKey } },
+              { formatParameters: { path: ['roundNumber'], equals: PLAN.roundNumber } },
+              { formatParameters: { path: ['matchNumber'], equals: PLAN.matchNumber } },
+            ],
+          },
+          select: { id: true },
+        });
+        if (EXISTING !== null) continue;
+
+        await _tx.match.create({
+          data: {
+            sportId: _input.sportId,
+            categoryId: _input.categoryId,
+            organizerUserId: _input.organizerUserId,
+            tournamentId: _input.tournamentId,
+            type: _input.matchType as never,
+            status: 'SCHEDULED',
+            maxParticipants: PLAN.participants.length,
+            ...(PLAN.scheduledAt !== null ? { scheduledAt: PLAN.scheduledAt } : {}),
+            ...(PLAN.courtId !== null ? { courtId: PLAN.courtId } : {}),
+            formatParameters: {
+              scheduleKey: _input.scheduleKey,
+              roundNumber: PLAN.roundNumber,
+              matchNumber: PLAN.matchNumber,
+            } as never,
+            participants: {
+              create: PLAN.participants.map((_p) => ({
+                ...(_p.userId !== null ? { userId: _p.userId } : {}),
+                tournamentRegistrationId: _p.tournamentRegistrationId,
+                ...(_p.teamLabel !== null ? { teamLabel: _p.teamLabel } : {}),
+              })),
+            },
+          },
+        });
+        CREATED_COUNT += 1;
+      }
+
+      return {
+        created: CREATED_COUNT > 0,
+        matchCount: CREATED_COUNT,
+        tournament: TOURNAMENT,
+      };
+    });
+  }
 }

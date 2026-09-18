@@ -23,6 +23,7 @@ const mockTournamentScheduleRepository = {
   findByTournamentIdSV: vi.fn(),
   createOrValidateIdempotencySV: vi.fn(),
   saveSlotPlanSV: vi.fn(),
+  updatePayloadSV: vi.fn(),
 };
 
 // Mock match-result repository (S8b: real per-match state once materialized)

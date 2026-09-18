@@ -9,6 +9,7 @@ import {
   postSettleTournamentSlotCON,
   getGuestScheduleActionCON,
   postGuestScheduleActionCON,
+  postAdvanceGroupsPlusKnockoutCON,
 } from '../controllers/tournament_schedule.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
@@ -28,6 +29,12 @@ TOURNAMENT_SCHEDULE_ROUTER.post(
   '/tournaments/:tournamentId/schedule\\:generate',
   requireAuth,
   asyncHandler(postGenerateTournamentScheduleCON),
+);
+
+TOURNAMENT_SCHEDULE_ROUTER.post(
+  '/tournaments/:tournamentId/schedule\\:advance-groups-plus-knockout',
+  requireAuth,
+  asyncHandler(postAdvanceGroupsPlusKnockoutCON),
 );
 
 TOURNAMENT_SCHEDULE_ROUTER.get(

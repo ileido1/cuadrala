@@ -1,7 +1,12 @@
 import type { FormatParameterFieldSchema } from '../../ports/tournament_format_parameters_validator.js';
+import { GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS } from '../../groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
 
 /** Base format codes that every sport gets as a v1 preset. */
-export type FormatPresetV1Code = 'AMERICANO' | 'ROUND_ROBIN' | 'SINGLE_ELIMINATION';
+export type FormatPresetV1Code =
+  | 'AMERICANO'
+  | 'ROUND_ROBIN'
+  | 'SINGLE_ELIMINATION'
+  | 'GROUPS_PLUS_KNOCKOUT';
 
 /**
  * @name    :FORMAT_PRESET_V1_PARAMETERS_SCHEMAS
@@ -23,5 +28,23 @@ export const FORMAT_PRESET_V1_PARAMETERS_SCHEMAS: Record<
   ROUND_ROBIN: [{ key: 'doubleRound', type: 'boolean', label: 'Doble vuelta', required: false }],
   SINGLE_ELIMINATION: [
     { key: 'thirdPlaceMatch', type: 'boolean', label: 'Tercer lugar', required: false },
+  ],
+  GROUPS_PLUS_KNOCKOUT: [
+    {
+      key: 'groupCount',
+      type: 'int',
+      label: 'Cantidad de grupos',
+      required: false,
+      min: GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS.groupCount,
+      max: GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS.groupCount,
+    },
+    {
+      key: 'qualifiersPerGroup',
+      type: 'int',
+      label: 'Clasificados por grupo',
+      required: false,
+      min: GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS.qualifiersPerGroup,
+      max: GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS.qualifiersPerGroup,
+    },
   ],
 };

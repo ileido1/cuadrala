@@ -39,6 +39,8 @@ String _presetDescription(String code) {
       return 'Rotación por rondas en varias canchas';
     case 'SINGLE_ELIMINATION':
       return 'Eliminación directa por llaves';
+    case 'GROUPS_PLUS_KNOCKOUT':
+      return 'Fase de grupos y luego eliminación';
     default:
       return 'Formato de torneo';
   }
@@ -52,7 +54,7 @@ Map<String, Object?> _initialParameterValues(TournamentPresetDto? preset) {
   final presetDefaults = defaults is Map ? defaults : const {};
   return {
     for (final field in preset?.parametersSchema ?? const [])
-      field.key: ?(presetDefaults[field.key] ?? field.defaultValue),
+      field.key: presetDefaults[field.key] ?? field.defaultValue,
   };
 }
 

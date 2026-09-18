@@ -69,6 +69,15 @@ class TournamentScheduleCubit extends Cubit<TournamentScheduleState> {
     }
   }
 
+  /// Advances a GROUPS_PLUS_KNOCKOUT schedule after its group results are
+  /// complete, then reloads the displayable schedule from the server.
+  Future<void> advanceGroupsPlusKnockout() async {
+    await _tournamentsRepository.advanceGroupsPlusKnockout(
+      tournamentId: _tournamentId,
+    );
+    await load();
+  }
+
   /// "Cargar resultado" (M11c): postea via el endpoint de resultados (D1) y
   /// recarga el calendario para reflejar el estado real (avance de ronda,
   /// score materializado). Un fallo (p. ej. 409 `RESULTADO_YA_CARGADO`) se

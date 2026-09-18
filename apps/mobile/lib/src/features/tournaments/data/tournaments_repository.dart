@@ -146,6 +146,15 @@ class TournamentsRepository {
     }
   }
 
+  /// Resolves the completed group phase and materializes the knockout
+  /// semifinals. The schedule view remains the source of truth for the UI,
+  /// so callers reload it after this mutation.
+  Future<void> advanceGroupsPlusKnockout({required String tournamentId}) async {
+    await _tournamentsApi.advanceGroupsPlusKnockoutEnvelope(
+      tournamentId: tournamentId,
+    );
+  }
+
   Future<TournamentScoreboardDto> getTournamentScoreboard({
     required String tournamentId,
   }) async {

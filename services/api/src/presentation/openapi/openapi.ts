@@ -629,6 +629,30 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/tournaments/{tournamentId}/schedule:advance-groups-plus-knockout': {
+      post: {
+        tags: ['Tournaments'],
+        summary: 'Avanzar de grupos a semifinales',
+        description:
+          'Para GROUPS_PLUS_KNOCKOUT, calcula standings v1 y materializa las dos semifinales de forma idempotente. Devuelve `advanced`, `canAdvance`, `phase` y el payload actualizado.',
+        parameters: [
+          {
+            name: 'tournamentId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Estado de la transición' },
+          '401': { description: 'Sesión no disponible' },
+          '403': { description: 'No autorizado' },
+          '404': { description: 'Torneo o calendario no encontrado' },
+          '409': { description: 'Formato o calendario incompatible' },
+        },
+      },
+    },
     '/api/v1/tournaments/{tournamentId}/schedule': {
       get: {
         tags: ['Tournaments'],

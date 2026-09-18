@@ -2,6 +2,7 @@ import { AppError } from '../errors/app_error.js';
 import type { AmericanoScheduleDTO } from '../americano/americano_schedule_generator.js';
 import type { RoundRobinScheduleDTO } from '../round_robin/round_robin_schedule_generator.js';
 import type { SingleEliminationScheduleDTO } from '../single_elimination/bracket_generator.js';
+import type { GroupsPlusKnockoutScheduleDTO } from '../groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
 
 /**
  * `participantRef` es un token opaco de inscripción (`TournamentRegistration.id`), no un `userId`.
@@ -83,6 +84,27 @@ export function buildMaterializedMatchPlansSV(_input: {
         if (MATCH.bye || MATCH.playerA === null || MATCH.playerB === null) {
           continue;
         }
+        PLANS.push({
+          roundNumber: ROUND.roundNumber,
+          matchNumber: MATCH.matchNumber,
+          participants: [
+            { participantRef: MATCH.playerA, teamLabel: null },
+            { participantRef: MATCH.playerB, teamLabel: null },
+          ],
+        });
+      }
+    }
+    return PLANS;
+  }
+
+  //? 4. GROUPS_PLUS_KNOCKOUT: se materializa la fase de grupos y cualquier
+  //? knockout que ya tenga ambos slots resueltos por una fase posterior.
+  if (_input.formatCode === 'GROUPS_PLUS_KNOCKOUT') {
+    const PAYLOAD = _input.payload as GroupsPlusKnockoutScheduleDTO;
+    const PLANS: MaterializedMatchPlanDTO[] = [];
+    for (const ROUND of PAYLOAD.rounds) {
+      for (const MATCH of ROUND.matches) {
+        if (MATCH.playerA === null || MATCH.playerB === null) continue;
         PLANS.push({
           roundNumber: ROUND.roundNumber,
           matchNumber: MATCH.matchNumber,
