@@ -8,6 +8,7 @@ final class _RegistrationsTab extends StatelessWidget {
     required this.tournamentStatus,
     required this.categoryName,
     required this.pairedRegistration,
+    this.maxSlots,
   });
 
   final String tournamentId;
@@ -16,6 +17,7 @@ final class _RegistrationsTab extends StatelessWidget {
   final String? tournamentStatus;
   final String? categoryName;
   final bool pairedRegistration;
+  final int? maxSlots;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +61,7 @@ final class _RegistrationsTab extends StatelessWidget {
                   tournamentStatus == null ||
                   _kOrganizerManageableStatuses.contains(tournamentStatus);
               final canManageGuests = isOrganizer && guestActionsAllowed;
+              final slotsFull = maxSlots != null && activeItems.length >= maxSlots!;
               final canInvitePlayers =
                   isOrganizer && loaded.canManageInvitations;
 
@@ -138,7 +141,7 @@ final class _RegistrationsTab extends StatelessWidget {
                       busyRegistrationId: loaded.busyRegistrationId,
                     ),
                   ],
-                  if (canManageGuests) ...[
+                  if (canManageGuests && !slotsFull) ...[
                     const SizedBox(height: 14),
                     Row(
                       children: [

@@ -29,6 +29,27 @@ export class RegisterTournamentParticipantUseCase {
       );
     }
 
+    const EXISTING = await this._registrationRepository.findByTournamentAndUserSV(
+      _input.tournamentId,
+      _input.userId,
+    );
+    if (
+      TOURNAMENT.maxSlots !== null &&
+      EXISTING?.status === 'WITHDRAWN' &&
+      (await this._registrationRepository.countByTournamentIdSV(_input.tournamentId)) >=
+        TOURNAMENT.maxSlots
+    ) {
+      throw new AppError('CUPOS_AGOTADOS', 'El torneo ya no tiene cupos disponibles.', 409);
+    }
+    if (
+      TOURNAMENT.maxSlots !== null &&
+      EXISTING === null &&
+      (await this._registrationRepository.countByTournamentIdSV(_input.tournamentId)) >=
+        TOURNAMENT.maxSlots
+    ) {
+      throw new AppError('CUPOS_AGOTADOS', 'El torneo ya no tiene cupos disponibles.', 409);
+    }
+
     //? La autoinscripcion entra PENDING y la confirma el organizador con
     //? PATCH /tournaments/:id/registrations/:registrationId. Escribir CONFIRMED
     //? aca saltea esa aprobacion, y contradice el @default(PENDING) del schema.

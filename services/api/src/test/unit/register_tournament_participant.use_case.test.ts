@@ -7,6 +7,8 @@ const mockTournamentRepository = {
 };
 
 const mockRegistrationRepository = {
+  findByTournamentAndUserSV: vi.fn(),
+  countByTournamentIdSV: vi.fn(),
   upsertSV: vi.fn(),
 };
 
@@ -48,6 +50,8 @@ const REGISTRATION = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockTournamentRepository.findByIdSV.mockResolvedValue(BASE_TOURNAMENT);
+  mockRegistrationRepository.findByTournamentAndUserSV.mockResolvedValue(null);
+  mockRegistrationRepository.countByTournamentIdSV.mockResolvedValue(0);
   mockRegistrationRepository.upsertSV.mockResolvedValue({ created: true, registration: REGISTRATION });
 });
 

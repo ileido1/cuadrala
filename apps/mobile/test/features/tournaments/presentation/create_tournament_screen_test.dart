@@ -216,17 +216,15 @@ void main() {
         expect(find.text('Fase de grupos y luego eliminación'), findsOneWidget);
         expect(
           tester
-              .widget<SegmentedControl<String>>(
+              .widget<SelectableChip>(
                 find.byWidgetPredicate(
                   (widget) =>
-                      widget is SegmentedControl<String> &&
-                      widget.options.any(
-                        (option) => option.label == 'Grupos + eliminación',
-                      ),
+                      widget is SelectableChip &&
+                      widget.label == 'Grupos + eliminación',
                 ),
               )
-              .value,
-          'preset-gpk',
+              .selected,
+          isTrue,
         );
       },
     );
@@ -399,7 +397,14 @@ void main() {
     testWidgets('should use shared sport selectors and preserve the handoff footer', (tester) async {
       await _pumpScreen(tester);
 
-      expect(find.byType(SelectableChip), findsNWidgets(2));
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableChip &&
+              (widget.label == 'Pádel' || widget.label == 'Tenis'),
+        ),
+        findsNWidgets(2),
+      );
       expect(find.byType(RadioListTile), findsNothing);
       await tester.tap(find.widgetWithText(SelectableChip, 'Tenis'));
       await _selectVenue(tester, 'Pádel Centro');

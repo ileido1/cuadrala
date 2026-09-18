@@ -6,12 +6,14 @@ import type {
 } from '../../domain/ports/tournament_registration_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
 import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
+import type { EmailSender } from '../../domain/ports/email_sender.js';
 
 export class InviteGuestTournamentParticipantUseCase {
   constructor(
     private readonly _tournamentRepository: TournamentRepository,
     private readonly _registrationRepository: TournamentRegistrationRepository,
     private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
+    private readonly _emailSender: EmailSender | null = null,
   ) {}
 
   async executeSV(_input: {
@@ -54,13 +56,40 @@ export class InviteGuestTournamentParticipantUseCase {
       );
     }
 
+    if (
+      TOURNAMENT.maxSlots !== null &&
+      (await this._registrationRepository.countByTournamentIdSV(_input.tournamentId)) >=
+        TOURNAMENT.maxSlots
+    ) {
+      throw new AppError('CUPOS_AGOTADOS', 'El torneo ya no tiene cupos disponibles.', 409);
+    }
+
     //? 5. Crear la inscripción GUEST en estado PENDING
-    return this._registrationRepository.createGuestSV({
+    const REGISTRATION = await this._registrationRepository.createGuestSV({
       tournamentId: _input.tournamentId,
       guestName: _input.guestName,
       guestPhone: _input.guestPhone ?? null,
       guestEmail: _input.guestEmail.toLowerCase(),
       registeredByUserId: _input.actorUserId,
     });
+    await this._notifyGuestSV(_input.guestEmail, TOURNAMENT.name);
+    return REGISTRATION;
+  }
+
+  private async _notifyGuestSV(_email: string, _tournamentName: string): Promise<void> {
+    if (this._emailSender === null) return;
+    try {
+      await this._emailSender.sendSV({
+        to: _email,
+        subject: `Invitación al torneo ${_tournamentName}`,
+        text: `Te agregaron como invitado al torneo ${_tournamentName}. Contactá al organizador para confirmar tu participación.`,
+      });
+    } catch (_error) {
+      console.error('[tournament-invite-email] No se pudo enviar el correo al invitado.', {
+        email: _email,
+        tournamentName: _tournamentName,
+        error: _error,
+      });
+    }
   }
 }

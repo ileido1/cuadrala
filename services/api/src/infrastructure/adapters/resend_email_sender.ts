@@ -8,7 +8,10 @@ export class ResendEmailSender implements EmailSender {
     text: string;
     html?: string;
   }): Promise<void> {
-    if (!ENV_CONST.RESEND_API_KEY || !ENV_CONST.EMAIL_FROM) return;
+    if (!ENV_CONST.RESEND_API_KEY || !ENV_CONST.EMAIL_FROM) {
+      console.warn('[email] Resend deshabilitado: faltan RESEND_API_KEY o EMAIL_FROM.');
+      return;
+    }
     const RESPONSE = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {

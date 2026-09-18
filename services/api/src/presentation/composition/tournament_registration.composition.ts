@@ -12,6 +12,7 @@ import { WithdrawTournamentRegistrationUseCase } from '../../application/use_cas
 import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composition.js';
 import { ConfirmPendingTournamentRegistrationsUseCase } from '../../application/use_cases/confirm_pending_tournament_registrations.use_case.js';
 import { PairTournamentRegistrationsUseCase } from '../../application/use_cases/pair_tournament_registrations.use_case.js';
+import { ResendEmailSender } from '../../infrastructure/adapters/resend_email_sender.js';
 
 const TOURNAMENT_REPO = new PrismaTournamentRepository();
 const REGISTRATION_REPO = new PrismaTournamentRegistrationRepository();
@@ -55,6 +56,7 @@ export const INVITE_GUEST_TOURNAMENT_PARTICIPANT_UC = new InviteGuestTournamentP
   TOURNAMENT_REPO,
   REGISTRATION_REPO,
   ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+  new ResendEmailSender(),
 );
 
 export const UPDATE_TOURNAMENT_REGISTRATION_STATUS_UC = new UpdateTournamentRegistrationStatusUseCase(

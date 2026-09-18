@@ -484,6 +484,7 @@ final class TournamentDetailBody extends StatelessWidget {
                       categoryName: tournament?.categoryName,
                       pairedRegistration:
                           tournament?.pairedRegistration ?? false,
+                      maxSlots: tournament?.maxSlots,
                     ),
                     _OrganizerBracketTab(
                       tournamentId: tournamentId,

@@ -29,10 +29,6 @@ import '../../../shared/widgets/pill_toggle.dart';
 import '../../../shared/widgets/selectable_chip.dart';
 import '../../../shared/widgets/segmented_control.dart';
 
-extension on Iterable<TournamentPresetDto> {
-  TournamentPresetDto? get firstOrNull => isEmpty ? null : first;
-}
-
 /// Descripción amigable de un preset de formato (para el usuario final).
 String _presetDescription(String code) {
   switch (code) {
@@ -685,26 +681,25 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     TournamentPresetsSuccess(:final presets) => Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SegmentedControl<String>(
-                          value: _selectedPreset?.id,
-                          onChanged: (id) {
-                            final preset = presets
-                                .where((p) => p.id == id)
-                                .firstOrNull;
-                            setState(() {
-                              _selectedPreset = preset;
-                              _formatParameterValues = _initialParameterValues(
-                                preset,
-                              );
-                            });
-                          },
-                          options: [
-                            for (final preset in presets)
-                              SegmentedOption(
-                                value: preset.id,
-                                label: preset.name,
-                              ),
-                          ],
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final preset in presets)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: SelectableChip(
+                                    label: preset.name,
+                                    selected: _selectedPreset?.id == preset.id,
+                                    onTap: () => setState(() {
+                                      _selectedPreset = preset;
+                                      _formatParameterValues =
+                                          _initialParameterValues(preset);
+                                    }),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                         if (_selectedPreset case final preset?)
                           Padding(
