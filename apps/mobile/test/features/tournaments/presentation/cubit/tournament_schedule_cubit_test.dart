@@ -8,7 +8,8 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_reposi
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_schedule_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_schedule_state.dart';
 
-class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockTournamentsRepository extends Mock
+    implements TournamentsRepository {}
 
 void main() {
   group('TournamentScheduleCubit', () {
@@ -23,12 +24,11 @@ void main() {
     blocTest<TournamentScheduleCubit, TournamentScheduleState>(
       'load (vacío) emite loading→empty',
       build: () {
-        when(() => tournamentsRepository.getTournamentSchedule(tournamentId: tournamentId))
-            .thenAnswer(
-          (_) async => const TournamentScheduleDto(
-            rounds: [],
+        when(
+          () => tournamentsRepository.getTournamentSchedule(
+            tournamentId: tournamentId,
           ),
-        );
+        ).thenAnswer((_) async => const TournamentScheduleDto(rounds: []));
         return TournamentScheduleCubit(
           tournamentsRepository: tournamentsRepository,
           tournamentId: tournamentId,
@@ -44,8 +44,11 @@ void main() {
     blocTest<TournamentScheduleCubit, TournamentScheduleState>(
       'load (ok) emite loading→success',
       build: () {
-        when(() => tournamentsRepository.getTournamentSchedule(tournamentId: tournamentId))
-            .thenAnswer(
+        when(
+          () => tournamentsRepository.getTournamentSchedule(
+            tournamentId: tournamentId,
+          ),
+        ).thenAnswer(
           (_) async => const TournamentScheduleDto(
             rounds: [
               TournamentScheduleRoundDto(
@@ -102,9 +105,7 @@ void main() {
           () => tournamentsRepository.generateTournamentSchedule(
             tournamentId: tournamentId,
           ),
-        ).thenThrow(
-          const AppFailure(code: 'HTTP_409', message: 'Conflicto.'),
-        );
+        ).thenThrow(const AppFailure(code: 'HTTP_409', message: 'Conflicto.'));
         return TournamentScheduleCubit(
           tournamentsRepository: tournamentsRepository,
           tournamentId: tournamentId,
@@ -130,10 +131,11 @@ void main() {
             ],
           ),
         ).thenAnswer((_) async {});
-        when(() => tournamentsRepository.getTournamentSchedule(tournamentId: tournamentId))
-            .thenAnswer(
-          (_) async => const TournamentScheduleDto(rounds: []),
-        );
+        when(
+          () => tournamentsRepository.getTournamentSchedule(
+            tournamentId: tournamentId,
+          ),
+        ).thenAnswer((_) async => const TournamentScheduleDto(rounds: []));
         return TournamentScheduleCubit(
           tournamentsRepository: tournamentsRepository,
           tournamentId: tournamentId,
@@ -174,7 +176,10 @@ void main() {
             scores: any(named: 'scores'),
           ),
         ).thenThrow(
-          const AppFailure(code: 'RESULTADO_YA_CARGADO', message: 'Ya cargado.'),
+          const AppFailure(
+            code: 'RESULTADO_YA_CARGADO',
+            message: 'Ya cargado.',
+          ),
         );
         return TournamentScheduleCubit(
           tournamentsRepository: tournamentsRepository,
@@ -191,10 +196,62 @@ void main() {
       errors: () => [isA<AppFailure>()],
       verify: (_) {
         verifyNever(
-          () => tournamentsRepository.getTournamentSchedule(tournamentId: tournamentId),
+          () => tournamentsRepository.getTournamentSchedule(
+            tournamentId: tournamentId,
+          ),
         );
+      },
+    );
+
+    blocTest<TournamentScheduleCubit, TournamentScheduleState>(
+      'advanceGroupsPlusKnockout advances the phase then reloads the schedule',
+      build: () {
+        when(
+          () => tournamentsRepository.advanceGroupsPlusKnockout(
+            tournamentId: tournamentId,
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => tournamentsRepository.getTournamentSchedule(
+            tournamentId: tournamentId,
+          ),
+        ).thenAnswer(
+          (_) async => const TournamentScheduleDto(
+            rounds: [
+              TournamentScheduleRoundDto(
+                name: 'Ronda 3',
+                matches: [
+                  TournamentScheduleMatchDto(
+                    id: '3-1',
+                    label: 'Ana vs Bea',
+                    status: 'SCHEDULED',
+                    matchId: 'semifinal-1',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        return TournamentScheduleCubit(
+          tournamentsRepository: tournamentsRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) => cubit.advanceGroupsPlusKnockout(),
+      expect: () => [
+        const TournamentScheduleLoading(),
+        isA<TournamentScheduleSuccess>(),
+      ],
+      verify: (_) {
+        verifyInOrder([
+          () => tournamentsRepository.advanceGroupsPlusKnockout(
+            tournamentId: tournamentId,
+          ),
+          () => tournamentsRepository.getTournamentSchedule(
+            tournamentId: tournamentId,
+          ),
+        ]);
       },
     );
   });
 }
-

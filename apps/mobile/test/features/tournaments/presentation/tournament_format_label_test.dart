@@ -19,6 +19,13 @@ void main() {
       expect(tournamentFormatLabel('ROUND_ROBIN'), 'Round robin');
     });
 
+    test('should map GROUPS_PLUS_KNOCKOUT to its user-facing label', () {
+      expect(
+        tournamentFormatLabel('GROUPS_PLUS_KNOCKOUT'),
+        'Grupos + eliminación',
+      );
+    });
+
     //? Un preset code sin mapeo conocido muestra el nombre crudo en vez de
     //? esconder la tarjeta (diseño: "other codes show the raw name") — a
     //? diferencia de `tournamentStatusLabel`, que sí falla cerrado.
@@ -31,6 +38,19 @@ void main() {
     //? nombre de deporte.
     test('should return an empty string when the preset code is null', () {
       expect(tournamentFormatLabel(null), '');
+    });
+  });
+
+  group('tournamentFormatPresentation', () {
+    test('should keep groups plus knockout distinct from direct brackets', () {
+      expect(
+        tournamentFormatPresentation('GROUPS_PLUS_KNOCKOUT'),
+        TournamentFormatPresentation.groupsPlusKnockout,
+      );
+      expect(
+        tournamentFormatPresentation('SINGLE_ELIMINATION'),
+        TournamentFormatPresentation.bracket,
+      );
     });
   });
 }

@@ -510,5 +510,23 @@ void main() {
         expect(match.scores.single.points, 6);
       },
     );
+
+    test(
+      'advanceGroupsPlusKnockout calls the phase-transition endpoint',
+      () async {
+        final api = _MockTournamentsApi();
+        final repo = TournamentsRepository(tournamentsApi: api);
+
+        when(
+          () => api.advanceGroupsPlusKnockoutEnvelope(tournamentId: 't-1'),
+        ).thenAnswer((_) async => {'advanced': true, 'phase': 'KNOCKOUT'});
+
+        await repo.advanceGroupsPlusKnockout(tournamentId: 't-1');
+
+        verify(
+          () => api.advanceGroupsPlusKnockoutEnvelope(tournamentId: 't-1'),
+        ).called(1);
+      },
+    );
   });
 }

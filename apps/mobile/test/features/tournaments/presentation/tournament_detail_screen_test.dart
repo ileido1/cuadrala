@@ -1732,7 +1732,9 @@ void main() {
       await pumpAndOpenBracketTab(tester, schedule: schedule);
 
       expect(find.text('Partidos programados'), findsOneWidget);
-      expect(find.text('Daniel R. vs Marcos S.'), findsOneWidget);
+      expect(find.text('Daniel R.'), findsOneWidget);
+      expect(find.text('vs Marcos S.'), findsOneWidget);
+      expect(find.text('Finalizado'), findsOneWidget);
       expect(find.text('6-3'), findsOneWidget);
     });
 
@@ -1758,7 +1760,8 @@ void main() {
 
       await pumpAndOpenBracketTab(tester, schedule: schedule);
 
-      expect(find.text('01 ene 11:30 · Central'), findsOneWidget);
+      expect(find.text('vs Luis P.'), findsOneWidget);
+      expect(find.text('CENTRAL · Activo'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Cargar'), findsOneWidget);
     });
 
@@ -1786,10 +1789,9 @@ void main() {
 
         await pumpAndOpenBracketTab(tester, schedule: schedule);
 
-        expect(
-          find.text('Rafa T. no puede a las 01 ene 11:30'),
-          findsOneWidget,
-        );
+        expect(find.text('Pedro L.'), findsOneWidget);
+        expect(find.text('vs Rafa T.'), findsOneWidget);
+        expect(find.text('CANCHA 2 · Sin estado'), findsOneWidget);
         expect(find.widgetWithText(OutlinedButton, 'Mover'), findsOneWidget);
       },
     );
@@ -1817,13 +1819,203 @@ void main() {
         await pumpAndOpenBracketTab(tester, schedule: schedule);
 
         expect(find.text('CUARTOS DE FINAL'), findsOneWidget);
-        expect(find.text('Luis P. vs Jorge Á.'), findsOneWidget);
-        expect(find.text('01 ene 09:00 · Cancha 2'), findsOneWidget);
+        expect(find.text('Luis P.'), findsOneWidget);
+        expect(find.text('vs Jorge Á.'), findsOneWidget);
+        expect(find.text('CANCHA 2 · Sin estado'), findsOneWidget);
       },
     );
   });
 
   group('_OrganizerBracketTab — SE-only advancement caption (M11c)', () {
+    testWidgets(
+      'shows Generar cuadro final only after every group match has scores',
+      (tester) async {
+        final groupMatch = TournamentScheduleMatchDto(
+          id: 'group-1',
+          label: 'Ana vs Bea',
+          status: 'SCHEDULED',
+          matchId: 'group-match-1',
+          matchStatus: 'FINISHED',
+          scores: const [
+            TournamentScheduleMatchScoreDto(userId: 'ana', points: 6),
+            TournamentScheduleMatchScoreDto(userId: 'bea', points: 3),
+          ],
+        );
+        final eligibleSchedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(name: 'Ronda 1', matches: [groupMatch]),
+            TournamentScheduleRoundDto(name: 'Ronda 2', matches: [groupMatch]),
+            const TournamentScheduleRoundDto(
+              name: 'Semifinales',
+              matches: [
+                TournamentScheduleMatchDto(id: 'semi-1', label: '', status: ''),
+              ],
+            ),
+            const TournamentScheduleRoundDto(
+              name: 'Final',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'final-1',
+                  label: '',
+                  status: '',
+                ),
+              ],
+            ),
+          ],
+        );
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [
+              _authRegistration(id: 'reg-1', userId: 'player-1'),
+              _authRegistration(id: 'reg-2', userId: 'player-2'),
+            ],
+            total: 2,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(TournamentScheduleSuccess(schedule: eligibleSchedule));
+        when(
+          () => scheduleCubit.advanceGroupsPlusKnockout(),
+        ).thenAnswer((_) async {});
+        when(() => scoreboardCubit.load()).thenAnswer((_) async {});
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            registrationsCubit: registrationsCubit,
+            scheduleCubit: scheduleCubit,
+            scoreboardCubit: scoreboardCubit,
+            tournament: _tournament(
+              organizerUserId: 'organizer-1',
+              formatPresetName: 'GROUPS_PLUS_KNOCKOUT',
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(SegmentedControl<int>),
+            matching: find.text('Cuadro'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Generar cuadro final'), findsOneWidget);
+
+        await tester.tap(find.text('Generar cuadro final'));
+        await tester.pumpAndSettle();
+
+        verify(() => scheduleCubit.advanceGroupsPlusKnockout()).called(1);
+        verify(() => scoreboardCubit.load()).called(1);
+
+        final incompleteSchedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Ronda 1',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'group-1',
+                  label: 'Ana vs Bea',
+                  status: 'SCHEDULED',
+                  matchId: 'group-match-1',
+                  matchStatus: 'IN_PROGRESS',
+                ),
+              ],
+            ),
+            TournamentScheduleRoundDto(name: 'Ronda 2', matches: [groupMatch]),
+            const TournamentScheduleRoundDto(
+              name: 'Semifinales',
+              matches: [
+                TournamentScheduleMatchDto(id: 'semi-1', label: '', status: ''),
+              ],
+            ),
+            const TournamentScheduleRoundDto(
+              name: 'Final',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'final-1',
+                  label: '',
+                  status: '',
+                ),
+              ],
+            ),
+          ],
+        );
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(TournamentScheduleSuccess(schedule: incompleteSchedule));
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            registrationsCubit: registrationsCubit,
+            scheduleCubit: scheduleCubit,
+            scoreboardCubit: scoreboardCubit,
+            tournament: _tournament(
+              organizerUserId: 'organizer-1',
+              formatPresetName: 'GROUPS_PLUS_KNOCKOUT',
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(SegmentedControl<int>),
+            matching: find.text('Cuadro'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Generar cuadro final'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'shows phase-aware copy for groups plus knockout before schedule generation',
+      (tester) async {
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [
+              _authRegistration(id: 'reg-1', userId: 'player-1'),
+              _authRegistration(id: 'reg-2', userId: 'player-2'),
+            ],
+            total: 2,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(const TournamentScheduleEmpty());
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            registrationsCubit: registrationsCubit,
+            scheduleCubit: scheduleCubit,
+            scoreboardCubit: scoreboardCubit,
+            tournament: _tournament(
+              organizerUserId: 'organizer-1',
+              formatPresetName: 'GROUPS_PLUS_KNOCKOUT',
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(SegmentedControl<int>),
+            matching: find.text('Cuadro'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Generar fase de grupos'), findsNWidgets(2));
+        expect(
+          find.textContaining('El cuadro de eliminación se genera después'),
+          findsOneWidget,
+        );
+        expect(find.text('Generar cuadro y horarios'), findsNothing);
+      },
+    );
+
     testWidgets(
       'shows the caption verbatim for a single-elimination tournament',
       (tester) async {

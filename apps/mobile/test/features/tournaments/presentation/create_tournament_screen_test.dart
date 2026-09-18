@@ -107,6 +107,16 @@ const _presetWithoutSchema = TournamentPresetDto(
   defaultParameters: null,
 );
 
+const _presetGroupsPlusKnockout = TournamentPresetDto(
+  id: 'preset-gpk',
+  sportId: 'padel',
+  code: 'GROUPS_PLUS_KNOCKOUT',
+  version: 1,
+  name: 'Grupos + eliminación',
+  schemaVersion: 1,
+  defaultParameters: null,
+);
+
 /// Registers the screen dependencies in getIt with mocked repositories.
 Future<void> _setupGetIt(
   _MockCatalogRepository catalogRepository,
@@ -175,7 +185,12 @@ void main() {
     when(
       () => tournamentsRepository.getPresetsBySportId(sportId: any(named: 'sportId')),
     ).thenAnswer(
-      (_) async => [_presetWithSchema, _presetWithDefaults, _presetWithoutSchema],
+      (_) async => [
+        _presetWithSchema,
+        _presetWithDefaults,
+        _presetWithoutSchema,
+        _presetGroupsPlusKnockout,
+      ],
     );
     //? Empty id makes the cubit emit an error, so the screen never navigates
     //? (there is no GoRouter in these tests).
@@ -190,6 +205,32 @@ void main() {
   tearDown(() async => getIt.reset());
 
   group('format parameters', () {
+    testWidgets(
+      'should render and select the API-provided groups plus knockout preset',
+      (tester) async {
+        await _pumpScreen(tester);
+
+        expect(find.text('Grupos + eliminación'), findsOneWidget);
+        await _selectPreset(tester, 'Grupos + eliminación');
+
+        expect(find.text('Fase de grupos y luego eliminación'), findsOneWidget);
+        expect(
+          tester
+              .widget<SegmentedControl<String>>(
+                find.byWidgetPredicate(
+                  (widget) =>
+                      widget is SegmentedControl<String> &&
+                      widget.options.any(
+                        (option) => option.label == 'Grupos + eliminación',
+                      ),
+                ),
+              )
+              .value,
+          'preset-gpk',
+        );
+      },
+    );
+
     testWidgets('should render schema fields when the preset has parametersSchema', (
       tester,
     ) async {
