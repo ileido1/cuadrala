@@ -453,15 +453,15 @@ export class PrismaPaymentTransactionRepository
       throw new Error('TRANSACCION_NO_PENDIENTE');
     }
 
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     let venuePaymentMethodId: string | null = null;
     let paymentData: PrismaTypes.InputJsonValue;
 
     if (
       _input.venuePaymentMethodId !== undefined
       && _input.venuePaymentMethodId.length > 0
-      && UUID_RE.test(_input.venuePaymentMethodId)
     ) {
+      // Los ids de medios de la sede también pueden ser legibles (por ejemplo,
+      // los ids legacy del seed); no se debe inferir su procedencia por formato.
       const METHOD = await PRISMA.venuePaymentMethod.findUnique({
         where: { id: _input.venuePaymentMethodId },
         select: { id: true, type: true, name: true, config: true },
