@@ -272,14 +272,14 @@ void main() {
   // ── 7. Subtitle copy fix ─────────────────────────────────────────────────
 
   group('subtitle copy', () {
-    testWidgets('"Tu resumen" is replaced by "Actividad cerca de ti"', (tester) async {
+    testWidgets('"Tu resumen" is replaced by "Actividad en Cuádrala"', (tester) async {
       when(() => homeCubit.state).thenReturn(_loadedState());
 
       await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
       await tester.pumpAndSettle();
 
       expect(find.text('Tu resumen'), findsNothing);
-      expect(find.text('Actividad cerca de ti'), findsAtLeastNWidgets(1));
+      expect(find.text('Actividad en Cuádrala'), findsOneWidget);
     });
   });
 }
