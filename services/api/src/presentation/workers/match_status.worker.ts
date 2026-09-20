@@ -51,12 +51,13 @@ export function startMatchStatusWorkerSV(
         ),
       ]);
 
-      if (RES.updatedCount > 0) {
+      if (RES.updatedCount > 0 || RES.cancelledCount > 0) {
         console.log(
           JSON.stringify({
             kind: 'match_status.update.tick',
             status: 'SUCCESS',
             updatedCount: RES.updatedCount,
+            cancelledCount: RES.cancelledCount,
             elapsedMs: Date.now() - TICK_STARTED_AT,
           }),
         );

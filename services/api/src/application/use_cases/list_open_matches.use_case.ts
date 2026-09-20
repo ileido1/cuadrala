@@ -29,6 +29,8 @@ export class ListOpenMatchesUseCase {
       {
         sportId: _input.sportId,
         status: 'SCHEDULED',
+        // Las partidas vencidas no son abiertas, aunque el job todavía no las haya reconciliado.
+        scheduledFrom: _input.scheduledFrom ?? new Date(),
         ...(_input.categoryId !== undefined ? { categoryId: _input.categoryId } : {}),
         ...(_input.scheduledFrom !== undefined ? { scheduledFrom: _input.scheduledFrom } : {}),
         ...(_input.scheduledTo !== undefined ? { scheduledTo: _input.scheduledTo } : {}),
@@ -46,4 +48,3 @@ export class ListOpenMatchesUseCase {
     return { items, pageInfo: { page: _input.page, limit: _input.limit, total } };
   }
 }
-

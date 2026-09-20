@@ -38,7 +38,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return BlocBuilder<HomeCubit, HomeState>(
       builder: (context, state) {
         if (state is HomeLoading || state is HomeInitial) {
-          return const Scaffold(body: SafeArea(child: SkeletonList(itemCount: 5)));
+          return const Scaffold(
+            body: SafeArea(child: SkeletonList(itemCount: 5)),
+          );
         }
 
         if (state is HomeFailure) {
@@ -81,31 +83,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   _MyMatchesSection(
                     myMatches: loaded.myMatches,
                     exchangeRates: loaded.exchangeRates,
-                    onVerTodas: () => StatefulNavigationShell.of(context).goBranch(1),
+                    onVerTodas: () =>
+                        StatefulNavigationShell.of(context).goBranch(1),
                     onMatchTap: (id) => context.push(Routes.matchDetail(id)),
                   ),
                   const SizedBox(height: 20),
                   _SectionHeader(
-                    title: 'Cerca de ti',
+                    title: 'Partidas abiertas',
                     onAction: () => context.push(Routes.discoverMatches),
                   ),
                   const SizedBox(height: 10),
                   if (loaded.openMatches.isEmpty)
                     EmptyState(
-                      title: 'Sin partidas cercanas',
-                      message: 'No hay partidas abiertas por ahora. ¡Explorá nuevas!',
+                      title: 'Sin partidas abiertas',
+                      message:
+                          'No hay partidas abiertas por ahora. ¡Explorá nuevas!',
                       ctaLabel: 'Buscar partidas',
                       onCtaPressed: () => context.push(Routes.discoverMatches),
                     )
                   else
-                    ...loaded.openMatches.take(3).map(
+                    ...loaded.openMatches
+                        .take(3)
+                        .map(
                           (m) => Padding(
                             padding: const EdgeInsets.only(bottom: 10),
                             child: _MatchCardFor(
                               match: m,
                               exchangeRates: loaded.exchangeRates,
                               live: false,
-                              onTap: () => context.push(Routes.matchDetail(m.id)),
+                              onTap: () =>
+                                  context.push(Routes.matchDetail(m.id)),
                             ),
                           ),
                         ),
@@ -126,7 +133,8 @@ bool _isLiveMatch(OpenMatchDto m) {
   if (scheduled == null) return false;
   final now = DateTime.now();
   final threshold = now.add(const Duration(minutes: 30));
-  final isUpcoming = scheduled.isAfter(now.subtract(const Duration(seconds: 1))) &&
+  final isUpcoming =
+      scheduled.isAfter(now.subtract(const Duration(seconds: 1))) &&
       scheduled.isBefore(threshold);
   final status = m.status.toUpperCase();
   return isUpcoming && (status == 'SCHEDULED' || status == 'IN_PROGRESS');
@@ -170,10 +178,7 @@ final class _MatchCardFor extends StatelessWidget {
           .toList(),
       participantCount: match.participantCount,
       maxParticipants: match.maxParticipants,
-      primaryPriceLabel: formatMoneyLabel(
-        match.pricePerPlayerCents,
-        currency,
-      ),
+      primaryPriceLabel: formatMoneyLabel(match.pricePerPlayerCents, currency),
       secondaryPriceLabel: secondaryBsLabelSV(
         primaryMinor: match.pricePerPlayerCents,
         primaryCurrency: currency,
@@ -192,7 +197,8 @@ String _initialsFrom(String name) {
   final parts = raw.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
   if (parts.isEmpty) return '';
   if (parts.length == 1) return parts.first.characters.first.toUpperCase();
-  return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
+  return (parts.first.characters.first + parts.last.characters.first)
+      .toUpperCase();
 }
 
 // ---------------------------------------------------------------------------
@@ -239,8 +245,11 @@ final class _HeroCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Icon(AppIcons.bolt,
-                          color: scheme.onPrimary, size: 24),
+                      child: Icon(
+                        AppIcons.bolt,
+                        color: scheme.onPrimary,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -346,9 +355,9 @@ final class _SectionHeader extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 19,
-                ),
+              fontWeight: FontWeight.w800,
+              fontSize: 19,
+            ),
           ),
         ),
         TextButton(
@@ -408,15 +417,12 @@ final class _MyMatchesSection extends StatelessWidget {
               child: Text(
                 'No tenés partidas. ¡Buscá una!',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            TextButton(
-              onPressed: onVerTodas,
-              child: const Text('Explorar'),
-            ),
+            TextButton(onPressed: onVerTodas, child: const Text('Explorar')),
           ],
         ),
       );
@@ -521,13 +527,13 @@ final class _HomeHeader extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          'Actividad cerca de ti',
+          'Actividad en Cuádrala',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontSize: 27,
-                letterSpacing: -0.5,
-                color: scheme.onSurface,
-              ),
+            fontWeight: FontWeight.w800,
+            fontSize: 27,
+            letterSpacing: -0.5,
+            color: scheme.onSurface,
+          ),
         ),
       ],
     );
@@ -560,10 +566,7 @@ final class _LevelRow extends StatelessWidget {
           ),
         if (category != null && elo != null) ...[
           const SizedBox(width: 5),
-          Text(
-            '·',
-            style: TextStyle(color: scheme.onSurfaceVariant),
-          ),
+          Text('·', style: TextStyle(color: scheme.onSurfaceVariant)),
           const SizedBox(width: 5),
         ],
         if (elo != null) ...[
@@ -614,11 +617,7 @@ final class _BellButton extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(
-                AppIcons.bell,
-                color: scheme.onSurface,
-                size: 20,
-              ),
+              Icon(AppIcons.bell, color: scheme.onSurface, size: 20),
               Positioned(
                 top: 10,
                 right: 11,
@@ -628,7 +627,10 @@ final class _BellButton extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: scheme.tertiary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: scheme.surfaceContainer, width: 1.5),
+                    border: Border.all(
+                      color: scheme.surfaceContainer,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),

@@ -79,6 +79,18 @@ describe('LIST_OPEN_MATCHES_QUERY_SCHEMA — venueId validation', () => {
 // ---------------------------------------------------------------------------
 
 describe('ListOpenMatchesUseCase — venueId forwarding', () => {
+  it('oculta partidas anteriores cuando no se envía scheduledFrom', async () => {
+    const REPO = buildMatchRepo([]);
+    const UC = new ListOpenMatchesUseCase(REPO);
+
+    await UC.executeSV({ sportId: SPORT_ID, page: 1, limit: 20 });
+
+    expect(REPO.listOpenMatchesSV).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduledFrom: expect.any(Date) }),
+      expect.anything(),
+    );
+  });
+
   it('SC-1.3: pasa venueId al repository cuando está presente', async () => {
     const MATCH_A = makeOpenMatchDTO({ id: 'match-a' });
     const REPO = buildMatchRepo([MATCH_A]);

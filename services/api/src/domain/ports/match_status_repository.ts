@@ -1,6 +1,6 @@
 export interface MatchStatusRepository {
-  //? Actualiza partidas SCHEDULED cuyo scheduledAt sea <= ahora a IN_PROGRESS
-  updateScheduledToInProgressSV(): Promise<{ updatedCount: number }>;
+  //? Reconcilia partidas vencidas: inicia las listas y cancela las incompletas.
+  updateScheduledToInProgressSV(): Promise<{ updatedCount: number; cancelledCount: number }>;
 
   //? Transición atómica condicionada al estado actual (compare-and-swap).
   //? Devuelve true si la partida coincidía con fromStatus y fue actualizada,

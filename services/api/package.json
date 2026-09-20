@@ -10,6 +10,8 @@
     "start": "node dist/main.js",
     "worker:notifications": "tsx src/notifications_worker_main.ts",
     "start:worker:notifications": "node dist/notifications_worker_main.js",
+    "worker:match-status": "tsx src/match_status_worker_main.ts",
+    "start:worker:match-status": "node dist/match_status_worker_main.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "lint": "eslint . -f json",
     "pretest": "node ./scripts/pretest.mjs",

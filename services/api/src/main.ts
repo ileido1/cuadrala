@@ -8,6 +8,9 @@ import { DISPATCH_NOTIFICATIONS_UC, EXPIRE_TOURNAMENT_SLOT_HOLDS_UC } from './pr
 import { REFRESH_EXCHANGE_RATES_UC } from './presentation/composition/exchange_rates.composition.js';
 import { startNotificationsWorkerSV } from './presentation/workers/notifications.worker.js';
 import { startExchangeRatesWorkerSV } from './presentation/workers/exchange_rates.worker.js';
+import { startMatchStatusWorkerSV } from './presentation/workers/match_status.worker.js';
+import { PrismaMatchStatusRepository } from './infrastructure/adapters/prisma_match_status_repository.js';
+import { UpdateMatchStatusUseCase } from './application/use_cases/update_match_status.use_case.js';
 
 const APP = createApp();
 
@@ -26,12 +29,17 @@ const EXCHANGE_RATES_WORKER = startExchangeRatesWorkerSV(
   REFRESH_EXCHANGE_RATES_UC,
   LOCK_REPOSITORY,
 );
+const MATCH_STATUS_WORKER = startMatchStatusWorkerSV(
+  new UpdateMatchStatusUseCase(new PrismaMatchStatusRepository()),
+  LOCK_REPOSITORY,
+);
 
 async function shutdownSV(_signal: string): Promise<void> {
   console.log(`Cerrando API (${_signal})...`);
 
   NOTIFICATIONS_WORKER?.stopSV();
   EXCHANGE_RATES_WORKER?.stopSV();
+  MATCH_STATUS_WORKER?.stopSV();
 
   await new Promise<void>((_resolve) => {
     SERVER.close(() => _resolve());

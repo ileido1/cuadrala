@@ -25,7 +25,7 @@ const _monthNames = [
 @immutable
 class DateStripDay {
   DateStripDay({required DateTime date, required this.offset})
-      : date = DateTime(date.year, date.month, date.day);
+    : date = DateTime(date.year, date.month, date.day);
 
   /// Fecha normalizada a medianoche local.
   final DateTime date;
@@ -61,7 +61,10 @@ List<DateStripDay> buildDateStripDays(int count, {DateTime? from}) {
   final start = DateTime(base.year, base.month, base.day);
   return List<DateStripDay>.generate(
     count,
-    (i) => DateStripDay(date: start.add(Duration(days: i)), offset: i),
+    (i) => DateStripDay(
+      date: start.add(Duration(days: i)),
+      offset: i,
+    ),
     growable: false,
   );
 }
@@ -82,8 +85,8 @@ class DateStrip extends StatefulWidget {
   /// Días a mostrar (ver [buildDateStripDays]).
   final List<DateStripDay> days;
 
-  /// [DateStripDay.key] del día seleccionado.
-  final String value;
+  /// [DateStripDay.key] del día seleccionado. `null` significa cualquier día.
+  final String? value;
 
   /// Notifica el [DateStripDay.key] del día tocado.
   final ValueChanged<String> onChanged;
@@ -184,7 +187,8 @@ class DateRangeStrip extends StatelessWidget {
               final day = days[index];
               final isStart = day.key == startValue;
               final isEnd = end != null && day.key == endValue;
-              final isInRange = !day.date.isBefore(start.date) &&
+              final isInRange =
+                  !day.date.isBefore(start.date) &&
                   !day.date.isAfter(rangeEnd.date);
               return _RangeDayColumn(
                 day: day,
@@ -318,11 +322,12 @@ class _DateStripState extends State<DateStrip> {
   }
 
   DateStripDay get _selected => widget.days.firstWhere(
-        (d) => d.key == widget.value,
-        orElse: () => widget.days.first,
-      );
+    (d) => d.key == widget.value,
+    orElse: () => widget.days.first,
+  );
 
   String get _relativeLabel {
+    if (widget.value == null) return 'Cualquier día';
     final sel = _selected;
     if (sel.offset == 0) return 'Hoy';
     if (sel.offset == 1) return 'Mañana';
@@ -337,10 +342,7 @@ class _DateStripState extends State<DateStrip> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(
-            bottom: 12,
-            left: widget.horizontalPadding,
-          ),
+          padding: EdgeInsets.only(bottom: 12, left: widget.horizontalPadding),
           child: Row(
             children: [
               Text(
@@ -375,8 +377,7 @@ class _DateStripState extends State<DateStrip> {
           child: ListView.separated(
             controller: _scrollController,
             scrollDirection: Axis.horizontal,
-            padding:
-                EdgeInsets.symmetric(horizontal: widget.horizontalPadding),
+            padding: EdgeInsets.symmetric(horizontal: widget.horizontalPadding),
             itemCount: widget.days.length,
             separatorBuilder: (_, _) => const SizedBox(width: _gap),
             itemBuilder: (context, index) {

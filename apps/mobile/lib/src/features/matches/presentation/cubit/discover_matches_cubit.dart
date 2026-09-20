@@ -11,9 +11,9 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
   DiscoverMatchesCubit({
     required MatchesRepository matchesRepository,
     String? venueId,
-  })  : _matchesRepository = matchesRepository,
-        _venueId = venueId,
-        super(const DiscoverMatchesInitial());
+  }) : _matchesRepository = matchesRepository,
+       _venueId = venueId,
+       super(const DiscoverMatchesInitial());
 
   final MatchesRepository _matchesRepository;
   final String? _venueId;
@@ -35,12 +35,10 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
       ]);
       final page = results[0] as OpenMatchesPage;
       final rates = results[1] as List<ExchangeRateRow>;
-      final today = DateTime.now();
-      final selectedDate = DateTime(today.year, today.month, today.day);
       final visible = _applyClientFilters(
         items: page.items,
         query: '',
-        selectedDate: selectedDate,
+        selectedDate: null,
         activeTimeBuckets: const {},
         onlyAvailable: false,
       );
@@ -48,7 +46,7 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
         DiscoverMatchesLoaded(
           sportId: sportId,
           query: '',
-          selectedDate: selectedDate,
+          selectedDate: null,
           activeTimeBuckets: const {},
           onlyAvailable: false,
           categoryId: null,
@@ -65,8 +63,9 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
         ),
       );
     } catch (e) {
-      final message =
-          e is AppFailure ? e.message : 'No se pudo cargar el listado.';
+      final message = e is AppFailure
+          ? e.message
+          : 'No se pudo cargar el listado.';
       emit(DiscoverMatchesFailure(message: message));
     }
   }
@@ -88,7 +87,9 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
   void selectDate(DateTime? date) {
     final current = state;
     if (current is! DiscoverMatchesLoaded) return;
-    final normalized = date != null ? DateTime(date.year, date.month, date.day) : null;
+    final normalized = date != null
+        ? DateTime(date.year, date.month, date.day)
+        : null;
     final visible = _applyClientFilters(
       items: current.items,
       query: current.query,
@@ -172,8 +173,9 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
         ),
       );
     } catch (e) {
-      final message =
-          e is AppFailure ? e.message : 'No se pudo cargar el listado.';
+      final message = e is AppFailure
+          ? e.message
+          : 'No se pudo cargar el listado.';
       emit(DiscoverMatchesFailure(message: message));
     }
   }
@@ -219,8 +221,9 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
         ),
       );
     } catch (e) {
-      final message =
-          e is AppFailure ? e.message : 'No se pudo cargar el listado.';
+      final message = e is AppFailure
+          ? e.message
+          : 'No se pudo cargar el listado.';
       emit(DiscoverMatchesFailure(message: message));
     }
   }
@@ -324,11 +327,13 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
     }
 
     return items
-        .where((m) =>
-            matchesQuery(m) &&
-            matchesDate(m) &&
-            matchesTimeBucket(m) &&
-            matchesAvailability(m))
+        .where(
+          (m) =>
+              matchesQuery(m) &&
+              matchesDate(m) &&
+              matchesTimeBucket(m) &&
+              matchesAvailability(m),
+        )
         .toList();
   }
 }

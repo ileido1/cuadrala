@@ -57,9 +57,9 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
     super.dispose();
   }
 
-  String _selectedDayKey(DiscoverMatchesLoaded loaded) {
+  String? _selectedDayKey(DiscoverMatchesLoaded loaded) {
     final selected = loaded.selectedDate;
-    if (selected == null) return _days.first.key;
+    if (selected == null) return null;
     for (final day in _days) {
       if (day.date.year == selected.year &&
           day.date.month == selected.month &&
@@ -128,6 +128,19 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                           day.date,
                         );
                       },
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: SelectableChip(
+                          label: 'Cualquier día',
+                          selected: state.selectedDate == null,
+                          onTap: () => context
+                              .read<DiscoverMatchesCubit>()
+                              .selectDate(null),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Padding(
