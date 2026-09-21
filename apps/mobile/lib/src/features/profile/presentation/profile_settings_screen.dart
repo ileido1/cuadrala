@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_icons.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../shared/widgets/app_header.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../auth/presentation/cubit/session_cubit.dart';
 
@@ -11,148 +10,220 @@ final class ProfileSettingsScreen extends StatelessWidget {
   const ProfileSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          const SliverToBoxAdapter(
-            child: AppHeader(title: 'Ajustes', showBack: true),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-            sliver: SliverList.list(
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+            ),
+            child: Row(
               children: [
-                const _SettingsHeading('Cuenta'),
-                _SettingsTile(
-                  icon: AppIcons.person,
-                  title: 'Editar perfil',
-                  subtitle: 'Nombre, deportes y datos de juego',
-                  onTap: () => context.push(Routes.onboarding),
-                ),
-                _SettingsTile(
-                  icon: AppIcons.racquetSport,
-                  title: 'Mis deportes',
-                  subtitle: 'Preferencias y categorías',
-                  onTap: () => context.push(Routes.mySports),
-                ),
-                const SizedBox(height: 20),
-                const _SettingsHeading('Preferencias'),
-                _SettingsTile(
-                  icon: AppIcons.bell,
-                  title: 'Notificaciones',
-                  subtitle: 'Elegí qué avisos querés recibir',
-                  onTap: () => context.push(Routes.notificationPrefs),
-                ),
-                _SettingsTile(
-                  icon: AppIcons.calendar,
-                  title: 'Disponibilidad',
-                  subtitle: 'Horarios para encontrar partidas',
-                  onTap: () => context.push(Routes.availability),
-                ),
-                const SizedBox(height: 20),
-                const _SettingsHeading('Privacidad'),
-                const _DisabledTile(
-                  icon: AppIcons.public,
-                  title: 'Quién ve mi perfil',
-                  subtitle:
-                      'La visibilidad del perfil requiere configuración de privacidad.',
-                ),
-                const _DisabledTile(
-                  icon: AppIcons.pin,
-                  title: 'Clubes favoritos',
-                  subtitle:
-                      'Esta función todavía no está soportada por el backend.',
-                ),
-                const _DisabledTile(
-                  icon: AppIcons.lock,
-                  title: 'Privacidad y contacto',
-                  subtitle:
-                      'La configuración de privacidad aún no está disponible.',
-                ),
-                const SizedBox(height: 18),
-                OutlinedButton(
-                  onPressed: () async {
-                    await getIt<SessionCubit>().logout();
-                    if (context.mounted) context.go(Routes.home);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                    minimumSize: const Size.fromHeight(48),
+                Semantics(
+                  button: true,
+                  label: 'Volver',
+                  child: Material(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(11),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(11),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Icon(AppIcons.chevronLeft, size: 18),
+                      ),
+                    ),
                   ),
-                  child: const Text('Cerrar sesión'),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'Ajustes',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
               ],
             ),
           ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SettingsGroup(
+                    title: 'Cuenta',
+                    items: [
+                      _Setting(
+                        icon: AppIcons.person,
+                        label: 'Editar perfil',
+                        onTap: () => context.push(Routes.onboarding),
+                      ),
+                      _Setting(
+                        icon: AppIcons.phone,
+                        label: 'Teléfono y correo',
+                      ),
+                      _Setting(
+                        icon: AppIcons.creditCard,
+                        label: 'Métodos de pago',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _SettingsGroup(
+                    title: 'Preferencias',
+                    items: [
+                      _Setting(
+                        icon: AppIcons.bell,
+                        label: 'Notificaciones',
+                        onTap: () => context.push(Routes.notificationPrefs),
+                      ),
+                      _Setting(
+                        icon: AppIcons.pin,
+                        label: 'Zona y radio de búsqueda',
+                      ),
+                      _Setting(icon: AppIcons.moon, label: 'Apariencia'),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _SettingsGroup(
+                    title: 'Privacidad',
+                    items: const [
+                      _Setting(
+                        icon: AppIcons.lock,
+                        label: 'Quién ve mi perfil',
+                      ),
+                      _Setting(icon: AppIcons.info, label: 'Ayuda y soporte'),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        await getIt<SessionCubit>().logout();
+                        if (context.mounted) context.go(Routes.home);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xfff87171),
+                        minimumSize: const Size.fromHeight(48),
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
+                      child: const Text(
+                        'Cerrar sesión',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
-final class _SettingsHeading extends StatelessWidget {
-  const _SettingsHeading(this.title);
-
+final class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({required this.title, required this.items});
   final String title;
-
+  final List<_Setting> items;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-    child: Text(
-      title,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-        color: Theme.of(context).colorScheme.primary,
-        fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: .7,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
-    ),
+      const SizedBox(height: 8),
+      Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
+        child: Column(
+          children: [
+            for (var index = 0; index < items.length; index++)
+              _SettingsRow(item: items[index], divider: index > 0),
+          ],
+        ),
+      ),
+    ],
   );
 }
 
-final class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
+final class _Setting {
+  const _Setting({required this.icon, required this.label, this.onTap});
   final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.only(bottom: 8),
-    child: ListTile(
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-      subtitle: Text(subtitle),
-      trailing: const Icon(AppIcons.chevronRight),
-      onTap: onTap,
-    ),
-  );
+  final String label;
+  final VoidCallback? onTap;
 }
 
-final class _DisabledTile extends StatelessWidget {
-  const _DisabledTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
+final class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({required this.item, required this.divider});
+  final _Setting item;
+  final bool divider;
   @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.only(bottom: 8),
-    child: ListTile(
-      enabled: false,
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: item.onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          border: divider
+              ? Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                )
+              : null,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(
+              item.icon,
+              size: 18,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                item.label,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(
+              AppIcons.chevronRight,
+              size: 17,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
     ),
   );
 }

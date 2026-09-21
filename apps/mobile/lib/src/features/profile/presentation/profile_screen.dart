@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../auth/presentation/cubit/session_cubit.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
-import '../../onboarding/data/models/user_availability_dto.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/error_state.dart';
-import '../data/models/user_rating_dto.dart';
+import '../../onboarding/data/models/user_availability_dto.dart';
 import 'cubit/profile_cubit.dart';
 import 'cubit/profile_state.dart';
 import 'widgets/profile_elo_sheet.dart';
@@ -21,6 +19,8 @@ final class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _formOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -28,933 +28,1189 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<ProfileCubit, ProfileState>(
-      builder: (context, state) {
-        if (state is ProfileInitial || state is ProfileLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (state is ProfileFailure) {
-          return ErrorState(
-            message: state.message,
-            onRetry: () => context.read<ProfileCubit>().load(),
-          );
-        }
-
-        final vm = state as ProfileLoaded;
-
-        return RefreshIndicator(
+  Widget build(BuildContext context) => BlocBuilder<ProfileCubit, ProfileState>(
+    builder: (context, state) {
+      if (state is ProfileInitial || state is ProfileLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (state is ProfileFailure) {
+        return ErrorState(
+          message: state.message,
+          onRetry: () => context.read<ProfileCubit>().load(),
+        );
+      }
+      final vm = state as ProfileLoaded;
+      return Material(
+        color: Colors.transparent,
+        child: RefreshIndicator(
           onRefresh: () => context.read<ProfileCubit>().load(),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              Row(
-                children: [
-                  Text(
-                    'Perfil',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => context.push(Routes.publicProfile),
-                    icon: const Icon(AppIcons.eyeOn),
-                    tooltip: 'Ver como me ven',
-                  ),
-                  IconButton(
-                    onPressed: () => context.push(Routes.settings),
-                    icon: const Icon(AppIcons.sliders),
-                    tooltip: 'Ajustes',
+                _Header(vm: vm),
+                const SizedBox(height: 16),
+                _Identity(vm: vm),
+                if (!vm.onboardingStatus.isComplete) ...[
+                  const SizedBox(height: 14),
+                  _CompletionHint(
+                    pendingCount: vm.onboardingStatus.pendingSteps.length,
                   ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              _SettingsMenu(vm: vm),
-              const SizedBox(height: 16),
-              _ProfileHero(vm: vm),
-              if (!vm.onboardingStatus.isComplete) ...[
-                const SizedBox(height: 16),
-                _OnboardingBanner(
-                  pendingCount: vm.onboardingStatus.pendingSteps.length,
+                const SizedBox(height: 18),
+                _EloCard(vm: vm),
+                const SizedBox(height: 18),
+                _Stats(vm: vm),
+                const SizedBox(height: 18),
+                _RecentForm(
+                  vm: vm,
+                  open: _formOpen,
+                  onTap: () => setState(() => _formOpen = !_formOpen),
                 ),
-              ],
-              const SizedBox(height: 20),
-              _RecentForm(vm: vm),
-              const SizedBox(height: 16),
-              const _UnsupportedCard(
-                title: 'Logros',
-                message: 'Todavía no participás ni organizás torneos.',
-              ),
-              const SizedBox(height: 16),
-              _StatsGrid(vm: vm),
-              const SizedBox(height: 16),
-              _RatingSummary(vm: vm),
-              const SizedBox(height: 16),
-              _GameSummary(vm: vm),
-              _AvailabilitySummary(vm: vm),
-              const SizedBox(height: 16),
-              _TournamentsSection(vm: vm),
-              const SizedBox(height: 20),
-              _LogoutButton(),
+                const SizedBox(height: 18),
+                const _SectionLabel('Mi juego'),
+                const SizedBox(height: 8),
+                _GameGrid(vm: vm),
+                const SizedBox(height: 18),
+                const _SectionLabel('Torneos'),
+                const SizedBox(height: 8),
+                _Tournaments(vm: vm),
+                const SizedBox(height: 18),
+                const _SectionLabel('Logros'),
+                const SizedBox(height: 8),
+                const _Achievements(),
+                const SizedBox(height: 18),
+                const _SectionLabel('Disponibilidad'),
+                const SizedBox(height: 8),
+                _AvailabilityGrid(
+                  availability: vm.availability,
+                  showHint: true,
+                ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
 }
 
-final class _ProfileHero extends StatelessWidget {
-  const _ProfileHero({required this.vm});
-
+final class _Header extends StatelessWidget {
+  const _Header({required this.vm});
   final ProfileLoaded vm;
 
-  String? _categoryLabel() {
-    for (final profile in vm.sportProfiles) {
-      final label = profile.categoryLabel;
-      if (label != null && label.isNotEmpty) return label;
-    }
-    return null;
-  }
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Text(
+        'Perfil',
+        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+          fontSize: 27,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -.5,
+        ),
+      ),
+      const Spacer(),
+      _HeaderButton(
+        icon: AppIcons.eyeOn,
+        tooltip: 'Ver como me ven',
+        onPressed: () => context.push(Routes.publicProfile),
+      ),
+      const SizedBox(width: 8),
+      _HeaderButton(
+        icon: AppIcons.sliders,
+        tooltip: 'Ajustes',
+        onPressed: () => context.push(Routes.settings),
+      ),
+    ],
+  );
+}
+
+final class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: tooltip,
+    child: Material(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onPressed,
+        child: SizedBox(width: 38, height: 38, child: Icon(icon, size: 18)),
+      ),
+    ),
+  );
+}
+
+final class _Identity extends StatelessWidget {
+  const _Identity({required this.vm});
+  final ProfileLoaded vm;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final category = _categoryLabel();
-    final greenBg = scheme.primary.withValues(alpha: 0.15);
-
-    return Column(
+    final location = vm.location?.label?.trim();
+    final category = _category(vm);
+    return Row(
       children: [
-        Container(
-          width: 84,
-          height: 84,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: scheme.primary,
-            border: Border.all(color: BrandColors.limeAccent, width: 3),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            _initials(vm.me.name),
-            style: const TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.w800,
-              color: BrandColors.onHero,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ProfileAvatar(
+              initials: profileInitials(vm.me.name),
+              avatarUrl: vm.playerProfile.avatarUrl,
+              size: 66,
+              borderWidth: 2.5,
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          vm.me.name,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: scheme.onSurface,
-          ),
-        ),
-        if (category != null) ...[
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: greenBg,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(AppIcons.target, size: 15, color: scheme.primary),
-                const SizedBox(width: 6),
-                Text(
-                  'Categoría $category',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.primary,
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Semantics(
+                key: const ValueKey('profile-avatar-camera-unavailable'),
+                enabled: false,
+                label:
+                    'Cambiar foto de perfil no disponible. La carga de fotos no está disponible todavía.',
+                child: ExcludeSemantics(
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: scheme.surface,
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(AppIcons.camera, size: 12),
                   ),
                 ),
-              ],
+              ),
             ),
+          ],
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                vm.me.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.3,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                location?.isNotEmpty == true
+                    ? location!
+                    : (category ?? 'Perfil de jugador'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Semantics(
+                button: true,
+                label: 'Ver como me ven',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => context.push(Routes.publicProfile),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withValues(alpha: .15),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(AppIcons.eyeOn, size: 14, color: scheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Ver como me ven',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ],
     );
   }
-
-  static String _initials(String name) {
-    final raw = name.trim();
-    if (raw.isEmpty) return '?';
-    final parts = raw.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
-    return (parts.first.characters.first + parts.last.characters.first)
-        .toUpperCase();
-  }
 }
 
-final class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.vm});
-
-  final ProfileLoaded vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final elo = vm.ratings.isNotEmpty
-        ? vm.ratings.first.rating.toStringAsFixed(0)
-        : '—';
-    final winPct = '${(vm.stats.winRate * 100).round()}%';
-
-    final cards = [
-      _StatCard(
-        value: vm.stats.matchesPlayed.toString(),
-        label: 'Jugadas',
-        scheme: scheme,
-      ),
-      _StatCard(value: winPct, label: 'Victorias', scheme: scheme),
-      _StatCard(value: elo, label: 'ELO', scheme: scheme),
-      _StatCard(
-        value: vm.ratings.isNotEmpty ? vm.ratings.first.points.toString() : '0',
-        label: 'Puntos',
-        scheme: scheme,
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) => Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: cards
-            .map(
-              (card) =>
-                  SizedBox(width: (constraints.maxWidth - 10) / 2, child: card),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-final class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.value,
-    required this.label,
-    required this.scheme,
-  });
-
-  final String value;
-  final String label;
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: scheme.surface,
-        border: Border.all(color: scheme.outlineVariant, width: 1.5),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 22,
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _RatingSummary extends StatelessWidget {
-  const _RatingSummary({required this.vm});
+final class _EloCard extends StatelessWidget {
+  const _EloCard({required this.vm});
   final ProfileLoaded vm;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final rating = vm.ratings.isEmpty ? null : vm.ratings.first.rating;
-    final points = vm.ratings.isEmpty ? 0 : vm.ratings.first.points;
-    final matchingEntries = vm.leaderboard.where(
-      (entry) => entry.userId == vm.me.id,
-    );
-    final rank = matchingEntries.isEmpty ? null : matchingEntries.first.rank;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
+    // The API returns history newest-first. Keep only the available recent
+    // entries and reverse that subset so the sparkline reads left-to-right.
+    final recentHistory = vm.history.take(8).toList();
+    final values = recentHistory.reversed
+        .take(8)
+        .map((item) => item.newRating)
+        .toList();
+    final delta = recentHistory.isEmpty
+        ? null
+        : recentHistory.first.newRating - recentHistory.last.previousRating;
+    final rank = vm.leaderboard
+        .where((entry) => entry.userId == vm.me.id)
+        .map((entry) => entry.rank)
+        .cast<int?>()
+        .firstOrNull;
+    return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'ELO ACTUAL',
-            style: TextStyle(
-              color: scheme.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Row(
-            children: [
-              Text(
-                rating?.toStringAsFixed(0) ?? '—',
-                style: const TextStyle(
-                  fontSize: 38,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const Spacer(),
-              Icon(
-                AppIcons.scoreboard,
-                size: 42,
-                color: scheme.primary.withValues(alpha: .45),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Text(
-                'Puntos $points',
-                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                rank == null ? 'Ranking: —' : 'Ranking: #$rank',
-                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (vm.history.isNotEmpty)
-            SizedBox(
-              height: 74,
-              width: double.infinity,
-              child: CustomPaint(
-                painter: _EloChartPainter(
-                  history: vm.history,
-                  lineColor: scheme.primary,
-                  gridColor: scheme.outlineVariant,
-                ),
-              ),
-            )
-          else
-            Text(
-              'Sin historial de ELO todavía',
-              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
-            ),
-          const SizedBox(height: 10),
-          Divider(color: scheme.outlineVariant),
-          Row(
-            children: [
-              Icon(AppIcons.target, size: 17, color: scheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  vm.leaderboard.isEmpty
-                      ? 'Ranking disponible cuando haya resultados'
-                      : 'Ranking activo en tu categoría',
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _GameSummary extends StatelessWidget {
-  const _GameSummary({required this.vm});
-  final ProfileLoaded vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final category = vm.sportProfiles.isEmpty
-        ? 'Sin categoría'
-        : (vm.sportProfiles.first.categoryLabel ?? 'Sin categoría');
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'MI JUEGO',
-            style: TextStyle(
-              color: scheme.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
-                child: _GameValue(label: 'Categoría', value: category),
-              ),
-              Expanded(
-                child: _GameValue(
-                  label: 'Lado',
-                  value: _sideLabel(
-                    vm.sportProfiles.isEmpty
-                        ? null
-                        : vm.sportProfiles.first.sidePreference.name,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _GameValue(
-                  label: 'Mano',
-                  value: vm.playerProfile.dominantHandLabel,
-                ),
-              ),
-              Expanded(
-                child: _GameValue(
-                  label: 'Horarios',
-                  value: '${vm.availability.length} configurados',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _RecentForm extends StatelessWidget {
-  const _RecentForm({required this.vm});
-
-  final ProfileLoaded vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return _ProfileCard(
-      title: 'FORMA RECIENTE',
-      child: vm.history.isEmpty
-          ? Text(
-              'Los resultados ganados y perdidos todavía no están disponibles.',
-              style: TextStyle(color: scheme.onSurfaceVariant),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Cambios recientes de ELO',
-                  style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final item in vm.history.take(5))
-                      _EloDelta(delta: item.newRating - item.previousRating),
+                    Text('ELO ACTUAL', style: _labelStyle(scheme)),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          rating?.toStringAsFixed(0) ?? '—',
+                          style: const TextStyle(
+                            fontSize: 40,
+                            height: 1,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.5,
+                          ),
+                        ),
+                        if (delta != null) ...[
+                          const SizedBox(width: 8),
+                          _DeltaPill(delta: delta),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      recentHistory.isEmpty
+                          ? 'Sin historial de ELO disponible'
+                          : 'Cambio en el historial reciente',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'La API aún no expone el resultado de cada partido.',
-                  style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
+              ),
+              SizedBox(
+                width: 96,
+                height: 38,
+                child: values.length >= 2
+                    ? CustomPaint(
+                        painter: _Sparkline(
+                          values: values,
+                          lineColor: scheme.primary,
+                          fillColor: scheme.primary.withValues(alpha: .14),
+                        ),
+                      )
+                    : Center(
+                        child: Icon(
+                          AppIcons.scoreboard,
+                          color: scheme.onSurfaceVariant.withValues(alpha: .45),
+                          size: 30,
+                        ),
+                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 13),
+          Divider(height: 1, color: scheme.outlineVariant),
+          Semantics(
+            button: true,
+            label: 'Historial de ELO',
+            child: InkWell(
+              key: const ValueKey('profile-elo-history'),
+              onTap: () => showProfileEloSheet(context, vm),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 13),
+                child: Row(
+                  children: [
+                    Icon(AppIcons.target, size: 16, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        rank == null || vm.leaderboard.isEmpty
+                            ? 'Historial de ELO'
+                            : 'Puesto #$rank de ${vm.leaderboard.length}',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      AppIcons.chevronRight,
+                      size: 17,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-    );
-  }
-}
-
-final class _EloDelta extends StatelessWidget {
-  const _EloDelta({required this.delta});
-
-  final double delta;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final positive = delta >= 0;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: (positive ? scheme.primary : scheme.error).withValues(
-          alpha: .14,
-        ),
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: Text(
-        '${positive ? '+' : ''}${delta.round()} ELO',
-        style: TextStyle(
-          color: positive ? scheme.primary : scheme.error,
-          fontWeight: FontWeight.w800,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-}
-
-final class _AvailabilitySummary extends StatelessWidget {
-  const _AvailabilitySummary({required this.vm});
-
-  final ProfileLoaded vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return _ProfileCard(
-      title: 'DISPONIBILIDAD',
-      child: vm.availability.isEmpty
-          ? Text(
-              'Todavía no configuraste horarios para jugar.',
-              style: TextStyle(color: scheme.onSurfaceVariant),
-            )
-          : Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final slot in vm.availability.take(8))
-                  Chip(
-                    label: Text(
-                      '${_dayLabel(slot.dayOfWeek)} · ${_slotLabel(slot.slot)}',
-                    ),
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
-            ),
-    );
-  }
-}
-
-final class _TournamentsSection extends StatelessWidget {
-  const _TournamentsSection({required this.vm});
-
-  final ProfileLoaded vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return _ProfileCard(
-      title: 'MIS TORNEOS',
-      child: vm.tournamentsLoadFailed
-          ? Text(
-              'No pudimos cargar tus torneos. Intentá actualizar el perfil.',
-              style: TextStyle(color: scheme.onSurfaceVariant),
-            )
-          : vm.myTournaments.isEmpty
-          ? Text(
-              'No tenés torneos todavía.',
-              style: TextStyle(color: scheme.onSurfaceVariant),
-            )
-          : Column(
-              children: [
-                for (final item in vm.myTournaments.take(3))
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      item.tournament.name,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    subtitle: Text(
-                      item.isOrganizer
-                          ? 'Organizador · ${item.tournament.categoryName}'
-                          : '${_tournamentStatus(item.registrationStatus)} · '
-                                '${item.tournament.categoryName}',
-                    ),
-                    trailing: const Icon(AppIcons.chevronRight),
-                    onTap: () => context.push(
-                      Routes.tournamentDetail(item.tournament.id),
-                    ),
-                  ),
-              ],
-            ),
-    );
-  }
-}
-
-final class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: scheme.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
+              ),
             ),
           ),
-          const SizedBox(height: 10),
-          child,
         ],
       ),
     );
   }
 }
 
-final class _UnsupportedCard extends StatelessWidget {
-  const _UnsupportedCard({required this.title, required this.message});
-
-  final String title;
-  final String message;
-
+final class _Stats extends StatelessWidget {
+  const _Stats({required this.vm});
+  final ProfileLoaded vm;
   @override
-  Widget build(BuildContext context) => _ProfileCard(
-    title: title,
-    child: Text(
-      message,
-      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-    ),
-  );
-}
-
-final class _EloChartPainter extends CustomPainter {
-  const _EloChartPainter({
-    required this.history,
-    required this.lineColor,
-    required this.gridColor,
-  });
-
-  final List<UserRatingHistoryItemDto> history;
-  final Color lineColor;
-  final Color gridColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final gridPaint = Paint()
-      ..color = gridColor
-      ..strokeWidth = 1;
-    for (var i = 1; i < 4; i++) {
-      final y = size.height * i / 4;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    final values = [...history.reversed.take(8).map((item) => item.newRating)];
-    if (values.length < 2) return;
-    final min = values.reduce((a, b) => a < b ? a : b);
-    final max = values.reduce((a, b) => a > b ? a : b);
-    final range = (max - min).abs() < 1 ? 1 : (max - min).abs();
-    final linePaint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final path = Path();
-    for (var i = 0; i < values.length; i++) {
-      final x = size.width * i / (values.length - 1);
-      final y = size.height - ((values[i] - min) / range * size.height);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(path, linePaint);
-  }
-
-  @override
-  bool shouldRepaint(_EloChartPainter oldDelegate) =>
-      oldDelegate.history != history ||
-      oldDelegate.lineColor != lineColor ||
-      oldDelegate.gridColor != gridColor;
-}
-
-final class _GameValue extends StatelessWidget {
-  const _GameValue({required this.label, required this.value});
-  final String label;
-  final String value;
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Row(
     children: [
-      Text(
-        label,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontSize: 12,
+      Expanded(
+        child: _Stat(value: '${vm.stats.matchesPlayed}', label: 'Jugadas'),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: _Stat(
+          value: '${(vm.stats.winRate * 100).round()}%',
+          label: 'Victorias',
         ),
       ),
-      const SizedBox(height: 3),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+      const SizedBox(width: 10),
+      Expanded(
+        child: _Stat(
+          value: '—',
+          label: 'Racha',
+          semanticHint: 'La racha no está disponible todavía',
+        ),
+      ),
     ],
   );
 }
 
+final class _Stat extends StatelessWidget {
+  const _Stat({required this.value, required this.label, this.semanticHint});
+  final String value;
+  final String label;
+  final String? semanticHint;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: semanticHint,
+    child: _Card(
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+final class _RecentForm extends StatelessWidget {
+  const _RecentForm({
+    required this.vm,
+    required this.open,
+    required this.onTap,
+  });
+  final ProfileLoaded vm;
+  final bool open;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          Semantics(
+            button: true,
+            expanded: open,
+            label: 'Forma reciente',
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.vertical(
+                top: const Radius.circular(16),
+                bottom: open ? Radius.zero : const Radius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Forma reciente',
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            vm.history.isEmpty
+                                ? 'Resultados detallados no disponibles'
+                                : '${vm.history.length} cambios de ELO recientes',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ...List.generate(
+                      5,
+                      (_) => Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: _FormPill(result: null),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: open ? .5 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: Icon(
+                        AppIcons.chevronDown,
+                        size: 17,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (open) ...[
+            Divider(height: 1, color: scheme.outlineVariant),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Text(
+                'La API actual no expone rival, marcador ni resultados de los últimos partidos.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+final class _FormPill extends StatelessWidget {
+  const _FormPill({required this.result});
+  final bool? result;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 26,
+    height: 26,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: result == true
+          ? BrandColors.limeAccent
+          : Theme.of(context).colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(9),
+      border: result == null
+          ? Border.all(color: Theme.of(context).colorScheme.outlineVariant)
+          : null,
+    ),
+    child: Text(
+      result == true
+          ? 'V'
+          : result == false
+          ? 'D'
+          : '—',
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        color: result == true
+            ? const Color(0xff15301a)
+            : Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    ),
+  );
+}
+
+final class _GameGrid extends StatelessWidget {
+  const _GameGrid({required this.vm});
+  final ProfileLoaded vm;
+  @override
+  Widget build(BuildContext context) {
+    final sport = vm.sportProfiles.isEmpty ? null : vm.sportProfiles.first;
+    final items = [
+      (AppIcons.target, 'Categoría', _category(vm) ?? 'Sin categoría'),
+      (
+        AppIcons.racquetSport,
+        'Lado',
+        _sideLabel(
+          sport?.sidePreference.name ?? vm.playerProfile.sidePreference,
+        ),
+      ),
+      (AppIcons.bolt, 'Mano', vm.playerProfile.dominantHandLabel),
+      (AppIcons.pin, 'Club habitual', 'Sin club habitual'),
+    ];
+    final scheme = Theme.of(context).colorScheme;
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: items.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 2.35,
+        ),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return Container(
+            decoration: BoxDecoration(
+              border: Border(
+                top: index > 1
+                    ? BorderSide(color: scheme.outlineVariant)
+                    : BorderSide.none,
+                right: index.isEven
+                    ? BorderSide(color: scheme.outlineVariant)
+                    : BorderSide.none,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Icon(item.$1, size: 17, color: scheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.$2,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        item.$3,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+final class _Tournaments extends StatelessWidget {
+  const _Tournaments({required this.vm});
+  final ProfileLoaded vm;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final latest = vm.myTournaments.isEmpty ? null : vm.myTournaments.first;
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _Medal(
+                    value: '${vm.myTournaments.length}',
+                    label: 'Jugados',
+                    color: scheme.surfaceContainerHigh,
+                    iconColor: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: const _Medal(
+                    value: '—',
+                    label: 'Oro',
+                    color: Color(0x24d9a300),
+                    iconColor: Color(0xffd9a300),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: const _Medal(
+                    value: '—',
+                    label: 'Plata',
+                    color: Color(0x298d97a5),
+                    iconColor: Color(0xff8d97a5),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: const _Medal(
+                    value: '—',
+                    label: 'Bronce',
+                    color: Color(0x24a9702f),
+                    iconColor: Color(0xffa9702f),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: scheme.outlineVariant),
+          Semantics(
+            button: latest != null,
+            label: 'Último torneo',
+            child: InkWell(
+              onTap: latest == null
+                  ? null
+                  : () => context.push(
+                      Routes.tournamentDetail(latest.tournament.id),
+                    ),
+              child: Padding(
+                padding: const EdgeInsets.all(13),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        AppIcons.trophy,
+                        size: 17,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            latest?.tournament.name ??
+                                (vm.tournamentsLoadFailed
+                                    ? 'No pudimos cargar tus torneos'
+                                    : 'Todavía no tenés torneos'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            latest == null
+                                ? 'El medallero todavía no está disponible'
+                                : latest.tournament.categoryName,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      AppIcons.chevronRight,
+                      size: 17,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _Medal extends StatelessWidget {
+  const _Medal({
+    required this.value,
+    required this.label,
+    required this.color,
+    required this.iconColor,
+  });
+  final String value;
+  final String label;
+  final Color color;
+  final Color iconColor;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (label != 'Jugados')
+              Icon(AppIcons.trophy, size: 15, color: iconColor),
+            if (label != 'Jugados') const SizedBox(width: 3),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: label == 'Jugados' ? 22 : 20,
+                fontWeight: FontWeight.w800,
+                color: iconColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+final class _Achievements extends StatelessWidget {
+  const _Achievements();
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    clipBehavior: Clip.none,
+    child: Row(
+      children: const [
+        _Achievement(icon: AppIcons.star, label: 'Próximamente'),
+        SizedBox(width: 9),
+        _Achievement(icon: AppIcons.trophy, label: 'Sin datos'),
+        SizedBox(width: 9),
+        _Achievement(icon: AppIcons.sparkle, label: 'Logros'),
+      ],
+    ),
+  );
+}
+
+final class _Achievement extends StatelessWidget {
+  const _Achievement({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: .45,
+    child: Container(
+      width: 84,
+      padding: const EdgeInsets.fromLTRB(6, 13, 6, 11),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            ),
+            child: Icon(
+              icon,
+              size: 19,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+final class _AvailabilityGrid extends StatelessWidget {
+  const _AvailabilityGrid({required this.availability, required this.showHint});
+
+  final List<UserAvailabilityDto> availability;
+  final bool showHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final active = availability
+        .map((slot) => '${slot.dayOfWeek.name}:${slot.slot.name}')
+        .toSet();
+    const days = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+    const rows = [
+      (AppIcons.sun, 'Mañana', AvailabilitySlot.morning),
+      (AppIcons.sunset, 'Tarde', AvailabilitySlot.afternoon),
+      (AppIcons.moon, 'Noche', AvailabilitySlot.evening),
+    ];
+    return _Card(
+      child: Column(
+        children: [
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 8,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 2,
+            childAspectRatio: .95,
+            children: [
+              const SizedBox(),
+              ...days.map(
+                (day) => Center(
+                  child: Text(
+                    day,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+              for (final row in rows) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(row.$1, size: 14, color: scheme.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text(
+                        row.$2,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                for (final day in DayOfWeek.values)
+                  _AvailabilityCell(
+                    active: active.contains('${day.name}:${row.$3.name}'),
+                  ),
+              ],
+            ],
+          ),
+          if (showHint) ...[
+            const SizedBox(height: 11),
+            Text(
+              'Se usa para sugerirte partidas. Toca Editar perfil para cambiarla.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+final class _AvailabilityCell extends StatelessWidget {
+  const _AvailabilityCell({required this.active});
+  final bool active;
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Container(
+      width: 20,
+      height: 20,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: active
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(7),
+        border: active
+            ? null
+            : Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: active
+          ? const Icon(AppIcons.check, size: 12, color: Colors.white)
+          : null,
+    ),
+  );
+}
+
+final class _Card extends StatelessWidget {
+  const _Card({required this.child, this.padding = const EdgeInsets.all(14)});
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: padding,
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    child: child,
+  );
+}
+
+final class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) => Text(
+    text.toUpperCase(),
+    style: _labelStyle(Theme.of(context).colorScheme),
+  );
+}
+
+final class _CompletionHint extends StatelessWidget {
+  const _CompletionHint({required this.pendingCount});
+  final int pendingCount;
+  @override
+  Widget build(BuildContext context) => Text(
+    pendingCount == 1
+        ? 'Te falta 1 paso para completar tu perfil.'
+        : 'Te faltan $pendingCount pasos para completar tu perfil.',
+    style: TextStyle(
+      fontSize: 12.5,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    ),
+  );
+}
+
+final class _DeltaPill extends StatelessWidget {
+  const _DeltaPill({required this.delta});
+  final double delta;
+  @override
+  Widget build(BuildContext context) {
+    final positive = delta >= 0;
+    final color = positive
+        ? Theme.of(context).colorScheme.primary
+        : const Color(0xffef4444);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Transform.flip(
+            flipY: !positive,
+            child: Icon(AppIcons.arrowForward, size: 13, color: color),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            '${positive ? '+' : ''}${delta.round()}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _Sparkline extends CustomPainter {
+  const _Sparkline({
+    required this.values,
+    required this.lineColor,
+    required this.fillColor,
+  });
+  final List<double> values;
+  final Color lineColor;
+  final Color fillColor;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final min = values.reduce((a, b) => a < b ? a : b);
+    final max = values.reduce((a, b) => a > b ? a : b);
+    final range = (max - min).abs() < 1 ? 1 : max - min;
+    final line = Path();
+    for (var i = 0; i < values.length; i++) {
+      final point = Offset(
+        size.width * i / (values.length - 1),
+        size.height - ((values[i] - min) / range * (size.height - 5)) - 2,
+      );
+      if (i == 0) {
+        line.moveTo(point.dx, point.dy);
+      } else {
+        line.lineTo(point.dx, point.dy);
+      }
+    }
+    final fill = Path.from(line)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(fill, Paint()..color = fillColor);
+    canvas.drawPath(
+      line,
+      Paint()
+        ..color = lineColor
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _Sparkline old) =>
+      old.values != values || old.lineColor != lineColor;
+}
+
+TextStyle _labelStyle(ColorScheme scheme) => TextStyle(
+  fontSize: 11.5,
+  fontWeight: FontWeight.w800,
+  letterSpacing: .7,
+  color: scheme.onSurfaceVariant,
+);
+String? _category(ProfileLoaded vm) =>
+    vm.me.primaryRating?.categoryName ??
+    vm.ratings.firstOrNull?.categoryName ??
+    vm.sportProfiles.firstOrNull?.categoryLabel;
 String _sideLabel(String? raw) => switch (raw?.toUpperCase()) {
   'LEFT' => 'Revés',
   'ANY' => 'Ambos lados',
   _ => 'Drive',
 };
+String profileInitials(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first.characters.first.toUpperCase();
+  return '${parts.first.characters.first}${parts.last.characters.first}'
+      .toUpperCase();
+}
 
-String _dayLabel(DayOfWeek day) => switch (day) {
-  DayOfWeek.monday => 'Lun',
-  DayOfWeek.tuesday => 'Mar',
-  DayOfWeek.wednesday => 'Mié',
-  DayOfWeek.thursday => 'Jue',
-  DayOfWeek.friday => 'Vie',
-  DayOfWeek.saturday => 'Sáb',
-  DayOfWeek.sunday => 'Dom',
-};
+final class ProfileAvatar extends StatelessWidget {
+  const ProfileAvatar({
+    super.key,
+    required this.initials,
+    required this.avatarUrl,
+    required this.size,
+    required this.borderWidth,
+  });
+  final String initials;
+  final String? avatarUrl;
+  final double size;
+  final double borderWidth;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: Theme.of(context).colorScheme.primary,
+      border: Border.all(color: BrandColors.limeAccent, width: borderWidth),
+    ),
+    child: ClipOval(
+      child: avatarUrl?.trim().isNotEmpty == true
+          ? Image.network(
+              avatarUrl!,
+              key: const ValueKey('profile-avatar-image'),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  _InitialsAvatar(initials: initials, size: size),
+            )
+          : _InitialsAvatar(initials: initials, size: size),
+    ),
+  );
+}
 
-String _slotLabel(AvailabilitySlot slot) => switch (slot) {
-  AvailabilitySlot.morning => 'Mañana',
-  AvailabilitySlot.afternoon => 'Tarde',
-  AvailabilitySlot.evening => 'Noche',
-};
+final class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials, required this.size});
 
-String _tournamentStatus(String? status) => switch (status) {
-  'CONFIRMED' => 'Confirmado',
-  'PENDING' => 'Pendiente',
-  _ => 'Sin inscripción',
-};
-
-final class _SettingsMenu extends StatelessWidget {
-  const _SettingsMenu({required this.vm});
-
-  final ProfileLoaded vm;
+  final String initials;
+  final double size;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final items = <_SettingsItem>[
-      _SettingsItem(
-        icon: AppIcons.person,
-        label: 'Editar perfil',
-        onTap: () => context.push(Routes.onboarding),
+  Widget build(BuildContext context) => Center(
+    child: Text(
+      initials,
+      style: TextStyle(
+        fontSize: size * .41,
+        fontWeight: FontWeight.w800,
+        color: BrandColors.onHero,
       ),
-      _SettingsItem(
-        icon: AppIcons.racquetSport,
-        label: 'Mis deportes',
-        onTap: () => context.push(Routes.mySports),
-      ),
-      _SettingsItem(
-        icon: AppIcons.target,
-        label: 'Historial de ELO',
-        onTap: () => showProfileEloSheet(context, vm),
-      ),
-      _SettingsItem(icon: AppIcons.pin, label: 'Clubes favoritos', onTap: null),
-      _SettingsItem(
-        icon: AppIcons.sliders,
-        label: 'Ajustes',
-        onTap: () => context.push(Routes.settings),
-      ),
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant, width: 1.5),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (var i = 0; i < items.length; i++)
-            _SettingsRow(item: items[i], showDivider: i < items.length - 1),
-        ],
-      ),
-    );
-  }
+    ),
+  );
 }
-
-final class _SettingsItem {
-  const _SettingsItem({required this.icon, required this.label, this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-}
-
-final class _SettingsRow extends StatelessWidget {
-  const _SettingsRow({required this.item, required this.showDivider});
-
-  final _SettingsItem item;
-  final bool showDivider;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-      child: Row(
-        children: [
-          Icon(
-            item.icon,
-            size: 19,
-            color: item.onTap == null
-                ? scheme.onSurfaceVariant.withValues(alpha: .55)
-                : scheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              item.label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: item.onTap == null
-                    ? scheme.onSurfaceVariant
-                    : scheme.onSurface,
-              ),
-            ),
-          ),
-          Icon(
-            item.onTap == null ? AppIcons.lock : AppIcons.chevronRight,
-            size: 18,
-            color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
-          ),
-        ],
-      ),
-    );
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: item.onTap,
-        child: Column(
-          children: [
-            content,
-            if (showDivider)
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: scheme.outlineVariant.withValues(alpha: 0.6),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-final class _LogoutButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return TextButton.icon(
-      onPressed: () async {
-        await context.read<SessionCubit>().logout();
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Sesión cerrada.')));
-        }
-      },
-      style: TextButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        foregroundColor: scheme.error,
-      ),
-      icon: const Icon(AppIcons.signOut, size: 20),
-      label: const Text(
-        'Cerrar sesión',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-final class _OnboardingBanner extends StatelessWidget {
-  const _OnboardingBanner({required this.pendingCount});
-
-  final int pendingCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: scheme.primary.withValues(alpha: 0.12),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        children: [
-          Icon(AppIcons.sparkle, color: scheme.primary, size: 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Completa tu perfil',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                Text(
-                  pendingCount == 1
-                      ? 'Te falta 1 paso para mejores recomendaciones.'
-                      : 'Te faltan $pendingCount pasos para mejores recomendaciones.',
-                  style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () => context.push(Routes.onboarding),
-            child: const Text('Continuar'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Public for tests — initials helper used by ELO sheet rows.
-String profileInitials(String name) => _ProfileHero._initials(name);

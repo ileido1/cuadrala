@@ -41,7 +41,10 @@ final _loaded = ProfileLoaded(
   ),
   ratings: const [],
   history: const [],
-  playerProfile: const PlayerProfileDto(dominantHand: 'RIGHT'),
+  playerProfile: const PlayerProfileDto(
+    dominantHand: 'RIGHT',
+    avatarUrl: 'https://cdn.example.test/public-avatar.png',
+  ),
   onboardingStatus: const OnboardingStatusDto(
     completedSteps: [],
     pendingSteps: [],
@@ -86,10 +89,10 @@ void main() {
       MaterialApp.router(theme: AppTheme.dark(), routerConfig: router),
     );
     expect(find.text('Ajustes'), findsOneWidget);
-    expect(find.text('Cuenta'), findsOneWidget);
-    expect(find.text('Privacidad'), findsOneWidget);
+    expect(find.text('CUENTA'), findsOneWidget);
+    expect(find.text('PRIVACIDAD'), findsOneWidget);
     await tester.fling(
-      find.byType(CustomScrollView),
+      find.byType(SingleChildScrollView),
       const Offset(0, -1200),
       1000,
     );
@@ -109,10 +112,39 @@ void main() {
 
     expect(find.text('Vista pública'), findsOneWidget);
     expect(find.text('Test User'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-avatar-image')), findsOneWidget);
     expect(find.textContaining('@testuser'), findsNothing);
-    expect(
-      find.text('Los resultados ganados y perdidos aún no están disponibles.'),
-      findsOneWidget,
+    expect(find.text('Sin datos'), findsOneWidget);
+  });
+
+  testWidgets('public route falls back to initials when avatarUrl is absent', (
+    tester,
+  ) async {
+    final loadedWithoutAvatar = ProfileLoaded(
+      me: _me,
+      stats: _loaded.stats,
+      ratings: _loaded.ratings,
+      history: _loaded.history,
+      playerProfile: const PlayerProfileDto(dominantHand: 'RIGHT'),
+      onboardingStatus: _loaded.onboardingStatus,
+      sportProfiles: _loaded.sportProfiles,
+      location: _loaded.location,
+      availability: _loaded.availability,
+      sports: _loaded.sports,
     );
+    when(() => profileCubit.state).thenReturn(loadedWithoutAvatar);
+    whenListen(
+      profileCubit,
+      Stream.value(loadedWithoutAvatar),
+      initialState: loadedWithoutAvatar,
+    );
+    final router = AppRouter(sessionCubit: sessionCubit).router;
+    router.go(Routes.publicProfile);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('profile-avatar-image')), findsNothing);
+    expect(find.text('TU'), findsOneWidget);
   });
 }

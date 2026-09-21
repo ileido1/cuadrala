@@ -99,13 +99,15 @@ List<LeaderboardEntryDto> _makeEntries({String? highlightUserId}) {
 ProfileLoaded _makeLoaded({
   List<UserRatingDto>? ratings,
   List<LeaderboardEntryDto> leaderboard = const [],
+  List<UserRatingHistoryItemDto> history = const [],
+  PlayerProfileDto playerProfile = _kPlayerProfile,
 }) {
   return ProfileLoaded(
     me: _kMe,
     stats: _kStats,
     ratings: ratings ?? [_kRatingWithCategory],
-    history: const [],
-    playerProfile: _kPlayerProfile,
+    history: history,
+    playerProfile: playerProfile,
     onboardingStatus: _kOnboardingStatus,
     sportProfiles: const [],
     location: null,
@@ -138,7 +140,7 @@ Widget _wrapScreen(
 }
 
 Future<void> _openEloSheet(WidgetTester tester) async {
-  await tester.tap(find.text('Historial de ELO'));
+  await tester.tap(find.byKey(const ValueKey('profile-elo-history')));
   await tester.pumpAndSettle();
 }
 
@@ -263,22 +265,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('handoff: settings menu shows Editar perfil and Ajustes', (
-    tester,
-  ) async {
-    final loaded = _makeLoaded();
-    when(() => profileCubit.state).thenReturn(loaded);
-    whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+  testWidgets(
+    'handoff: private profile exposes header actions and three stats',
+    (tester) async {
+      final loaded = _makeLoaded();
+      when(() => profileCubit.state).thenReturn(loaded);
+      whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
 
-    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Editar perfil'), findsOneWidget);
-    expect(find.text('Ajustes'), findsOneWidget);
-    expect(find.text('Jugadas'), findsOneWidget);
-    expect(find.text('Victorias'), findsOneWidget);
-    expect(find.text('ELO'), findsOneWidget);
-  });
+      expect(find.bySemanticsLabel('Ver como me ven'), findsWidgets);
+      expect(find.bySemanticsLabel('Ajustes'), findsOneWidget);
+      expect(find.text('Jugadas'), findsOneWidget);
+      expect(find.text('Victorias'), findsOneWidget);
+      expect(find.text('Racha'), findsOneWidget);
+    },
+  );
 
   testWidgets('profile shows honest empty states for unsupported sections', (
     tester,
@@ -290,27 +293,99 @@ void main() {
     await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('FORMA RECIENTE'),
+      find.text('Forma reciente'),
       500,
       scrollable: find.byType(Scrollable).first,
     );
 
-    expect(find.text('FORMA RECIENTE'), findsOneWidget);
-    expect(
-      find.text(
-        'Los resultados ganados y perdidos todavía no están disponibles.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Forma reciente'), findsOneWidget);
+    expect(find.text('Resultados detallados no disponibles'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Logros'),
       500,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Logros'), findsOneWidget);
-    expect(
-      find.text('Todavía no participás ni organizás torneos.'),
-      findsOneWidget,
+    expect(find.text('Próximamente'), findsOneWidget);
+  });
+
+  testWidgets(
+    'profile renders avatarUrl and labels the unavailable camera badge without an action',
+    (tester) async {
+      final loaded = _makeLoaded(
+        playerProfile: const PlayerProfileDto(
+          dominantHand: 'RIGHT',
+          avatarUrl: 'https://cdn.example.test/avatar.png',
+        ),
+      );
+      when(() => profileCubit.state).thenReturn(loaded);
+      whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+
+      await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+
+      expect(
+        find.byKey(const ValueKey('profile-avatar-image')),
+        findsOneWidget,
+      );
+      final badge = find.byKey(
+        const ValueKey('profile-avatar-camera-unavailable'),
+      );
+      expect(badge, findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          'Cambiar foto de perfil no disponible. La carga de fotos no está disponible todavía.',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.widget<Semantics>(badge).properties.onTap, isNull);
+      expect(tester.widget<Semantics>(badge).properties.enabled, isFalse);
+    },
+  );
+
+  testWidgets('profile falls back to initials when avatarUrl is unavailable', (
+    tester,
+  ) async {
+    final loaded = _makeLoaded();
+    when(() => profileCubit.state).thenReturn(loaded);
+    whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+
+    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('profile-avatar-image')), findsNothing);
+    expect(find.text('TU'), findsOneWidget);
+  });
+
+  testWidgets('profile describes ELO changes as recent history, not a month', (
+    tester,
+  ) async {
+    final loaded = _makeLoaded(
+      history: [
+        UserRatingHistoryItemDto(
+          matchId: 'newest',
+          resultId: 'result-2',
+          previousRating: 1405,
+          newRating: 1410,
+          kFactor: 32,
+          createdAt: DateTime(2025, 2),
+        ),
+        UserRatingHistoryItemDto(
+          matchId: 'oldest',
+          resultId: 'result-1',
+          previousRating: 1400,
+          newRating: 1405,
+          kFactor: 32,
+          createdAt: DateTime(2024, 11),
+        ),
+      ],
     );
+    when(() => profileCubit.state).thenReturn(loaded);
+    whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+
+    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cambio en el historial reciente'), findsOneWidget);
+    expect(find.textContaining('este mes'), findsNothing);
   });
 }
