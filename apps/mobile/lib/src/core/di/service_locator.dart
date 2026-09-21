@@ -133,6 +133,7 @@ Future<void> setupDependencies() async {
     AuthTokenInterceptor(
       authRepository: getIt<AuthRepository>(),
       refreshSession: () => getIt<AuthRepository>().refresh(),
+      onRefreshFailure: () => getIt<SessionCubit>().logout(),
     ),
   ]);
 
@@ -224,7 +225,9 @@ Future<void> setupDependencies() async {
     ),
   );
 
-  getIt.registerFactory<SessionCubit>(
+  // La sesión es dueña del estado de autenticación de toda la app. Debe ser
+  // la misma instancia que observa el interceptor cuando el refresh falla.
+  getIt.registerLazySingleton<SessionCubit>(
     () => SessionCubit(
       authRepository: getIt<AuthRepository>(),
       onboardingRepository: getIt<OnboardingRepository>(),

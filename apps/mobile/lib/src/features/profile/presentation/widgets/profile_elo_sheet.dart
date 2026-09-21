@@ -115,8 +115,8 @@ final class _ProfileEloSheet extends StatelessWidget {
                             rank: vm.leaderboard[i].rank,
                             name: vm.leaderboard[i].displayName,
                             rating: vm.leaderboard[i].rating.round(),
-                            highlighted:
-                                vm.leaderboard[i].userId == vm.me.id,
+                            points: vm.leaderboard[i].points,
+                            highlighted: vm.leaderboard[i].userId == vm.me.id,
                           ),
                         ],
                       ],
@@ -173,12 +173,14 @@ final class _LeaderboardRow extends StatelessWidget {
     required this.rank,
     required this.name,
     required this.rating,
+    required this.points,
     this.highlighted = false,
   });
 
   final int rank;
   final String name;
   final int rating;
+  final int points;
   final bool highlighted;
 
   @override
@@ -206,10 +208,7 @@ final class _LeaderboardRow extends StatelessWidget {
             backgroundColor: scheme.surfaceContainerHighest,
             child: Text(
               profileInitials(name),
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
             ),
           ),
           const SizedBox(width: 12),
@@ -222,9 +221,18 @@ final class _LeaderboardRow extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            '$rating',
-            style: const TextStyle(fontWeight: FontWeight.w800),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$rating ELO',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                '$points pts',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11),
+              ),
+            ],
           ),
         ],
       ),

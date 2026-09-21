@@ -16,7 +16,7 @@ const APP = createApp();
 type MatchWithParticipantsSV = {
   id: string;
   formatParameters: unknown;
-  participants: Array<{ userId: string | null; teamLabel: string | null }>;
+  participants: Array<{ userId: string | null; tournamentRegistrationId: string | null; teamLabel: string | null }>;
 };
 
 //? S7c-2: integra contra Postgres real el avance automático de eliminación
@@ -179,7 +179,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           tournamentId: _tournamentId,
           formatParameters: { path: ['roundNumber'], equals: _roundNumber },
         },
-        include: { participants: { select: { userId: true, teamLabel: true } } },
+        include: { participants: { select: { userId: true, tournamentRegistrationId: true, teamLabel: true } } },
       });
       return MATCHES.sort(
         (_a, _b) =>
@@ -257,7 +257,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
             matchId: string | null;
             status: string;
             winnerId: string | null;
-            score: Array<{ userId: string; points: number }> | null;
+            score: Array<{ userId: string; tournamentRegistrationId: string; points: number }> | null;
           }>;
         }>;
       };
@@ -290,6 +290,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const [SF1, SF2] = await fetchRoundMatchesSV(TOURNAMENT_ID, 1);
       const SF1_WINNER = SF1!.participants[0]!.userId!;
       const SF1_LOSER = SF1!.participants[1]!.userId!;
+      const SF1_WINNER_REGISTRATION = SF1!.participants[0]!.tournamentRegistrationId!;
+      const SF1_LOSER_REGISTRATION = SF1!.participants[1]!.tournamentRegistrationId!;
       const RES1 = await recordResultSV(TOURNAMENT_ID, SF1!.id, [
         { userId: SF1_WINNER, points: 6 },
         { userId: SF1_LOSER, points: 2 },
@@ -304,11 +306,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const SF1_SLOT = AFTER_ROUND_1.matches.find((_m) => _m.matchNumber === SF1_MATCH_NUMBER)!;
       expect(SF1_SLOT.matchId).toBe(SF1!.id);
       expect(SF1_SLOT.status).toBe('COMPLETED');
-      expect(SF1_SLOT.winnerId).toBe(SF1_WINNER);
+      expect(SF1_SLOT.winnerId).toBe(SF1_WINNER_REGISTRATION);
       expect(SF1_SLOT.score).toEqual(
         expect.arrayContaining([
-          { userId: SF1_WINNER, points: 6 },
-          { userId: SF1_LOSER, points: 2 },
+          { userId: SF1_WINNER, tournamentRegistrationId: SF1_WINNER_REGISTRATION, points: 6 },
+          { userId: SF1_LOSER, tournamentRegistrationId: SF1_LOSER_REGISTRATION, points: 2 },
         ]),
       );
 

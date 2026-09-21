@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
   if (isDashboardPath && !token) {
     const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
     return NextResponse.redirect(
-      new URL(`/login?callbackUrl=${callbackUrl}`, request.url)
+      new URL(`/login?callbackUrl=${callbackUrl}`, request.url),
     );
   }
 

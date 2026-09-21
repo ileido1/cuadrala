@@ -22,6 +22,7 @@ function buildAvailabilityRepo(): MatchCourtAvailabilityRepository {
 function buildUserCategoryRepo(_hasCategory = true): UserCategoryRepository {
   return {
     userHasCategoryForSportSV: vi.fn().mockResolvedValue(_hasCategory),
+    userHasAnyCategoryForSportSV: vi.fn().mockResolvedValue(_hasCategory),
     userHasCategorySV: vi.fn(),
     listByUserIdSV: vi.fn(),
     upsertForUserSportSV: vi.fn(),

@@ -102,8 +102,9 @@ class _VenueBookingFormState extends State<VenueBookingForm> {
 
         final selectedDay = _dayFor(state.selectedDate);
         final dateLabel = '${selectedDay.dowLabel} ${selectedDay.date.day}';
-        final activeCourts =
-            state.courts.where((c) => c.status == 'ACTIVE').toList();
+        final activeCourts = state.courts
+            .where((c) => c.status == 'ACTIVE')
+            .toList();
 
         return Column(
           children: [
@@ -119,8 +120,10 @@ class _VenueBookingFormState extends State<VenueBookingForm> {
                     days: _days,
                     value: _keyFor(state.selectedDate),
                     onChanged: (key) {
-                      final day =
-                          _days.firstWhere((d) => d.key == key, orElse: () => _days.first);
+                      final day = _days.firstWhere(
+                        (d) => d.key == key,
+                        orElse: () => _days.first,
+                      );
                       cubit.selectDate(day.date);
                     },
                   ),
@@ -210,7 +213,11 @@ class _SectionLabel extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class MatchSettingsSection extends StatelessWidget {
-  const MatchSettingsSection({super.key, required this.state, required this.cubit});
+  const MatchSettingsSection({
+    super.key,
+    required this.state,
+    required this.cubit,
+  });
 
   final VenueBookingState state;
   final VenueBookingCubit cubit;
@@ -248,8 +255,7 @@ class MatchSettingsSection extends StatelessWidget {
                   color: scheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(AppIcons.target,
-                    size: 20, color: scheme.primary),
+                child: Icon(AppIcons.target, size: 20, color: scheme.primary),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -257,7 +263,9 @@ class MatchSettingsSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Afecta ELO',
+                      state.affectsElo
+                          ? 'Partida competitiva'
+                          : 'Partida casual',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -265,7 +273,9 @@ class MatchSettingsSection extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'El resultado modifica el ranking',
+                      state.affectsElo
+                          ? 'El resultado modifica tu ELO'
+                          : 'El resultado no modifica tu ELO',
                       style: TextStyle(
                         fontSize: 12.5,
                         color: scheme.onSurfaceVariant,
@@ -274,10 +284,7 @@ class MatchSettingsSection extends StatelessWidget {
                   ],
                 ),
               ),
-              Switch(
-                value: state.affectsElo,
-                onChanged: cubit.setAffectsElo,
-              ),
+              Switch(value: state.affectsElo, onChanged: cubit.setAffectsElo),
             ],
           ),
         ),
@@ -376,10 +383,7 @@ class _CategoryReadOnly extends StatelessWidget {
             Expanded(
               child: Text(
                 'Necesitás una categoría en este deporte para crear partidas.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: scheme.onErrorContainer,
-                ),
+                style: TextStyle(fontSize: 13, color: scheme.onErrorContainer),
               ),
             ),
           ],
@@ -396,7 +400,11 @@ class _CategoryReadOnly extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.workspace_premium_outlined, size: 18, color: scheme.primary),
+          Icon(
+            Icons.workspace_premium_outlined,
+            size: 18,
+            color: scheme.primary,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -548,9 +556,7 @@ class VenueBookingStickyFooter extends StatelessWidget {
             scheme.surfaceContainerLow,
           ],
         ),
-        border: Border(
-          top: BorderSide(color: scheme.outlineVariant),
-        ),
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

@@ -145,10 +145,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       }
 
       const SCORES = [
-        { userId: TEAM_A[0]!.userId as string, points: 6 },
-        { userId: TEAM_A[1]!.userId as string, points: 6 },
-        { userId: TEAM_B[0]!.userId as string, points: 3 },
-        { userId: TEAM_B[1]!.userId as string, points: 3 },
+        { userId: TEAM_A[0]!.userId as string, tournamentRegistrationId: TEAM_A[0]!.tournamentRegistrationId as string, points: 6 },
+        { userId: TEAM_A[1]!.userId as string, tournamentRegistrationId: TEAM_A[1]!.tournamentRegistrationId as string, points: 6 },
+        { userId: TEAM_B[0]!.userId as string, tournamentRegistrationId: TEAM_B[0]!.tournamentRegistrationId as string, points: 3 },
+        { userId: TEAM_B[1]!.userId as string, tournamentRegistrationId: TEAM_B[1]!.tournamentRegistrationId as string, points: 3 },
       ];
       const RESULT_RES = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT.id}/matches/${FIRST_MATCH.id}/results`)
@@ -168,7 +168,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(AFTER_MATCH.matchId).toBe(FIRST_MATCH.id);
       expect(AFTER_MATCH.matchStatus).toBe('FINISHED');
       expect(
-        (AFTER_MATCH.scores as Array<{ userId: string; points: number }>).sort((_a, _b) =>
+        (AFTER_MATCH.scores as Array<{ userId: string; tournamentRegistrationId: string; points: number }>).sort((_a, _b) =>
           _a.userId.localeCompare(_b.userId),
         ),
       ).toEqual([...SCORES].sort((_a, _b) => _a.userId.localeCompare(_b.userId)));

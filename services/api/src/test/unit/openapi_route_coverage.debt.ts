@@ -61,12 +61,15 @@ export const UNDOCUMENTED_ROUTES: readonly string[] = [
   'POST /tournaments/:tournamentId/registrations/:userId/withdraw',
 
   //? tournaments — 6 de 7 (GET /tournaments documentada en sdd/tournaments-handoff-fidelity S1)
+  'GET /public/tournament-guest-schedule/:token',
+  'POST /public/tournament-guest-schedule/:token',
   'GET /tournaments/:tournamentId',
   'GET /tournaments/:tournamentId/bracket',
   'POST /tournaments/:tournamentId/matches/:matchId/results',
   'PATCH /tournaments/:tournamentId/status',
   'PATCH /tournaments/:tournamentId/visibility',
   'GET /tournaments/venue/:venueId',
+  'PATCH /tournaments/:tournamentId/settings',
 
   //? venue_payment_method — 5 de 5
   'GET /venues/:venueId/payment-methods',

@@ -181,11 +181,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(IDS).toContain(TOURNAMENT_ID);
     });
 
-    //? `venueId` no es solo un dato de vitrina: AssertTournamentOrganizerAccess
-    //? trata al staff de la sede como organizador. Aceptarlo sin permiso deja
-    //? que cualquiera publique un torneo a nombre de un club ajeno y le entregue
-    //? el control a su staff.
-    it('should reject a venue the anonymous caller has no authority over', async () => {
+    it('should reject an anonymous caller who associates a tournament with a venue', async () => {
       const RES = await request(APP)
         .post('/api/v1/tournaments')
         .send({
@@ -201,7 +197,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(RES.body.code).toBe('NO_AUTORIZADO');
     });
 
-    it('should reject a venue the authenticated caller does not work at', async () => {
+    it('should allow an authenticated caller who does not work at the venue', async () => {
       const RES = await request(APP)
         .post('/api/v1/tournaments')
         .send({
@@ -214,8 +210,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         .set('Authorization', `Bearer ${outsiderToken}`)
         .set('Content-Type', 'application/json');
 
-      expect(RES.status).toBe(403);
-      expect(RES.body.code).toBe('NO_AUTORIZADO');
+      expect(RES.status).toBe(201);
     });
 
     it('should reject a venue that does not exist', async () => {

@@ -12,8 +12,8 @@ export class PrismaMatchReadRepository implements MatchReadRepository {
         sportId: true,
         status: true,
         maxParticipants: true,
+        affectsElo: true,
       },
     });
   }
 }
-

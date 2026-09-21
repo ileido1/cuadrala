@@ -16,9 +16,20 @@ export class PrismaUserRatingLeaderboardReadRepository implements UserRatingLead
       take: _params.limit,
     });
 
+    const POINT_ROWS = await PRISMA.rankingEntry.findMany({
+      where: { categoryId: _params.categoryId, userId: { in: ROWS.map((_row) => _row.userId) } },
+      select: { userId: true, points: true },
+    });
+    const POINTS = new Map(POINT_ROWS.map((_row) => [_row.userId, _row.points]));
     return {
-      items: ROWS.map((_r, _idx) => ({ userId: _r.userId, rating: _r.rating, updatedAt: _r.updatedAt, displayName: _r.user.name, rank: _idx + 1 })),
+      items: ROWS.map((_r, _idx) => ({
+        userId: _r.userId,
+        rating: _r.rating,
+        points: POINTS.get(_r.userId) ?? 0,
+        updatedAt: _r.updatedAt,
+        displayName: _r.user.name,
+        rank: _idx + 1,
+      })),
     };
   }
 }
-

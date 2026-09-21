@@ -12,11 +12,17 @@ export class PrismaUserRatingReadRepository implements UserRatingReadRepository 
     const USER = await PRISMA.user.findUnique({ where: { id: _userId }, select: { id: true } });
     if (USER === null) return null;
 
-    return await PRISMA.userRating.findMany({
+    const ROWS = await PRISMA.userRating.findMany({
       where: { userId: _userId, ...(typeof _categoryId === 'string' ? { categoryId: _categoryId } : {}) },
       select: { categoryId: true, rating: true, updatedAt: true },
       orderBy: { updatedAt: 'desc' },
     });
+    const POINT_ROWS = await PRISMA.rankingEntry.findMany({
+      where: { userId: _userId, categoryId: { in: ROWS.map((_row) => _row.categoryId) } },
+      select: { categoryId: true, points: true },
+    });
+    const POINTS = new Map(POINT_ROWS.map((_row) => [_row.categoryId, _row.points]));
+    return ROWS.map((_row) => ({ ..._row, points: POINTS.get(_row.categoryId) ?? 0 }));
   }
 
   async getPrimaryUserRatingSV(_userId: string): Promise<PrimaryUserRatingDTO | null> {
@@ -74,4 +80,3 @@ export class PrismaUserRatingReadRepository implements UserRatingReadRepository 
     return { items: ITEMS, pageInfo: { page: _params.page, limit: _params.limit, total: TOTAL } };
   }
 }
-

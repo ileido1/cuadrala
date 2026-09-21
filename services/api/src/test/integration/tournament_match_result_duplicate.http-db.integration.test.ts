@@ -22,6 +22,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let organizerToken: string;
     let playerAId: string;
     let playerBId: string;
+    let playerARegistrationId: string;
+    let playerBRegistrationId: string;
 
     beforeAll(async () => {
       await resetDatabaseForTestsSV();
@@ -66,6 +68,15 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         },
       });
       tournamentId = TOURNAMENT.id;
+
+      const REGISTRATIONS = await PRISMA.tournamentRegistration.createManyAndReturn({
+        data: [
+          { tournamentId, userId: playerAId, status: 'CONFIRMED', registrationType: 'AUTHENTICATED' },
+          { tournamentId, userId: playerBId, status: 'CONFIRMED', registrationType: 'AUTHENTICATED' },
+        ],
+      });
+      playerARegistrationId = REGISTRATIONS.find((_r) => _r.userId === playerAId)!.id;
+      playerBRegistrationId = REGISTRATIONS.find((_r) => _r.userId === playerBId)!.id;
     });
 
     afterAll(async () => {
@@ -83,6 +94,12 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           courtId,
           tournamentId,
         },
+      });
+      await PRISMA.matchParticipant.createMany({
+        data: [
+          { matchId: MATCH.id, userId: playerAId, tournamentRegistrationId: playerARegistrationId, teamLabel: 'A' },
+          { matchId: MATCH.id, userId: playerBId, tournamentRegistrationId: playerBRegistrationId, teamLabel: 'B' },
+        ],
       });
 
       const FIRST = await request(APP)
@@ -121,6 +138,12 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           courtId,
           tournamentId,
         },
+      });
+      await PRISMA.matchParticipant.createMany({
+        data: [
+          { matchId: MATCH.id, userId: playerAId, tournamentRegistrationId: playerARegistrationId, teamLabel: 'A' },
+          { matchId: MATCH.id, userId: playerBId, tournamentRegistrationId: playerBRegistrationId, teamLabel: 'B' },
+        ],
       });
 
       const req1 = request(APP)

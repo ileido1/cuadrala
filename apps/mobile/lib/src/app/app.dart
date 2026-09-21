@@ -17,8 +17,8 @@ final class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<SessionCubit>(
-      create: (_) => getIt<SessionCubit>()..bootstrap(),
+    return BlocProvider<SessionCubit>.value(
+      value: getIt<SessionCubit>()..bootstrap(),
       child: Builder(
         builder: (context) {
           final router = AppRouter(sessionCubit: context.read<SessionCubit>());

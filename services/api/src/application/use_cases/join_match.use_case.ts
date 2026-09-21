@@ -22,11 +22,13 @@ export class JoinMatchUseCase {
       throw new AppError('PARTIDO_NO_ABIERTO', 'El partido no está abierto para unirse.', 409);
     }
 
-    const HAS_CATEGORY = await this._userCategoryRepository.userHasCategoryForSportSV(
-      _userId,
-      MATCH.sportId,
-      MATCH.categoryId,
-    );
+    const HAS_CATEGORY = MATCH.affectsElo
+      ? await this._userCategoryRepository.userHasCategoryForSportSV(
+          _userId,
+          MATCH.sportId,
+          MATCH.categoryId,
+        )
+      : await this._userCategoryRepository.userHasAnyCategoryForSportSV(_userId, MATCH.sportId);
     if (!HAS_CATEGORY) {
       throw new AppError(
         'CATEGORIA_NO_COMPATIBLE',
@@ -85,4 +87,3 @@ export class JoinMatchUseCase {
     }
   }
 }
-

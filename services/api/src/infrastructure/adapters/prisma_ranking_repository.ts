@@ -37,7 +37,7 @@ async function recalculateInTxSV(
   _categoryId: string,
 ): Promise<{ categoryId: string; entriesUpdated: number }> {
   const RESULTS = await _tx.matchResult.findMany({
-    where: { match: { categoryId: _categoryId } },
+    where: { match: { categoryId: _categoryId, affectsElo: true } },
     select: {
       matchId: true,
       scores: { where: { userId: { not: null } }, select: { userId: true, points: true } },

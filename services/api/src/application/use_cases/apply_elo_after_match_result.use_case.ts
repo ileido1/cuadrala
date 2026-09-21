@@ -1,6 +1,7 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import { applyEloForFreeForAllPerPlayerKSV } from '../../domain/elo/elo_rating.js';
 import type { MatchResultReadRepository } from '../../domain/ports/match_result_read_repository.js';
+import type { RankingRepository } from '../../domain/ports/ranking_repository.js';
 import type { UserRatingRepository } from '../../domain/ports/user_rating_repository.js';
 
 export type ApplyEloAfterMatchResultUseCaseInput = {
@@ -17,6 +18,7 @@ export class ApplyEloAfterMatchResultUseCase {
   public constructor(
     private readonly _matchResultReadRepository: MatchResultReadRepository,
     private readonly _userRatingRepository: UserRatingRepository,
+    private readonly _rankingRepository: RankingRepository,
   ) {}
 
   async executeSV(_input: ApplyEloAfterMatchResultUseCaseInput): Promise<{ updated: number }> {
@@ -39,6 +41,9 @@ export class ApplyEloAfterMatchResultUseCase {
     const RESULT = await this._matchResultReadRepository.findByIdWithMatchSV(_input.resultId);
     if (RESULT === null) {
       throw new AppError('RESULTADO_NO_ENCONTRADO', 'El resultado indicado no existe.', 404);
+    }
+    if (!RESULT.affectsElo) {
+      return { updated: 0 };
     }
 
     const USER_IDS = RESULT.scores.map((_s) => _s.userId);
@@ -95,7 +100,8 @@ export class ApplyEloAfterMatchResultUseCase {
       })),
     );
 
+    await this._rankingRepository.recalculateByCategoryIdSV(RESULT.categoryId);
+
     return { updated: OUT.length };
   }
 }
-

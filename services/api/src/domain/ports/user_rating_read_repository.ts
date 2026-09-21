@@ -1,6 +1,7 @@
 export type UserRatingReadRowDTO = {
   categoryId: string;
   rating: number;
+  points: number;
   updatedAt: Date;
 };
 
@@ -47,4 +48,3 @@ export interface UserRatingReadRepository {
     limit: number;
   }): Promise<PaginatedUserRatingHistoryDTO | null>;
 }
-

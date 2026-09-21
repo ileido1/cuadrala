@@ -2,6 +2,7 @@ final class UserRatingDto {
   const UserRatingDto({
     required this.categoryId,
     required this.rating,
+    this.points = 0,
     required this.updatedAt,
     this.categoryName,
     this.sportId,
@@ -9,6 +10,7 @@ final class UserRatingDto {
 
   final String categoryId;
   final double rating;
+  final int points;
   final DateTime updatedAt;
 
   /// Nombre de la categoría (ej. "7ma"). Opcional, puede no venir en todos los endpoints.
@@ -21,11 +23,11 @@ final class UserRatingDto {
     return UserRatingDto(
       categoryId: (json['categoryId'] ?? json['category_id']) as String,
       rating: (json['rating'] as num).toDouble(),
+      points: (json['points'] as num?)?.toInt() ?? 0,
       updatedAt: DateTime.parse(
         (json['updatedAt'] ?? json['updated_at']) as String,
       ),
-      categoryName:
-          (json['categoryName'] ?? json['category_name']) as String?,
+      categoryName: (json['categoryName'] ?? json['category_name']) as String?,
       sportId: (json['sportId'] ?? json['sport_id']) as String?,
     );
   }
@@ -59,4 +61,3 @@ final class UserRatingHistoryItemDto {
     );
   }
 }
-

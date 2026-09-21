@@ -114,7 +114,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       it('responds 400 when name is missing', async () => {
         const TOURNAMENT = await createTournamentSV('DRAFT');
 
-        const RES = await inviteGuestSV(TOURNAMENT.id, organizerToken, { phone: '+584121234567' });
+        const RES = await request(APP)
+          .post(`/api/v1/tournaments/${TOURNAMENT.id}/invite-guest`)
+          .send({ phone: '+584121234567', email: 'guest@example.com' })
+          .set('Authorization', `Bearer ${organizerToken}`)
+          .set('Content-Type', 'application/json');
 
         expect(RES.status).toBe(400);
       });

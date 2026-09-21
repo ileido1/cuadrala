@@ -1,6 +1,7 @@
 export type UserRatingLeaderboardItemDTO = {
   userId: string;
   rating: number;
+  points: number;
   updatedAt: Date;
   displayName: string;
 };
@@ -12,4 +13,3 @@ export type UserRatingLeaderboardDTO = {
 export interface UserRatingLeaderboardReadRepository {
   listLeaderboardByCategorySV(_params: { categoryId: string; limit: number }): Promise<UserRatingLeaderboardDTO>;
 }
-

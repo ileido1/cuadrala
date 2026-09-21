@@ -54,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
               const SizedBox(height: 20),
-              _StatsRow(vm: vm),
+              _StatsGrid(vm: vm),
               const SizedBox(height: 16),
               _SettingsMenu(vm: vm),
               const SizedBox(height: 20),
@@ -155,8 +155,8 @@ final class _ProfileHero extends StatelessWidget {
   }
 }
 
-final class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.vm});
+final class _StatsGrid extends StatelessWidget {
+  const _StatsGrid({required this.vm});
 
   final ProfileLoaded vm;
 
@@ -168,32 +168,31 @@ final class _StatsRow extends StatelessWidget {
         : '—';
     final winPct = '${(vm.stats.winRate * 100).round()}%';
 
-    return Row(
-      children: [
-        Expanded(
-          child: _StatCard(
-            value: vm.stats.matchesPlayed.toString(),
-            label: 'Jugadas',
-            scheme: scheme,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatCard(
-            value: winPct,
-            label: 'Victorias',
-            scheme: scheme,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatCard(
-            value: elo,
-            label: 'ELO',
-            scheme: scheme,
-          ),
-        ),
-      ],
+    final cards = [
+      _StatCard(
+        value: vm.stats.matchesPlayed.toString(),
+        label: 'Jugadas',
+        scheme: scheme,
+      ),
+      _StatCard(value: winPct, label: 'Victorias', scheme: scheme),
+      _StatCard(value: elo, label: 'ELO', scheme: scheme),
+      _StatCard(
+        value: vm.ratings.isNotEmpty ? vm.ratings.first.points.toString() : '0',
+        label: 'Puntos',
+        scheme: scheme,
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) => Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: cards
+            .map(
+              (card) =>
+                  SizedBox(width: (constraints.maxWidth - 10) / 2, child: card),
+            )
+            .toList(),
+      ),
     );
   }
 }
@@ -271,9 +270,9 @@ final class _SettingsMenu extends StatelessWidget {
         icon: AppIcons.pin,
         label: 'Clubes favoritos',
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Próximamente.')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Próximamente.')));
         },
       ),
       _SettingsItem(
@@ -293,10 +292,7 @@ final class _SettingsMenu extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < items.length; i++)
-            _SettingsRow(
-              item: items[i],
-              showDivider: i < items.length - 1,
-            ),
+            _SettingsRow(item: items[i], showDivider: i < items.length - 1),
         ],
       ),
     );
@@ -316,10 +312,7 @@ final class _SettingsItem {
 }
 
 final class _SettingsRow extends StatelessWidget {
-  const _SettingsRow({
-    required this.item,
-    required this.showDivider,
-  });
+  const _SettingsRow({required this.item, required this.showDivider});
 
   final _SettingsItem item;
   final bool showDivider;
@@ -337,11 +330,7 @@ final class _SettingsRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
               child: Row(
                 children: [
-                  Icon(
-                    item.icon,
-                    size: 19,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  Icon(item.icon, size: 19, color: scheme.onSurfaceVariant),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -382,9 +371,9 @@ final class _LogoutButton extends StatelessWidget {
       onPressed: () async {
         await context.read<SessionCubit>().logout();
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Sesión cerrada.')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Sesión cerrada.')));
         }
       },
       style: TextButton.styleFrom(

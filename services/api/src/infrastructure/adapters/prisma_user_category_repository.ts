@@ -53,6 +53,14 @@ export class PrismaUserCategoryRepository implements UserCategoryRepository {
     return ROW.categoryId === _categoryId;
   }
 
+  async userHasAnyCategoryForSportSV(_userId: string, _sportId: string): Promise<boolean> {
+    const ROW = await PRISMA.userSportCategory.findUnique({
+      where: { userId_sportId: { userId: _userId, sportId: _sportId } },
+      select: { id: true },
+    });
+    return ROW !== null;
+  }
+
   async upsertForUserSportSV(
     _userId: string,
     _sportId: string,

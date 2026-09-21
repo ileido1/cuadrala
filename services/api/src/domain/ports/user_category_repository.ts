@@ -13,6 +13,7 @@ export interface UserCategoryRepository {
     _sportId: string,
     _categoryId: string,
   ): Promise<boolean>;
+  userHasAnyCategoryForSportSV(_userId: string, _sportId: string): Promise<boolean>;
   upsertForUserSportSV(
     _userId: string,
     _sportId: string,
@@ -23,4 +24,3 @@ export interface UserCategoryRepository {
     _items: Array<{ sportId: string; categoryId: string }>,
   ): Promise<void>;
 }
-

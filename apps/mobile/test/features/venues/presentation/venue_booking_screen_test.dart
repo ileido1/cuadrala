@@ -236,7 +236,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(Switch), findsOneWidget);
-    expect(find.text('Afecta ELO'), findsOneWidget);
+    expect(find.text('Partida competitiva'), findsOneWidget);
   });
 
   // ──────────────────────────────────────────────────────────────────────────

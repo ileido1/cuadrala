@@ -3,16 +3,20 @@ import 'package:dio/dio.dart';
 import '../../features/auth/data/auth_repository.dart';
 
 typedef AuthTokenRefresher = Future<void> Function();
+typedef AuthRefreshFailureHandler = Future<void> Function();
 
 final class AuthTokenInterceptor extends Interceptor {
   AuthTokenInterceptor({
     required AuthRepository authRepository,
     required AuthTokenRefresher refreshSession,
-  })  : _authRepository = authRepository,
-        _refreshSession = refreshSession;
+    AuthRefreshFailureHandler? onRefreshFailure,
+  }) : _authRepository = authRepository,
+       _refreshSession = refreshSession,
+       _onRefreshFailure = onRefreshFailure;
 
   final AuthRepository _authRepository;
   final AuthTokenRefresher _refreshSession;
+  final AuthRefreshFailureHandler? _onRefreshFailure;
 
   static const _retryExtraKey = 'auth_retry';
 
@@ -32,7 +36,10 @@ final class AuthTokenInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     final response = err.response;
     if (response?.statusCode != 401) {
       return handler.next(err);
@@ -51,6 +58,7 @@ final class AuthTokenInterceptor extends Interceptor {
     try {
       await _refreshSession();
     } catch (_) {
+      await _notifyRefreshFailure();
       return handler.next(err);
     }
 
@@ -71,10 +79,7 @@ final class AuthTokenInterceptor extends Interceptor {
             ...requestOptions.headers,
             'authorization': 'Bearer $token',
           },
-          extra: {
-            ...requestOptions.extra,
-            _retryExtraKey: true,
-          },
+          extra: {...requestOptions.extra, _retryExtraKey: true},
         ),
       );
 
@@ -84,6 +89,15 @@ final class AuthTokenInterceptor extends Interceptor {
         return handler.next(e);
       }
       return handler.next(err);
+    }
+  }
+
+  Future<void> _notifyRefreshFailure() async {
+    if (_onRefreshFailure == null) return;
+    try {
+      await _onRefreshFailure();
+    } catch (_) {
+      // La sesión se considera inválida aunque falle la limpieza remota.
     }
   }
 }
