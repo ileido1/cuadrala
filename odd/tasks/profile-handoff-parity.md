@@ -19,7 +19,7 @@ The current profile tab is structurally different from the handoff: it has an ea
 - [x] PH-1 Align private Profile layout, components, data fallbacks, and interactions with the handoff. Evidence: verified 2026-09-21; ELO history wording is truthful and avatarUrl renders with initials fallback.
 - [x] PH-2 Align public-preview and Settings overlays with the handoff. Evidence: verified 2026-09-21; public avatar fallback and settings/public layouts match the available handoff behavior.
 - [x] PH-3 Update/add profile fidelity widget tests and run Flutter analysis/test suite. Evidence: `flutter analyze lib test` passed with 0 issues; `flutter test` passed 772 tests on 2026-09-21.
-- [ ] PH-4 Review the work unit, commit it with its tests, and record verification. Evidence: pending.
+- [x] PH-4 Review the work unit, commit it with its tests, and record verification. Evidence: `b437e68 feat(mobile): align profile with handoff`; fast-forwarded and pushed to `origin/main` on 2026-09-21.
 
 ## Acceptance criteria
 - The authenticated profile follows handoff order: header, horizontal identity, ELO, three stats, recent form, game profile, tournaments, achievements, availability.
@@ -33,4 +33,4 @@ The current profile tab is structurally different from the handoff: it has an ea
 - Verification: from `apps/mobile`, `flutter analyze lib test` passed with 0 issues; `flutter test` passed 772 tests. `git diff --check` also passed.
 
 ## Next step
-Choose the chain strategy required before the oversized work-unit commit; no remote push has been authorized.
+Completed and delivered to `origin/main` at `b437e68` after explicit user authorization.
