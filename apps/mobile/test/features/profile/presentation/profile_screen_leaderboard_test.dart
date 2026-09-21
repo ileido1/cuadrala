@@ -21,9 +21,11 @@ import 'package:cuadrala_mobile/src/features/profile/presentation/profile_screen
 // Mocks
 // ---------------------------------------------------------------------------
 
-class _MockSessionCubit extends MockCubit<SessionState> implements SessionCubit {}
+class _MockSessionCubit extends MockCubit<SessionState>
+    implements SessionCubit {}
 
-class _MockProfileCubit extends MockCubit<ProfileState> implements ProfileCubit {}
+class _MockProfileCubit extends MockCubit<ProfileState>
+    implements ProfileCubit {}
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -67,10 +69,30 @@ List<LeaderboardEntryDto> _makeEntries({String? highlightUserId}) {
       displayName: 'Alice',
       rating: 1600.0,
     ),
-    const LeaderboardEntryDto(rank: 2, userId: 'other-2', displayName: 'Bob', rating: 1550.0),
-    const LeaderboardEntryDto(rank: 3, userId: 'other-3', displayName: 'Carlos', rating: 1500.0),
-    const LeaderboardEntryDto(rank: 4, userId: 'other-4', displayName: 'Diana', rating: 1450.0),
-    const LeaderboardEntryDto(rank: 5, userId: 'other-5', displayName: 'Eva', rating: 1400.0),
+    const LeaderboardEntryDto(
+      rank: 2,
+      userId: 'other-2',
+      displayName: 'Bob',
+      rating: 1550.0,
+    ),
+    const LeaderboardEntryDto(
+      rank: 3,
+      userId: 'other-3',
+      displayName: 'Carlos',
+      rating: 1500.0,
+    ),
+    const LeaderboardEntryDto(
+      rank: 4,
+      userId: 'other-4',
+      displayName: 'Diana',
+      rating: 1450.0,
+    ),
+    const LeaderboardEntryDto(
+      rank: 5,
+      userId: 'other-5',
+      displayName: 'Eva',
+      rating: 1400.0,
+    ),
   ];
 }
 
@@ -131,24 +153,31 @@ void main() {
   setUp(() {
     sessionCubit = _MockSessionCubit();
     profileCubit = _MockProfileCubit();
-    when(() => sessionCubit.state).thenReturn(const SessionState.authenticated());
+    when(
+      () => sessionCubit.state,
+    ).thenReturn(const SessionState.authenticated());
     when(() => profileCubit.load()).thenAnswer((_) async {});
   });
 
-  testWidgets('UT-05: empty leaderboard state renders empty-state text in ELO sheet', (tester) async {
-    final loaded = _makeLoaded(ratings: [], leaderboard: []);
-    when(() => profileCubit.state).thenReturn(loaded);
-    whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+  testWidgets(
+    'UT-05: empty leaderboard state renders empty-state text in ELO sheet',
+    (tester) async {
+      final loaded = _makeLoaded(ratings: [], leaderboard: []);
+      when(() => profileCubit.state).thenReturn(loaded);
+      whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
 
-    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
-    await tester.pumpAndSettle();
-    await _openEloSheet(tester);
+      await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+      await tester.pumpAndSettle();
+      await _openEloSheet(tester);
 
-    expect(find.text('Sin datos de clasificación'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Sin datos de clasificación'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('UT-06: screen renders user name when ProfileLoaded is emitted', (tester) async {
+  testWidgets('UT-06: screen renders user name when ProfileLoaded is emitted', (
+    tester,
+  ) async {
     final loaded = _makeLoaded(leaderboard: []);
     when(() => profileCubit.state).thenReturn(loaded);
     whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
@@ -160,44 +189,51 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('WT-01: ELO sheet renders 5 rows with rank, displayName and rating', (tester) async {
-    final entries = _makeEntries();
-    final loaded = _makeLoaded(leaderboard: entries);
-    when(() => profileCubit.state).thenReturn(loaded);
-    whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+  testWidgets(
+    'WT-01: ELO sheet renders 5 rows with rank, displayName and rating',
+    (tester) async {
+      final entries = _makeEntries();
+      final loaded = _makeLoaded(leaderboard: entries);
+      when(() => profileCubit.state).thenReturn(loaded);
+      whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
 
-    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
-    await tester.pumpAndSettle();
-    await _openEloSheet(tester);
+      await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+      await tester.pumpAndSettle();
+      await _openEloSheet(tester);
 
-    for (final e in entries) {
-      expect(find.text(e.displayName), findsOneWidget);
-    }
-    expect(find.textContaining('1600'), findsOneWidget);
-  });
+      for (final e in entries) {
+        expect(find.text(e.displayName), findsOneWidget);
+      }
+      expect(find.textContaining('1600'), findsOneWidget);
+    },
+  );
 
-  testWidgets('WT-02: ELO sheet row with me.id has highlighted visual treatment', (tester) async {
-    final entries = _makeEntries(highlightUserId: _kMe.id);
-    final loaded = _makeLoaded(leaderboard: entries);
-    when(() => profileCubit.state).thenReturn(loaded);
-    whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+  testWidgets(
+    'WT-02: ELO sheet row with me.id has highlighted visual treatment',
+    (tester) async {
+      final entries = _makeEntries(highlightUserId: _kMe.id);
+      final loaded = _makeLoaded(leaderboard: entries);
+      when(() => profileCubit.state).thenReturn(loaded);
+      whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
 
-    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
-    await tester.pumpAndSettle();
-    await _openEloSheet(tester);
+      await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+      await tester.pumpAndSettle();
+      await _openEloSheet(tester);
 
-    final aliceText = find.text('Alice');
-    expect(aliceText, findsOneWidget);
+      final aliceText = find.text('Alice');
+      expect(aliceText, findsOneWidget);
 
-    final containers = tester.widgetList<Container>(find.ancestor(
-      of: aliceText,
-      matching: find.byType(Container),
-    ));
-    final hasHighlight = containers.any((c) => c.color != null);
-    expect(hasHighlight, isTrue);
-  });
+      final containers = tester.widgetList<Container>(
+        find.ancestor(of: aliceText, matching: find.byType(Container)),
+      );
+      final hasHighlight = containers.any((c) => c.color != null);
+      expect(hasHighlight, isTrue);
+    },
+  );
 
-  testWidgets('WT-03: no row highlighted when userId does not match me.id', (tester) async {
+  testWidgets('WT-03: no row highlighted when userId does not match me.id', (
+    tester,
+  ) async {
     final entries = _makeEntries();
     final loaded = _makeLoaded(leaderboard: entries);
     when(() => profileCubit.state).thenReturn(loaded);
@@ -211,7 +247,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('WT-04: empty leaderboard in ELO sheet, no list rows', (tester) async {
+  testWidgets('WT-04: empty leaderboard in ELO sheet, no list rows', (
+    tester,
+  ) async {
     final loaded = _makeLoaded(leaderboard: []);
     when(() => profileCubit.state).thenReturn(loaded);
     whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
@@ -225,7 +263,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('handoff: settings menu shows Editar perfil and Ajustes', (tester) async {
+  testWidgets('handoff: settings menu shows Editar perfil and Ajustes', (
+    tester,
+  ) async {
     final loaded = _makeLoaded();
     when(() => profileCubit.state).thenReturn(loaded);
     whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
@@ -238,5 +278,39 @@ void main() {
     expect(find.text('Jugadas'), findsOneWidget);
     expect(find.text('Victorias'), findsOneWidget);
     expect(find.text('ELO'), findsOneWidget);
+  });
+
+  testWidgets('profile shows honest empty states for unsupported sections', (
+    tester,
+  ) async {
+    final loaded = _makeLoaded();
+    when(() => profileCubit.state).thenReturn(loaded);
+    whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+
+    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('FORMA RECIENTE'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('FORMA RECIENTE'), findsOneWidget);
+    expect(
+      find.text(
+        'Los resultados ganados y perdidos todavía no están disponibles.',
+      ),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Logros'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Logros'), findsOneWidget);
+    expect(
+      find.text('Todavía no participás ni organizás torneos.'),
+      findsOneWidget,
+    );
   });
 }

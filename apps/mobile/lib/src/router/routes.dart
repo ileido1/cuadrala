@@ -6,6 +6,8 @@ final class Routes {
   static const login = '/login';
   static const register = '/register';
   static const onboarding = '/onboarding';
+  static const settings = '/perfil/ajustes';
+  static const publicProfile = '/perfil/publico';
   static const home = '/home';
 
   // Shell branch roots (StatefulShellRoute tabs)

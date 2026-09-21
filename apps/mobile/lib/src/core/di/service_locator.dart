@@ -91,7 +91,8 @@ Future<void> setupDependencies() async {
   );
 
   getIt.registerLazySingleton<SecureTokenStorage>(
-    () => FlutterSecureTokenStorage(secureStorage: getIt<FlutterSecureStorage>()),
+    () =>
+        FlutterSecureTokenStorage(secureStorage: getIt<FlutterSecureStorage>()),
   );
 
   getIt.registerLazySingleton<SavedClubsRepository>(
@@ -103,10 +104,8 @@ Future<void> setupDependencies() async {
   );
 
   getIt.registerLazySingleton<ApiClient>(
-    () => ApiClient(
-      dio: getIt<Dio>(),
-      failureMapper: getIt<AppFailureMapper>(),
-    ),
+    () =>
+        ApiClient(dio: getIt<Dio>(), failureMapper: getIt<AppFailureMapper>()),
   );
 
   getIt.registerLazySingleton<ExchangeRatesApi>(
@@ -137,12 +136,16 @@ Future<void> setupDependencies() async {
     ),
   ]);
 
-  getIt.registerLazySingleton<CatalogApi>(() => DioCatalogApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<CatalogApi>(
+    () => DioCatalogApi(apiClient: getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<CatalogRepository>(
     () => CatalogRepository(catalogApi: getIt<CatalogApi>()),
   );
 
-  getIt.registerLazySingleton<MatchesApi>(() => DioMatchesApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<MatchesApi>(
+    () => DioMatchesApi(apiClient: getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<MatchesRepository>(
     () => MatchesRepository(
       matchesApi: getIt<MatchesApi>(),
@@ -150,8 +153,12 @@ Future<void> setupDependencies() async {
     ),
   );
 
-  getIt.registerLazySingleton<VenuesApi>(() => DioVenuesApi(apiClient: getIt<ApiClient>()));
-  getIt.registerLazySingleton<VenuesRepository>(() => VenuesRepository(venuesApi: getIt<VenuesApi>()));
+  getIt.registerLazySingleton<VenuesApi>(
+    () => DioVenuesApi(apiClient: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<VenuesRepository>(
+    () => VenuesRepository(venuesApi: getIt<VenuesApi>()),
+  );
 
   getIt.registerFactory<VenueMapCubit>(
     () => VenueMapCubit(
@@ -169,12 +176,16 @@ Future<void> setupDependencies() async {
     ),
   );
 
-  getIt.registerLazySingleton<ProfileApi>(() => DioProfileApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<ProfileApi>(
+    () => DioProfileApi(apiClient: getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<ProfileRepository>(
     () => ProfileRepository(profileApi: getIt<ProfileApi>()),
   );
 
-  getIt.registerLazySingleton<ChatApi>(() => DioChatApi(apiClient: getIt<ApiClient>()));
+  getIt.registerLazySingleton<ChatApi>(
+    () => DioChatApi(apiClient: getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<ChatRepository>(
     () => ChatRepository(chatApi: getIt<ChatApi>()),
   );
@@ -253,6 +264,7 @@ Future<void> setupDependencies() async {
       profileRepository: getIt<ProfileRepository>(),
       onboardingRepository: getIt<OnboardingRepository>(),
       catalogRepository: getIt<CatalogRepository>(),
+      tournamentsRepository: getIt<TournamentsRepository>(),
     ),
   );
 
@@ -272,7 +284,9 @@ Future<void> setupDependencies() async {
   );
 
   getIt.registerFactory<CreateTournamentCubit>(
-    () => CreateTournamentCubit(tournamentsRepository: getIt<TournamentsRepository>()),
+    () => CreateTournamentCubit(
+      tournamentsRepository: getIt<TournamentsRepository>(),
+    ),
   );
   getIt.registerFactory<TournamentsListCubit>(
     () => TournamentsListCubit(
@@ -285,7 +299,9 @@ Future<void> setupDependencies() async {
     ),
   );
   getIt.registerFactory<TournamentPresetsCubit>(
-    () => TournamentPresetsCubit(tournamentsRepository: getIt<TournamentsRepository>()),
+    () => TournamentPresetsCubit(
+      tournamentsRepository: getIt<TournamentsRepository>(),
+    ),
   );
   getIt.registerFactoryParam<TournamentScheduleCubit, String, void>(
     (tournamentId, _) => TournamentScheduleCubit(

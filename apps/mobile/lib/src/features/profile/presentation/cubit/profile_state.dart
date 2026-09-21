@@ -10,6 +10,7 @@ import '../../data/models/player_profile_dto.dart';
 import '../../data/models/user_me_dto.dart';
 import '../../data/models/user_rating_dto.dart';
 import '../../data/models/user_stats_dto.dart';
+import '../../../tournaments/data/models/viewer_tournament_dto.dart';
 
 sealed class ProfileState extends Equatable {
   const ProfileState();
@@ -39,6 +40,8 @@ final class ProfileLoaded extends ProfileState {
     required this.availability,
     required this.sports,
     this.leaderboard = const [],
+    this.myTournaments = const [],
+    this.tournamentsLoadFailed = false,
   });
 
   final UserMeDto me;
@@ -52,21 +55,25 @@ final class ProfileLoaded extends ProfileState {
   final List<UserAvailabilityDto> availability;
   final List<SportDto> sports;
   final List<LeaderboardEntryDto> leaderboard;
+  final List<ViewerTournamentDto> myTournaments;
+  final bool tournamentsLoadFailed;
 
   @override
   List<Object?> get props => [
-        me,
-        stats,
-        ratings,
-        history,
-        playerProfile,
-        onboardingStatus,
-        sportProfiles,
-        location,
-        availability,
-        sports,
-        leaderboard,
-      ];
+    me,
+    stats,
+    ratings,
+    history,
+    playerProfile,
+    onboardingStatus,
+    sportProfiles,
+    location,
+    availability,
+    sports,
+    leaderboard,
+    myTournaments,
+    tournamentsLoadFailed,
+  ];
 }
 
 final class ProfileFailure extends ProfileState {

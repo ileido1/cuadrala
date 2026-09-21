@@ -30,6 +30,8 @@ import '../features/notifications/presentation/notification_detail_screen.dart';
 import '../features/notifications/presentation/notification_prefs_screen.dart';
 import '../features/onboarding/presentation/my_sports_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow_screen.dart';
+import '../features/profile/presentation/profile_settings_screen.dart';
+import '../features/profile/presentation/public_profile_screen.dart';
 import '../features/shell/presentation/shell_screen.dart';
 import '../features/venue_detail/venue_detail_screen.dart';
 import '../features/venues/data/models/venue_dto.dart';
@@ -76,10 +78,18 @@ final class AppRouter {
                 child: const RegisterScreen(),
               ),
             ),
-            GoRoute(
-              path: Routes.onboarding,
-              builder: (context, state) => const OnboardingFlowScreen(),
-            ),
+          GoRoute(
+            path: Routes.onboarding,
+            builder: (context, state) => const OnboardingFlowScreen(),
+          ),
+          GoRoute(
+            path: Routes.settings,
+            builder: (context, state) => const ProfileSettingsScreen(),
+          ),
+          GoRoute(
+            path: Routes.publicProfile,
+            builder: (context, state) => const PublicProfileScreen(),
+          ),
 
             // ------------------------------------------------------------------
             // Shell — StatefulShellRoute.indexedStack
