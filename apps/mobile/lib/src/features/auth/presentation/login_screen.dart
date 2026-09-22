@@ -130,19 +130,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
       debugPrint('[Google Auth] 8. Marking session as authenticated...');
+      // No manual navigation here: GoRouter's redirect already reacts to
+      // SessionCubit's stream (refreshListenable in app_router.dart) and
+      // routes to onboarding or home on its own. Navigating manually too
+      // raced with the router's own redirects for new users (two GoRouter
+      // navigations firing almost simultaneously) and crashed.
       await context.read<SessionCubit>().markAuthenticated();
-      if (!mounted) return;
-
-      final session = context.read<SessionCubit>().state;
-      debugPrint('[Google Auth] 9. Session state: ${session.runtimeType}, onboardingComplete: ${session is SessionAuthenticated ? session.onboardingComplete : 'N/A'}');
-
-      if (session is SessionAuthenticated && session.onboardingComplete == false) {
-        debugPrint('[Google Auth] 10. Redirecting to onboarding (new user)');
-        context.go(Routes.onboarding);
-      } else {
-        debugPrint('[Google Auth] 10. Redirecting to home (existing user)');
-        context.go(Routes.home);
-      }
+      debugPrint('[Google Auth] 9. Session authenticated — router will redirect');
     } catch (e) {
       _showGoogleError(e);
     } finally {
