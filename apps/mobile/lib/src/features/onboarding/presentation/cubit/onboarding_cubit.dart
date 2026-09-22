@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/models/onboarding_status_dto.dart';
 import '../../data/models/player_sport_profile_dto.dart';
@@ -12,12 +13,81 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   OnboardingCubit({
     required OnboardingRepository repository,
     required ProfileRepository profileRepository,
-  })  : _repository = repository,
-        _profileRepository = profileRepository,
-        super(OnboardingState.initial());
+    LocationService? locationService,
+  }) : _repository = repository,
+       _profileRepository = profileRepository,
+       _locationService = locationService,
+       super(OnboardingState.initial());
 
   final OnboardingRepository _repository;
   final ProfileRepository _profileRepository;
+  final LocationService? _locationService;
+
+  Future<void> detectLocation({bool retry = false}) async {
+    if (state.locationDetectionStatus ==
+        OnboardingLocationDetectionStatus.detecting) {
+      return;
+    }
+    if (!retry &&
+        state.locationDetectionStatus !=
+            OnboardingLocationDetectionStatus.initial) {
+      return;
+    }
+
+    final service = _locationService;
+    if (service == null) {
+      emit(
+        state.copyWith(
+          locationDetectionStatus: OnboardingLocationDetectionStatus.failure,
+          locationFailure: const LocationFailure(
+            code: 'LOCATION_UNAVAILABLE',
+            message:
+                'No pudimos detectar tu ubicación. Puedes ingresar tus coordenadas manualmente.',
+          ),
+          clearDetectedLocation: true,
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        locationDetectionStatus: OnboardingLocationDetectionStatus.detecting,
+        clearDetectedLocation: true,
+        clearLocationFailure: true,
+      ),
+    );
+    try {
+      final location = await service.getCurrentLocation();
+      emit(
+        state.copyWith(
+          locationDetectionStatus: OnboardingLocationDetectionStatus.success,
+          detectedLocation: location,
+          clearLocationFailure: true,
+        ),
+      );
+    } on LocationFailure catch (failure) {
+      emit(
+        state.copyWith(
+          locationDetectionStatus: OnboardingLocationDetectionStatus.failure,
+          locationFailure: failure,
+          clearDetectedLocation: true,
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          locationDetectionStatus: OnboardingLocationDetectionStatus.failure,
+          locationFailure: const LocationFailure(
+            code: 'LOCATION_UNAVAILABLE',
+            message:
+                'No pudimos detectar tu ubicación. Puedes ingresar tus coordenadas manualmente.',
+          ),
+          clearDetectedLocation: true,
+        ),
+      );
+    }
+  }
 
   Future<void> load() async {
     emit(state.copyWith(type: OnboardingStatusType.loading, clearError: true));
@@ -25,9 +95,19 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       final status = await _repository.getStatus();
       emit(state.copyWith(type: OnboardingStatusType.loaded, status: status));
     } on AppFailure catch (f) {
-      emit(state.copyWith(type: OnboardingStatusType.error, errorMessage: f.message));
+      emit(
+        state.copyWith(
+          type: OnboardingStatusType.error,
+          errorMessage: f.message,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(type: OnboardingStatusType.error, errorMessage: e.toString()));
+      emit(
+        state.copyWith(
+          type: OnboardingStatusType.error,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 
@@ -63,15 +143,23 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   }
 
   Future<bool> saveSportProfiles({
-    required List<({
-      String sportId,
-      double skillLevel,
-      SidePreference sidePreference,
-      String? categoryId,
-    })> items,
+    required List<
+      ({
+        String sportId,
+        double skillLevel,
+        SidePreference sidePreference,
+        String? categoryId,
+      })
+    >
+    items,
     String? dominantHand,
   }) async {
-    emit(state.copyWith(savingStep: OnboardingStep.sportProfiles, clearError: true));
+    emit(
+      state.copyWith(
+        savingStep: OnboardingStep.sportProfiles,
+        clearError: true,
+      ),
+    );
     try {
       await _repository.putSportProfiles(items);
       if (dominantHand != null && dominantHand.isNotEmpty) {
@@ -89,7 +177,9 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   }
 
   Future<bool> saveAvailability(List<UserAvailabilityDto> items) async {
-    emit(state.copyWith(savingStep: OnboardingStep.availability, clearError: true));
+    emit(
+      state.copyWith(savingStep: OnboardingStep.availability, clearError: true),
+    );
     try {
       await _repository.putAvailability(items);
       // Si es el último paso pendiente, marcar onboarding como completo.
@@ -134,10 +224,12 @@ class OnboardingCubit extends Cubit<OnboardingState> {
 
   Future<void> _refreshStatus() async {
     final status = await _repository.getStatus();
-    emit(state.copyWith(
-      type: OnboardingStatusType.loaded,
-      status: status,
-      clearSaving: true,
-    ));
+    emit(
+      state.copyWith(
+        type: OnboardingStatusType.loaded,
+        status: status,
+        clearSaving: true,
+      ),
+    );
   }
 }

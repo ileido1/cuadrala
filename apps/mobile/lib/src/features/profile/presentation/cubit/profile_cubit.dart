@@ -67,7 +67,16 @@ class ProfileCubit extends Cubit<ProfileState> {
       var tournamentsLoadFailed = false;
       if (_tournamentsRepository != null) {
         try {
-          myTournaments = await _tournamentsRepository.listMyTournaments();
+          final viewerTournaments = await _tournamentsRepository
+              .listMyTournaments();
+          myTournaments =
+              viewerTournaments
+                  .where((item) => item.registrationStatus != null)
+                  .toList(growable: false)
+                // `startsAt` is the tournament occurrence date. Sort at the
+                // profile projection boundary because the shared endpoint also
+                // serves organizer and invitation views with broader semantics.
+                ..sort(_comparePlayerTournamentRecencySV);
         } catch (e) {
           tournamentsLoadFailed = true;
           debugPrint('[ProfileCubit] tournaments fetch failed: $e');
@@ -98,4 +107,21 @@ class ProfileCubit extends Cubit<ProfileState> {
       emit(ProfileFailure(message: message));
     }
   }
+}
+
+int _comparePlayerTournamentRecencySV(
+  ViewerTournamentDto left,
+  ViewerTournamentDto right,
+) {
+  final leftStartsAt = left.tournament.startsAt;
+  final rightStartsAt = right.tournament.startsAt;
+
+  if (leftStartsAt == null && rightStartsAt != null) return 1;
+  if (leftStartsAt != null && rightStartsAt == null) return -1;
+  if (leftStartsAt != null && rightStartsAt != null) {
+    final byStartDate = rightStartsAt.compareTo(leftStartsAt);
+    if (byStartDate != 0) return byStartDate;
+  }
+
+  return left.tournament.id.compareTo(right.tournament.id);
 }

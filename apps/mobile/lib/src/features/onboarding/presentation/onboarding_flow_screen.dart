@@ -98,7 +98,10 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
                   children: [
                     OnboardingIdentityPage(onContinue: _next),
                     OnboardingSportProfilesPage(onContinue: _next),
-                    OnboardingLocationPage(onContinue: _next),
+                    OnboardingLocationPage(
+                      onContinue: _next,
+                      isActive: _currentPage == 2,
+                    ),
                     OnboardingAvailabilityPage(onContinue: _next),
                   ],
                 ),

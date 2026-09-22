@@ -3,9 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/feature_flags.dart';
-import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../router/shell_branches.dart';
 import '../../home/presentation/cubit/home_cubit.dart';
 import '../../matches/presentation/cubit/open_matches_cubit.dart';
 import '../../notifications/presentation/cubit/notifications_cubit.dart';
@@ -29,42 +29,17 @@ class ShellTabConfig {
   final String label;
 }
 
-final _defaultTabs = [
-  const ShellTabConfig(
-    activeIcon: AppIcons.home,
-    inactiveIcon: AppIcons.home,
-    label: 'Inicio',
-  ),
-  const ShellTabConfig(
-    activeIcon: AppIcons.calendar,
-    inactiveIcon: AppIcons.calendar,
-    label: 'Partidas',
-  ),
-  const ShellTabConfig(
-    activeIcon: AppIcons.trophy,
-    inactiveIcon: AppIcons.trophy,
-    label: 'Torneos',
-  ),
-  const ShellTabConfig(
-    activeIcon: AppIcons.explore,
-    inactiveIcon: AppIcons.explore,
-    label: 'Descubrir',
-  ),
-  const ShellTabConfig(
-    activeIcon: AppIcons.bell,
-    inactiveIcon: AppIcons.bell,
-    label: 'Avisos',
-  ),
-  const ShellTabConfig(
-    activeIcon: AppIcons.person,
-    inactiveIcon: AppIcons.person,
-    label: 'Perfil',
-  ),
-];
-
-List<ShellTabConfig> _filterTabs(List<ShellTabConfig> tabs) => [
-  for (final t in tabs)
-    if (t.label != 'Torneos' || FeatureFlags.torneosEnabled) t,
+List<ShellTabConfig> shellTabsFor({
+  bool tournamentsEnabled = FeatureFlags.torneosEnabled,
+}) => [
+  for (final destination in shellDestinations(
+    tournamentsEnabled: tournamentsEnabled,
+  ))
+    ShellTabConfig(
+      activeIcon: destination.activeIcon,
+      inactiveIcon: destination.inactiveIcon,
+      label: destination.label,
+    ),
 ];
 
 // ---------------------------------------------------------------------------
@@ -127,7 +102,7 @@ class ShellBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedTabs = tabs ?? _filterTabs(_defaultTabs);
+    final resolvedTabs = tabs ?? shellTabsFor();
 
     return BlocBuilder<NotificationsCubit, NotificationsState>(
       builder: (context, notifState) {

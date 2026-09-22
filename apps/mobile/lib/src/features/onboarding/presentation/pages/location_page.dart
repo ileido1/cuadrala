@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/di/service_locator.dart';
-import '../../../../core/location/location_service.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/selectable_chip.dart';
@@ -13,9 +11,14 @@ import '../cubit/onboarding_state.dart';
 import '../validation/onboarding_input_validators.dart';
 
 class OnboardingLocationPage extends StatefulWidget {
-  const OnboardingLocationPage({super.key, required this.onContinue});
+  const OnboardingLocationPage({
+    super.key,
+    required this.onContinue,
+    this.isActive = true,
+  });
 
   final VoidCallback onContinue;
+  final bool isActive;
 
   @override
   State<OnboardingLocationPage> createState() => _OnboardingLocationPageState();
@@ -29,8 +32,28 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
   final _lngController = TextEditingController(text: '-66.9036');
   int _radiusKm = 10;
   bool _showAdvanced = false;
-  bool _detectingLocation = false;
   String? _formError;
+
+  @override
+  void initState() {
+    super.initState();
+    _requestLocationWhenActive();
+  }
+
+  @override
+  void didUpdateWidget(covariant OnboardingLocationPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive && widget.isActive) {
+      _requestLocationWhenActive();
+    }
+  }
+
+  void _requestLocationWhenActive() {
+    if (!widget.isActive) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<OnboardingCubit>().detectLocation();
+    });
+  }
 
   @override
   void dispose() {
@@ -41,39 +64,28 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
   }
 
   Future<void> _useDeviceLocation() async {
-    if (_detectingLocation) return;
-    setState(() {
-      _detectingLocation = true;
-      _formError = null;
-    });
-    try {
-      final loc = await getIt<LocationService>().getCurrentLocation();
-      if (!mounted) return;
-      setState(() {
-        _latController.text = loc.latitude.toStringAsFixed(6);
-        _lngController.text = loc.longitude.toStringAsFixed(6);
-      });
+    setState(() => _formError = null);
+    await context.read<OnboardingCubit>().detectLocation(retry: true);
+  }
+
+  void _onLocationState(BuildContext context, OnboardingState state) {
+    if (state.locationDetectionStatus ==
+            OnboardingLocationDetectionStatus.success &&
+        state.detectedLocation != null) {
+      final location = state.detectedLocation!;
+      _latController.text = location.latitude.toStringAsFixed(6);
+      _lngController.text = location.longitude.toStringAsFixed(6);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Ubicación detectada. Ajusta el radio si quieres.'),
         ),
       );
-    } on LocationFailure catch (f) {
-      if (!mounted) return;
+    } else if (state.locationDetectionStatus ==
+            OnboardingLocationDetectionStatus.failure &&
+        state.locationFailure != null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(f.message)));
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No pudimos detectar tu ubicación. Inténtalo de nuevo.',
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _detectingLocation = false);
+      ).showSnackBar(SnackBar(content: Text(state.locationFailure!.message)));
     }
   }
 
@@ -105,9 +117,17 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<OnboardingCubit, OnboardingState>(
+    return BlocConsumer<OnboardingCubit, OnboardingState>(
+      listenWhen: (previous, current) =>
+          previous.locationDetectionStatus != current.locationDetectionStatus &&
+          current.locationDetectionStatus !=
+              OnboardingLocationDetectionStatus.detecting,
+      listener: _onLocationState,
       builder: (context, state) {
         final saving = state.savingStep == OnboardingStep.location;
+        final detecting =
+            state.locationDetectionStatus ==
+            OnboardingLocationDetectionStatus.detecting;
         final scheme = Theme.of(context).colorScheme;
         return SafeArea(
           child: Padding(
@@ -132,10 +152,7 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _GpsCard(
-                          onTap: _useDeviceLocation,
-                          loading: _detectingLocation,
-                        ),
+                        _GpsCard(onTap: _useDeviceLocation, loading: detecting),
                         const SizedBox(height: 16),
                         const _SectionTitle(title: 'Tu zona'),
                         const SizedBox(height: 10),
@@ -253,6 +270,9 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                             children: [
                               Expanded(
                                 child: TextField(
+                                  key: const Key(
+                                    'onboarding.location.latitude',
+                                  ),
                                   controller: _latController,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
@@ -269,6 +289,9 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: TextField(
+                                  key: const Key(
+                                    'onboarding.location.longitude',
+                                  ),
                                   controller: _lngController,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(

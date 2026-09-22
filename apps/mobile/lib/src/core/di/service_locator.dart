@@ -233,6 +233,7 @@ Future<void> setupDependencies() async {
     () => OnboardingCubit(
       repository: getIt<OnboardingRepository>(),
       profileRepository: getIt<ProfileRepository>(),
+      locationService: getIt<LocationService>(),
     ),
   );
 

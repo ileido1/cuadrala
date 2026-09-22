@@ -23,8 +23,7 @@ class _MockNotificationsCubit extends MockCubit<NotificationsState>
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Stub tab set — mirrors the real tab order with Torneos excluded
-// (matches FeatureFlags.torneosEnabled = false production default)
+// Stub tab set — mirrors the real tab order with Torneos enabled.
 // ---------------------------------------------------------------------------
 
 List<ShellTabConfig> _stubTabs() => [
@@ -42,6 +41,11 @@ List<ShellTabConfig> _stubTabs() => [
     activeIcon: Icons.emoji_events,
     inactiveIcon: Icons.emoji_events_outlined,
     label: 'Torneos',
+  ),
+  const ShellTabConfig(
+    activeIcon: Icons.explore,
+    inactiveIcon: Icons.explore_outlined,
+    label: 'Descubrir',
   ),
   const ShellTabConfig(
     activeIcon: Icons.notifications,
@@ -148,7 +152,7 @@ void main() {
       expect(find.byIcon(Icons.sports_tennis), findsOneWidget);
     });
 
-    testWidgets('when tab 0 is active, Avisos shows outlined icon (index 2)', (
+    testWidgets('when tab 0 is active, Avisos shows outlined icon (index 4)', (
       tester,
     ) async {
       when(() => notifCubit.state).thenReturn(_notifState());
@@ -158,12 +162,12 @@ void main() {
       expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
     });
 
-    testWidgets('Avisos active (index 3): filled notifications icon visible', (
+    testWidgets('Avisos active (index 4): filled notifications icon visible', (
       tester,
     ) async {
       when(() => notifCubit.state).thenReturn(_notifState());
 
-      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 3));
+      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 4));
 
       expect(find.byIcon(Icons.notifications), findsOneWidget);
     });
@@ -267,7 +271,7 @@ void main() {
     ) async {
       when(() => notifCubit.state).thenReturn(_notifState(unread: 5));
 
-      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 3));
+      await tester.pumpWidget(_wrap(notifCubit: notifCubit, currentIndex: 4));
 
       expect(find.text('5'), findsOneWidget);
     });
@@ -276,7 +280,7 @@ void main() {
   // ── 5. Tab tap calls onSelectTab callback ─────────────────────────────────
 
   group('tapping a tab calls onSelectTab with the correct index', () {
-    testWidgets('tapping Perfil tab calls onSelectTab(4)', (tester) async {
+    testWidgets('tapping Perfil tab calls onSelectTab(5)', (tester) async {
       when(() => notifCubit.state).thenReturn(_notifState());
       final tappedIndexes = <int>[];
 
@@ -291,10 +295,10 @@ void main() {
       await tester.tap(find.text('Perfil'));
       await tester.pump();
 
-      expect(tappedIndexes, [4]);
+      expect(tappedIndexes, [5]);
     });
 
-    testWidgets('tapping Avisos tab calls onSelectTab(3)', (tester) async {
+    testWidgets('tapping Avisos tab calls onSelectTab(4)', (tester) async {
       when(() => notifCubit.state).thenReturn(_notifState());
       final tappedIndexes = <int>[];
 
@@ -309,7 +313,7 @@ void main() {
       await tester.tap(find.text('Avisos'));
       await tester.pump();
 
-      expect(tappedIndexes, [3]);
+      expect(tappedIndexes, [4]);
     });
 
     testWidgets('tapping Inicio tab calls onSelectTab(0)', (tester) async {
