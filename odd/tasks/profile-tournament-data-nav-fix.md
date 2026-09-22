@@ -46,4 +46,4 @@ The profile currently shows organizer-owned tournaments as if they were played, 
 Rollback only the bounded correction hunks: the `startsAt` profile sort/comparator and its membership/order fixtures in `apps/mobile/lib/src/features/profile/presentation/cubit/profile_cubit.dart` and `apps/mobile/test/features/profile/presentation/cubit/profile_cubit_test.dart`; the truthful missing-service fallback and assertion in `apps/mobile/lib/src/features/onboarding/presentation/cubit/onboarding_cubit.dart` and `apps/mobile/test/features/onboarding/presentation/cubit/onboarding_cubit_test.dart`; and the inactive-to-active/manual-coordinate widget coverage in `apps/mobile/test/features/onboarding/presentation/pages/location_page_test.dart`. Do not revert whole files because they also contain the preserved earlier ODD work.
 
 ## Delivery constraint
-Direct commit and push to `origin/main` were explicitly authorized on 2026-09-22. Final commit identities are recorded after delivery.
+Delivered to `origin/main` in `40786c9 fix(mobile): correct profile navigation and location flows` on 2026-09-22.
