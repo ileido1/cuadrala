@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
 
 import '../../../../core/theme/app_icons.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -75,6 +76,8 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
       final location = state.detectedLocation!;
       _latController.text = location.latitude.toStringAsFixed(6);
       _lngController.text = location.longitude.toStringAsFixed(6);
+      // Auto-detect city name in background
+      _detectCityName(location.latitude, location.longitude);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Ubicación detectada. Ajusta el radio si quieres.'),
@@ -86,6 +89,22 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(state.locationFailure!.message)));
+    }
+  }
+
+  Future<void> _detectCityName(double latitude, double longitude) async {
+    if (!mounted) return;
+    try {
+      final placemarks =
+          await placemarkFromCoordinates(latitude, longitude);
+      if (!mounted || placemarks.isEmpty) return;
+      final place = placemarks.first;
+      final cityName = place.locality ?? place.administrativeArea ?? '';
+      if (cityName.isNotEmpty && _labelController.text.isEmpty && mounted) {
+        setState(() => _labelController.text = cityName);
+      }
+    } catch (_) {
+      // Reverse geocoding unavailable or failed; user can enter manually
     }
   }
 

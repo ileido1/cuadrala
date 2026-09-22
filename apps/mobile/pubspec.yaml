@@ -43,6 +43,7 @@ dependencies:
   flutter_secure_storage: ^10.3.0
   image_picker: ^1.2.0
   geolocator: ^14.0.2
+  geocoding: ^4.0.0
   phone_form_field: ^10.0.9
   google_sign_in: ^7.2.0
   sign_in_with_apple: ^7.0.1

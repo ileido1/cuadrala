@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 
 import '../../../../core/di/service_locator.dart';
@@ -26,13 +25,11 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
   final _nameController = TextEditingController();
   final _phoneController = PhoneController();
   DateTime? _birthDate;
-  final _cityController = TextEditingController();
   final _documentController = TextEditingController();
   String? _nameError;
   String? _phoneError;
   String? _birthError;
   String? _documentError;
-  String? _cityError;
   bool _loading = true;
 
   @override
@@ -57,7 +54,6 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _cityController.dispose();
     _documentController.dispose();
     super.dispose();
   }
@@ -70,7 +66,6 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
     final birthValid = _birthDate != null && _birthDate!.year >= 1920;
     final document = _documentController.text.trim();
     final documentValid = isValidOnboardingDocument(document);
-    final cityValid = isValidOnboardingCity(_cityController.text);
     setState(() {
       _nameError = nameValid
           ? null
@@ -80,9 +75,8 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
       _documentError = documentValid
           ? null
           : 'Usa solo números (máximo 20 caracteres).';
-      _cityError = cityValid ? null : 'Máximo 120 caracteres.';
     });
-    return nameValid && phoneValid && birthValid && documentValid && cityValid;
+    return nameValid && phoneValid && birthValid && documentValid;
   }
 
   Future<void> _submit() async {
@@ -94,9 +88,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
       phone: phoneE164,
       birthYear: birthYear,
       birthDate: _birthDate,
-      city: _cityController.text.trim().isEmpty
-          ? null
-          : _cityController.text.trim(),
+      city: null, // City is detected automatically in location step
       documentNumber: _documentController.text.trim().isEmpty
           ? null
           : _documentController.text.trim(),
@@ -238,29 +230,10 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           onTap: _pickBirthDate,
                           errorText: _birthError,
                         ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _cityController,
-                          inputFormatters: [
-                            LengthLimitingTextInputFormatter(
-                              onboardingCityMaxLength,
-                            ),
-                          ],
-                          textCapitalization: TextCapitalization.words,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            labelText: 'Ciudad',
-                            hintText: 'Caracas, Venezuela',
-                            prefixIcon: Icon(AppIcons.pin),
-                            helperText:
-                                'La usamos para mostrarte partidas y canchas cercanas.',
-                            errorText: _cityError,
-                          ),
-                        ),
                         const SizedBox(height: 24),
                         _ProfilePreviewCard(
                           name: _nameController.text.trim(),
-                          city: _cityController.text.trim(),
+                          city: '', // City is detected in location step
                           initials: _initials,
                         ),
                       ],
@@ -372,9 +345,8 @@ class _BirthDatePickerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isSelected = birthDate != null;
-    final formatter = DateFormat('MMMM d, yyyy', 'es_ES');
     final displayDate = isSelected
-        ? formatter.format(birthDate!)
+        ? '${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}'
         : 'Selecciona tu fecha de nacimiento';
     final age = isSelected ? DateTime.now().year - birthDate!.year : null;
 
