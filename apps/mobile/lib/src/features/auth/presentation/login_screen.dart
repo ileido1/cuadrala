@@ -150,8 +150,24 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Extracts a readable message from [e].
+  ///
+  /// `GoogleSignInException.details` can hold a raw JS interop object whose
+  /// default `toString()` is meaningless once minified in a release build
+  /// (e.g. "minified:bt") -- `code`/`description` stay readable, so those
+  /// are used instead of interpolating the exception as a whole.
+  String _describeGoogleError(Object e) {
+    if (e is GoogleSignInException) {
+      final desc = e.description;
+      return 'GoogleSignInException: ${e.code}'
+          '${desc != null && desc.isNotEmpty ? ' — $desc' : ''}';
+    }
+    return e.toString();
+  }
+
   void _showGoogleError(Object e) {
-    debugPrint('[Google Auth] ❌ ERROR: $e');
+    final message = _describeGoogleError(e);
+    debugPrint('[Google Auth] ❌ ERROR: $message (raw: $e)');
     debugPrintStack(label: '[Google Auth] Stack trace:');
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -162,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             const Text('❌ Error en Google Login', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text('$e', style: const TextStyle(fontSize: 12)),
+            Text(message, style: const TextStyle(fontSize: 12)),
           ],
         ),
         duration: const Duration(seconds: 10),
