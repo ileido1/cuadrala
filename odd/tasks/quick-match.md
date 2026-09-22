@@ -42,7 +42,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 - QM-1: API `npm run typecheck`, `npm run lint`, and `npx prisma validate` passed.
 
 ## Next step
-- Open and merge the QM-1 stacked slice into main, then create the next branch from the merged main for QM-2 (matching and proposal lifecycle).
+- QM-2 on `codex/quick-match-proposals`: match compatible open inventory first, then create server-expiring proposals with explicit dismiss/confirm rules.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.
