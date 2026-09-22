@@ -20,7 +20,6 @@ export const SPORT_NAMES: Record<string, string> = {
 export const TEAM_SPORT_CODES = ['FOOTBALL5', 'BASKETBALL3X3', 'VOLLEY_BEACH'] as const;
 
 export type RacketOrdinalSlug =
-  | '8va'
   | '7ma'
   | '6ta'
   | '5ta'
@@ -64,7 +63,6 @@ export function isTeamSportCodeSV(_code: string): boolean {
  */
 export function skillLevelFromRacketSlugSV(_slug: string): number {
   const MAP: Record<string, number> = {
-    '8va': 1.5,
     '7ma': 2.0,
     '6ta': 2.5,
     '5ta': 3.0,
@@ -98,7 +96,6 @@ export const RACKET_CATEGORY_DEFS: Array<{
   skillBand: 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
   sortOrder: number;
 }> = [
-  { slug: '8va', name: '8va', skillBand: 'BASIC', sortOrder: 8 },
   { slug: '7ma', name: '7ma', skillBand: 'BASIC', sortOrder: 7 },
   { slug: '6ta', name: '6ta', skillBand: 'INTERMEDIATE', sortOrder: 6 },
   { slug: '5ta', name: '5ta', skillBand: 'INTERMEDIATE', sortOrder: 5 },
