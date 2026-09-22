@@ -101,7 +101,63 @@ class ApiClient {
 
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', newRefreshToken);
+    // Update token expiry (assume 15 min default)
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+    localStorage.setItem('tokenExpiresAt', expiresAt.toString());
     return accessToken;
+  }
+
+  /**
+   * Set tokens with expiry time (used after social login)
+   */
+  setTokens(accessToken: string, refreshToken: string, expiresIn: number): void {
+    if (!accessToken || typeof accessToken !== 'string') {
+      throw new Error('Invalid access token');
+    }
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      throw new Error('Invalid refresh token');
+    }
+    const expiresAt = Date.now() + expiresIn * 1000;
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem('tokenExpiresAt', expiresAt.toString());
+  }
+
+  /**
+   * Clear all tokens (on logout or failed refresh)
+   */
+  clearTokens(): void {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('tokenExpiresAt');
+  }
+
+  /**
+   * Setup cross-tab synchronization via storage events
+   */
+  setupCrossTabSync(onTokensUpdated?: () => void): () => void {
+    if (typeof window === 'undefined') {
+      return () => {};
+    }
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (
+        event.key === 'accessToken' ||
+        event.key === 'refreshToken' ||
+        event.key === 'tokenExpiresAt'
+      ) {
+        if (onTokensUpdated) {
+          onTokensUpdated();
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Return cleanup function
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }
 
   readonly auth = {
@@ -116,6 +172,10 @@ class ApiClient {
 
     register: (email: string, password: string, name: string) =>
       this.client.post('/auth/register', { email, password, name }),
+
+    // Social login (Google, Apple, etc.)
+    socialLogin: (provider: 'google' | 'apple', idToken: string, name?: string) =>
+      this.client.post('/auth/social', { provider, idToken, ...(name ? { name } : {}) }),
   };
 
   readonly venues = {

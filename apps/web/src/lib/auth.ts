@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import type { NextAuthConfig } from 'next-auth';
+import { authorizeCredentials } from './social-login-authorize';
 
 const authConfig: NextAuthConfig = {
   providers: [
@@ -10,49 +11,10 @@ const authConfig: NextAuthConfig = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
-        const API_BASE_PATH = process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/api/v1/';
-
-        try {
-          const response = await fetch(`${API_URL}${API_BASE_PATH}auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          });
-
-          if (!response.ok) {
-            return null;
-          }
-
-          const data = await response.json();
-
-          if (!data.success) {
-            return null;
-          }
-
-          const { user, accessToken, refreshToken, expiresIn } = data.data;
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            subscriptionType: user.subscriptionType,
-            accessToken,
-            refreshToken,
-            expiresIn,
-          };
-        } catch {
-          return null;
-        }
-      },
+      //? Delegates to a next-auth-free module so the authorize logic
+      //? (password login + social-login token-verification bridge) stays
+      //? unit-testable. See lib/social-login-authorize.ts.
+      authorize: authorizeCredentials,
     }),
   ],
   callbacks: {
@@ -65,6 +27,7 @@ const authConfig: NextAuthConfig = {
         token.email = user.email ?? '';
         token.name = user.name ?? '';
         token.subscriptionType = (user as { subscriptionType?: string }).subscriptionType ?? 'free';
+        token.onboardingComplete = (user as { onboardingComplete?: boolean }).onboardingComplete ?? false;
       }
       return token;
     },
@@ -77,6 +40,7 @@ const authConfig: NextAuthConfig = {
           email: token.email as string,
           name: token.name as string,
           subscriptionType: token.subscriptionType as string,
+          onboardingComplete: token.onboardingComplete as boolean,
         },
         accessToken: token.accessToken as string,
         refreshToken: token.refreshToken as string,

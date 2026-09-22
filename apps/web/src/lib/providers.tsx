@@ -1,6 +1,7 @@
 'use client';
 
 import { SessionProvider } from 'next-auth/react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import type { Session } from 'next-auth';
 
 interface ProvidersProps {
@@ -8,6 +9,16 @@ interface ProvidersProps {
   session?: Session | null;
 }
 
+const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
 export default function Providers({ children, session }: ProvidersProps) {
-  return <SessionProvider session={session}>{children}</SessionProvider>;
+  if (!googleClientId) {
+    console.warn('NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable is not set');
+  }
+
+  return (
+    <GoogleOAuthProvider clientId={googleClientId || ''}>
+      <SessionProvider session={session}>{children}</SessionProvider>
+    </GoogleOAuthProvider>
+  );
 }
