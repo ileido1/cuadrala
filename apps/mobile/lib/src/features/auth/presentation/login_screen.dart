@@ -136,7 +136,9 @@ class _LoginScreenState extends State<LoginScreen> {
       // raced with the router's own redirects for new users (two GoRouter
       // navigations firing almost simultaneously) and crashed.
       await context.read<SessionCubit>().markAuthenticated();
-      debugPrint('[Google Auth] 9. Session authenticated — router will redirect');
+      debugPrint(
+        '[Google Auth] 9. Session authenticated — router will redirect',
+      );
     } catch (e) {
       _showGoogleError(e);
     } finally {
@@ -170,7 +172,10 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('❌ Error en Google Login', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              '❌ Error en Google Login',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Text(message, style: const TextStyle(fontSize: 12)),
           ],
@@ -226,11 +231,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _submit() {
     context.read<LoginCubit>().submit(
-          LoginRequest(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          ),
-        );
+      LoginRequest(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      ),
+    );
   }
 
   @override
@@ -258,183 +263,203 @@ class _LoginScreenState extends State<LoginScreen> {
           final scheme = Theme.of(context).colorScheme;
 
           Widget content() => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const AuthHeader(
-                    title: 'Bienvenido de vuelta',
-                    subtitle: 'Inicia sesión para seguir cuadrando partidas.',
-                  ),
-                  const SizedBox(height: 22),
-                  AuthTabs(
-                    selectedIndex: 0,
-                    isDisabled: isBusy,
-                    onTabChanged: (i) {
-                      if (i == 1) context.go(Routes.register);
-                    },
-                  ),
-                  // Apple sigue comentado a pedido: se lanza después de Google.
-                  // Web: GoogleSignIn.authenticate() no está soportado, Google
-                  // exige su botón GIS renderizado (el sign-in llega por
-                  // authenticationEvents, suscrito en initState).
-                  if (kIsWeb)
-                    Center(
-                      key: const Key('login.social_google_web'),
-                      child: googleWebSignInButton(),
-                    )
-                  else
-                    SocialButton(
-                      key: const Key('login.social_google'),
-                      icon: const GoogleGLogo(size: 20),
-                      label: 'Continuar con Google',
-                      background: scheme.surface,
-                      foreground: scheme.onSurface,
-                      border: scheme.outlineVariant,
-                      onPressed: isBusy ? null : _socialLoginGoogle,
-                    ),
-                  // SocialButton(
-                  //   icon: const Icon(AppIcons.appleLogo),
-                  //   label: 'Continuar con Apple',
-                  //   background: scheme.surface,
-                  //   foreground: scheme.onSurface,
-                  //   border: scheme.outlineVariant,
-                  //   onPressed: isBusy ? null : _socialLoginApple,
-                  // ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: scheme.outlineVariant, thickness: 1)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          'o continuar con email',
-                          style: TextStyle(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w800,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AuthHeader(
+                title: 'Bienvenido de vuelta',
+                subtitle: 'Inicia sesión para seguir cuadrando partidas.',
+              ),
+              const SizedBox(height: 22),
+              AuthTabs(
+                selectedIndex: 0,
+                isDisabled: isBusy,
+                onTabChanged: (i) {
+                  if (i == 1) context.go(Routes.register);
+                },
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                key: const Key('login.email'),
+                controller: _emailController,
+                enabled: !isBusy,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autocorrect: false,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Correo electrónico',
+                  hintText: 'tu@email.com',
+                  prefixIcon: Icon(AppIcons.mail),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                key: const Key('login.password'),
+                controller: _passwordController,
+                enabled: !isBusy,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                onSubmitted: isBusy ? null : (_) => _submit(),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  prefixIcon: const Icon(AppIcons.lock),
+                  suffixIcon: IconButton(
+                    onPressed: isBusy
+                        ? null
+                        : () => setState(
+                            () => _obscurePassword = !_obscurePassword,
                           ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: scheme.outlineVariant, thickness: 1)),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  TextField(
-                    key: const Key('login.email'),
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
-                      hintText: 'tu@email.com',
-                      prefixIcon: Icon(AppIcons.mail),
+                    icon: Icon(
+                      _obscurePassword ? AppIcons.eyeOn : AppIcons.eyeOff,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    key: const Key('login.password'),
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _submit(),
-                    decoration: InputDecoration(
-                      labelText: 'Contraseña',
-                      prefixIcon: const Icon(AppIcons.lock),
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                        icon: Icon(
-                          _obscurePassword
-                              ? AppIcons.eyeOn
-                              : AppIcons.eyeOff,
-                        ),
-                      ),
-                    ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: isBusy
-                          ? null
-                          : () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Próximamente'),
-                                  duration: Duration(seconds: 3),
-                                ),
-                              );
-                            },
-                      child: Text(
-                        '¿Olvidaste tu contraseña?',
-                        style: TextStyle(
-                          color: scheme.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: scheme.error.withValues(alpha: 0.10),
-                        border: Border.all(color: scheme.error.withValues(alpha: 0.25)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(AppIcons.warning, color: scheme.error, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              errorMessage,
-                              style: TextStyle(
-                                color: scheme.onErrorContainer,
-                                fontWeight: FontWeight.w700,
-                              ),
+                  onPressed: isBusy
+                      ? null
+                      : () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Próximamente'),
+                              duration: Duration(seconds: 3),
                             ),
-                          ),
-                        ],
-                      ),
+                          );
+                        },
+                  child: Text(
+                    '¿Olvidaste tu contraseña?',
+                    style: TextStyle(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w800,
                     ),
-                    const SizedBox(height: 12),
-                  ] else
-                    const SizedBox(height: 20),
-                  PrimaryButton(
-                    key: const Key('login.submit'),
-                    label: 'Iniciar sesión',
-                    height: 52,
-                    isLoading: isLoading,
-                    onPressed: _submit,
                   ),
-                  const SizedBox(height: 18),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                ),
+              ),
+              if (errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: scheme.error.withValues(alpha: 0.10),
+                    border: Border.all(
+                      color: scheme.error.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        '¿No tienes cuenta? ',
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
-                      InkWell(
-                        key: const Key('login.go_register'),
-                        onTap: isBusy ? null : () => context.go(Routes.register),
+                      Icon(AppIcons.warning, color: scheme.error, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(
-                          'Crear cuenta',
+                          errorMessage,
                           style: TextStyle(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w900,
+                            color: scheme.onErrorContainer,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else
+                const SizedBox(height: 20),
+              PrimaryButton(
+                key: const Key('login.submit'),
+                label: 'Iniciar sesión',
+                height: 52,
+                isLoading: isLoading,
+                onPressed: isBusy ? null : _submit,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(color: scheme.outlineVariant, thickness: 1),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'o',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(color: scheme.outlineVariant, thickness: 1),
                   ),
                 ],
-              );
+              ),
+              const SizedBox(height: 20),
+              // Apple sigue comentado a pedido: se lanza después de Google.
+              // Web: GoogleSignIn.authenticate() no está soportado, Google
+              // exige su botón GIS renderizado (el sign-in llega por
+              // authenticationEvents, suscrito en initState).
+              if (kIsWeb)
+                Center(
+                  key: const Key('login.social_google_web'),
+                  child: googleWebSignInButton(),
+                )
+              else
+                SocialButton(
+                  key: const Key('login.social_google'),
+                  icon: const GoogleGLogo(size: 19),
+                  label: 'Continuar con Google',
+                  background: scheme.surface,
+                  foreground: scheme.onSurface,
+                  border: scheme.outlineVariant,
+                  onPressed: isBusy ? null : _socialLoginGoogle,
+                ),
+              const SizedBox(height: 18),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    '¿No tienes cuenta? ',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                  InkWell(
+                    key: const Key('login.go_register'),
+                    onTap: isBusy ? null : () => context.go(Routes.register),
+                    child: Text(
+                      'Crear cuenta',
+                      style: TextStyle(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
 
           return SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                padding: const EdgeInsets.fromLTRB(24, 64, 24, 40),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Center(
@@ -452,4 +477,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

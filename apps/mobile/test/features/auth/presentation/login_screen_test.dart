@@ -18,7 +18,10 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(
-        const LoginRequest(email: 'fallback@cuadrala.app', password: '12345678'),
+        const LoginRequest(
+          email: 'fallback@cuadrala.app',
+          password: '12345678',
+        ),
       );
     });
 
@@ -59,7 +62,10 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byKey(const Key('login.email')), 'a@b.com');
-      await tester.enterText(find.byKey(const Key('login.password')), '12345678');
+      await tester.enterText(
+        find.byKey(const Key('login.password')),
+        '12345678',
+      );
       await tester.ensureVisible(find.byKey(const Key('login.submit')));
       await tester.tap(find.byKey(const Key('login.submit')));
       await tester.pump();
@@ -74,16 +80,15 @@ void main() {
     testWidgets('muestra error cuando state es failure', (tester) async {
       whenListen(
         loginCubit,
-        Stream<LoginState>.fromIterable(
-          const [
-            LoginState.idle(),
-            LoginState.failure(message: 'Credenciales inválidas'),
-          ],
-        ),
+        Stream<LoginState>.fromIterable(const [
+          LoginState.idle(),
+          LoginState.failure(message: 'Credenciales inválidas'),
+        ]),
         initialState: const LoginState.idle(),
       );
-      when(() => loginCubit.state)
-          .thenReturn(const LoginState.failure(message: 'Credenciales inválidas'));
+      when(
+        () => loginCubit.state,
+      ).thenReturn(const LoginState.failure(message: 'Credenciales inválidas'));
 
       await tester.pumpWidget(wrap());
       await tester.pump();
@@ -97,29 +102,43 @@ void main() {
 
       expect(find.byKey(const Key('login.social_google')), findsOneWidget);
       expect(find.text('Continuar con Google'), findsOneWidget);
+      expect(find.text('o'), findsOneWidget);
+      expect(find.text('o continuar con email'), findsNothing);
+
+      final fields = tester.getTopLeft(find.byKey(const Key('login.email')));
+      final submit = tester.getTopLeft(find.byKey(const Key('login.submit')));
+      final google = tester.getTopLeft(
+        find.byKey(const Key('login.social_google')),
+      );
+      expect(fields.dy, lessThan(submit.dy));
+      expect(submit.dy, lessThan(google.dy));
     });
 
-    testWidgets('no muestra botón de Apple (feature aún no habilitada)', (tester) async {
+    testWidgets('no muestra botón de Apple (feature aún no habilitada)', (
+      tester,
+    ) async {
       await tester.pumpWidget(wrap());
       await tester.pumpAndSettle();
 
       expect(find.text('Continuar con Apple'), findsNothing);
     });
 
-    testWidgets('tocar "¿Olvidaste tu contraseña?" muestra SnackBar con "Próximamente"',
-        (tester) async {
-      await tester.pumpWidget(wrap());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'tocar "¿Olvidaste tu contraseña?" muestra SnackBar con "Próximamente"',
+      (tester) async {
+        await tester.pumpWidget(wrap());
+        await tester.pumpAndSettle();
 
-      final forgotButton = find.ancestor(
-        of: find.text('¿Olvidaste tu contraseña?'),
-        matching: find.byType(TextButton),
-      );
-      await tester.ensureVisible(forgotButton);
-      await tester.tap(forgotButton);
-      await tester.pump();
+        final forgotButton = find.ancestor(
+          of: find.text('¿Olvidaste tu contraseña?'),
+          matching: find.byType(TextButton),
+        );
+        await tester.ensureVisible(forgotButton);
+        await tester.tap(forgotButton);
+        await tester.pump();
 
-      expect(find.text('Próximamente'), findsOneWidget);
-    });
+        expect(find.text('Próximamente'), findsOneWidget);
+      },
+    );
   });
 }

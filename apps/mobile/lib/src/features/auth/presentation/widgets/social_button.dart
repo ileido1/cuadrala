@@ -29,16 +29,14 @@ class SocialButton extends StatelessWidget {
           foregroundColor: foreground,
           side: BorderSide(color: border, width: 1.5),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            icon,
-            const SizedBox(width: 8),
-            Text(label),
-          ],
+          children: [icon, const SizedBox(width: 10), Text(label)],
         ),
       ),
     );
