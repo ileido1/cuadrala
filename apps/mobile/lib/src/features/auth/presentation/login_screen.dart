@@ -56,16 +56,29 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _socialLoginGoogle() async {
+    debugPrint('[Google Auth] 1. Starting Google login flow...');
     setState(() => _socialLoading = true);
     try {
+      debugPrint('[Google Auth] 2. Initializing GoogleSignIn...');
       await _ensureGoogleInitialized();
+
+      debugPrint('[Google Auth] 3. Showing Google auth dialog...');
       final account = await GoogleSignIn.instance.authenticate(
         scopeHint: const ['email', 'profile'],
       );
+
+      if (account == null) {
+        throw Exception('Google authentication cancelled by user.');
+      }
+
+      debugPrint('[Google Auth] 4. Got Google account: ${account.email}');
       final idToken = account.authentication.idToken;
       if (idToken == null || idToken.isEmpty) {
         throw Exception('No se pudo obtener idToken de Google.');
       }
+      debugPrint('[Google Auth] 5. Got idToken (${idToken.length} chars)');
+
+      debugPrint('[Google Auth] 6. Sending to backend /auth/social...');
       await getIt<AuthRepository>().socialLogin(
         SocialLoginRequest(
           provider: 'google',
@@ -73,19 +86,41 @@ class _LoginScreenState extends State<LoginScreen> {
           name: account.displayName,
         ),
       );
+      debugPrint('[Google Auth] 7. Backend response OK');
+
       if (!mounted) return;
+      debugPrint('[Google Auth] 8. Marking session as authenticated...');
       await context.read<SessionCubit>().markAuthenticated();
       if (!mounted) return;
+
       final session = context.read<SessionCubit>().state;
+      debugPrint('[Google Auth] 9. Session state: ${session.runtimeType}, onboardingComplete: ${session is SessionAuthenticated ? session.onboardingComplete : 'N/A'}');
+
       if (session is SessionAuthenticated && session.onboardingComplete == false) {
+        debugPrint('[Google Auth] 10. Redirecting to onboarding (new user)');
         context.go(Routes.onboarding);
       } else {
+        debugPrint('[Google Auth] 10. Redirecting to home (existing user)');
         context.go(Routes.home);
       }
     } catch (e) {
+      debugPrint('[Google Auth] ❌ ERROR: $e');
+      debugPrintStack(label: '[Google Auth] Stack trace:');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error Google: $e'), duration: const Duration(seconds: 8)),
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('❌ Error en Google Login', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text('$e', style: const TextStyle(fontSize: 12)),
+            ],
+          ),
+          duration: const Duration(seconds: 10),
+          backgroundColor: Colors.red.shade700,
+        ),
       );
     } finally {
       if (mounted) setState(() => _socialLoading = false);
