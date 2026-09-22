@@ -222,6 +222,27 @@ enum AvailabilitySlot {
   EVENING
 }
 
+enum QuickMatchSearchStatus {
+  SEARCHING
+  PROPOSAL
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
+
+enum QuickMatchProposalType {
+  OPEN_MATCH
+  NEW_GROUP
+}
+
+enum QuickMatchProposalStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  EXPIRED
+  DISMISSED
+}
+
 enum CourtStatus {
   ACTIVE
   INACTIVE
@@ -285,6 +306,7 @@ model Sport {
   reservations        Reservation[]
   categories          Category[]
   userSportCategories UserSportCategory[]
+  quickMatchSearches QuickMatchSearch[]
 }
 
 /// Preset de formato de torneo por deporte (Americano, Round Robin, etc.).
@@ -353,6 +375,7 @@ model User {
   sportCategories           UserSportCategory[]
   playerProfile             PlayerProfile?
   availability              UserAvailability[]
+  quickMatchSearch          QuickMatchSearch?
   location                  UserLocation?
   organizedMatches          Match[]                  @relation("MatchOrganizer")
   organizedTournaments      Tournament[]             @relation("TournamentOrganizer")
@@ -443,6 +466,46 @@ model UserAvailability {
 }
 
 /// Ubicación de referencia y radio de búsqueda del usuario.
+model QuickMatchSearch {
+  id                 String                  @id @default(uuid())
+  userId             String                  @unique
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sportId            String
+  sport              Sport                   @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  targetDate         DateTime                 @db.Date
+  slots              AvailabilitySlot[]
+  widenLevel         Boolean                  @default(false)
+  zoneKm             Int                      @default(10)
+  includeOpenMatches Boolean                  @default(true)
+  status             QuickMatchSearchStatus   @default(SEARCHING)
+  noMatchYet         Boolean                  @default(false)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  proposal QuickMatchProposal?
+
+  @@index([sportId, status, targetDate])
+  @@index([status, updatedAt])
+}
+
+model QuickMatchProposal {
+  id               String                   @id @default(uuid())
+  searchId         String                   @unique
+  search           QuickMatchSearch         @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  type             QuickMatchProposalType
+  status           QuickMatchProposalStatus @default(PENDING)
+  matchId          String?
+  match            Match?                   @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  playerIds        String[]
+  venueOptions     Json?
+  expiresAt        DateTime
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([status, expiresAt])
+  @@index([matchId])
+}
+
 model UserLocation {
   id        String   @id @default(uuid())
   userId    String   @unique
@@ -899,6 +962,7 @@ model Match {
   resultDrafts       MatchResultDraft[]
   transactions       Transaction[]
   notificationEvents NotificationEvent[]
+  quickMatchProposals QuickMatchProposal[]
   chatThread         ChatThread?
   // Relación 1:1 con Reservation (companion para type=MATCH)
   reservation        Reservation?        @relation("ReservationMatch")
