@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +18,7 @@ import 'cubit/session_state.dart';
 import 'widgets/auth_header.dart';
 import 'widgets/auth_tabs.dart';
 import 'widgets/google_g_logo.dart';
+import 'widgets/google_web_signin_button.dart';
 import 'widgets/social_button.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/env/app_env.dart';
@@ -35,6 +39,31 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _socialLoading = false;
   Future<void>? _googleInit;
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _googleAuthSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Web can't use .authenticate() (see _socialLoginGoogle) — it must
+    // listen for sign-in events fired by the rendered GIS button instead.
+    if (kIsWeb) {
+      _ensureGoogleInitialized().then((_) {
+        if (!mounted) return;
+        _googleAuthSub = GoogleSignIn.instance.authenticationEvents.listen(
+          (event) {
+            if (event is GoogleSignInAuthenticationEventSignIn) {
+              debugPrint('[Google Auth] Web button sign-in event received');
+              _completeGoogleSignIn(event.user);
+            }
+          },
+          onError: (Object e) {
+            debugPrint('[Google Auth] ❌ Web auth stream error: $e');
+            _showGoogleError(e);
+          },
+        );
+      });
+    }
+  }
 
   Future<void> _ensureGoogleInitialized() {
     final init = _googleInit;
@@ -50,11 +79,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _googleAuthSub?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  /// Mobile-only flow: web's `.authenticate()` throws `UnimplementedError`
+  /// (Google requires the rendered GIS button there — see initState/build).
   Future<void> _socialLoginGoogle() async {
     debugPrint('[Google Auth] 1. Starting Google login flow...');
     setState(() => _socialLoading = true);
@@ -67,6 +99,18 @@ class _LoginScreenState extends State<LoginScreen> {
         scopeHint: const ['email', 'profile'],
       );
 
+      await _completeGoogleSignIn(account);
+    } catch (e) {
+      _showGoogleError(e);
+      if (mounted) setState(() => _socialLoading = false);
+    }
+  }
+
+  /// Shared by both flows: mobile's `.authenticate()` result and web's
+  /// `authenticationEvents` sign-in event carry the same account type.
+  Future<void> _completeGoogleSignIn(GoogleSignInAccount account) async {
+    if (mounted) setState(() => _socialLoading = true);
+    try {
       debugPrint('[Google Auth] 4. Got Google account: ${account.email}');
       final idToken = account.authentication.idToken;
       if (idToken == null || idToken.isEmpty) {
@@ -100,27 +144,31 @@ class _LoginScreenState extends State<LoginScreen> {
         context.go(Routes.home);
       }
     } catch (e) {
-      debugPrint('[Google Auth] ❌ ERROR: $e');
-      debugPrintStack(label: '[Google Auth] Stack trace:');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('❌ Error en Google Login', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text('$e', style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          duration: const Duration(seconds: 10),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      _showGoogleError(e);
     } finally {
       if (mounted) setState(() => _socialLoading = false);
     }
+  }
+
+  void _showGoogleError(Object e) {
+    debugPrint('[Google Auth] ❌ ERROR: $e');
+    debugPrintStack(label: '[Google Auth] Stack trace:');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('❌ Error en Google Login', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text('$e', style: const TextStyle(fontSize: 12)),
+          ],
+        ),
+        duration: const Duration(seconds: 10),
+        backgroundColor: Colors.red.shade700,
+      ),
+    );
   }
   //
   // Future<void> _socialLoginApple() async {
@@ -215,15 +263,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   // Apple sigue comentado a pedido: se lanza después de Google.
-                  SocialButton(
-                    key: const Key('login.social_google'),
-                    icon: const GoogleGLogo(size: 20),
-                    label: 'Continuar con Google',
-                    background: scheme.surface,
-                    foreground: scheme.onSurface,
-                    border: scheme.outlineVariant,
-                    onPressed: isBusy ? null : _socialLoginGoogle,
-                  ),
+                  // Web: GoogleSignIn.authenticate() no está soportado, Google
+                  // exige su botón GIS renderizado (el sign-in llega por
+                  // authenticationEvents, suscrito en initState).
+                  if (kIsWeb)
+                    Center(
+                      key: const Key('login.social_google_web'),
+                      child: googleWebSignInButton(),
+                    )
+                  else
+                    SocialButton(
+                      key: const Key('login.social_google'),
+                      icon: const GoogleGLogo(size: 20),
+                      label: 'Continuar con Google',
+                      background: scheme.surface,
+                      foreground: scheme.onSurface,
+                      border: scheme.outlineVariant,
+                      onPressed: isBusy ? null : _socialLoginGoogle,
+                    ),
                   // SocialButton(
                   //   icon: const Icon(AppIcons.appleLogo),
                   //   label: 'Continuar con Apple',
