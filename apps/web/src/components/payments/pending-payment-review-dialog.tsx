@@ -450,7 +450,7 @@ export function PendingPaymentReviewDialog({
             <div>
               <h2
                 id="review-payment-title"
-                className="text-lg font-bold text-[#0F172A]"
+                className="text-lg font-bold text-[#12203A]"
               >
                 Validar pago del jugador
               </h2>
@@ -476,7 +476,7 @@ export function PendingPaymentReviewDialog({
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                 Jugador
               </p>
-              <p className="mt-1 text-base font-semibold text-[#0F172A]">
+              <p className="mt-1 text-base font-semibold text-[#12203A]">
                 {transaction.payerName}
               </p>
               {transaction.payerEmail ? (

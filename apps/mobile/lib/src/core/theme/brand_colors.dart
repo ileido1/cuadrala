@@ -10,9 +10,9 @@ import 'package:flutter/material.dart';
 /// constants in this file only — no inline `Color(0x…)` in presentation.
 abstract final class BrandColors {
   // ─── Brand primary ────────────────────────────────────────────────────────
-  static const padelGreen = Color(0xFF17A34A);
+  static const padelGreen = Color(0xFF1F9A4D);
   static const padelGreenDark = Color(0xFF13883E);
-  static const navy = Color(0xFF0F172A);
+  static const navy = Color(0xFF12203A);
   static const navyMid = Color(0xFF172340);
   static const limeAccent = Color(0xFFC5FF00);
 
@@ -43,7 +43,7 @@ abstract final class BrandColors {
 
   /// Paleta de avatares (pila de cupos y avatares de cancha). Cicla por índice.
   static const avatarPalette = <Color>[
-    padelGreen, // #17A34A
+    padelGreen, // #1F9A4D
     Color(0xFF3B82F6),
     Color(0xFFF59E0B),
     Color(0xFFEC4899),
@@ -56,7 +56,7 @@ abstract final class BrandColors {
   static const darkSurface = Color(0xFF0B1220);
 
   /// `--bg-2` — header, bottom nav y sheets (== [navy]).
-  static const darkSurfaceLow = navy; // #0F172A
+  static const darkSurfaceLow = navy; // #12203A
 
   /// `--surface` — base de cards (match card, venue card, perfil…).
   static const darkSurfaceContainer = Color(0xFF131C2E);
