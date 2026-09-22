@@ -4,9 +4,9 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #17A34A;
+  --color-primary: #1F9A4D;
   --color-primary-hover: #15803d;
-  --color-secondary: #0F172A;
+  --color-secondary: #12203A;
   --color-tertiary: #C5FF00;
   --color-surface: #FFFFFF;
   --color-surface-container: #F3F4F6;
@@ -35,7 +35,7 @@
     background-color: var(--color-surface);
     border-radius: var(--radius-lg);
     border: 1px solid var(--color-outline);
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 1px 3px rgba(18, 32, 58, 0.08), 0 1px 2px rgba(18, 32, 58, 0.04);
     transition: all 200ms ease-out;
   }
 
@@ -201,7 +201,7 @@
   }
 
   .bg-brand-gradient {
-    background: linear-gradient(135deg, #17A34A 0%, #15803d 100%);
+    background: linear-gradient(135deg, #1F9A4D 0%, #15803d 100%);
   }
 
   .bg-subtle-pattern {

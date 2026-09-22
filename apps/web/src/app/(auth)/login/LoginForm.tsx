@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiClient } from '~/lib/api-client';
+import { BrandLogo } from '~/components/brand/BrandLogo';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -231,10 +232,7 @@ export default function LoginForm() {
         {/* Logo and badge */}
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-6">
-            {/* Logo circle with C */}
-            <div className="w-12 h-12 bg-primary-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-xl">C</span>
-            </div>
+            <BrandLogo className="h-12 w-12" priority variant="white" />
             <div>
               <h1 className="text-white font-display text-2xl font-bold">Cuádrala</h1>
               <p className="text-secondary-400 text-xs font-medium tracking-wider uppercase">Backoffice</p>
@@ -286,9 +284,7 @@ export default function LoginForm() {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
-            </div>
+            <BrandLogo className="h-10 w-10" priority />
             <div>
               <h1 className="text-secondary-900 font-display text-xl font-bold">Cuádrala</h1>
               <p className="text-secondary-500 text-xs font-medium tracking-wider uppercase">Backoffice</p>

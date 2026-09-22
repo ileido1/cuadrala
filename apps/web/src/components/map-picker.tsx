@@ -18,7 +18,7 @@ function createDraggableIcon() {
       <div style="
         width: 32px;
         height: 32px;
-        background-color: #17A34A;
+        background-color: #1F9A4D;
         border: 3px solid white;
         border-radius: 50%;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);

@@ -211,7 +211,7 @@ export default function PaymentsPage() {
                   <p className="text-sm font-semibold text-[#64748b] uppercase tracking-wide">
                     Ingresos Semanales
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-[#0F172A] mt-2">
+                  <p className="text-2xl sm:text-3xl font-bold text-[#12203A] mt-2">
                     {formatCurrency(displayStats.weeklyRevenue)}
                   </p>
                 </div>
@@ -238,7 +238,7 @@ export default function PaymentsPage() {
               <p className="text-sm font-semibold text-[#64748b] uppercase tracking-wide">
                 Total Pagado
               </p>
-              <p className="text-2xl sm:text-3xl font-bold text-[#0F172A] mt-2">
+              <p className="text-2xl sm:text-3xl font-bold text-[#12203A] mt-2">
                 {formatCurrency(displayStats.totalPaid)}
               </p>
               <p className="text-sm text-[#64748b] mt-3">Este mes</p>
@@ -258,13 +258,13 @@ export default function PaymentsPage() {
               <p className="text-sm font-semibold text-[#64748b] uppercase tracking-wide">
                 Tasa de Éxito
               </p>
-              <p className="text-2xl sm:text-3xl font-bold text-[#0F172A] mt-2">
+              <p className="text-2xl sm:text-3xl font-bold text-[#12203A] mt-2">
                 {displayStats.successRate}%
               </p>
               <div className="mt-3">
                 <div className="h-2 bg-[#E5E7EB] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#17A34A] rounded-full transition-all duration-500"
+                    className="h-full bg-[#1F9A4D] rounded-full transition-all duration-500"
                     style={{ width: `${displayStats.successRate}%` }}
                   />
                 </div>
@@ -295,7 +295,7 @@ export default function PaymentsPage() {
                 return (
                   <div key={data.day} className="flex flex-col items-center flex-1 gap-2">
                     <div
-                      className="w-full max-w-[40px] bg-[#17A34A] rounded-t transition-all duration-300 hover:bg-[#15803d]"
+                      className="w-full max-w-[40px] bg-[#1F9A4D] rounded-t transition-all duration-300 hover:bg-[#15803d]"
                       style={{ height: `${(heightPercent / 100) * maxBarHeight}px` }}
                     />
                     <span className="text-xs text-[#64748b] font-medium">{data.day}</span>
@@ -329,7 +329,7 @@ export default function PaymentsPage() {
                   className="w-full h-full rounded-full"
                   style={{
                     background: `conic-gradient(
-                      ${displayStats.paymentMethods[0]?.color ?? '#17A34A'} 0% ${displayStats.paymentMethods[0]?.percentage ?? 0}%,
+                      ${displayStats.paymentMethods[0]?.color ?? '#1F9A4D'} 0% ${displayStats.paymentMethods[0]?.percentage ?? 0}%,
                       ${displayStats.paymentMethods[1]?.color ?? '#3B82F6'} ${displayStats.paymentMethods[0]?.percentage ?? 0}% ${(displayStats.paymentMethods[0]?.percentage ?? 0) + (displayStats.paymentMethods[1]?.percentage ?? 0)}%,
                       ${displayStats.paymentMethods[2]?.color ?? '#EAB308'} ${(displayStats.paymentMethods[0]?.percentage ?? 0) + (displayStats.paymentMethods[1]?.percentage ?? 0)}% 100%
                     )`,
@@ -346,7 +346,7 @@ export default function PaymentsPage() {
                       style={{ backgroundColor: item.color }}
                     />
                     <span className="text-sm text-[#475569] flex-1">{item.method}</span>
-                    <span className="text-sm font-semibold text-[#0F172A]">{item.percentage}%</span>
+                    <span className="text-sm font-semibold text-[#12203A]">{item.percentage}%</span>
                   </div>
                 ))}
               </div>
@@ -425,13 +425,13 @@ export default function PaymentsPage() {
                     <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-[#475569]">
                       {transaction.date}
                     </td>
-                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm font-medium text-[#0F172A]">
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm font-medium text-[#12203A]">
                       {transaction.clientName}
                     </td>
                     <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm text-[#475569]">
                       {transaction.courtName}
                     </td>
-                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm font-semibold text-[#0F172A]">
+                    <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm font-semibold text-[#12203A]">
                       {formatCurrency(transaction.amount)}
                     </td>
                     <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap">

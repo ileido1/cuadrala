@@ -9,13 +9,23 @@ class CuadralaLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Image.asset(
-        'assets/images/logo.png',
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
+    final asset = Theme.of(context).brightness == Brightness.dark
+        ? 'assets/brand/logo-auth-dark.png'
+        : 'assets/brand/logo-auth.png';
+
+    return Semantics(
+      image: true,
+      label: 'Cuádrala',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: ExcludeSemantics(
+          child: Image.asset(
+            asset,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+          ),
+        ),
       ),
     );
   }
