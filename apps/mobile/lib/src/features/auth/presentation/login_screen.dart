@@ -67,12 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
         scopeHint: const ['email', 'profile'],
       );
 
-      if (account == null) {
-        throw Exception('Google authentication cancelled by user.');
-      }
-
       debugPrint('[Google Auth] 4. Got Google account: ${account.email}');
-      // ignore: unnecessary_null_comparison, dead_code
       final idToken = account.authentication.idToken;
       if (idToken == null || idToken.isEmpty) {
         throw Exception('No se pudo obtener idToken de Google.');
