@@ -103,8 +103,10 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
       if (cityName.isNotEmpty && _labelController.text.isEmpty && mounted) {
         setState(() => _labelController.text = cityName);
       }
-    } catch (_) {
+    } catch (e) {
       // Reverse geocoding unavailable or failed; user can enter manually
+      // This is expected on some platforms or when service is unavailable
+      debugPrint('City detection failed: $e');
     }
   }
 
