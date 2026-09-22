@@ -140,26 +140,19 @@ class MatchCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Row(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
                               children: [
-                                if (leadingBadge != null) ...[
-                                  leadingBadge!,
-                                  const SizedBox(width: 6),
-                                ],
-                                Flexible(
-                                  child: InfoBadge(
-                                    label: category,
-                                    background: BrandColors.limeAccent,
-                                    foreground: BrandColors.onLime,
-                                    fontSize: 11,
-                                  ),
+                                if (leadingBadge != null) leadingBadge!,
+                                InfoBadge(
+                                  label: category,
+                                  background: BrandColors.limeAccent,
+                                  foreground: BrandColors.onLime,
+                                  fontSize: 11,
                                 ),
-                                if (surfaceTag != null) ...[
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: SurfaceTag(label: surfaceTag!),
-                                  ),
-                                ],
+                                if (surfaceTag != null)
+                                  SurfaceTag(label: surfaceTag!),
                               ],
                             ),
                           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 
 import '../../../../core/di/service_locator.dart';
@@ -232,34 +233,10 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        InkWell(
+                        _BirthDatePickerCard(
+                          birthDate: _birthDate,
                           onTap: _pickBirthDate,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InputDecorator(
-                            decoration: InputDecoration(
-                              labelText: 'Fecha de nacimiento',
-                              prefixIcon: const Icon(AppIcons.cake),
-                              errorText: _birthError,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    _birthDate == null
-                                        ? 'Seleccionar'
-                                        : '${_birthDate!.year.toString().padLeft(4, '0')}-${_birthDate!.month.toString().padLeft(2, '0')}-${_birthDate!.day.toString().padLeft(2, '0')}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                                const Icon(AppIcons.calendar),
-                              ],
-                            ),
-                          ),
+                          errorText: _birthError,
                         ),
                         const SizedBox(height: 16),
                         TextField(
@@ -376,6 +353,111 @@ class _AvatarPicker extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _BirthDatePickerCard extends StatelessWidget {
+  const _BirthDatePickerCard({
+    required this.birthDate,
+    required this.onTap,
+    this.errorText,
+  });
+
+  final DateTime? birthDate;
+  final VoidCallback onTap;
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isSelected = birthDate != null;
+    final formatter = DateFormat('MMMM d, yyyy', 'es_ES');
+    final displayDate = isSelected
+        ? formatter.format(birthDate!)
+        : 'Selecciona tu fecha de nacimiento';
+    final age = isSelected ? DateTime.now().year - birthDate!.year : null;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: isSelected
+              ? scheme.primary.withValues(alpha: .1)
+              : scheme.surfaceContainerHigh,
+          border: Border.all(
+            color: errorText != null
+                ? scheme.error
+                : isSelected
+                    ? scheme.primary
+                    : scheme.outlineVariant,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: scheme.primary.withValues(alpha: .2),
+              ),
+              child: Icon(
+                AppIcons.cake,
+                color: scheme.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Fecha de nacimiento',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    displayDate,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? scheme.onSurface : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (age != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '$age años',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              AppIcons.chevronRight,
+              color: scheme.onSurfaceVariant,
+              size: 24,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
