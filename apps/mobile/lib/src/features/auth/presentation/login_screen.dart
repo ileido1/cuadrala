@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-// Login social (Google/Apple) comentado a pedido: se lanza bastante después
-// del MVP. Reactivar junto con el bloque comentado más abajo.
-// import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+// Apple login sigue comentado a pedido: se lanza después de Google.
 // import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../data/models/login_request.dart';
-// import '../data/models/social_login_request.dart';
-// import '../data/auth_repository.dart';
+import '../data/models/social_login_request.dart';
+import '../data/auth_repository.dart';
 import 'cubit/login_cubit.dart';
 import 'cubit/login_state.dart';
 import 'cubit/session_cubit.dart';
 import 'cubit/session_state.dart';
 import 'widgets/auth_header.dart';
 import 'widgets/auth_tabs.dart';
-// import 'widgets/google_g_logo.dart';
-// import 'widgets/social_button.dart';
-// import '../../../core/di/service_locator.dart';
-// import '../../../core/env/app_env.dart';
+import 'widgets/google_g_logo.dart';
+import 'widgets/social_button.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/env/app_env.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -34,20 +33,20 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  final bool _socialLoading = false;
-  // Future<void>? _googleInit;
-  //
-  // Future<void> _ensureGoogleInitialized() {
-  //   final init = _googleInit;
-  //   if (init != null) return init;
-  //   final env = getIt<AppEnv>();
-  //   final future = GoogleSignIn.instance.initialize(
-  //     clientId: env.googleWebClientId,
-  //     serverClientId: env.googleWebClientId,
-  //   );
-  //   _googleInit = future;
-  //   return future;
-  // }
+  bool _socialLoading = false;
+  Future<void>? _googleInit;
+
+  Future<void> _ensureGoogleInitialized() {
+    final init = _googleInit;
+    if (init != null) return init;
+    final env = getIt<AppEnv>();
+    final future = GoogleSignIn.instance.initialize(
+      clientId: env.googleWebClientId,
+      serverClientId: env.googleWebClientId,
+    );
+    _googleInit = future;
+    return future;
+  }
 
   @override
   void dispose() {
@@ -56,42 +55,42 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Future<void> _socialLoginGoogle() async {
-  //   setState(() => _socialLoading = true);
-  //   try {
-  //     await _ensureGoogleInitialized();
-  //     final account = await GoogleSignIn.instance.authenticate(
-  //       scopeHint: const ['email', 'profile'],
-  //     );
-  //     final idToken = account.authentication.idToken;
-  //     if (idToken == null || idToken.isEmpty) {
-  //       throw Exception('No se pudo obtener idToken de Google.');
-  //     }
-  //     await getIt<AuthRepository>().socialLogin(
-  //       SocialLoginRequest(
-  //         provider: 'google',
-  //         idToken: idToken,
-  //         name: account.displayName,
-  //       ),
-  //     );
-  //     if (!mounted) return;
-  //     await context.read<SessionCubit>().markAuthenticated();
-  //     if (!mounted) return;
-  //     final session = context.read<SessionCubit>().state;
-  //     if (session is SessionAuthenticated && session.onboardingComplete == false) {
-  //       context.go(Routes.onboarding);
-  //     } else {
-  //       context.go(Routes.home);
-  //     }
-  //   } catch (e) {
-  //     if (!mounted) return;
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Error Google: $e'), duration: const Duration(seconds: 8)),
-  //     );
-  //   } finally {
-  //     if (mounted) setState(() => _socialLoading = false);
-  //   }
-  // }
+  Future<void> _socialLoginGoogle() async {
+    setState(() => _socialLoading = true);
+    try {
+      await _ensureGoogleInitialized();
+      final account = await GoogleSignIn.instance.authenticate(
+        scopeHint: const ['email', 'profile'],
+      );
+      final idToken = account.authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('No se pudo obtener idToken de Google.');
+      }
+      await getIt<AuthRepository>().socialLogin(
+        SocialLoginRequest(
+          provider: 'google',
+          idToken: idToken,
+          name: account.displayName,
+        ),
+      );
+      if (!mounted) return;
+      await context.read<SessionCubit>().markAuthenticated();
+      if (!mounted) return;
+      final session = context.read<SessionCubit>().state;
+      if (session is SessionAuthenticated && session.onboardingComplete == false) {
+        context.go(Routes.onboarding);
+      } else {
+        context.go(Routes.home);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error Google: $e'), duration: const Duration(seconds: 8)),
+      );
+    } finally {
+      if (mounted) setState(() => _socialLoading = false);
+    }
+  }
   //
   // Future<void> _socialLoginApple() async {
   //   setState(() => _socialLoading = true);
@@ -184,18 +183,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (i == 1) context.go(Routes.register);
                     },
                   ),
-                  // Login social (Google/Apple) comentado a pedido: se lanza
-                  // bastante después del MVP. El diseño actual tampoco lo
-                  // muestra (sin botones sociales arriba, sin este divisor).
-                  // SocialButton(
-                  //   icon: const GoogleGLogo(size: 20),
-                  //   label: 'Continuar con Google',
-                  //   background: scheme.surface,
-                  //   foreground: scheme.onSurface,
-                  //   border: scheme.outlineVariant,
-                  //   onPressed: isBusy ? null : _socialLoginGoogle,
-                  // ),
-                  // const SizedBox(height: 10),
+                  // Apple sigue comentado a pedido: se lanza después de Google.
+                  SocialButton(
+                    key: const Key('login.social_google'),
+                    icon: const GoogleGLogo(size: 20),
+                    label: 'Continuar con Google',
+                    background: scheme.surface,
+                    foreground: scheme.onSurface,
+                    border: scheme.outlineVariant,
+                    onPressed: isBusy ? null : _socialLoginGoogle,
+                  ),
                   // SocialButton(
                   //   icon: const Icon(AppIcons.appleLogo),
                   //   label: 'Continuar con Apple',
@@ -204,23 +201,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   //   border: scheme.outlineVariant,
                   //   onPressed: isBusy ? null : _socialLoginApple,
                   // ),
-                  // const SizedBox(height: 18),
-                  // Row(
-                  //   children: [
-                  //     Expanded(child: Divider(color: scheme.outlineVariant, thickness: 1)),
-                  //     Padding(
-                  //       padding: const EdgeInsets.symmetric(horizontal: 12),
-                  //       child: Text(
-                  //         'o continuar con email',
-                  //         style: TextStyle(
-                  //           color: scheme.onSurfaceVariant,
-                  //           fontWeight: FontWeight.w800,
-                  //         ),
-                  //       ),
-                  //     ),
-                  //     Expanded(child: Divider(color: scheme.outlineVariant, thickness: 1)),
-                  //   ],
-                  // ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: scheme.outlineVariant, thickness: 1)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'o continuar con email',
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: scheme.outlineVariant, thickness: 1)),
+                    ],
+                  ),
                   const SizedBox(height: 18),
                   TextField(
                     key: const Key('login.email'),

@@ -91,6 +91,21 @@ void main() {
       expect(find.text('Credenciales inválidas'), findsOneWidget);
     });
 
+    testWidgets('muestra el botón de continuar con Google', (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('login.social_google')), findsOneWidget);
+      expect(find.text('Continuar con Google'), findsOneWidget);
+    });
+
+    testWidgets('no muestra botón de Apple (feature aún no habilitada)', (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Continuar con Apple'), findsNothing);
+    });
+
     testWidgets('tocar "¿Olvidaste tu contraseña?" muestra SnackBar con "Próximamente"',
         (tester) async {
       await tester.pumpWidget(wrap());
