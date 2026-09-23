@@ -51,6 +51,7 @@ final class NotificationPrefsLoaded extends NotificationPrefsState {
     'MATCH_CANCELLED': true,
     'CHAT_MESSAGE': true,
     'PAYMENT_PENDING': true,
+    'QUICK_MATCH_PROPOSAL': true,
   };
 
   @override

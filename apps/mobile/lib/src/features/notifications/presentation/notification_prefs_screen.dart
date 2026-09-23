@@ -16,7 +16,9 @@ final class NotificationPrefsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => NotificationPrefsCubit(repository: getIt<NotificationsRepository>())..load(),
+      create: (_) =>
+          NotificationPrefsCubit(repository: getIt<NotificationsRepository>())
+            ..load(),
       child: const _NotificationPrefsView(),
     );
   }
@@ -31,7 +33,8 @@ final class _NotificationPrefsView extends StatelessWidget {
       key: const Key('notification.prefs'),
       body: BlocBuilder<NotificationPrefsCubit, NotificationPrefsState>(
         builder: (context, state) {
-          if (state is NotificationPrefsLoading || state is NotificationPrefsInitial) {
+          if (state is NotificationPrefsLoading ||
+              state is NotificationPrefsInitial) {
             return const Center(child: CircularProgressIndicator());
           }
           if (state is NotificationPrefsFailure) {
@@ -51,7 +54,9 @@ final class _NotificationPrefsView extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                     child: Text(
                       loaded.saveError!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ),
                 ),
@@ -69,12 +74,20 @@ final class _NotificationPrefsView extends StatelessWidget {
                           'navegador verás las notificaciones en Avisos.',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                         ),
                       ),
+                    _TypeToggleTile(
+                      icon: AppIcons.bolt,
+                      title: 'Encontrar partida',
+                      subtitle:
+                          'Cuando haya una propuesta lista para confirmar',
+                      type: 'QUICK_MATCH_PROPOSAL',
+                      value: loaded.isTypeEnabled('QUICK_MATCH_PROPOSAL'),
+                    ),
                     _TypeToggleTile(
                       icon: AppIcons.people,
                       title: 'Cupos disponibles',
@@ -126,9 +139,9 @@ final class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          fontWeight: FontWeight.w700,
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -166,8 +179,8 @@ final class _TypeToggleTile extends StatelessWidget {
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -177,7 +190,12 @@ final class _TypeToggleTile extends StatelessWidget {
               final saving = state is NotificationPrefsLoaded && state.saving;
               return Switch(
                 value: value,
-                onChanged: saving ? null : (v) => context.read<NotificationPrefsCubit>().toggleType(type, v),
+                onChanged: saving
+                    ? null
+                    : (v) => context.read<NotificationPrefsCubit>().toggleType(
+                        type,
+                        v,
+                      ),
               );
             },
           ),
