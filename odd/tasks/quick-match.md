@@ -22,6 +22,7 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Commit: `feat(quick-match): persist player searches` (QM-1 work-unit head).
 - [ ] QM-2 Implement server matching against open matches first, then compatible active searches; enforce server-owned 2-minute holds, expiry, dismissal, and confirmation rules.
   - Partial: open-match priority now validates the selected time slot and serializes active holds per match; read-time expiry, dismiss, and explicit open-match confirmation endpoints are implemented. Compatible four-player group proposals are now created after open-match inventory; a cancellation releases the whole group. Court selection/reservation after four confirmations is still pending.
+  - Current slice: close the grouped-proposal expiry gap. Expiry must atomically release every pending proposal in the group and return every affected search to `SEARCHING` with `noMatchYet`.
 - [ ] QM-3 Wire mobile data, dependency injection, routes, Cubit, and persistent Quick Match state.
   - Partial: API client/repository/DTO/Cubit now load, start, dismiss, confirm, and cancel persistent state; configuration obtains valid sport/category IDs from the catalog.
 - [ ] QM-4 Implement handoff-faithful Home hero, configuration sheet, active-search, no-match, proposal, confirmation, and expiry UI states.
@@ -45,9 +46,10 @@ The app currently lists open matches and supports manual creation, but has no pe
 ## Verification evidence
 - QM-1: RED — missing `quick_match.validation.ts` caused the new Vitest suite to fail. GREEN — 3 validation tests passed.
 - QM-1: API `npm run typecheck`, `npm run lint`, and `npx prisma validate` passed.
+- QM-2 slice: API `npm run typecheck`, `npm run lint`, `git diff --check`, and the focused Quick Match Vitest set passed (8 tests). Grouped proposal expiry now releases pending/confirmed group holds atomically and returns all group searches to `SEARCHING` with `noMatchYet`.
 
 ## Next step
-- Complete QM-2 group formation and notification delivery, then add widget tests and connect confirmed proposals to the match detail deep link.
+- Add venue options and the post-confirmation court reservation flow for a fully confirmed new group; then complete QM-3–QM-6 verification and visual parity.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.

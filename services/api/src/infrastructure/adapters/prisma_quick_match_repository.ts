@@ -152,6 +152,23 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
     await PRISMA.$transaction(async (_tx) => {
       const SEARCH = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, include: SEARCH_INCLUDE });
       if (SEARCH?.proposal === null || SEARCH === null || SEARCH.proposal.status !== 'PENDING' || SEARCH.proposal.expiresAt > new Date()) return;
+      if (SEARCH.proposal.groupKey !== null) {
+        // Una propuesta grupal es atómica: si un jugador no confirma, se libera
+        // el hold completo y todos vuelven a la cola para evitar grupos huérfanos.
+        await _tx.quickMatchProposal.updateMany({
+          where: { groupKey: SEARCH.proposal.groupKey, status: { in: ['PENDING', 'CONFIRMED'] } },
+          data: { status: 'EXPIRED' },
+        });
+        const GROUP_SEARCHES = await _tx.quickMatchProposal.findMany({
+          where: { groupKey: SEARCH.proposal.groupKey },
+          select: { searchId: true },
+        });
+        await _tx.quickMatchSearch.updateMany({
+          where: { id: { in: GROUP_SEARCHES.map((_proposal) => _proposal.searchId) } },
+          data: { status: 'SEARCHING', noMatchYet: true },
+        });
+        return;
+      }
       await _tx.quickMatchProposal.update({ where: { id: SEARCH.proposal.id }, data: { status: 'EXPIRED' } });
       await _tx.quickMatchSearch.update({ where: { id: SEARCH.id }, data: { status: 'SEARCHING', noMatchYet: true } });
     });
