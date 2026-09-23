@@ -1,7 +1,7 @@
 import 'models/quick_match_search_dto.dart';
 import 'quick_match_api.dart';
 
-final class QuickMatchRepository {
+class QuickMatchRepository {
   const QuickMatchRepository(this._api);
   final QuickMatchApi _api;
 

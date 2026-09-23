@@ -1,0 +1,57 @@
+import 'package:bloc_test/bloc_test.dart';
+import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
+import 'package:cuadrala_mobile/src/features/quick_match/data/models/quick_match_search_dto.dart';
+import 'package:cuadrala_mobile/src/features/quick_match/data/quick_match_repository.dart';
+import 'package:cuadrala_mobile/src/features/quick_match/presentation/cubit/quick_match_cubit.dart';
+import 'package:cuadrala_mobile/src/features/quick_match/presentation/cubit/quick_match_state.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+class _QuickMatchRepository extends Mock implements QuickMatchRepository {}
+
+class _CatalogRepository extends Mock implements CatalogRepository {}
+
+final _search = QuickMatchSearchDto(
+  id: 'search',
+  sportId: 'sport',
+  categoryId: 'category',
+  status: 'PROPOSAL',
+  noMatchYet: false,
+  slots: ['EVENING'],
+  proposal: QuickMatchProposalDto(
+    id: 'proposal',
+    type: 'OPEN_MATCH',
+    status: 'PENDING',
+    matchId: 'match',
+    expiresAt: DateTime.utc(2030),
+  ),
+);
+
+void main() {
+  late _QuickMatchRepository repository;
+  late _CatalogRepository catalog;
+
+  setUp(() {
+    repository = _QuickMatchRepository();
+    catalog = _CatalogRepository();
+  });
+
+  QuickMatchCubit build() =>
+      QuickMatchCubit(repository: repository, catalogRepository: catalog);
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should expose an active proposal when a persisted search exists',
+    build: build,
+    setUp: () => when(repository.current).thenAnswer((_) async => _search),
+    act: (cubit) => cubit.load(),
+    expect: () => [isA<QuickMatchLoading>(), isA<QuickMatchActive>()],
+  );
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should clear the queue when cancellation succeeds',
+    build: build,
+    setUp: () => when(repository.cancel).thenAnswer((_) async {}),
+    act: (cubit) => cubit.cancel(),
+    expect: () => [isA<QuickMatchIdle>()],
+  );
+}
