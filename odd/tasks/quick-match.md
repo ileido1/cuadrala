@@ -13,7 +13,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 - Follow existing Clean Architecture and Flutter feature-first/Cubit conventions.
 - Route: delegated direct would normally be required: the implementation spans mobile UI, routing/DI, API persistence/endpoints, matching behavior, notification integration, and tests. No subagent runtime is available in this session, so implementation will be sequenced in bounded work units inline.
 - TDD: enabled by repository instruction. Runners: API Vitest and Flutter widget/unit tests; observe RED before each behavior where testable.
-- Delivery strategy: stacked-to-main (user-selected 2026-09-22). Forecast: well over 400 authored lines. Each merged work-unit slice lands in main before the next branch is created from main.
+- Delivery strategy: single feature branch (user-selected 2026-09-22, supersedes stacked-to-main). Complete all remaining Quick Match work on `codex/quick-match-full-feature`; do not create interim PRs or pause between micro-slices.
 
 ## Tasks
 - [x] QM-1 Define persistent Quick Match domain, schema, repositories, and API contracts for search lifecycle and proposals.
@@ -43,7 +43,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 - QM-1: API `npm run typecheck`, `npm run lint`, and `npx prisma validate` passed.
 
 ## Next step
-- QM-2 on `codex/quick-match-proposals`: match compatible open inventory first, then create server-expiring proposals with explicit dismiss/confirm rules.
+- QM-2 on `codex/quick-match-full-feature`: match compatible open inventory first, then create server-expiring proposals with explicit dismiss/confirm rules.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.
