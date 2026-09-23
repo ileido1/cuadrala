@@ -27,6 +27,6 @@ export class MatchQuickMatchUseCase {
 
   private async notifySV(_search: QuickMatchSearchDTO, _fallbackUserId?: string): Promise<void> {
     if (this._notifyProposal === null || _search.proposal === null) return;
-    await this._notifyProposal.executeSV({ quickMatchSearchId: _search.id, categoryId: _search.categoryId, userIds: _search.proposal.playerIds.length > 0 ? _search.proposal.playerIds : _fallbackUserId === undefined ? [] : [_fallbackUserId], proposalType: _search.proposal.type });
+    await this._notifyProposal.executeSV({ quickMatchSearchId: _search.id, categoryId: _search.categoryId, userIds: _search.proposal.type === 'OPEN_MATCH' ? (_fallbackUserId === undefined ? [] : [_fallbackUserId]) : _search.proposal.playerIds, proposalType: _search.proposal.type });
   }
 }
