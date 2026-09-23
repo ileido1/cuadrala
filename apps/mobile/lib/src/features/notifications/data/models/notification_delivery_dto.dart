@@ -54,6 +54,7 @@ NotificationType notificationTypeFromWire(String raw) {
     'TOURNAMENT_STARTED' => NotificationType.tournamentStarted,
     'TOURNAMENT_MATCH_NEEDS_ATTENTION' =>
       NotificationType.tournamentMatchNeedsAttention,
+    'QUICK_MATCH_PROPOSAL' => NotificationType.quickMatchProposal,
     _ => NotificationType.unknown,
   };
 }

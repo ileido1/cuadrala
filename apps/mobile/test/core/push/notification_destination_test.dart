@@ -33,6 +33,17 @@ void main() {
       }
     });
 
+    test('should open quick match for a proposal notification', () {
+      final d = notificationDestination(
+        eventType: 'QUICK_MATCH_PROPOSAL',
+        matchId: null,
+        tournamentId: null,
+      );
+
+      expect(d.route, Routes.quickMatch);
+      expect(d.replacesStack, isFalse);
+    });
+
     //? El sujeto del evento pasó a ser partido O torneo. Antes el navegador
     //? leía solo `matchId` y mandaba al listado de avisos cualquier cosa que no
     //? fuera un partido, así que las de torneo no llevaban a ningún lado.
@@ -55,16 +66,19 @@ void main() {
       }
     });
 
-    test('should fall back to the notification list when there is no subject', () {
-      final d = notificationDestination(
-        eventType: 'TOURNAMENT_STARTED',
-        matchId: null,
-        tournamentId: null,
-      );
+    test(
+      'should fall back to the notification list when there is no subject',
+      () {
+        final d = notificationDestination(
+          eventType: 'TOURNAMENT_STARTED',
+          matchId: null,
+          tournamentId: null,
+        );
 
-      expect(d.route, Routes.avisos);
-      expect(d.replacesStack, isTrue);
-    });
+        expect(d.route, Routes.avisos);
+        expect(d.replacesStack, isTrue);
+      },
+    );
 
     test('should fall back to the notification list for an unknown event', () {
       final d = notificationDestination(
@@ -97,8 +111,20 @@ void main() {
       expect(d?.route, Routes.matchChat('m-9'));
     });
 
+    test('should open quick match from its API deep link', () {
+      final d = notificationDestinationFromDeepLink(
+        Routes.quickMatch,
+        eventType: 'QUICK_MATCH_PROPOSAL',
+      );
+
+      expect(d?.route, Routes.quickMatch);
+    });
+
     test('should return null for a link it does not understand', () {
-      expect(notificationDestinationFromDeepLink('/otra-cosa/1', eventType: 'X'), isNull);
+      expect(
+        notificationDestinationFromDeepLink('/otra-cosa/1', eventType: 'X'),
+        isNull,
+      );
       expect(notificationDestinationFromDeepLink(null, eventType: 'X'), isNull);
     });
   });

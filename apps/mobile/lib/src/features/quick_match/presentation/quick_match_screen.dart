@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import 'cubit/quick_match_cubit.dart';
 import 'cubit/quick_match_state.dart';
+import '../../../router/routes.dart';
 
 final class QuickMatchScreen extends StatefulWidget {
   const QuickMatchScreen({super.key});
@@ -36,7 +38,10 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                   search.proposal?.status == 'PENDING' =>
             _Proposal(),
           QuickMatchActive(:final search) when search.status == 'CONFIRMED' =>
-            _Confirmed(isNewGroup: search.proposal?.type == 'NEW_GROUP'),
+            _Confirmed(
+              isNewGroup: search.proposal?.type == 'NEW_GROUP',
+              matchId: search.proposal?.matchId,
+            ),
           QuickMatchActive(:final search) => _Searching(
             noMatchYet: search.noMatchYet,
           ),
@@ -298,119 +303,147 @@ final class _ProposalState extends State<_Proposal> {
             .search
             .proposal!;
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.groups_rounded,
-              color: scheme.onPrimaryContainer,
-              size: 36,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            proposal.type == 'NEW_GROUP'
-                ? '¡Encontramos jugadores!'
-                : '¡Encontramos una partida!',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            proposal.type == 'NEW_GROUP'
-                ? 'Tres jugadores compatibles quieren jugar. Confirmá tu disponibilidad antes de que venza el hold.'
-                : 'Hay un cupo disponible para vos. Confirmalo antes de que venza el hold.',
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          _Countdown(expiresAt: proposal.expiresAt),
-          if (proposal.type == 'NEW_GROUP' &&
-              proposal.venueOptions.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Elegí sede y horario',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.groups_rounded,
+                color: scheme.onPrimaryContainer,
+                size: 36,
               ),
             ),
-            const SizedBox(height: 8),
-            ...proposal.venueOptions.asMap().entries.map((entry) {
-              final option = entry.value;
-              final selected = _selectedOption == entry.key;
-              final price = (option.pricePerPlayerCents / 100).toStringAsFixed(
-                2,
-              );
-              return Card(
-                child: ListTile(
-                  onTap: () => setState(() => _selectedOption = entry.key),
-                  leading: Icon(
-                    selected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                  ),
-                  title: Text(option.venueName),
-                  subtitle: Text(
-                    '${option.courtName} · ${_formatOptionDate(option.scheduledAt)}',
-                  ),
-                  trailing: Text('US\$ $price'),
-                ),
-              );
-            }),
-          ] else if (proposal.type == 'NEW_GROUP') ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
-              'Estamos buscando cancha cerca de vos. Te avisaremos antes de reservar.',
+              proposal.type == 'NEW_GROUP'
+                  ? '¡Encontramos jugadores!'
+                  : '¡Encontramos una partida!',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              proposal.type == 'NEW_GROUP'
+                  ? 'Tres jugadores compatibles quieren jugar. Confirmá tu disponibilidad antes de que venza el hold.'
+                  : 'Hay un cupo disponible para vos. Confirmalo antes de que venza el hold.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            _Countdown(expiresAt: proposal.expiresAt),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: scheme.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.groups_rounded, color: scheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      proposal.type == 'NEW_GROUP'
+                          ? 'Grupo compatible listo para confirmar'
+                          : 'Hay un lugar disponible en una partida cercana',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (proposal.type == 'NEW_GROUP' &&
+                proposal.venueOptions.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Elegí sede y horario',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...proposal.venueOptions.asMap().entries.map((entry) {
+                final option = entry.value;
+                final selected = _selectedOption == entry.key;
+                final price = (option.pricePerPlayerCents / 100)
+                    .toStringAsFixed(2);
+                return Card(
+                  child: ListTile(
+                    onTap: () => setState(() => _selectedOption = entry.key),
+                    leading: Icon(
+                      selected
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_off,
+                      color: selected
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant,
+                    ),
+                    title: Text(option.venueName),
+                    subtitle: Text(
+                      '${option.courtName} · ${_formatOptionDate(option.scheduledAt)}',
+                    ),
+                    trailing: Text('US\$ $price'),
+                  ),
+                );
+              }),
+            ] else if (proposal.type == 'NEW_GROUP') ...[
+              const SizedBox(height: 16),
+              Text(
+                'Estamos buscando cancha cerca de vos. Te avisaremos antes de reservar.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed:
+                  proposal.type == 'NEW_GROUP' &&
+                      proposal.venueOptions.isNotEmpty &&
+                      _selectedOption == null
+                  ? null
+                  : () => context.read<QuickMatchCubit>().confirmProposal(
+                      option: _selectedOption == null
+                          ? null
+                          : proposal.venueOptions[_selectedOption!],
+                    ),
+              child: Text(
+                proposal.type == 'NEW_GROUP'
+                    ? 'Confirmar disponibilidad'
+                    : 'Confirmar partida',
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: () =>
+                  context.read<QuickMatchCubit>().dismissProposal(),
+              child: const Text('Seguir buscando'),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              proposal.type == 'NEW_GROUP'
+                  ? 'La cancha y el pago se eligen solo cuando estén los cuatro.'
+                  : 'Confirmar te une a la partida; el pago sigue el flujo habitual.',
               textAlign: TextAlign.center,
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed:
-                proposal.type == 'NEW_GROUP' &&
-                    proposal.venueOptions.isNotEmpty &&
-                    _selectedOption == null
-                ? null
-                : () => context.read<QuickMatchCubit>().confirmProposal(
-                    option: _selectedOption == null
-                        ? null
-                        : proposal.venueOptions[_selectedOption!],
-                  ),
-            child: Text(
-              proposal.type == 'NEW_GROUP'
-                  ? 'Confirmar disponibilidad'
-                  : 'Confirmar partida',
-            ),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: () => context.read<QuickMatchCubit>().dismissProposal(),
-            child: const Text('Seguir buscando'),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            proposal.type == 'NEW_GROUP'
-                ? 'La cancha y el pago se eligen solo cuando estén los cuatro.'
-                : 'Confirmar te une a la partida; el pago sigue el flujo habitual.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -490,39 +523,81 @@ final class _Searching extends StatelessWidget {
 }
 
 final class _Confirmed extends StatelessWidget {
-  const _Confirmed({required this.isNewGroup});
+  const _Confirmed({required this.isNewGroup, required this.matchId});
   final bool isNewGroup;
+  final String? matchId;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.check_circle_rounded,
-            color: Theme.of(context).colorScheme.primary,
-            size: 76,
-          ),
-          const SizedBox(height: 18),
-          Text(
-            isNewGroup ? 'Disponibilidad confirmada' : '¡Partida confirmada!',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isNewGroup
-                ? 'Esperamos las confirmaciones restantes. La cancha y el pago se eligen solamente cuando estén los cuatro.'
-                : 'Ya estás unido. Encontrá los detalles y el pago en Mis partidas.',
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final hasMatch = matchId != null && matchId!.isNotEmpty;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 42, 20, 28),
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: .35),
+                    blurRadius: 26,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.check_rounded,
+                color: Theme.of(context).colorScheme.onPrimary,
+                size: 44,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              isNewGroup ? '¡Participación confirmada!' : '¡Cupo confirmado!',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isNewGroup
+                  ? hasMatch
+                        ? 'La partida ya está lista. Consultá la sede y los próximos pasos.'
+                        : 'Te avisamos cuando los cuatro confirmen y la cancha quede reservada.'
+                  : 'Ya estás dentro. Consultá los detalles y pagá tu parte desde la partida.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 26),
+            if (hasMatch)
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: const Key('quick-match.open-match'),
+                  onPressed: () => context.go(Routes.matchDetail(matchId!)),
+                  icon: const Icon(Icons.sports_tennis_rounded),
+                  label: const Text('Ver partida'),
+                ),
+              ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => context.go(Routes.home),
+                child: const Text('Volver al inicio'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 final class _Failure extends StatelessWidget {
