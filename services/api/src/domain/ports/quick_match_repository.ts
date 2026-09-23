@@ -16,6 +16,7 @@ export type QuickMatchProposalDTO = {
 export type QuickMatchSearchDTO = {
   id: string;
   sportId: string;
+  categoryId: string;
   targetDate: Date;
   slots: QuickMatchSlot[];
   widenLevel: boolean;
@@ -23,13 +24,22 @@ export type QuickMatchSearchDTO = {
   includeOpenMatches: boolean;
   status: QuickMatchSearchStatus;
   noMatchYet: boolean;
+  dismissedMatchIds: string[];
   proposal: QuickMatchProposalDTO | null;
 };
 
-export type StartQuickMatchInput = Omit<QuickMatchSearchDTO, 'id' | 'status' | 'noMatchYet' | 'proposal'>;
+export type StartQuickMatchInput = Omit<QuickMatchSearchDTO, 'id' | 'status' | 'noMatchYet' | 'dismissedMatchIds' | 'proposal'>;
 
 export interface QuickMatchRepository {
   startForUserSV(_userId: string, _input: StartQuickMatchInput): Promise<QuickMatchSearchDTO>;
   findByUserIdSV(_userId: string): Promise<QuickMatchSearchDTO | null>;
   cancelForUserSV(_userId: string): Promise<void>;
+  findOpenCandidateSV(_search: QuickMatchSearchDTO): Promise<QuickMatchOpenCandidateDTO | null>;
+  createOpenProposalSV(_searchId: string, _candidate: QuickMatchOpenCandidateDTO, _expiresAt: Date): Promise<QuickMatchSearchDTO>;
+  markNoMatchYetSV(_searchId: string): Promise<QuickMatchSearchDTO>;
 }
+
+export type QuickMatchOpenCandidateDTO = {
+  matchId: string;
+  participantIds: string[];
+};

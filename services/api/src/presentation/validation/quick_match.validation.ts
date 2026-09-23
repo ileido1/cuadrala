@@ -5,6 +5,7 @@ const SLOT_SCHEMA = z.enum(['MORNING', 'AFTERNOON', 'EVENING']);
 export const START_QUICK_MATCH_BODY_SCHEMA = z
   .object({
     sportId: z.string().uuid('sportId debe ser un UUID valido.'),
+    categoryId: z.string().uuid('categoryId debe ser un UUID valido.'),
     day: z.enum(['TODAY', 'TOMORROW', 'CUSTOM']),
     date: z.string().date('date debe tener formato YYYY-MM-DD.').optional(),
     slots: z.array(SLOT_SCHEMA).min(1).max(3),

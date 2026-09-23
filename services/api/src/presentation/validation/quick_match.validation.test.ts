@@ -6,6 +6,7 @@ const SPORT_ID = '550e8400-e29b-41d4-a716-446655440001';
 
 const VALID_SEARCH = {
   sportId: SPORT_ID,
+  categoryId: '550e8400-e29b-41d4-a716-446655440002',
   day: 'TODAY',
   slots: ['EVENING'],
   widenLevel: false,

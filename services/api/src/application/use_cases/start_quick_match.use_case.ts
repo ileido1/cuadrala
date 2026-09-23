@@ -19,6 +19,7 @@ export class StartQuickMatchUseCase {
 
   async executeSV(_userId: string, _input: {
     sportId: string;
+    categoryId: string;
     day: QuickMatchDay;
     date?: string | undefined;
     slots: QuickMatchSlot[];
@@ -28,6 +29,7 @@ export class StartQuickMatchUseCase {
   }): Promise<QuickMatchSearchDTO> {
     return this._repository.startForUserSV(_userId, {
       sportId: _input.sportId,
+      categoryId: _input.categoryId,
       targetDate: targetDateSV(_input.day, _input.date),
       slots: _input.slots,
       widenLevel: _input.widenLevel,

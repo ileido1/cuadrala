@@ -17,6 +17,7 @@ final class Routes {
   static const torneos = '/torneos';
   static const descubrir = '/descubrir';
 
+  static const quickMatch = '/quick-match';
   static const matches = '/matches';
   static const createMatch = '/matches/create';
   static const discoverMatches = '/matches/discover';
@@ -24,17 +25,23 @@ final class Routes {
   static String matchLive(String matchId) => '/matches/$matchId/live';
   static String matchResult(String matchId) => '/matches/$matchId/result';
   static String matchChat(String matchId) => '/matches/$matchId/chat';
-  static String matchChatReadOnly(String matchId) => '/matches/$matchId/chat/readonly';
-  static String matchSuggestions(String matchId) => '/matches/$matchId/suggestions';
+  static String matchChatReadOnly(String matchId) =>
+      '/matches/$matchId/chat/readonly';
+  static String matchSuggestions(String matchId) =>
+      '/matches/$matchId/suggestions';
   static const tournaments = '/tournaments';
+
   /// Home del tab de torneos (branch del shell). Usado como fallback del back.
   static const torneosHome = '/torneos';
   static const createTournament = '/tournaments/create';
-  static String tournamentChat(String tournamentId) => '/tournaments/$tournamentId/chat';
-  static String tournamentChatReadOnly(String tournamentId) => '/tournaments/$tournamentId/chat/readonly';
+  static String tournamentChat(String tournamentId) =>
+      '/tournaments/$tournamentId/chat';
+  static String tournamentChatReadOnly(String tournamentId) =>
+      '/tournaments/$tournamentId/chat/readonly';
   static const notifications = '/notifications';
   static const notificationPrefs = '/notifications/prefs';
   static const availability = '/availability';
+
   /// Fuera del branch `/perfil` a propósito: es un overlay de nivel superior,
   /// como `/availability`, y así no compite con las rutas del shell.
   static const mySports = '/mis-deportes';
@@ -44,7 +51,8 @@ final class Routes {
   static String venueDetail(String venueId) => '/descubrir/$venueId';
 
   static String matchDetail(String matchId) => '/matches/$matchId';
-  static String tournamentDetail(String tournamentId) => '/tournaments/$tournamentId';
+  static String tournamentDetail(String tournamentId) =>
+      '/tournaments/$tournamentId';
   static String notificationDetail(String notificationId) =>
       '/notifications/$notificationId';
 

@@ -4,6 +4,7 @@ import { AppError } from '../../domain/errors/app_error.js';
 import {
   CANCEL_MY_QUICK_MATCH_UC,
   GET_MY_QUICK_MATCH_UC,
+  MATCH_QUICK_MATCH_UC,
   START_QUICK_MATCH_UC,
 } from '../composition/quick_match.composition.js';
 import { START_QUICK_MATCH_BODY_SCHEMA } from '../validation/quick_match.validation.js';
@@ -26,10 +27,11 @@ export async function getMyQuickMatchCON(_req: Request, _res: Response): Promise
 export async function postQuickMatchCON(_req: Request, _res: Response): Promise<void> {
   const BODY = START_QUICK_MATCH_BODY_SCHEMA.parse(_req.body);
   const SEARCH = await START_QUICK_MATCH_UC.executeSV(actorUserIdSV(_req), BODY);
+  const MATCHED = await MATCH_QUICK_MATCH_UC.executeSV(SEARCH);
   _res.status(201).json({
     success: true,
     message: 'Búsqueda de partida iniciada correctamente.',
-    data: SEARCH,
+    data: MATCHED,
   });
 }
 

@@ -32,6 +32,9 @@ import '../../features/profile/presentation/cubit/profile_cubit.dart';
 import '../../features/chat/data/chat_api.dart';
 import '../../features/chat/data/chat_repository.dart';
 import '../../features/matches/data/matches_api.dart';
+import '../../features/quick_match/data/quick_match_api.dart';
+import '../../features/quick_match/data/quick_match_repository.dart';
+import '../../features/quick_match/presentation/cubit/quick_match_cubit.dart';
 import '../../features/matches/data/matches_repository.dart';
 import '../../features/matches/presentation/cubit/discover_matches_cubit.dart';
 import '../../features/matches/presentation/cubit/open_matches_cubit.dart';
@@ -151,6 +154,16 @@ Future<void> setupDependencies() async {
       matchesApi: getIt<MatchesApi>(),
       catalogRepository: getIt<CatalogRepository>(),
     ),
+  );
+
+  getIt.registerLazySingleton<QuickMatchApi>(
+    () => DioQuickMatchApi(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<QuickMatchRepository>(
+    () => QuickMatchRepository(getIt<QuickMatchApi>()),
+  );
+  getIt.registerFactory<QuickMatchCubit>(
+    () => QuickMatchCubit(repository: getIt<QuickMatchRepository>()),
   );
 
   getIt.registerLazySingleton<VenuesApi>(

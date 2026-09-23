@@ -336,7 +336,7 @@ final class _DiscoverHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Buscar partida',
+                  'Explorar partidas',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
@@ -345,7 +345,7 @@ final class _DiscoverHeader extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Matchmaking por horario y nivel',
+                  'Partidas abiertas con cupos',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,

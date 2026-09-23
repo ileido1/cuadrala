@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   _HeroCard(
-                    onBuscar: () => context.push(Routes.discoverMatches),
+                    onBuscar: () => context.push(Routes.quickMatch),
                     onCrear: () => showCreateMatchSheet(context),
                   ),
                   const SizedBox(height: 20),

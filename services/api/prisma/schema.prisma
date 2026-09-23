@@ -472,7 +472,9 @@ model QuickMatchSearch {
   user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   sportId            String
   sport              Sport                   @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  categoryId         String
   targetDate         DateTime                 @db.Date
+  dismissedMatchIds  String[]                 @default([])
   slots              AvailabilitySlot[]
   widenLevel         Boolean                  @default(false)
   zoneKm             Int                      @default(10)
