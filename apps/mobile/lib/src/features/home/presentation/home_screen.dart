@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/di/service_locator.dart';
 import '../../../core/formatting/fx_price_labels.dart';
 import '../../../core/formatting/id_preview.dart';
 import '../../../core/formatting/money_conversion.dart';
@@ -10,6 +11,7 @@ import '../../../core/formatting/scheduled_label.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../matches/data/models/open_match_dto.dart';
+import '../../quick_match/data/quick_match_repository.dart';
 import '../../venues/presentation/create_match_panel.dart';
 import '../../matches/presentation/open_match_display.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -75,6 +77,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     onBellTap: () => context.go(Routes.avisos),
                   ),
                   const SizedBox(height: 16),
+                  const _QuickMatchHomeBanner(),
+                  const SizedBox(height: 12),
                   _HeroCard(
                     onBuscar: () => context.push(Routes.quickMatch),
                     onCrear: () => showCreateMatchSheet(context),
@@ -204,6 +208,88 @@ String _initialsFrom(String name) {
 // ---------------------------------------------------------------------------
 // Hero card — bolt + CTAs Buscar / Crear dentro de la card
 // ---------------------------------------------------------------------------
+
+final class _QuickMatchHomeBanner extends StatefulWidget {
+  const _QuickMatchHomeBanner();
+
+  @override
+  State<_QuickMatchHomeBanner> createState() => _QuickMatchHomeBannerState();
+}
+
+final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
+  late final Future _search = getIt<QuickMatchRepository>().current();
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _search,
+    builder: (context, snapshot) {
+      final search = snapshot.data;
+      if (search == null ||
+          search.status == 'CANCELLED' ||
+          search.status == 'CONFIRMED') {
+        return const SizedBox.shrink();
+      }
+      final proposalReady = search.status == 'PROPOSAL';
+      final scheme = Theme.of(context).colorScheme;
+      return Material(
+        color: proposalReady ? scheme.primary : scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => context.push(Routes.quickMatch),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(
+                  proposalReady ? Icons.bolt_rounded : Icons.circle,
+                  size: proposalReady ? 24 : 12,
+                  color: proposalReady ? scheme.onPrimary : scheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        proposalReady
+                            ? '¡Tu propuesta está lista!'
+                            : 'Tu búsqueda está activa',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: proposalReady
+                              ? scheme.onPrimary
+                              : scheme.onPrimaryContainer,
+                        ),
+                      ),
+                      Text(
+                        proposalReady
+                            ? 'Tenés tiempo limitado para confirmar.'
+                            : 'Te avisamos cuando encontremos una opción.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: proposalReady
+                              ? scheme.onPrimary
+                              : scheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: proposalReady
+                      ? scheme.onPrimary
+                      : scheme.onPrimaryContainer,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
 
 final class _HeroCard extends StatelessWidget {
   const _HeroCard({required this.onBuscar, required this.onCrear});
