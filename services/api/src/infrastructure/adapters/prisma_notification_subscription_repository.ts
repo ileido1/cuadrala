@@ -76,6 +76,26 @@ export class PrismaNotificationSubscriptionRepository
     return UPDATED.count > 0;
   }
 
+  async filterEnabledUserIdsForEventSV(_userIds: string[], _eventType: string): Promise<string[]> {
+    if (_userIds.length === 0) return [];
+    const SUBSCRIPTIONS = await PRISMA.notificationSubscription.findMany({
+      where: { userId: { in: _userIds } },
+      orderBy: { createdAt: 'desc' },
+      select: { userId: true, enabled: true, enabledTypes: true },
+    });
+    const BY_USER = new Map<string, typeof SUBSCRIPTIONS[number]>();
+    for (const SUBSCRIPTION of SUBSCRIPTIONS) {
+      if (!BY_USER.has(SUBSCRIPTION.userId)) BY_USER.set(SUBSCRIPTION.userId, SUBSCRIPTION);
+    }
+    return _userIds.filter((_userId) => {
+      const SUBSCRIPTION = BY_USER.get(_userId);
+      if (SUBSCRIPTION === undefined) return true;
+      if (!SUBSCRIPTION.enabled) return false;
+      if (SUBSCRIPTION.enabledTypes === null || typeof SUBSCRIPTION.enabledTypes !== 'object') return true;
+      return (SUBSCRIPTION.enabledTypes as Record<string, unknown>)[_eventType] !== false;
+    });
+  }
+
   async findRecipientsForEventSV(
     _filter: NotificationSubscriptionRecipientFilterDTO,
   ): Promise<NotificationRecipientDTO[]> {

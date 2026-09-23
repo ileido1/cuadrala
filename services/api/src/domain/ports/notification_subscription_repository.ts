@@ -39,6 +39,7 @@ export interface NotificationSubscriptionRepository {
   upsertSV(_dto: UpsertNotificationSubscriptionDTO): Promise<NotificationSubscriptionDTO>;
   listByUserIdSV(_userId: string): Promise<NotificationSubscriptionDTO[]>;
   disableByIdForUserSV(_id: string, _userId: string): Promise<boolean>;
+  filterEnabledUserIdsForEventSV(_userIds: string[], _eventType: string): Promise<string[]>;
   findRecipientsForEventSV(
     _filter: NotificationSubscriptionRecipientFilterDTO,
   ): Promise<NotificationRecipientDTO[]>;
