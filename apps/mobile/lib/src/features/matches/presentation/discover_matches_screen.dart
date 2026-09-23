@@ -98,6 +98,54 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                 ),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Material(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => context.push(Routes.quickMatch),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.bolt_rounded,
+                          color: scheme.onPrimaryContainer,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '¿No encontrás una opción?',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: scheme.onPrimaryContainer,
+                                ),
+                              ),
+                              Text(
+                                'Entrá a la cola y te avisamos cuando haya una partida.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: scheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: scheme.onPrimaryContainer,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             BlocBuilder<DiscoverMatchesCubit, DiscoverMatchesState>(
               buildWhen: (prev, next) => next is DiscoverMatchesLoaded,
               builder: (context, state) {
