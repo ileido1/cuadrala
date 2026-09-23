@@ -266,6 +266,7 @@ final class _NotificationTile extends StatelessWidget {
       NotificationType.tournamentSchedulePublished => AppIcons.calendar,
       NotificationType.tournamentStarted => AppIcons.trophy,
       NotificationType.tournamentMatchNeedsAttention => AppIcons.calendarBusy,
+      NotificationType.quickMatchProposal => AppIcons.bolt,
       NotificationType.unknown => AppIcons.bell,
     };
   }
@@ -283,11 +284,7 @@ final class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              AppIcons.bell,
-              size: 42,
-              color: scheme.onSurfaceVariant,
-            ),
+            Icon(AppIcons.bell, size: 42, color: scheme.onSurfaceVariant),
             const SizedBox(height: 10),
             const Text(
               'Sin notificaciones nuevas',
@@ -305,7 +302,6 @@ final class _EmptyState extends StatelessWidget {
     );
   }
 }
-
 
 String _relativeTime(DateTime dt) {
   final now = DateTime.now();

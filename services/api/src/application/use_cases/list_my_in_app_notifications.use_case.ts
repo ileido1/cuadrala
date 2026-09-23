@@ -34,9 +34,11 @@ function resolveNotificationBodySV(
  * partido. Con los eventos de torneo ese link llevaba a ninguna parte.
  */
 function deepLinkForEventSV(_event: {
+  type: string;
   matchId: string | null;
   tournamentId: string | null;
 }): string | null {
+  if (_event.type === 'QUICK_MATCH_PROPOSAL') return '/quick-match';
   if (_event.tournamentId !== null) return `/tournaments/${_event.tournamentId}`;
   if (_event.matchId !== null) return `/matches/${_event.matchId}`;
   return null;

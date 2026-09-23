@@ -10,29 +10,31 @@ enum NotificationType {
   tournamentSchedulePublished,
   tournamentStarted,
   tournamentMatchNeedsAttention,
+  quickMatchProposal,
   unknown,
 }
 
 extension NotificationTypeWire on NotificationType {
   /// Valor tal como lo emite la API. Inverso de [notificationTypeFromWire].
   String get wire => switch (this) {
-        NotificationType.chatMessage => 'CHAT_MESSAGE',
-        NotificationType.matchSlotOpened => 'MATCH_SLOT_OPENED',
-        NotificationType.matchCancelled => 'MATCH_CANCELLED',
-        NotificationType.paymentPending => 'PAYMENT_PENDING',
-        NotificationType.matchPlayerJoined => 'MATCH_PLAYER_JOINED',
-        NotificationType.paymentConfirmed => 'PAYMENT_CONFIRMED',
-        NotificationType.tournamentRegistrationReceived =>
-          'TOURNAMENT_REGISTRATION_RECEIVED',
-        NotificationType.tournamentRegistrationConfirmed =>
-          'TOURNAMENT_REGISTRATION_CONFIRMED',
-        NotificationType.tournamentSchedulePublished =>
-          'TOURNAMENT_SCHEDULE_PUBLISHED',
-        NotificationType.tournamentStarted => 'TOURNAMENT_STARTED',
-        NotificationType.tournamentMatchNeedsAttention =>
-          'TOURNAMENT_MATCH_NEEDS_ATTENTION',
-        NotificationType.unknown => '',
-      };
+    NotificationType.chatMessage => 'CHAT_MESSAGE',
+    NotificationType.matchSlotOpened => 'MATCH_SLOT_OPENED',
+    NotificationType.matchCancelled => 'MATCH_CANCELLED',
+    NotificationType.paymentPending => 'PAYMENT_PENDING',
+    NotificationType.matchPlayerJoined => 'MATCH_PLAYER_JOINED',
+    NotificationType.paymentConfirmed => 'PAYMENT_CONFIRMED',
+    NotificationType.tournamentRegistrationReceived =>
+      'TOURNAMENT_REGISTRATION_RECEIVED',
+    NotificationType.tournamentRegistrationConfirmed =>
+      'TOURNAMENT_REGISTRATION_CONFIRMED',
+    NotificationType.tournamentSchedulePublished =>
+      'TOURNAMENT_SCHEDULE_PUBLISHED',
+    NotificationType.tournamentStarted => 'TOURNAMENT_STARTED',
+    NotificationType.tournamentMatchNeedsAttention =>
+      'TOURNAMENT_MATCH_NEEDS_ATTENTION',
+    NotificationType.quickMatchProposal => 'QUICK_MATCH_PROPOSAL',
+    NotificationType.unknown => '',
+  };
 }
 
 NotificationType notificationTypeFromWire(String raw) {
@@ -47,7 +49,8 @@ NotificationType notificationTypeFromWire(String raw) {
       NotificationType.tournamentRegistrationReceived,
     'TOURNAMENT_REGISTRATION_CONFIRMED' =>
       NotificationType.tournamentRegistrationConfirmed,
-    'TOURNAMENT_SCHEDULE_PUBLISHED' => NotificationType.tournamentSchedulePublished,
+    'TOURNAMENT_SCHEDULE_PUBLISHED' =>
+      NotificationType.tournamentSchedulePublished,
     'TOURNAMENT_STARTED' => NotificationType.tournamentStarted,
     'TOURNAMENT_MATCH_NEEDS_ATTENTION' =>
       NotificationType.tournamentMatchNeedsAttention,
@@ -95,19 +98,20 @@ final class NotificationDeliveryDto {
       title: title != null && title.isNotEmpty
           ? title
           : _defaultTitleForType(type),
-      body: body != null && body.isNotEmpty
-          ? body
-          : _defaultBodyForType(type),
+      body: body != null && body.isNotEmpty ? body : _defaultBodyForType(type),
       //? El sujeto puede ser un partido o un torneo; antes solo se contemplaba
       //? el partido y las notificaciones de torneo quedaban sin destino.
-      deepLink: (json['deepLink'] as String?) ??
+      deepLink:
+          (json['deepLink'] as String?) ??
           (tournamentId != null
               ? '/tournaments/$tournamentId'
               : matchId != null
-                  ? '/matches/$matchId'
-                  : null),
+              ? '/matches/$matchId'
+              : null),
       createdAt: DateTime.parse(json['createdAt'] as String),
-      readAt: json['readAt'] == null ? null : DateTime.parse(json['readAt'] as String),
+      readAt: json['readAt'] == null
+          ? null
+          : DateTime.parse(json['readAt'] as String),
     );
   }
 
@@ -123,7 +127,9 @@ final class NotificationDeliveryDto {
       NotificationType.tournamentRegistrationConfirmed => 'Estás dentro',
       NotificationType.tournamentSchedulePublished => 'Ya está el calendario',
       NotificationType.tournamentStarted => 'Arrancó el torneo',
-      NotificationType.tournamentMatchNeedsAttention => 'Un partido necesita horario',
+      NotificationType.tournamentMatchNeedsAttention =>
+        'Un partido necesita horario',
+      NotificationType.quickMatchProposal => 'Encontramos una partida',
       NotificationType.unknown => 'Notificación',
     };
   }
@@ -138,7 +144,8 @@ final class NotificationDeliveryDto {
       NotificationType.paymentPending =>
         'Hay un pago pendiente de revisión en tu partida.',
       NotificationType.matchPlayerJoined => 'Alguien se unió a tu partida.',
-      NotificationType.paymentConfirmed => 'Tu pago fue confirmado por el club.',
+      NotificationType.paymentConfirmed =>
+        'Tu pago fue confirmado por el club.',
       NotificationType.tournamentRegistrationReceived =>
         'Alguien se anotó a tu torneo y espera tu confirmación.',
       NotificationType.tournamentRegistrationConfirmed =>
@@ -149,8 +156,9 @@ final class NotificationDeliveryDto {
         'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
       NotificationType.tournamentMatchNeedsAttention =>
         'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
+      NotificationType.quickMatchProposal =>
+        'Tenés una propuesta lista para confirmar.',
       NotificationType.unknown => '',
     };
   }
 }
-

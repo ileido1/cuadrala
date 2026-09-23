@@ -1,4 +1,5 @@
 import type {
+  CreateQuickMatchProposalEventDTO,
   CreateTournamentEventDTO,
   CreateMatchCancelledEventDTO,
   CreateChatMessageEventDTO,
@@ -55,6 +56,10 @@ export class PrismaNotificationEventRepository implements NotificationEventRepos
         payload: _dto.payload as never,
       },
     });
+  }
+
+  async createQuickMatchProposalSV(_dto: CreateQuickMatchProposalEventDTO): Promise<NotificationEventDTO> {
+    return PRISMA.notificationEvent.create({ data: { type: 'QUICK_MATCH_PROPOSAL', quickMatchSearchId: _dto.quickMatchSearchId, categoryId: _dto.categoryId, payload: _dto.payload as never } });
   }
 
   async createTournamentEventSV(

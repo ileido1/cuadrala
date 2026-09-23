@@ -28,8 +28,9 @@ export async function getMyQuickMatchCON(_req: Request, _res: Response): Promise
 
 export async function postQuickMatchCON(_req: Request, _res: Response): Promise<void> {
   const BODY = START_QUICK_MATCH_BODY_SCHEMA.parse(_req.body);
-  const SEARCH = await START_QUICK_MATCH_UC.executeSV(actorUserIdSV(_req), BODY);
-  const MATCHED = await MATCH_QUICK_MATCH_UC.executeSV(SEARCH);
+  const USER_ID = actorUserIdSV(_req);
+  const SEARCH = await START_QUICK_MATCH_UC.executeSV(USER_ID, BODY);
+  const MATCHED = await MATCH_QUICK_MATCH_UC.executeSV(SEARCH, USER_ID);
   _res.status(201).json({
     success: true,
     message: 'Búsqueda de partida iniciada correctamente.',

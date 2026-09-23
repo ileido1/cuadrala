@@ -193,6 +193,7 @@ enum NotificationEventType {
   TOURNAMENT_MATCH_NEEDS_ATTENTION
   /// Se cargo el resultado de un partido: avisa a ambos lados con userId.
   TOURNAMENT_MATCH_RESULT_RECORDED
+  QUICK_MATCH_PROPOSAL
 }
 
 enum NotificationDeliveryStatus {
@@ -485,6 +486,7 @@ model QuickMatchSearch {
   updatedAt          DateTime                 @updatedAt
 
   proposal QuickMatchProposal?
+  notificationEvents NotificationEvent[] @relation("QuickMatchSearchNotificationEvents")
 
   @@index([sportId, status, targetDate])
   @@index([status, updatedAt])
@@ -1337,6 +1339,8 @@ model NotificationEvent {
   /// hablar de nada que no fuera un partido.
   matchId      String?
   match        Match?                @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  quickMatchSearchId String?
+  quickMatchSearch QuickMatchSearch? @relation("QuickMatchSearchNotificationEvents", fields: [quickMatchSearchId], references: [id], onDelete: Cascade)
   tournamentId String?
   tournament   Tournament?           @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   categoryId   String
@@ -1349,6 +1353,7 @@ model NotificationEvent {
 
   @@index([matchId])
   @@index([tournamentId])
+  @@index([quickMatchSearchId])
   @@index([categoryId])
   @@index([processedAt, createdAt])
 }

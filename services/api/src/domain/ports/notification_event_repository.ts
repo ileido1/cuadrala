@@ -9,6 +9,7 @@ export type NotificationEventDTO = {
     | 'PAYMENT_PENDING'
     | 'MATCH_PLAYER_JOINED'
     | 'PAYMENT_CONFIRMED'
+    | 'QUICK_MATCH_PROPOSAL'
     | TournamentNotificationEventType;
   /// Sujeto del evento: uno de los dos, nunca ambos (CHECK en la base).
   matchId: string | null;
@@ -62,6 +63,12 @@ export type CreatePaymentConfirmedEventDTO = {
  * idénticos que solo difieren en un literal—. Repetir ese molde acá sumaría
  * cuatro copias más de lo mismo, así que el tipo viaja como dato.
  */
+export type CreateQuickMatchProposalEventDTO = {
+  quickMatchSearchId: string;
+  categoryId: string;
+  payload: unknown;
+};
+
 export type CreateTournamentEventDTO = {
   type: TournamentNotificationEventType;
   tournamentId: string;
@@ -70,6 +77,7 @@ export type CreateTournamentEventDTO = {
 };
 
 export interface NotificationEventRepository {
+  createQuickMatchProposalSV(_dto: CreateQuickMatchProposalEventDTO): Promise<NotificationEventDTO>;
   createTournamentEventSV(_dto: CreateTournamentEventDTO): Promise<NotificationEventDTO>;
   createMatchSlotOpenedSV(_dto: CreateMatchSlotOpenedEventDTO): Promise<NotificationEventDTO>;
   createMatchCancelledSV(_dto: CreateMatchCancelledEventDTO): Promise<NotificationEventDTO>;

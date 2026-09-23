@@ -5,6 +5,8 @@ export function notificationContentForTypeSV(
   _type: string,
 ): { title: string; body: string } {
   switch (_type) {
+    case 'QUICK_MATCH_PROPOSAL':
+      return { title: 'Encontramos una partida', body: 'Tenés una propuesta lista para confirmar.' };
     case 'MATCH_SLOT_OPENED':
       return {
         title: 'Se abrió una vacante',
@@ -74,6 +76,7 @@ export const DIRECT_NOTIFICATION_EVENT_TYPES = new Set<string>([
   'MATCH_CANCELLED',
   'MATCH_PLAYER_JOINED',
   'PAYMENT_CONFIRMED',
+  'QUICK_MATCH_PROPOSAL',
   //? Los de torneo no tienen `matchId`: si salieran de este conjunto, el
   //? despachador buscaría contexto de partido, no lo encontraría y los daría
   //? por procesados sin enviar nada.

@@ -27,7 +27,8 @@ final class ForegroundNotificationHandler extends StatefulWidget {
       _ForegroundNotificationState();
 }
 
-class _ForegroundNotificationState extends State<ForegroundNotificationHandler> {
+class _ForegroundNotificationState
+    extends State<ForegroundNotificationHandler> {
   bool _isShowing = false;
   StreamSubscription<RemoteMessage>? _subscription;
 
@@ -53,9 +54,11 @@ class _ForegroundNotificationState extends State<ForegroundNotificationHandler> 
     if (data.isEmpty) return;
 
     final notification = message.notification;
-    final title = notification?.title?.trim() ??
+    final title =
+        notification?.title?.trim() ??
         _defaultTitle(data['eventType'] as String?);
-    final body = notification?.body?.trim() ??
+    final body =
+        notification?.body?.trim() ??
         _defaultBody(data['eventType'] as String?);
 
     _showOverlay(title: title, body: body, data: data);
@@ -125,7 +128,9 @@ class _ForegroundNotificationState extends State<ForegroundNotificationHandler> 
       NotificationType.tournamentRegistrationConfirmed => 'Estás dentro',
       NotificationType.tournamentSchedulePublished => 'Ya está el calendario',
       NotificationType.tournamentStarted => 'Arrancó el torneo',
-      NotificationType.tournamentMatchNeedsAttention => 'Un partido necesita horario',
+      NotificationType.tournamentMatchNeedsAttention =>
+        'Un partido necesita horario',
+      NotificationType.quickMatchProposal => 'Encontramos una partida',
       NotificationType.unknown => 'Notificación',
     };
   }
@@ -154,6 +159,8 @@ class _ForegroundNotificationState extends State<ForegroundNotificationHandler> 
         'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
       NotificationType.tournamentMatchNeedsAttention =>
         'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
+      NotificationType.quickMatchProposal =>
+        'Tenés una propuesta lista para confirmar.',
       NotificationType.unknown => '',
     };
   }

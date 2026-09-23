@@ -27,7 +27,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 - [ ] QM-4 Implement handoff-faithful Home hero, configuration sheet, active-search, no-match, proposal, confirmation, and expiry UI states.
   - Partial: Home CTA framing and a usable Quick Match configuration, active queue, proposal countdown, dismissal, and confirmation UI are present; visual parity and navigation to the confirmed match remain pending.
 - [ ] QM-5 Update Explore framing/banner; add proposal and filled-match notifications/deep links, plus opt-in “Avisos en mi horario” preferences and invitation flow.
-  - Partial: Explore now distinguishes browsing from queueing and routes users to Quick Match; confirmed open-match joins reuse the existing player-joined notification. Dedicated queue proposal delivery, deep link, and availability-alert preference remain pending.
+  - Partial: Explore now distinguishes browsing from queueing and routes users to Quick Match; confirmed open-match joins reuse the existing player-joined notification. Dedicated proposal delivery and a deep link to Quick Match are implemented; opt-in availability alerts outside the queue and invitation handling remain pending.
 - [ ] QM-6 Run API and Flutter verification, record work-unit commits, and perform a visual review against the supplied handoff.
 
 ## Acceptance criteria

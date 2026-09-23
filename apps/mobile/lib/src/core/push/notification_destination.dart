@@ -34,18 +34,26 @@ NotificationDestination notificationDestination({
     return NotificationDestination(Routes.tournamentDetail(tournamentId));
   }
 
+  if (notificationTypeFromWire(eventType) ==
+      NotificationType.quickMatchProposal) {
+    return const NotificationDestination(Routes.quickMatch);
+  }
+
   if (matchId == null || matchId.isEmpty) return _fallback;
 
   return switch (notificationTypeFromWire(eventType)) {
-    NotificationType.chatMessage => NotificationDestination(Routes.matchChat(matchId)),
+    NotificationType.chatMessage => NotificationDestination(
+      Routes.matchChat(matchId),
+    ),
     //? `matchCancelled` estaba solo en la copia del handler de foreground: por
     //? push desde background, una partida cancelada caía al listado de avisos.
     //? Al unificar se toma el comportamiento más útil de las dos copias.
     NotificationType.matchPlayerJoined ||
     NotificationType.paymentConfirmed ||
     NotificationType.paymentPending ||
-    NotificationType.matchCancelled =>
-      NotificationDestination(Routes.matchDetail(matchId)),
+    NotificationType.matchCancelled => NotificationDestination(
+      Routes.matchDetail(matchId),
+    ),
     _ => _fallback,
   };
 }
@@ -59,6 +67,9 @@ NotificationDestination? notificationDestinationFromDeepLink(
   required String eventType,
 }) {
   if (deepLink == null) return null;
+  if (deepLink == Routes.quickMatch) {
+    return const NotificationDestination(Routes.quickMatch);
+  }
 
   final tournamentId = _idAfter(deepLink, '/tournaments/');
   if (tournamentId != null) {

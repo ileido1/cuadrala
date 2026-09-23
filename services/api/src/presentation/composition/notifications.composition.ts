@@ -1,3 +1,4 @@
+import { CreateQuickMatchProposalNotificationEventUseCase } from '../../application/use_cases/create_quick_match_proposal_notification_event.use_case.js';
 import { CreateMatchCancelledNotificationEventUseCase } from '../../application/use_cases/create_match_cancelled_notification_event.use_case.js';
 import { CreateChatMessageNotificationEventUseCase } from '../../application/use_cases/create_chat_message_notification_event.use_case.js';
 import { CreatePaymentPendingNotificationEventUseCase } from '../../application/use_cases/create_payment_pending_notification_event.use_case.js';
@@ -111,3 +112,8 @@ export const CREATE_PAYMENT_CONFIRMED_NOTIFICATION_EVENT_UC =
     NOTIFICATION_DELIVERY_REPOSITORY,
   );
 
+
+export const CREATE_QUICK_MATCH_PROPOSAL_NOTIFICATION_EVENT_UC = new CreateQuickMatchProposalNotificationEventUseCase(
+  NOTIFICATION_EVENT_REPOSITORY,
+  NOTIFICATION_DELIVERY_REPOSITORY,
+);
