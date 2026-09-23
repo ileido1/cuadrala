@@ -18,11 +18,13 @@ function actorUserIdSV(_req: Request): string {
 }
 
 export async function getMyQuickMatchCON(_req: Request, _res: Response): Promise<void> {
-  const SEARCH = await GET_MY_QUICK_MATCH_UC.executeSV(actorUserIdSV(_req));
+  const USER_ID = actorUserIdSV(_req);
+  const SEARCH = await GET_MY_QUICK_MATCH_UC.executeSV(USER_ID);
+  const MATCHED = SEARCH?.status === 'SEARCHING' ? await MATCH_QUICK_MATCH_UC.executeSV(SEARCH, USER_ID) : SEARCH;
   _res.status(200).json({
     success: true,
     message: 'Estado de búsqueda obtenido correctamente.',
-    data: SEARCH,
+    data: MATCHED,
   });
 }
 
@@ -44,8 +46,10 @@ export async function deleteMyQuickMatchCON(_req: Request, _res: Response): Prom
 }
 
 export async function postDismissMyQuickMatchProposalCON(_req: Request, _res: Response): Promise<void> {
-  const SEARCH = await DISMISS_MY_QUICK_MATCH_PROPOSAL_UC.executeSV(actorUserIdSV(_req));
-  _res.status(200).json({ success: true, message: 'Propuesta descartada; seguimos buscando.', data: SEARCH });
+  const USER_ID = actorUserIdSV(_req);
+  const SEARCH = await DISMISS_MY_QUICK_MATCH_PROPOSAL_UC.executeSV(USER_ID);
+  const MATCHED = await MATCH_QUICK_MATCH_UC.executeSV(SEARCH, USER_ID);
+  _res.status(200).json({ success: true, message: 'Propuesta descartada; seguimos buscando.', data: MATCHED });
 }
 
 export async function postConfirmMyQuickMatchProposalCON(_req: Request, _res: Response): Promise<void> {
