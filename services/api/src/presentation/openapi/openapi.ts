@@ -767,6 +767,43 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/quick-match': {
+      get: {
+        tags: ['Matchmaking'],
+        summary: 'Consultar la búsqueda automática de partida del usuario',
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'Estado de búsqueda' }, '401': { description: 'No autorizado' } },
+      },
+      post: {
+        tags: ['Matchmaking'],
+        summary: 'Iniciar una búsqueda automática de partida',
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } },
+        responses: { '201': { description: 'Búsqueda iniciada' }, '400': { description: 'Validación fallida' }, '401': { description: 'No autorizado' } },
+      },
+      delete: {
+        tags: ['Matchmaking'],
+        summary: 'Cancelar la búsqueda automática de partida',
+        security: [{ bearerAuth: [] }],
+        responses: { '204': { description: 'Búsqueda cancelada' }, '401': { description: 'No autorizado' } },
+      },
+    },
+    '/api/v1/quick-match/proposal/confirm': {
+      post: {
+        tags: ['Matchmaking'],
+        summary: 'Confirmar una propuesta de Quick Match',
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'Propuesta confirmada' }, '401': { description: 'No autorizado' }, '409': { description: 'Propuesta no disponible' } },
+      },
+    },
+    '/api/v1/quick-match/proposal/dismiss': {
+      post: {
+        tags: ['Matchmaking'],
+        summary: 'Descartar una propuesta de Quick Match',
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'Propuesta descartada' }, '401': { description: 'No autorizado' }, '409': { description: 'Propuesta no disponible' } },
+      },
+    },
     '/api/v1/matches': {
       get: {
         tags: ['Matches'],

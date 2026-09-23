@@ -47,6 +47,8 @@ The app currently lists open matches and supports manual creation, but has no pe
 - QM-1: RED — missing `quick_match.validation.ts` caused the new Vitest suite to fail. GREEN — 3 validation tests passed.
 - QM-1: API `npm run typecheck`, `npm run lint`, and `npx prisma validate` passed.
 - QM-2 slice: API `npm run typecheck`, `npm run lint`, `git diff --check`, and the focused Quick Match Vitest set passed (8 tests). Grouped proposal expiry now releases pending/confirmed group holds atomically and returns all group searches to `SEARCHING` with `noMatchYet`.
+- Work-unit commit: `a121b92 fix(quick-match): expire grouped proposals atomically`; review assessment: medium risk, under budget, no native review due.
+- QM-2 follow-up: documented all five Quick Match routes in OpenAPI; typecheck and focused Quick Match/OpenAPI tests passed (9 tests). The full API suite reported 165 passed / 9 failed files (12 tests), with 11 failures caused by the test database missing `NotificationEvent.quickMatchSearchId` and one unrelated receipt-delivery assertion; these require the test DB migration to be applied.
 
 ## Next step
 - Add venue options and the post-confirmation court reservation flow for a fully confirmed new group; then complete QM-3–QM-6 verification and visual parity.
