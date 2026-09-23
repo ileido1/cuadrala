@@ -138,7 +138,47 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
     const SEARCH = await PRISMA.$transaction(async (_tx) => {
       const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, include: SEARCH_INCLUDE });
       if (CURRENT?.proposal === null || CURRENT === null || CURRENT.proposal.status !== 'PENDING') throw new AppError('PROPUESTA_NO_DISPONIBLE', 'No hay una propuesta activa para confirmar.', 409);
+      if (CURRENT.proposal.groupKey !== null) {
+        await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${CURRENT.proposal.groupKey}))`;
+      }
       await _tx.quickMatchProposal.update({ where: { id: CURRENT.proposal.id }, data: { status: 'CONFIRMED' } });
+
+      if (CURRENT.proposal.groupKey !== null) {
+        const GROUP = await _tx.quickMatchProposal.findMany({
+          where: { groupKey: CURRENT.proposal.groupKey },
+          select: { id: true, searchId: true, status: true, matchId: true, playerIds: true },
+        });
+        const ALL_CONFIRMED = GROUP.length === 4 && GROUP.every((_proposal) => _proposal.status === 'CONFIRMED');
+        if (ALL_CONFIRMED && GROUP.every((_proposal) => _proposal.matchId === null)) {
+          const PLAYER_IDS = [...new Set(GROUP[0]!.playerIds)];
+          if (PLAYER_IDS.length !== 4) {
+            throw new AppError('PROPUESTA_INVALIDA', 'La propuesta grupal no tiene cuatro jugadores válidos.', 409);
+          }
+          const MATCH = await _tx.match.create({
+            data: {
+              sportId: CURRENT.sportId,
+              categoryId: CURRENT.categoryId,
+              organizerUserId: PLAYER_IDS[0]!,
+              type: 'REGULAR',
+              status: 'SCHEDULED',
+              scheduledAt: null,
+              pricePerPlayerCents: 0,
+              maxParticipants: 4,
+              affectsElo: true,
+              participants: { create: PLAYER_IDS.map((_playerId) => ({ userId: _playerId })) },
+            },
+            select: { id: true },
+          });
+          await _tx.quickMatchProposal.updateMany({
+            where: { groupKey: CURRENT.proposal.groupKey },
+            data: { matchId: MATCH.id },
+          });
+        }
+        await _tx.quickMatchSearch.updateMany({
+          where: { id: { in: GROUP.map((_proposal) => _proposal.searchId) } },
+          data: { status: 'CONFIRMED', noMatchYet: false },
+        });
+      }
       return _tx.quickMatchSearch.update({ where: { id: CURRENT.id }, data: { status: 'CONFIRMED', noMatchYet: false }, include: SEARCH_INCLUDE });
     });
     return mapSearchSV(SEARCH);

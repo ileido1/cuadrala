@@ -21,7 +21,7 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Evidence: Prisma migration + generated client; `npm run typecheck`, `npm run lint`, targeted Vitest validation test, and `npx prisma validate` passed.
   - Commit: `feat(quick-match): persist player searches` (QM-1 work-unit head).
 - [ ] QM-2 Implement server matching against open matches first, then compatible active searches; enforce server-owned 2-minute holds, expiry, dismissal, and confirmation rules.
-  - Partial: open-match priority now validates the selected time slot and serializes active holds per match; read-time expiry, dismiss, and explicit open-match confirmation endpoints are implemented. Compatible four-player group proposals are now created after open-match inventory; a cancellation releases the whole group. Court selection/reservation after four confirmations is still pending.
+- Partial: open-match priority now validates the selected time slot and serializes active holds per match; read-time expiry, dismiss, and explicit open-match confirmation endpoints are implemented. Compatible four-player group proposals are now created after open-match inventory; a cancellation releases the whole group. Once all four players confirm, the backend now atomically creates one four-player `Match`; court selection/reservation is still pending.
   - Current slice: close the grouped-proposal expiry gap. Expiry must atomically release every pending proposal in the group and return every affected search to `SEARCHING` with `noMatchYet`.
 - [ ] QM-3 Wire mobile data, dependency injection, routes, Cubit, and persistent Quick Match state.
   - Partial: API client/repository/DTO/Cubit now load, start, dismiss, confirm, and cancel persistent state; configuration obtains valid sport/category IDs from the catalog.
@@ -49,9 +49,10 @@ The app currently lists open matches and supports manual creation, but has no pe
 - QM-2 slice: API `npm run typecheck`, `npm run lint`, `git diff --check`, and the focused Quick Match Vitest set passed (8 tests). Grouped proposal expiry now releases pending/confirmed group holds atomically and returns all group searches to `SEARCHING` with `noMatchYet`.
 - Work-unit commit: `a121b92 fix(quick-match): expire grouped proposals atomically`; review assessment: medium risk, under budget, no native review due.
 - QM-2 follow-up: documented all five Quick Match routes in OpenAPI; typecheck and focused Quick Match/OpenAPI tests passed (9 tests). The full API suite reported 165 passed / 9 failed files (12 tests), with 11 failures caused by the test database missing `NotificationEvent.quickMatchSearchId` and one unrelated receipt-delivery assertion; these require the test DB migration to be applied.
+- QM-2 follow-up: applied all pending Prisma migrations to `cuadrala_test`; the six previously blocked notification integration files now pass (18 tests). The grouped confirmation finalization also passes `npm run typecheck`.
 
 ## Next step
-- Add venue options and the post-confirmation court reservation flow for a fully confirmed new group; then complete QM-3–QM-6 verification and visual parity.
+- Add venue options and accept the selected option on confirmation so the linked court reservation is created atomically; then complete QM-3–QM-6 verification and visual parity.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.
