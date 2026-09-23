@@ -62,7 +62,11 @@ void main() {
           matchId: null,
           tournamentId: 't-1',
         );
-        expect(d.route, Routes.tournamentDetail('t-1'), reason: type);
+        expect(
+          d.route,
+          Routes.tournamentDetail('t-1', invitation: true),
+          reason: type,
+        );
         expect(d.replacesStack, isFalse, reason: type);
       }
     });
@@ -100,7 +104,7 @@ void main() {
         eventType: 'TOURNAMENT_SCHEDULE_PUBLISHED',
       );
 
-      expect(d?.route, Routes.tournamentDetail('t-9'));
+      expect(d?.route, Routes.tournamentDetail('t-9', invitation: true));
     });
 
     test('should read the match id out of the API deep link', () {

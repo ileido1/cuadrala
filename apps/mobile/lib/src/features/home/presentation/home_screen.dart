@@ -12,6 +12,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../matches/data/models/open_match_dto.dart';
 import '../../quick_match/data/quick_match_repository.dart';
+import '../../quick_match/data/models/quick_match_search_dto.dart';
 import '../../venues/presentation/create_match_panel.dart';
 import '../../matches/presentation/open_match_display.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -217,7 +218,9 @@ final class _QuickMatchHomeBanner extends StatefulWidget {
 }
 
 final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
-  late final Future _search = getIt<QuickMatchRepository>().current();
+  late final Future _search = getIt.isRegistered<QuickMatchRepository>()
+      ? getIt<QuickMatchRepository>().current()
+      : Future<QuickMatchSearchDto?>.value(null);
 
   @override
   Widget build(BuildContext context) => FutureBuilder(
@@ -381,7 +384,7 @@ final class _HeroCard extends StatelessWidget {
                           ),
                           icon: const Icon(AppIcons.search, size: 18),
                           label: const Text(
-                            'Encontrar',
+                            'Buscar',
                             style: TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),

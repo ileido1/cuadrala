@@ -51,8 +51,10 @@ final class Routes {
   static String venueDetail(String venueId) => '/descubrir/$venueId';
 
   static String matchDetail(String matchId) => '/matches/$matchId';
-  static String tournamentDetail(String tournamentId) =>
-      '/tournaments/$tournamentId';
+  static String tournamentDetail(
+    String tournamentId, {
+    bool invitation = false,
+  }) => '/tournaments/$tournamentId${invitation ? '?invitation=pending' : ''}';
   static String notificationDetail(String notificationId) =>
       '/notifications/$notificationId';
 

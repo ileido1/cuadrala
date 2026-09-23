@@ -125,11 +125,13 @@ final class TournamentDetailScreen extends StatefulWidget {
     required this.tournamentId,
     this.extra,
     this.viewerIsOrganizer,
+    this.openInvitation = false,
   });
 
   final String tournamentId;
   final Object? extra;
   final bool? viewerIsOrganizer;
+  final bool openInvitation;
 
   @override
   State<TournamentDetailScreen> createState() => _TournamentDetailScreenState();
@@ -144,6 +146,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
   TournamentListItemDto? _tournament;
   bool? _viewerIsOrganizer;
   bool _loadingTournament = false;
+  bool _invitationOpened = false;
   List<UserRatingDto>? _playerRatings;
   TabController? _tabController;
 
@@ -247,6 +250,10 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
         _loadingTournament = false;
       });
       _loadOrganizerData();
+      final registrationsState = _registrationsCubit.state;
+      if (registrationsState is TournamentRegistrationsLoaded) {
+        _openPendingInvitationIfRequested(registrationsState);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _loadingTournament = false);
@@ -307,6 +314,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             listener: (_, state) {
               if (state is TournamentRegistrationsLoaded) {
                 _loadOrganizerData();
+                _openPendingInvitationIfRequested(state);
               }
             },
             child: _loadingTournament
@@ -322,6 +330,31 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
                   ),
           ),
     );
+  }
+
+  void _openPendingInvitationIfRequested(TournamentRegistrationsLoaded state) {
+    if (!widget.openInvitation || _invitationOpened || _tournament == null) {
+      return;
+    }
+    final userId = _registrationsCubit.currentUserId;
+    if (userId == null) return;
+    final invitation = state.pendingInvitationFor(userId);
+    if (invitation == null) return;
+    _invitationOpened = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => BlocProvider.value(
+            value: _registrationsCubit,
+            child: TournamentInvitationScreen(
+              tournament: _tournament!,
+              invitation: invitation,
+            ),
+          ),
+        ),
+      );
+    });
   }
 }
 

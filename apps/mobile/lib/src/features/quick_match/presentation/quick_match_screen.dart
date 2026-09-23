@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'cubit/quick_match_cubit.dart';
 import 'cubit/quick_match_state.dart';
+import '../data/models/quick_match_search_dto.dart';
 import '../../../router/routes.dart';
 
 final class QuickMatchScreen extends StatefulWidget {
@@ -57,9 +58,7 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
             ),
           QuickMatchActive(:final search) when search.status == 'EXPIRED' =>
             const _Expired(),
-          QuickMatchActive(:final search) => _Searching(
-            noMatchYet: search.noMatchYet,
-          ),
+          QuickMatchActive(:final search) => _Searching(search: search),
         },
       ),
     ),
@@ -500,20 +499,20 @@ final class _Countdown extends StatelessWidget {
 }
 
 final class _Searching extends StatelessWidget {
-  const _Searching({required this.noMatchYet});
-  final bool noMatchYet;
+  const _Searching({required this.search});
+  final QuickMatchSearchDto search;
   @override
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
     children: [
       _PulseIcon(
-        icon: noMatchYet
+        icon: search.noMatchYet
             ? Icons.notifications_none_rounded
             : Icons.search_rounded,
       ),
       const SizedBox(height: 18),
       Text(
-        noMatchYet ? 'Seguimos buscando' : 'Buscando jugadores',
+        search.noMatchYet ? 'Seguimos buscando' : 'Buscando jugadores',
         textAlign: TextAlign.center,
         style: Theme.of(
           context,
@@ -521,15 +520,27 @@ final class _Searching extends StatelessWidget {
       ),
       const SizedBox(height: 8),
       Text(
-        noMatchYet
+        search.noMatchYet
             ? 'Todavía no encontramos una opción compatible. Te avisamos cuando aparezca.'
             : 'Estamos revisando partidas abiertas y jugadores con tu mismo horario.',
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 22),
-      _StepCard(noMatchYet: noMatchYet),
+      _StepCard(noMatchYet: search.noMatchYet),
       const SizedBox(height: 16),
-      if (noMatchYet) ...[
+      if (search.noMatchYet) ...[
+        _ActionRow(
+          icon: Icons.schedule_rounded,
+          title: 'Cambiar horario',
+          onTap: () => _showScheduleSheet(context),
+        ),
+        _ActionRow(
+          icon: Icons.location_on_outlined,
+          title: 'Ampliar zona (${search.zoneKm} km)',
+          onTap: search.zoneKm >= 100
+              ? null
+              : () => context.read<QuickMatchCubit>().expandZone(),
+        ),
         _ActionRow(
           icon: Icons.sports_tennis_rounded,
           title: 'Explorar partidas abiertas',
@@ -546,6 +557,98 @@ final class _Searching extends StatelessWidget {
         child: const Text('Salir de la cola'),
       ),
     ],
+  );
+
+  void _showScheduleSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => _ScheduleSheet(search: search),
+    );
+  }
+}
+
+final class _ScheduleSheet extends StatefulWidget {
+  const _ScheduleSheet({required this.search});
+  final QuickMatchSearchDto search;
+  @override
+  State<_ScheduleSheet> createState() => _ScheduleSheetState();
+}
+
+final class _ScheduleSheetState extends State<_ScheduleSheet> {
+  late String _day;
+  late final Set<String> _slots;
+
+  @override
+  void initState() {
+    super.initState();
+    final date = widget.search.targetDate.toLocal();
+    final now = DateTime.now();
+    final target = DateTime(date.year, date.month, date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    _day = target.difference(today).inDays == 1 ? 'TOMORROW' : 'TODAY';
+    _slots = {...widget.search.slots};
+    if (_slots.isEmpty) _slots.add('EVENING');
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Cambiar horario', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          children: ['TODAY', 'TOMORROW']
+              .map(
+                (day) => ChoiceChip(
+                  label: Text(day == 'TODAY' ? 'Hoy' : 'Mañana'),
+                  selected: _day == day,
+                  onSelected: (_) => setState(() => _day = day),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          children:
+              const [
+                    ('MORNING', 'Mañana'),
+                    ('AFTERNOON', 'Tarde'),
+                    ('EVENING', 'Noche'),
+                  ]
+                  .map(
+                    (entry) => FilterChip(
+                      label: Text(entry.$2),
+                      selected: _slots.contains(entry.$1),
+                      onSelected: (selected) => setState(() {
+                        if (selected) {
+                          _slots.add(entry.$1);
+                        } else if (_slots.length > 1) {
+                          _slots.remove(entry.$1);
+                        }
+                      }),
+                    ),
+                  )
+                  .toList(),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(context);
+            context.read<QuickMatchCubit>().changeSchedule(
+              day: _day,
+              slots: _slots.toList(),
+            );
+          },
+          child: const Text('Actualizar búsqueda'),
+        ),
+      ],
+    ),
   );
 }
 
@@ -669,7 +772,7 @@ final class _ActionRow extends StatelessWidget {
   });
   final IconData icon;
   final String title;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Card(
     child: ListTile(

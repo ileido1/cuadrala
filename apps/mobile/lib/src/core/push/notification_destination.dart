@@ -31,7 +31,9 @@ NotificationDestination notificationDestination({
   //? a la misma pantalla, y una quinta notificación de torneo va a querer lo
   //? mismo sin tener que tocar esta lista.
   if (tournamentId != null && tournamentId.isNotEmpty) {
-    return NotificationDestination(Routes.tournamentDetail(tournamentId));
+    return NotificationDestination(
+      Routes.tournamentDetail(tournamentId, invitation: true),
+    );
   }
 
   if (notificationTypeFromWire(eventType) ==
@@ -95,6 +97,6 @@ NotificationDestination? notificationDestinationFromDeepLink(
 
 String? _idAfter(String link, String prefix) {
   if (!link.startsWith(prefix)) return null;
-  final id = link.substring(prefix.length).split('/').first;
+  final id = link.substring(prefix.length).split('/').first.split('?').first;
   return id.isEmpty ? null : id;
 }

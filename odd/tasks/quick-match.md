@@ -56,9 +56,18 @@ The app currently lists open matches and supports manual creation, but has no pe
 - QM-4/QM-5 completion: expired proposal holds now surface `EXPIRED` to the mobile client, the expired screen offers `Seguir buscando` with the prior search preferences or `Salir de la cola`, and `MATCH_SLOT_OPENED` notifications deep-link to the specific match. Flutter focused Quick Match/notification tests pass (12), `flutter analyze` passes, API typecheck/lint pass, and `git diff --check` passes.
 - Work-unit commit: `195dbc2 feat(quick-match): finish visual and notification flows`.
 - Full-suite follow-up: the API suite was started against the migrated test database but was interrupted after a pre-existing 5-second timeout in `tournament_guest_registration_end_to_end.http-db.integration.test.ts` T24; the failure is not in this slice. The Flutter suite reached 784 passing tests but reported 10 existing failures in home/router expectations; the focused Quick Match and notification tests remain green.
+- Delivery hardening verification: Flutter `flutter analyze` passed and the complete suite passed with 799 tests. API `npm run typecheck`, `npm run lint`, and the complete suite passed with 174 files and 1021 tests. T24 passed; the suite timeout issue was resolved by explicit test/hook timeouts for shared-DB integration scenarios.
 
 ## Next step
-- Rerun the full API/mobile suites before delivery; prior full runs remain limited by the documented pre-existing integration timeout and 10 existing Flutter home/router expectation failures.
+- Complete the delivery hardening requested on 2026-09-23: eliminate the API integration timeout, repair the Flutter Home/Router expectations, add visual screenshot QA, make no-match filters functional, and open tournament invitations directly with accept/reject actions.
+
+## Delivery hardening tasks (2026-09-23)
+- [x] DH-1 API integration timeout: reproduce the reported guest-registration T24 and identify the actual full-suite timeouts. T24 passed; the reproducible timeouts were tournament match materialization exceeding Vitest's 5-second default and two slow DB hooks, fixed with 15-second test and 30-second hook timeouts.
+- [x] DH-2 Flutter regression suite: repaired Home/Router failures without weakening assertions; the full suite passed with 799 tests.
+- [ ] DH-3 Visual QA: capture the Quick Match screen on the available device/emulator and compare it with the handoff states; record any corrections and evidence. Pending: no device/emulator is exposed in the current CUA session.
+- [x] DH-4 No-match actions: implemented functional change-time and expand-zone interactions, preserving search preferences and restarting through the Cubit/API; added Cubit coverage.
+- [x] DH-5 Invitation-specific navigation: tournament notification routes now carry an invitation intent and the detail screen opens the pending invitation flow with accept/reject actions when one exists.
+- [x] DH-6 Final verification and delivery: Flutter and API checks passed; changes are ready to commit and push to `main`.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.

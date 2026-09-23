@@ -83,6 +83,51 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
     await start(body);
   }
 
+  Future<void> changeSchedule({
+    required String day,
+    required List<String> slots,
+  }) async {
+    final current = state;
+    if (current is! QuickMatchActive) return;
+    await start({
+      'sportId': current.search.sportId,
+      'categoryId': current.search.categoryId,
+      'day': day,
+      'slots': slots,
+      'widenLevel': current.search.widenLevel,
+      'zoneKm': current.search.zoneKm,
+      'includeOpenMatches': current.search.includeOpenMatches,
+    });
+  }
+
+  Future<void> expandZone() async {
+    final current = state;
+    if (current is! QuickMatchActive) return;
+    final nextZone = (current.search.zoneKm + 10).clamp(10, 100);
+    if (nextZone == current.search.zoneKm) return;
+    final target = current.search.targetDate.toLocal();
+    final today = DateTime.now();
+    final targetDate = DateTime(target.year, target.month, target.day);
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final days = targetDate.difference(todayDate).inDays;
+    await start({
+      'sportId': current.search.sportId,
+      'categoryId': current.search.categoryId,
+      'day': days == 0
+          ? 'TODAY'
+          : days == 1
+          ? 'TOMORROW'
+          : 'CUSTOM',
+      if (days != 0 && days != 1)
+        'date':
+            '${target.year.toString().padLeft(4, '0')}-${target.month.toString().padLeft(2, '0')}-${target.day.toString().padLeft(2, '0')}',
+      'slots': current.search.slots,
+      'widenLevel': current.search.widenLevel,
+      'zoneKm': nextZone,
+      'includeOpenMatches': current.search.includeOpenMatches,
+    });
+  }
+
   Future<
     ({
       String sportId,

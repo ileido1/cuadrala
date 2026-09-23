@@ -58,4 +58,43 @@ void main() {
     act: (cubit) => cubit.cancel(),
     expect: () => [isA<QuickMatchIdle>()],
   );
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should restart the queue with the selected schedule',
+    build: build,
+    seed: () => QuickMatchActive(_search),
+    setUp: () => when(() => repository.start(any())).thenAnswer((_) async => _search),
+    act: (cubit) => cubit.changeSchedule(
+      day: 'TOMORROW',
+      slots: ['MORNING'],
+    ),
+    verify: (_) {
+      verify(() => repository.start({
+        'sportId': 'sport',
+        'categoryId': 'category',
+        'day': 'TOMORROW',
+        'slots': ['MORNING'],
+        'widenLevel': false,
+        'zoneKm': 10,
+        'includeOpenMatches': true,
+      })).called(1);
+    },
+    expect: () => [isA<QuickMatchLoading>(), isA<QuickMatchActive>()],
+  );
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should expand the search radius by ten kilometers',
+    build: build,
+    seed: () => QuickMatchActive(_search),
+    setUp: () => when(() => repository.start(any())).thenAnswer((_) async => _search),
+    act: (cubit) => cubit.expandZone(),
+    verify: (_) {
+      final captured = verify(() => repository.start(captureAny())).captured.single
+          as Map<String, Object?>;
+      expect(captured['zoneKm'], 20);
+      expect(captured['sportId'], 'sport');
+      expect(captured['categoryId'], 'category');
+    },
+    expect: () => [isA<QuickMatchLoading>(), isA<QuickMatchActive>()],
+  );
 }

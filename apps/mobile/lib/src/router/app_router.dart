@@ -289,6 +289,8 @@ final class AppRouter {
               return TournamentDetailScreen(
                 tournamentId: tournamentId,
                 extra: state.extra,
+                openInvitation:
+                    state.uri.queryParameters['invitation'] == 'pending',
               );
             },
           ),
