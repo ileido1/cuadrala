@@ -56,6 +56,33 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
     emit(const QuickMatchIdle());
   }
 
+  Future<void> continueSearching() async {
+    final current = state;
+    if (current is! QuickMatchActive) return;
+    final target = current.search.targetDate.toLocal();
+    final today = DateTime.now();
+    final date = DateTime(target.year, target.month, target.day);
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final days = date.difference(todayDate).inDays;
+    final body = <String, Object?>{
+      'sportId': current.search.sportId,
+      'categoryId': current.search.categoryId,
+      'day': days == 0
+          ? 'TODAY'
+          : days == 1
+          ? 'TOMORROW'
+          : 'CUSTOM',
+      if (days != 0 && days != 1)
+        'date':
+            '${target.year.toString().padLeft(4, '0')}-${target.month.toString().padLeft(2, '0')}-${target.day.toString().padLeft(2, '0')}',
+      'slots': current.search.slots,
+      'widenLevel': current.search.widenLevel,
+      'zoneKm': current.search.zoneKm,
+      'includeOpenMatches': current.search.includeOpenMatches,
+    };
+    await start(body);
+  }
+
   Future<
     ({
       String sportId,

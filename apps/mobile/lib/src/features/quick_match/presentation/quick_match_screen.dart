@@ -24,7 +24,20 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Encontrar partida')),
+    appBar: AppBar(
+      leading: IconButton(
+        tooltip: 'Volver',
+        onPressed: () => context.go(Routes.home),
+        icon: const Icon(Icons.arrow_back_rounded),
+      ),
+      title: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Encontrar partida'),
+          Text('Matchmaking por horario y nivel'),
+        ],
+      ),
+    ),
     body: SafeArea(
       child: BlocBuilder<QuickMatchCubit, QuickMatchState>(
         builder: (context, state) => switch (state) {
@@ -42,6 +55,8 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
               isNewGroup: search.proposal?.type == 'NEW_GROUP',
               matchId: search.proposal?.matchId,
             ),
+          QuickMatchActive(:final search) when search.status == 'EXPIRED' =>
+            const _Expired(),
           QuickMatchActive(:final search) => _Searching(
             noMatchYet: search.noMatchYet,
           ),
@@ -488,36 +503,192 @@ final class _Searching extends StatelessWidget {
   const _Searching({required this.noMatchYet});
   final bool noMatchYet;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(28),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const SizedBox(
-          width: 72,
-          height: 72,
-          child: CircularProgressIndicator(strokeWidth: 6),
-        ),
-        const SizedBox(height: 28),
-        Text(
-          noMatchYet ? 'Seguimos buscando' : 'Buscando tu partida',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          noMatchYet
-              ? 'Todavía no hay una opción compatible. Te avisamos cuando aparezca.'
-              : 'Estamos revisando partidas abiertas y jugadores con tu mismo horario.',
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 26),
-        OutlinedButton(
-          onPressed: () => context.read<QuickMatchCubit>().cancel(),
-          child: const Text('Salir de la cola'),
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+    children: [
+      _PulseIcon(
+        icon: noMatchYet
+            ? Icons.notifications_none_rounded
+            : Icons.search_rounded,
+      ),
+      const SizedBox(height: 18),
+      Text(
+        noMatchYet ? 'Seguimos buscando' : 'Buscando jugadores',
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        noMatchYet
+            ? 'Todavía no encontramos una opción compatible. Te avisamos cuando aparezca.'
+            : 'Estamos revisando partidas abiertas y jugadores con tu mismo horario.',
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 22),
+      _StepCard(noMatchYet: noMatchYet),
+      const SizedBox(height: 16),
+      if (noMatchYet) ...[
+        _ActionRow(
+          icon: Icons.sports_tennis_rounded,
+          title: 'Explorar partidas abiertas',
+          onTap: () => context.go(Routes.discoverMatches),
         ),
       ],
+      const SizedBox(height: 20),
+      FilledButton(
+        onPressed: () => context.go(Routes.home),
+        child: const Text('Listo, avisame'),
+      ),
+      TextButton(
+        onPressed: () => context.read<QuickMatchCubit>().cancel(),
+        child: const Text('Salir de la cola'),
+      ),
+    ],
+  );
+}
+
+final class _Expired extends StatelessWidget {
+  const _Expired();
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.fromLTRB(20, 36, 20, 28),
+    children: [
+      _PulseIcon(icon: Icons.schedule_rounded),
+      const SizedBox(height: 20),
+      Text(
+        'La propuesta expiró',
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 10),
+      const Text(
+        'Pasaron los 2 minutos y el cupo se liberó. No se cobró nada.',
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 20),
+      const _SurfaceMessage(
+        text:
+            'Tu búsqueda sigue activa y podés volver a intentarlo cuando quieras.',
+      ),
+      const SizedBox(height: 24),
+      FilledButton(
+        onPressed: () => context.read<QuickMatchCubit>().continueSearching(),
+        child: const Text('Seguir buscando'),
+      ),
+      OutlinedButton(
+        onPressed: () => context.read<QuickMatchCubit>().cancel(),
+        child: const Text('Salir de la cola'),
+      ),
+    ],
+  );
+}
+
+final class _PulseIcon extends StatelessWidget {
+  const _PulseIcon({required this.icon});
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return Center(
+      child: Container(
+        width: 116,
+        height: 116,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withValues(alpha: .28), width: 10),
+          color: color.withValues(alpha: .12),
+        ),
+        child: Container(
+          margin: const EdgeInsets.all(14),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.onPrimary,
+            size: 34,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _StepCard extends StatelessWidget {
+  const _StepCard({required this.noMatchYet});
+  final bool noMatchYet;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            noMatchYet ? 'Seguimos atentos' : 'Así funciona',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          const _Step(label: 'Revisamos partidas abiertas'),
+          const _Step(label: 'Buscamos jugadores compatibles'),
+          const _Step(label: 'Te avisamos cuando haya una opción'),
+        ],
+      ),
+    ),
+  );
+}
+
+final class _Step extends StatelessWidget {
+  const _Step({required this.label});
+  final String label;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      children: [
+        Icon(
+          Icons.check_circle_rounded,
+          color: Theme.of(context).colorScheme.primary,
+          size: 18,
+        ),
+        const SizedBox(width: 10),
+        Text(label),
+      ],
+    ),
+  );
+}
+
+final class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
+    ),
+  );
+}
+
+final class _SurfaceMessage extends StatelessWidget {
+  const _SurfaceMessage({required this.text});
+  final String text;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Text(text, textAlign: TextAlign.center),
     ),
   );
 }

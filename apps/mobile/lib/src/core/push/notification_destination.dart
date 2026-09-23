@@ -49,6 +49,7 @@ NotificationDestination notificationDestination({
     //? push desde background, una partida cancelada caía al listado de avisos.
     //? Al unificar se toma el comportamiento más útil de las dos copias.
     NotificationType.matchPlayerJoined ||
+    NotificationType.matchSlotOpened ||
     NotificationType.paymentConfirmed ||
     NotificationType.paymentPending ||
     NotificationType.matchCancelled => NotificationDestination(

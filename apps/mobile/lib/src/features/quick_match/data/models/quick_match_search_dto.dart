@@ -72,6 +72,10 @@ final class QuickMatchSearchDto {
     required this.status,
     required this.noMatchYet,
     required this.slots,
+    required this.targetDate,
+    required this.widenLevel,
+    required this.zoneKm,
+    required this.includeOpenMatches,
     required this.proposal,
   });
 
@@ -81,6 +85,10 @@ final class QuickMatchSearchDto {
   final String status;
   final bool noMatchYet;
   final List<String> slots;
+  final DateTime targetDate;
+  final bool widenLevel;
+  final int zoneKm;
+  final bool includeOpenMatches;
   final QuickMatchProposalDto? proposal;
 
   factory QuickMatchSearchDto.fromJson(Map<String, Object?> json) =>
@@ -93,6 +101,10 @@ final class QuickMatchSearchDto {
         slots: (json['slots'] as List? ?? const [])
             .whereType<String>()
             .toList(),
+        targetDate: DateTime.parse(json['targetDate'] as String),
+        widenLevel: json['widenLevel'] as bool? ?? false,
+        zoneKm: (json['zoneKm'] as num?)?.toInt() ?? 10,
+        includeOpenMatches: json['includeOpenMatches'] as bool? ?? true,
         proposal: json['proposal'] is Map<String, Object?>
             ? QuickMatchProposalDto.fromJson(
                 json['proposal'] as Map<String, Object?>,

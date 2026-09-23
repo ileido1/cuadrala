@@ -302,12 +302,12 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
         });
         await _tx.quickMatchSearch.updateMany({
           where: { id: { in: GROUP_SEARCHES.map((_proposal) => _proposal.searchId) } },
-          data: { status: 'SEARCHING', noMatchYet: true },
+          data: { status: 'EXPIRED', noMatchYet: true },
         });
         return;
       }
       await _tx.quickMatchProposal.update({ where: { id: SEARCH.proposal.id }, data: { status: 'EXPIRED' } });
-      await _tx.quickMatchSearch.update({ where: { id: SEARCH.id }, data: { status: 'SEARCHING', noMatchYet: true } });
+      await _tx.quickMatchSearch.update({ where: { id: SEARCH.id }, data: { status: 'EXPIRED', noMatchYet: true } });
     });
   }
 }

@@ -18,6 +18,10 @@ final _search = QuickMatchSearchDto(
   status: 'PROPOSAL',
   noMatchYet: false,
   slots: ['EVENING'],
+  targetDate: DateTime.utc(2030),
+  widenLevel: false,
+  zoneKm: 10,
+  includeOpenMatches: true,
   proposal: QuickMatchProposalDto(
     id: 'proposal',
     type: 'OPEN_MATCH',

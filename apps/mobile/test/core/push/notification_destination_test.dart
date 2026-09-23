@@ -23,6 +23,7 @@ void main() {
         'PAYMENT_CONFIRMED',
         'PAYMENT_PENDING',
         'MATCH_CANCELLED',
+        'MATCH_SLOT_OPENED',
       ]) {
         final d = notificationDestination(
           eventType: type,
