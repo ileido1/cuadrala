@@ -30,3 +30,17 @@ export const START_QUICK_MATCH_BODY_SCHEMA = z
       });
     }
   });
+
+export const CONFIRM_QUICK_MATCH_PROPOSAL_BODY_SCHEMA = z
+  .object({
+    venueId: z.string().uuid('venueId debe ser un UUID valido.').optional(),
+    courtId: z.string().uuid('courtId debe ser un UUID valido.').optional(),
+    scheduledAt: z.coerce.date().optional(),
+  })
+  .strict()
+  .superRefine((_data, _ctx) => {
+    const PRESENT = [_data.venueId, _data.courtId, _data.scheduledAt].filter((_value) => _value !== undefined).length;
+    if (PRESENT !== 0 && PRESENT !== 3) {
+      _ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'venueId, courtId y scheduledAt deben enviarse juntos.', path: ['venueId'] });
+    }
+  });

@@ -9,7 +9,7 @@ import {
   MATCH_QUICK_MATCH_UC,
   START_QUICK_MATCH_UC,
 } from '../composition/quick_match.composition.js';
-import { START_QUICK_MATCH_BODY_SCHEMA } from '../validation/quick_match.validation.js';
+import { CONFIRM_QUICK_MATCH_PROPOSAL_BODY_SCHEMA, START_QUICK_MATCH_BODY_SCHEMA } from '../validation/quick_match.validation.js';
 
 function actorUserIdSV(_req: Request): string {
   const USER_ID = _req.authUser?.id;
@@ -53,6 +53,12 @@ export async function postDismissMyQuickMatchProposalCON(_req: Request, _res: Re
 }
 
 export async function postConfirmMyQuickMatchProposalCON(_req: Request, _res: Response): Promise<void> {
-  const SEARCH = await CONFIRM_MY_QUICK_MATCH_PROPOSAL_UC.executeSV(actorUserIdSV(_req));
+  const BODY = CONFIRM_QUICK_MATCH_PROPOSAL_BODY_SCHEMA.parse(_req.body ?? {});
+  const VENUE_SELECTION = BODY.venueId === undefined ? undefined : {
+    venueId: BODY.venueId,
+    courtId: BODY.courtId!,
+    scheduledAt: BODY.scheduledAt!,
+  };
+  const SEARCH = await CONFIRM_MY_QUICK_MATCH_PROPOSAL_UC.executeSV(actorUserIdSV(_req), VENUE_SELECTION);
   _res.status(200).json({ success: true, message: 'Partida confirmada correctamente.', data: SEARCH });
 }

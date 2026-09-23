@@ -793,7 +793,23 @@ const OPENAPI_CONST = {
         tags: ['Matchmaking'],
         summary: 'Confirmar una propuesta de Quick Match',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Propuesta confirmada' }, '401': { description: 'No autorizado' }, '409': { description: 'Propuesta no disponible' } },
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  venueId: { type: 'string', format: 'uuid' },
+                  courtId: { type: 'string', format: 'uuid' },
+                  scheduledAt: { type: 'string', format: 'date-time' },
+                },
+                description: 'Obligatorio para finalizar una propuesta de grupo nuevo; omitido para un partido abierto.',
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'Propuesta confirmada' }, '400': { description: 'Validación fallida' }, '401': { description: 'No autorizado' }, '409': { description: 'Propuesta no disponible o cancha ocupada' } },
       },
     },
     '/api/v1/quick-match/proposal/dismiss': {

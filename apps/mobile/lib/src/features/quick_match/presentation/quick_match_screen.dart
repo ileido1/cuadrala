@@ -281,8 +281,15 @@ final class _ConfigurationSheetState extends State<_ConfigurationSheet> {
   );
 }
 
-final class _Proposal extends StatelessWidget {
+final class _Proposal extends StatefulWidget {
   const _Proposal();
+
+  @override
+  State<_Proposal> createState() => _ProposalState();
+}
+
+final class _ProposalState extends State<_Proposal> {
+  int? _selectedOption;
 
   @override
   Widget build(BuildContext context) {
@@ -327,9 +334,62 @@ final class _Proposal extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           _Countdown(expiresAt: proposal.expiresAt),
+          if (proposal.type == 'NEW_GROUP' &&
+              proposal.venueOptions.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Elegí sede y horario',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...proposal.venueOptions.asMap().entries.map((entry) {
+              final option = entry.value;
+              final selected = _selectedOption == entry.key;
+              final price = (option.pricePerPlayerCents / 100).toStringAsFixed(
+                2,
+              );
+              return Card(
+                child: ListTile(
+                  onTap: () => setState(() => _selectedOption = entry.key),
+                  leading: Icon(
+                    selected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+                  title: Text(option.venueName),
+                  subtitle: Text(
+                    '${option.courtName} · ${_formatOptionDate(option.scheduledAt)}',
+                  ),
+                  trailing: Text('US\$ $price'),
+                ),
+              );
+            }),
+          ] else if (proposal.type == 'NEW_GROUP') ...[
+            const SizedBox(height: 16),
+            Text(
+              'Estamos buscando cancha cerca de vos. Te avisaremos antes de reservar.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
           const SizedBox(height: 20),
           FilledButton(
-            onPressed: () => context.read<QuickMatchCubit>().confirmProposal(),
+            onPressed:
+                proposal.type == 'NEW_GROUP' &&
+                    proposal.venueOptions.isNotEmpty &&
+                    _selectedOption == null
+                ? null
+                : () => context.read<QuickMatchCubit>().confirmProposal(
+                    option: _selectedOption == null
+                        ? null
+                        : proposal.venueOptions[_selectedOption!],
+                  ),
             child: Text(
               proposal.type == 'NEW_GROUP'
                   ? 'Confirmar disponibilidad'
@@ -353,6 +413,13 @@ final class _Proposal extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatOptionDate(DateTime value) {
+  final local = value.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
 }
 
 final class _Countdown extends StatelessWidget {

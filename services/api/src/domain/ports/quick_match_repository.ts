@@ -3,6 +3,12 @@ export type QuickMatchSearchStatus = 'SEARCHING' | 'PROPOSAL' | 'CONFIRMED' | 'C
 export type QuickMatchProposalType = 'OPEN_MATCH' | 'NEW_GROUP';
 export type QuickMatchProposalStatus = 'PENDING' | 'CONFIRMED' | 'DECLINED' | 'EXPIRED' | 'DISMISSED';
 
+export type QuickMatchVenueSelectionDTO = {
+  venueId: string;
+  courtId: string;
+  scheduledAt: Date;
+};
+
 export type QuickMatchProposalDTO = {
   id: string;
   type: QuickMatchProposalType;
@@ -50,5 +56,5 @@ export interface QuickMatchRepository {
   createGroupProposalsSV(_search: QuickMatchSearchDTO, _group: QuickMatchGroupCandidateDTO, _expiresAt: Date): Promise<QuickMatchSearchDTO | null>;
   markNoMatchYetSV(_searchId: string): Promise<QuickMatchSearchDTO>;
   dismissProposalForUserSV(_userId: string): Promise<QuickMatchSearchDTO>;
-  confirmProposalForUserSV(_userId: string): Promise<QuickMatchSearchDTO>;
+  confirmProposalForUserSV(_userId: string, _venueSelection?: QuickMatchVenueSelectionDTO): Promise<QuickMatchSearchDTO>;
 }

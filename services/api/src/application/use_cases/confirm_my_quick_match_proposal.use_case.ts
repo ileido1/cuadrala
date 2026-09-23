@@ -1,5 +1,5 @@
 import { AppError } from '../../domain/errors/app_error.js';
-import type { QuickMatchRepository, QuickMatchSearchDTO } from '../../domain/ports/quick_match_repository.js';
+import type { QuickMatchRepository, QuickMatchSearchDTO, QuickMatchVenueSelectionDTO } from '../../domain/ports/quick_match_repository.js';
 import type { JoinMatchUseCase } from './join_match.use_case.js';
 
 export class ConfirmMyQuickMatchProposalUseCase {
@@ -8,7 +8,7 @@ export class ConfirmMyQuickMatchProposalUseCase {
     private readonly _joinMatch: JoinMatchUseCase,
   ) {}
 
-  async executeSV(_userId: string): Promise<QuickMatchSearchDTO> {
+  async executeSV(_userId: string, _venueSelection?: QuickMatchVenueSelectionDTO): Promise<QuickMatchSearchDTO> {
     const SEARCH = await this._repository.findByUserIdSV(_userId);
     if (SEARCH === null || SEARCH.proposal === null || SEARCH.proposal.status !== 'PENDING') {
       throw new AppError('PROPUESTA_NO_DISPONIBLE', 'No hay una propuesta activa para confirmar.', 409);
@@ -25,6 +25,6 @@ export class ConfirmMyQuickMatchProposalUseCase {
       await this._joinMatch.executeSV(PROPOSAL.matchId, _userId);
     }
     // Un grupo nuevo no aparta cancha ni genera pagos: cada jugador solo confirma interés.
-    return this._repository.confirmProposalForUserSV(_userId);
+    return this._repository.confirmProposalForUserSV(_userId, _venueSelection);
   }
 }

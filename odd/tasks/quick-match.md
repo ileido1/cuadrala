@@ -21,12 +21,12 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Evidence: Prisma migration + generated client; `npm run typecheck`, `npm run lint`, targeted Vitest validation test, and `npx prisma validate` passed.
   - Commit: `feat(quick-match): persist player searches` (QM-1 work-unit head).
 - [ ] QM-2 Implement server matching against open matches first, then compatible active searches; enforce server-owned 2-minute holds, expiry, dismissal, and confirmation rules.
-- Partial: open-match priority now validates the selected time slot and serializes active holds per match; read-time expiry, dismiss, and explicit open-match confirmation endpoints are implemented. Compatible four-player group proposals are now created after open-match inventory; a cancellation releases the whole group. Once all four players confirm, the backend now atomically creates one four-player `Match`; court selection/reservation is still pending.
-  - Current slice: close the grouped-proposal expiry gap. Expiry must atomically release every pending proposal in the group and return every affected search to `SEARCHING` with `noMatchYet`.
+- Partial: open-match priority now validates the selected time slot and serializes active holds per match; read-time expiry, dismiss, and explicit open-match confirmation endpoints are implemented. Compatible four-player group proposals are now created after open-match inventory; a cancellation releases the whole group. Group proposals now expose available venue/court/time options and final confirmation atomically creates the four-player `Match` plus its confirmed reservation when an option is selected.
+  - Completed slices: grouped-proposal expiry releases every pending/confirmed proposal atomically; venue/court options and reservation finalization are now wired through confirmation.
 - [ ] QM-3 Wire mobile data, dependency injection, routes, Cubit, and persistent Quick Match state.
   - Partial: API client/repository/DTO/Cubit now load, start, dismiss, confirm, and cancel persistent state; configuration obtains valid sport/category IDs from the catalog.
 - [ ] QM-4 Implement handoff-faithful Home hero, configuration sheet, active-search, no-match, proposal, confirmation, and expiry UI states.
-  - Partial: Home CTA framing, a usable Quick Match configuration, active queue, proposal countdown, dismissal, confirmation UI, and a Home active/proposal banner are present; visual parity and navigation to the confirmed match remain pending.
+  - Partial: Home CTA framing, a usable Quick Match configuration, active queue, proposal countdown, dismissal, confirmation UI, venue/court option selection, and a Home active/proposal banner are present; visual parity and navigation to the confirmed match remain pending.
 - [ ] QM-5 Update Explore framing/banner; add proposal and filled-match notifications/deep links, plus opt-in “Avisos en mi horario” preferences and invitation flow.
   - Partial: Explore now distinguishes browsing from queueing and routes users to Quick Match; confirmed open-match joins reuse the existing player-joined notification. Dedicated proposal delivery and a deep link to Quick Match are implemented; opt-in availability alerts outside the queue and invitation handling remain pending.
 - [ ] QM-6 Run API and Flutter verification, record work-unit commits, and perform a visual review against the supplied handoff.
@@ -51,9 +51,10 @@ The app currently lists open matches and supports manual creation, but has no pe
 - QM-2 follow-up: documented all five Quick Match routes in OpenAPI; typecheck and focused Quick Match/OpenAPI tests passed (9 tests). The full API suite reported 165 passed / 9 failed files (12 tests), with 11 failures caused by the test database missing `NotificationEvent.quickMatchSearchId` and one unrelated receipt-delivery assertion; these require the test DB migration to be applied.
 - QM-2 follow-up: applied all pending Prisma migrations to `cuadrala_test`; the six previously blocked notification integration files now pass (18 tests). The grouped confirmation finalization also passes `npm run typecheck`.
 - QM-6 verification: API full suite passes (`174` files / `1018` tests); mobile Quick Match Cubit tests pass and `flutter analyze` reports no issues.
+- QM-2/QM-3 follow-up: venue options are generated from active courts and live reservations; confirmation accepts the selected venue/court/time tuple and creates the linked `Reservation` atomically. API typecheck/lint and focused Quick Match tests (9) pass; mobile Quick Match analysis and Cubit tests pass.
 
 ## Next step
-- Add venue options and accept the selected option on confirmation so the linked court reservation is created atomically; then complete QM-3–QM-6 visual parity and route/deep-link work.
+- Complete visual parity, navigation to the confirmed match, and the remaining notification/invitation flows; then rerun the full API/mobile suites.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.

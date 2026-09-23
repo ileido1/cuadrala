@@ -15,8 +15,19 @@ class QuickMatchRepository {
 
   Future<QuickMatchSearchDto> start(Map<String, Object?> preferences) =>
       _fromEnvelope(_api.start(preferences));
-  Future<QuickMatchSearchDto> confirmProposal() =>
-      _fromEnvelope(_api.confirmProposal());
+  Future<QuickMatchSearchDto> confirmProposal({
+    QuickMatchVenueOptionDto? option,
+  }) {
+    final body = option == null
+        ? const <String, Object?>{}
+        : <String, Object?>{
+            'venueId': option.venueId,
+            'courtId': option.courtId,
+            'scheduledAt': option.scheduledAt.toUtc().toIso8601String(),
+          };
+    return _fromEnvelope(_api.confirmProposal(body: body));
+  }
+
   Future<QuickMatchSearchDto> dismissProposal() =>
       _fromEnvelope(_api.dismissProposal());
   Future<void> cancel() => _api.cancel();

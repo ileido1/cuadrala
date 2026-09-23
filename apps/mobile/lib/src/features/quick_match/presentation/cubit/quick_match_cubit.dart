@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../catalog/data/catalog_repository.dart';
+import '../../data/models/quick_match_search_dto.dart';
 import '../../data/quick_match_repository.dart';
 import 'quick_match_state.dart';
 
@@ -34,9 +35,9 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
     }
   }
 
-  Future<void> confirmProposal() async {
+  Future<void> confirmProposal({QuickMatchVenueOptionDto? option}) async {
     try {
-      emit(QuickMatchActive(await _repository.confirmProposal()));
+      emit(QuickMatchActive(await _repository.confirmProposal(option: option)));
     } catch (_) {
       emit(const QuickMatchFailure('La propuesta ya no está disponible.'));
     }

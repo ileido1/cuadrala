@@ -8,7 +8,9 @@ import type {
   QuickMatchSearchDTO,
   QuickMatchSlot,
   StartQuickMatchInput,
+  QuickMatchVenueSelectionDTO,
 } from '../../domain/ports/quick_match_repository.js';
+import { reservationMoneyCreateFieldsSV } from '../prisma_money_fields.js';
 
 import { PRISMA } from '../prisma_client.js';
 
@@ -38,7 +40,56 @@ function matchesSlotSV(_scheduledAt: Date, _slots: QuickMatchSlot[]): boolean {
   return _slots.includes(SLOT);
 }
 
+function slotStartSV(_date: Date, _slot: QuickMatchSlot): Date {
+  const START = new Date(_date);
+  START.setUTCHours(_slot === 'MORNING' ? 9 : _slot === 'AFTERNOON' ? 14 : 19, 0, 0, 0);
+  return START;
+}
+
+type QuickMatchVenueOption = {
+  id: string;
+  venueId: string;
+  venueName: string;
+  courtId: string;
+  courtName: string;
+  scheduledAt: string;
+  pricePerPlayerCents: number;
+};
+
 export class PrismaQuickMatchRepository implements QuickMatchRepository {
+  private async listVenueOptionsSV(_search: QuickMatchSearchDTO): Promise<QuickMatchVenueOption[]> {
+    const SPORT = await PRISMA.sport.findUnique({ where: { id: _search.sportId }, select: { code: true } });
+    if (SPORT === null) return [];
+    const COURTS = await PRISMA.court.findMany({
+      where: { status: 'ACTIVE', sportType: SPORT.code as 'PADEL' | 'TENNIS' | 'PICKLEBALL' | 'BEACH_TENNIS' },
+      select: { id: true, name: true, pricePerHourCents: true, venueId: true, venue: { select: { name: true } } },
+      orderBy: [{ venueId: 'asc' }, { createdAt: 'asc' }],
+      take: 30,
+    });
+    const OPTIONS: QuickMatchVenueOption[] = [];
+    for (const COURT of COURTS) {
+      for (const SLOT of _search.slots) {
+        const SCHEDULED_AT = slotStartSV(_search.targetDate, SLOT);
+        const [RESERVATION, MATCH] = await Promise.all([
+          PRISMA.reservation.findFirst({ where: { courtId: COURT.id, scheduledAt: SCHEDULED_AT, status: { in: ['HELD', 'CONFIRMED'] } }, select: { id: true } }),
+          PRISMA.match.findFirst({ where: { courtId: COURT.id, scheduledAt: SCHEDULED_AT, status: { in: ['SCHEDULED', 'IN_PROGRESS'] } }, select: { id: true } }),
+        ]);
+        if (RESERVATION !== null || MATCH !== null) continue;
+        OPTIONS.push({
+          id: `${COURT.id}:${SCHEDULED_AT.toISOString()}`,
+          venueId: COURT.venueId,
+          venueName: COURT.venue.name,
+          courtId: COURT.id,
+          courtName: COURT.name,
+          scheduledAt: SCHEDULED_AT.toISOString(),
+          pricePerPlayerCents: Math.ceil((COURT.pricePerHourCents ?? 0) / 4),
+        });
+        if (OPTIONS.length >= 6) return OPTIONS;
+      }
+    }
+    return OPTIONS;
+  }
+
   async startForUserSV(_userId: string, _input: StartQuickMatchInput): Promise<QuickMatchSearchDTO> {
     const SEARCH = await PRISMA.$transaction(async (_tx) => {
       const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, select: { id: true } });
@@ -97,6 +148,7 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
 
   async createGroupProposalsSV(_search: QuickMatchSearchDTO, _group: QuickMatchGroupCandidateDTO, _expiresAt: Date): Promise<QuickMatchSearchDTO | null> {
     const GROUP_KEY = randomUUID();
+    const VENUE_OPTIONS = await this.listVenueOptionsSV(_search);
     const SEARCH = await PRISMA.$transaction(async (_tx) => {
       await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${_search.sportId}:${_search.categoryId}:${_search.targetDate.toISOString()}`}))`;
       const CANDIDATES = await _tx.quickMatchSearch.findMany({ where: { id: { in: _group.searchIds }, status: 'SEARCHING' }, select: { id: true, userId: true } });
@@ -104,8 +156,8 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
       const PLAYER_IDS = CANDIDATES.map((_candidate) => _candidate.userId);
       await Promise.all(CANDIDATES.map((_candidate) => _tx.quickMatchProposal.upsert({
         where: { searchId: _candidate.id },
-        create: { searchId: _candidate.id, type: 'NEW_GROUP', groupKey: GROUP_KEY, playerIds: PLAYER_IDS, expiresAt: _expiresAt },
-        update: { type: 'NEW_GROUP', status: 'PENDING', matchId: null, groupKey: GROUP_KEY, playerIds: PLAYER_IDS, expiresAt: _expiresAt },
+        create: { searchId: _candidate.id, type: 'NEW_GROUP', groupKey: GROUP_KEY, playerIds: PLAYER_IDS, venueOptions: VENUE_OPTIONS, expiresAt: _expiresAt },
+        update: { type: 'NEW_GROUP', status: 'PENDING', matchId: null, groupKey: GROUP_KEY, playerIds: PLAYER_IDS, venueOptions: VENUE_OPTIONS, expiresAt: _expiresAt },
       })));
       await _tx.quickMatchSearch.updateMany({ where: { id: { in: _group.searchIds } }, data: { status: 'PROPOSAL', noMatchYet: false } });
       return _tx.quickMatchSearch.findUnique({ where: { id: _search.id }, include: SEARCH_INCLUDE });
@@ -134,7 +186,7 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
     return mapSearchSV(SEARCH);
   }
 
-  async confirmProposalForUserSV(_userId: string): Promise<QuickMatchSearchDTO> {
+  async confirmProposalForUserSV(_userId: string, _venueSelection?: QuickMatchVenueSelectionDTO): Promise<QuickMatchSearchDTO> {
     const SEARCH = await PRISMA.$transaction(async (_tx) => {
       const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, include: SEARCH_INCLUDE });
       if (CURRENT?.proposal === null || CURRENT === null || CURRENT.proposal.status !== 'PENDING') throw new AppError('PROPUESTA_NO_DISPONIBLE', 'No hay una propuesta activa para confirmar.', 409);
@@ -154,6 +206,24 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
           if (PLAYER_IDS.length !== 4) {
             throw new AppError('PROPUESTA_INVALIDA', 'La propuesta grupal no tiene cuatro jugadores válidos.', 409);
           }
+          const OPTIONS = Array.isArray(CURRENT.proposal.venueOptions) ? CURRENT.proposal.venueOptions as QuickMatchVenueOption[] : [];
+          if (_venueSelection === undefined && OPTIONS.length > 0) {
+            throw new AppError('CANCHA_REQUERIDA', 'Selecciona una sede y un horario para reservar la cancha.', 409);
+          }
+          const OPTION = _venueSelection === undefined ? undefined : OPTIONS.find((_option) => _option.venueId === _venueSelection.venueId && _option.courtId === _venueSelection.courtId && _option.scheduledAt === _venueSelection.scheduledAt.toISOString());
+          if (_venueSelection !== undefined && OPTION === undefined) {
+            throw new AppError('CANCHA_NO_DISPONIBLE', 'La sede u horario seleccionado ya no está disponible.', 409);
+          }
+          if (OPTION !== undefined) {
+            await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${OPTION.courtId}:${OPTION.scheduledAt}`}))`;
+            const [ACTIVE_RESERVATION, ACTIVE_MATCH] = await Promise.all([
+              _tx.reservation.findFirst({ where: { courtId: OPTION.courtId, scheduledAt: _venueSelection!.scheduledAt, status: { in: ['HELD', 'CONFIRMED'] } }, select: { id: true } }),
+              _tx.match.findFirst({ where: { courtId: OPTION.courtId, scheduledAt: _venueSelection!.scheduledAt, status: { in: ['SCHEDULED', 'IN_PROGRESS'] } }, select: { id: true } }),
+            ]);
+            if (ACTIVE_RESERVATION !== null || ACTIVE_MATCH !== null) {
+              throw new AppError('CANCHA_NO_DISPONIBLE', 'La cancha seleccionada ya fue reservada.', 409);
+            }
+          }
           const MATCH = await _tx.match.create({
             data: {
               sportId: CURRENT.sportId,
@@ -161,14 +231,41 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
               organizerUserId: PLAYER_IDS[0]!,
               type: 'REGULAR',
               status: 'SCHEDULED',
-              scheduledAt: null,
-              pricePerPlayerCents: 0,
+              scheduledAt: OPTION === undefined ? null : _venueSelection!.scheduledAt,
+              ...(OPTION === undefined ? {} : { courtId: OPTION.courtId }),
+              pricePerPlayerCents: OPTION?.pricePerPlayerCents ?? 0,
               maxParticipants: 4,
               affectsElo: true,
               participants: { create: PLAYER_IDS.map((_playerId) => ({ userId: _playerId })) },
             },
             select: { id: true },
           });
+          if (OPTION !== undefined) {
+            const PRICING_CURRENCY = await _tx.venue.findUnique({ where: { id: OPTION.venueId }, select: { pricingCurrency: true } });
+            if (PRICING_CURRENCY === null) {
+              throw new AppError('SEDE_NO_ENCONTRADA', 'La sede seleccionada no existe.', 404);
+            }
+            await _tx.reservation.create({
+              data: {
+              venueId: OPTION.venueId,
+              courtId: OPTION.courtId,
+              sportId: CURRENT.sportId,
+              categoryId: CURRENT.categoryId,
+              type: 'MATCH',
+              scheduledAt: _venueSelection!.scheduledAt,
+              durationMinutes: 90,
+              status: 'CONFIRMED',
+              visibility: 'PUBLISHED',
+              matchStatus: 'SCHEDULED',
+              matchId: MATCH.id,
+              organizerUserId: PLAYER_IDS[0]!,
+              createdByUserId: PLAYER_IDS[0]!,
+              maxParticipants: 4,
+              pricePerPlayerCents: OPTION.pricePerPlayerCents,
+              ...reservationMoneyCreateFieldsSV(PRICING_CURRENCY.pricingCurrency, OPTION.pricePerPlayerCents * 4),
+              },
+            });
+          }
           await _tx.quickMatchProposal.updateMany({
             where: { groupKey: CURRENT.proposal.groupKey },
             data: { matchId: MATCH.id },
