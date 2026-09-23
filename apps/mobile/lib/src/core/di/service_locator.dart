@@ -163,7 +163,10 @@ Future<void> setupDependencies() async {
     () => QuickMatchRepository(getIt<QuickMatchApi>()),
   );
   getIt.registerFactory<QuickMatchCubit>(
-    () => QuickMatchCubit(repository: getIt<QuickMatchRepository>()),
+    () => QuickMatchCubit(
+      repository: getIt<QuickMatchRepository>(),
+      catalogRepository: getIt<CatalogRepository>(),
+    ),
   );
 
   getIt.registerLazySingleton<VenuesApi>(

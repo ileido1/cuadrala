@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'cubit/quick_match_cubit.dart';
 import 'cubit/quick_match_state.dart';
 
 final class QuickMatchScreen extends StatefulWidget {
   const QuickMatchScreen({super.key});
+
   @override
   State<QuickMatchScreen> createState() => _QuickMatchScreenState();
 }
@@ -19,59 +23,469 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Encontrar partida')),
-    body: BlocBuilder<QuickMatchCubit, QuickMatchState>(
-      builder: (context, state) {
-        if (state is QuickMatchLoading || state is QuickMatchInitial)
-          return const Center(child: CircularProgressIndicator());
-        if (state is QuickMatchActive)
-          return _Active(
-            searching: state.search.status == 'SEARCHING',
-            noMatchYet: state.search.noMatchYet,
-          );
-        return Center(
-          child: FilledButton.icon(
-            onPressed: () => context.read<QuickMatchCubit>().start({
-              'sportId': '',
-              'categoryId': '',
-              'day': 'TODAY',
-              'slots': ['EVENING'],
-              'widenLevel': false,
-              'zoneKm': 10,
-              'includeOpenMatches': true,
-            }),
-            icon: const Icon(Icons.bolt),
-            label: const Text('Entrar a la cola'),
+    body: SafeArea(
+      child: BlocBuilder<QuickMatchCubit, QuickMatchState>(
+        builder: (context, state) => switch (state) {
+          QuickMatchInitial() || QuickMatchLoading() => const Center(
+            child: CircularProgressIndicator(),
           ),
-        );
-      },
+          QuickMatchFailure(:final message) => _Failure(message: message),
+          QuickMatchIdle() => const _StartSearch(),
+          QuickMatchActive(:final search)
+              when search.status == 'PROPOSAL' &&
+                  search.proposal?.status == 'PENDING' =>
+            _Proposal(),
+          QuickMatchActive(:final search) when search.status == 'CONFIRMED' =>
+            const _Confirmed(),
+          QuickMatchActive(:final search) => _Searching(
+            noMatchYet: search.noMatchYet,
+          ),
+        },
+      ),
     ),
   );
 }
 
-final class _Active extends StatelessWidget {
-  const _Active({required this.searching, required this.noMatchYet});
-  final bool searching, noMatchYet;
+final class _StartSearch extends StatelessWidget {
+  const _StartSearch();
+
   @override
-  Widget build(BuildContext c) => Padding(
-    padding: const EdgeInsets.all(24),
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return FutureBuilder(
+      future: context.read<QuickMatchCubit>().defaultConfiguration(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final configuration = snapshot.data;
+        if (configuration == null) {
+          return const _Failure(
+            message: 'Completá tu deporte y categoría para buscar una partida.',
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: .22),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.bolt_rounded, color: scheme.onPrimary, size: 34),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Jugá hoy sin armar grupo',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: scheme.onPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Buscamos primero partidas abiertas y después jugadores compatibles con tu horario.',
+                    style: TextStyle(
+                      color: scheme.onPrimary.withValues(alpha: .86),
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _InfoRow(
+              icon: Icons.sports_tennis_rounded,
+              label: 'Deporte',
+              value: configuration.sportName,
+            ),
+            _InfoRow(
+              icon: Icons.bar_chart_rounded,
+              label: 'Nivel',
+              value: configuration.categoryName,
+            ),
+            const SizedBox(height: 10),
+            FilledButton.icon(
+              key: const Key('quick-match.start'),
+              onPressed: () => _showConfiguration(context, configuration),
+              icon: const Icon(Icons.search_rounded),
+              label: const Text('Buscar partida'),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No reservamos cancha ni cobramos nada hasta que confirmes una opción.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfiguration(
+    BuildContext context,
+    ({String sportId, String sportName, String categoryId, String categoryName})
+    config,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => _ConfigurationSheet(config: config),
+    );
+  }
+}
+
+final class _ConfigurationSheet extends StatefulWidget {
+  const _ConfigurationSheet({required this.config});
+  final ({
+    String sportId,
+    String sportName,
+    String categoryId,
+    String categoryName,
+  })
+  config;
+
+  @override
+  State<_ConfigurationSheet> createState() => _ConfigurationSheetState();
+}
+
+final class _ConfigurationSheetState extends State<_ConfigurationSheet> {
+  String _day = 'TODAY';
+  final Set<String> _slots = {'EVENING'};
+  bool _widenLevel = false;
+  bool _includeOpenMatches = true;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      20,
+      4,
+      20,
+      20 + MediaQuery.viewInsetsOf(context).bottom,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Configurá tu búsqueda',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${widget.config.sportName} · ${widget.config.categoryName}',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          '¿Cuándo querés jugar?',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: ['TODAY', 'TOMORROW']
+              .map(
+                (value) => ChoiceChip(
+                  label: Text(value == 'TODAY' ? 'Hoy' : 'Mañana'),
+                  selected: _day == value,
+                  onSelected: (_) => setState(() => _day = value),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 18),
+        const Text(
+          'Franja horaria',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children:
+              const [
+                    ('MORNING', 'Mañana'),
+                    ('AFTERNOON', 'Tarde'),
+                    ('EVENING', 'Noche'),
+                  ]
+                  .map(
+                    (entry) => FilterChip(
+                      label: Text(entry.$2),
+                      selected: _slots.contains(entry.$1),
+                      onSelected: (selected) => setState(() {
+                        if (selected) {
+                          _slots.add(entry.$1);
+                        } else if (_slots.length > 1) {
+                          _slots.remove(entry.$1);
+                        }
+                      }),
+                    ),
+                  )
+                  .toList(),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Incluir partidas abiertas'),
+          subtitle: const Text(
+            'Las priorizamos antes de armar una nueva cola.',
+          ),
+          value: _includeOpenMatches,
+          onChanged: (value) => setState(() => _includeOpenMatches = value),
+        ),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Ampliar nivel si hace falta'),
+          value: _widenLevel,
+          onChanged: (value) => setState(() => _widenLevel = value),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(context);
+            context.read<QuickMatchCubit>().start({
+              'sportId': widget.config.sportId,
+              'categoryId': widget.config.categoryId,
+              'day': _day,
+              'slots': _slots.toList(),
+              'widenLevel': _widenLevel,
+              'zoneKm': 10,
+              'includeOpenMatches': _includeOpenMatches,
+            });
+          },
+          child: const Text('Entrar a la cola'),
+        ),
+      ],
+    ),
+  );
+}
+
+final class _Proposal extends StatelessWidget {
+  const _Proposal();
+
+  @override
+  Widget build(BuildContext context) {
+    final proposal =
+        (context.watch<QuickMatchCubit>().state as QuickMatchActive)
+            .search
+            .proposal!;
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.groups_rounded,
+              color: scheme.onPrimaryContainer,
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            '¡Encontramos una partida!',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Hay un cupo disponible para vos. Confirmalo antes de que venza el hold.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          _Countdown(expiresAt: proposal.expiresAt),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: () => context.read<QuickMatchCubit>().confirmProposal(),
+            child: const Text('Confirmar partida'),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton(
+            onPressed: () => context.read<QuickMatchCubit>().dismissProposal(),
+            child: const Text('Seguir buscando'),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Confirmar te une a la partida; el pago sigue el flujo habitual.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _Countdown extends StatelessWidget {
+  const _Countdown({required this.expiresAt});
+  final DateTime expiresAt;
+  @override
+  Widget build(BuildContext context) => StreamBuilder<int>(
+    stream: Stream.periodic(const Duration(seconds: 1), (value) => value),
+    builder: (context, _) {
+      final seconds = expiresAt
+          .difference(DateTime.now())
+          .inSeconds
+          .clamp(0, 120);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Reservado por ${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onErrorContainer,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      );
+    },
+  );
+}
+
+final class _Searching extends StatelessWidget {
+  const _Searching({required this.noMatchYet});
+  final bool noMatchYet;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(28),
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.search, size: 88, color: Colors.green),
-        const SizedBox(height: 20),
+        const SizedBox(
+          width: 72,
+          height: 72,
+          child: CircularProgressIndicator(strokeWidth: 6),
+        ),
+        const SizedBox(height: 28),
         Text(
-          noMatchYet ? 'Seguimos buscando' : 'Buscando jugadores',
-          style: Theme.of(c).textTheme.headlineSmall,
+          noMatchYet ? 'Seguimos buscando' : 'Buscando tu partida',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'Te avisaremos apenas haya una opción. Puedes cerrar la app.',
+        const SizedBox(height: 10),
+        Text(
+          noMatchYet
+              ? 'Todavía no hay una opción compatible. Te avisamos cuando aparezca.'
+              : 'Estamos revisando partidas abiertas y jugadores con tu mismo horario.',
+          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 26),
         OutlinedButton(
-          onPressed: () => c.read<QuickMatchCubit>().cancel(),
+          onPressed: () => context.read<QuickMatchCubit>().cancel(),
           child: const Text('Salir de la cola'),
         ),
+      ],
+    ),
+  );
+}
+
+final class _Confirmed extends StatelessWidget {
+  const _Confirmed();
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.check_circle_rounded,
+            color: Theme.of(context).colorScheme.primary,
+            size: 76,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            '¡Partida confirmada!',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Ya estás unido. Encontrá los detalles y el pago en Mis partidas.',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+final class _Failure extends StatelessWidget {
+  const _Failure({required this.message});
+  final String message;
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline_rounded, size: 48),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: () => context.read<QuickMatchCubit>().load(),
+            child: const Text('Reintentar'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+final class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+  final IconData icon;
+  final String label, value;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      children: [
+        Icon(icon, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 12),
+        Text(label),
+        const Spacer(),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
       ],
     ),
   );

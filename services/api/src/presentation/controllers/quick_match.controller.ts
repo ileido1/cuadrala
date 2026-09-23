@@ -3,6 +3,8 @@ import type { Request, Response } from 'express';
 import { AppError } from '../../domain/errors/app_error.js';
 import {
   CANCEL_MY_QUICK_MATCH_UC,
+  CONFIRM_MY_QUICK_MATCH_PROPOSAL_UC,
+  DISMISS_MY_QUICK_MATCH_PROPOSAL_UC,
   GET_MY_QUICK_MATCH_UC,
   MATCH_QUICK_MATCH_UC,
   START_QUICK_MATCH_UC,
@@ -38,4 +40,14 @@ export async function postQuickMatchCON(_req: Request, _res: Response): Promise<
 export async function deleteMyQuickMatchCON(_req: Request, _res: Response): Promise<void> {
   await CANCEL_MY_QUICK_MATCH_UC.executeSV(actorUserIdSV(_req));
   _res.status(204).send();
+}
+
+export async function postDismissMyQuickMatchProposalCON(_req: Request, _res: Response): Promise<void> {
+  const SEARCH = await DISMISS_MY_QUICK_MATCH_PROPOSAL_UC.executeSV(actorUserIdSV(_req));
+  _res.status(200).json({ success: true, message: 'Propuesta descartada; seguimos buscando.', data: SEARCH });
+}
+
+export async function postConfirmMyQuickMatchProposalCON(_req: Request, _res: Response): Promise<void> {
+  const SEARCH = await CONFIRM_MY_QUICK_MATCH_PROPOSAL_UC.executeSV(actorUserIdSV(_req));
+  _res.status(200).json({ success: true, message: 'Partida confirmada correctamente.', data: SEARCH });
 }

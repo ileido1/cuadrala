@@ -1,12 +1,20 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../catalog/data/catalog_repository.dart';
 import '../../data/quick_match_repository.dart';
 import 'quick_match_state.dart';
 
 final class QuickMatchCubit extends Cubit<QuickMatchState> {
-  QuickMatchCubit({required QuickMatchRepository repository})
-    : _repository = repository,
-      super(const QuickMatchInitial());
+  QuickMatchCubit({
+    required QuickMatchRepository repository,
+    required CatalogRepository catalogRepository,
+  }) : _repository = repository,
+       _catalogRepository = catalogRepository,
+       super(const QuickMatchInitial());
+
   final QuickMatchRepository _repository;
+  final CatalogRepository _catalogRepository;
+
   Future<void> load() async {
     emit(const QuickMatchLoading());
     try {
@@ -26,8 +34,49 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
     }
   }
 
+  Future<void> confirmProposal() async {
+    try {
+      emit(QuickMatchActive(await _repository.confirmProposal()));
+    } catch (_) {
+      emit(const QuickMatchFailure('La propuesta ya no está disponible.'));
+    }
+  }
+
+  Future<void> dismissProposal() async {
+    try {
+      emit(QuickMatchActive(await _repository.dismissProposal()));
+    } catch (_) {
+      emit(const QuickMatchFailure('No pudimos descartar la propuesta.'));
+    }
+  }
+
   Future<void> cancel() async {
     await _repository.cancel();
     emit(const QuickMatchIdle());
+  }
+
+  Future<
+    ({
+      String sportId,
+      String sportName,
+      String categoryId,
+      String categoryName,
+    })?
+  >
+  defaultConfiguration() async {
+    final sports = await _catalogRepository.listSports();
+    if (sports.isEmpty) return null;
+    final sport = sports.first;
+    final categories = await _catalogRepository.listCategories(
+      sportId: sport.id,
+    );
+    if (categories.isEmpty) return null;
+    final category = categories.first;
+    return (
+      sportId: sport.id,
+      sportName: sport.name,
+      categoryId: category.id,
+      categoryName: category.name,
+    );
   }
 }

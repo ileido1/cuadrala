@@ -13,6 +13,8 @@ describe('MatchQuickMatchUseCase', () => {
       findOpenCandidateSV: async () => ({ matchId: 'm', participantIds: ['a', 'b', 'c'] }),
       createOpenProposalSV: async () => ({ ...SEARCH, status: 'PROPOSAL', proposal: { id: 'p', type: 'OPEN_MATCH', status: 'PENDING', matchId: 'm', playerIds: ['a', 'b', 'c'], venueOptions: null, expiresAt: new Date() } }),
       markNoMatchYetSV: async () => ({ ...SEARCH, noMatchYet: true, dismissedMatchIds: [] }),
+      dismissProposalForUserSV: async () => { throw new Error('not used'); },
+      confirmProposalForUserSV: async () => { throw new Error('not used'); },
     });
     expect((await UC.executeSV(SEARCH)).status).toBe('PROPOSAL');
   });

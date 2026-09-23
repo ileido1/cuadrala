@@ -21,8 +21,11 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Evidence: Prisma migration + generated client; `npm run typecheck`, `npm run lint`, targeted Vitest validation test, and `npx prisma validate` passed.
   - Commit: `feat(quick-match): persist player searches` (QM-1 work-unit head).
 - [ ] QM-2 Implement server matching against open matches first, then compatible active searches; enforce server-owned 2-minute holds, expiry, dismissal, and confirmation rules.
+  - Partial: open-match priority now validates the selected time slot and serializes active holds per match; read-time expiry, dismiss, and explicit open-match confirmation endpoints are implemented. Compatible four-player group formation is still pending.
 - [ ] QM-3 Wire mobile data, dependency injection, routes, Cubit, and persistent Quick Match state.
+  - Partial: API client/repository/DTO/Cubit now load, start, dismiss, confirm, and cancel persistent state; configuration obtains valid sport/category IDs from the catalog.
 - [ ] QM-4 Implement handoff-faithful Home hero, configuration sheet, active-search, no-match, proposal, confirmation, and expiry UI states.
+  - Partial: Home CTA framing and a usable Quick Match configuration, active queue, proposal countdown, dismissal, and confirmation UI are present; visual parity and navigation to the confirmed match remain pending.
 - [ ] QM-5 Update Explore framing/banner; add proposal and filled-match notifications/deep links, plus opt-in “Avisos en mi horario” preferences and invitation flow.
 - [ ] QM-6 Run API and Flutter verification, record work-unit commits, and perform a visual review against the supplied handoff.
 
@@ -43,7 +46,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 - QM-1: API `npm run typecheck`, `npm run lint`, and `npx prisma validate` passed.
 
 ## Next step
-- QM-2 on `codex/quick-match-full-feature`: match compatible open inventory first, then create server-expiring proposals with explicit dismiss/confirm rules.
+- Complete QM-2 group formation and notification delivery, then add widget tests and connect confirmed proposals to the match detail deep link.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.

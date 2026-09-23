@@ -9,6 +9,7 @@ export class MatchQuickMatchUseCase {
     if (!_search.includeOpenMatches) return this._repository.markNoMatchYetSV(_search.id);
     const CANDIDATE = await this._repository.findOpenCandidateSV(_search);
     if (CANDIDATE === null) return this._repository.markNoMatchYetSV(_search.id);
-    return this._repository.createOpenProposalSV(_search.id, CANDIDATE, new Date(Date.now() + HOLD_MS));
+    const PROPOSAL = await this._repository.createOpenProposalSV(_search.id, CANDIDATE, new Date(Date.now() + HOLD_MS));
+    return PROPOSAL ?? this._repository.markNoMatchYetSV(_search.id);
   }
 }

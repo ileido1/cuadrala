@@ -257,7 +257,7 @@ final class _HeroCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Buscar partida',
+                            'Encontrar partida',
                             style: TextStyle(
                               color: scheme.onSurface,
                               fontWeight: FontWeight.w800,
@@ -266,7 +266,7 @@ final class _HeroCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Matchmaking por horario y nivel',
+                            'Jugá según tu disponibilidad',
                             style: TextStyle(
                               color: scheme.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
@@ -295,7 +295,7 @@ final class _HeroCard extends StatelessWidget {
                           ),
                           icon: const Icon(AppIcons.search, size: 18),
                           label: const Text(
-                            'Buscar',
+                            'Encontrar',
                             style: TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),
