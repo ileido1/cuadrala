@@ -50,9 +50,10 @@ The app currently lists open matches and supports manual creation, but has no pe
 - Work-unit commit: `a121b92 fix(quick-match): expire grouped proposals atomically`; review assessment: medium risk, under budget, no native review due.
 - QM-2 follow-up: documented all five Quick Match routes in OpenAPI; typecheck and focused Quick Match/OpenAPI tests passed (9 tests). The full API suite reported 165 passed / 9 failed files (12 tests), with 11 failures caused by the test database missing `NotificationEvent.quickMatchSearchId` and one unrelated receipt-delivery assertion; these require the test DB migration to be applied.
 - QM-2 follow-up: applied all pending Prisma migrations to `cuadrala_test`; the six previously blocked notification integration files now pass (18 tests). The grouped confirmation finalization also passes `npm run typecheck`.
+- QM-6 verification: API full suite passes (`174` files / `1018` tests); mobile Quick Match Cubit tests pass and `flutter analyze` reports no issues.
 
 ## Next step
-- Add venue options and accept the selected option on confirmation so the linked court reservation is created atomically; then complete QM-3–QM-6 verification and visual parity.
+- Add venue options and accept the selected option on confirmation so the linked court reservation is created atomically; then complete QM-3–QM-6 visual parity and route/deep-link work.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.
