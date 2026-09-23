@@ -18,10 +18,13 @@ export class ConfirmMyQuickMatchProposalUseCase {
       // La lectura expira de forma perezosa en el repositorio; este guard cubre adaptadores alternativos.
       throw new AppError('PROPUESTA_VENCIDA', 'La propuesta ya venció.', 409);
     }
-    if (PROPOSAL.type !== 'OPEN_MATCH' || PROPOSAL.matchId === null) {
-      throw new AppError('PROPUESTA_SIN_PARTIDO', 'Esta propuesta todavía no tiene una partida confirmable.', 409);
+    if (PROPOSAL.type === 'OPEN_MATCH') {
+      if (PROPOSAL.matchId === null) {
+        throw new AppError('PROPUESTA_SIN_PARTIDO', 'Esta propuesta no tiene una partida confirmable.', 409);
+      }
+      await this._joinMatch.executeSV(PROPOSAL.matchId, _userId);
     }
-    await this._joinMatch.executeSV(PROPOSAL.matchId, _userId);
+    // Un grupo nuevo no aparta cancha ni genera pagos: cada jugador solo confirma interés.
     return this._repository.confirmProposalForUserSV(_userId);
   }
 }

@@ -21,6 +21,8 @@ describe('ConfirmMyQuickMatchProposalUseCase', () => {
       markNoMatchYetSV: async () => SEARCH,
       dismissProposalForUserSV: async () => SEARCH,
       confirmProposalForUserSV: async () => { calls.push('confirm'); return { ...SEARCH, status: 'CONFIRMED' }; },
+      findCompatibleGroupSV: async () => null,
+      createGroupProposalsSV: async () => null,
     }, { executeSV: async (_matchId: string, _userId: string) => { calls.push(`join:${_matchId}:${_userId}`); return { matchId: _matchId, userId: _userId }; } } as never);
 
     await uc.executeSV('player');

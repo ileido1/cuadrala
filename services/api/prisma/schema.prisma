@@ -497,6 +497,7 @@ model QuickMatchProposal {
   type             QuickMatchProposalType
   status           QuickMatchProposalStatus @default(PENDING)
   matchId          String?
+  groupKey         String?
   match            Match?                   @relation(fields: [matchId], references: [id], onDelete: SetNull)
   playerIds        String[]
   venueOptions     Json?
@@ -506,6 +507,7 @@ model QuickMatchProposal {
 
   @@index([status, expiresAt])
   @@index([matchId])
+  @@index([groupKey])
 }
 
 model UserLocation {

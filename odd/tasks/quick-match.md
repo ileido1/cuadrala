@@ -21,7 +21,7 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Evidence: Prisma migration + generated client; `npm run typecheck`, `npm run lint`, targeted Vitest validation test, and `npx prisma validate` passed.
   - Commit: `feat(quick-match): persist player searches` (QM-1 work-unit head).
 - [ ] QM-2 Implement server matching against open matches first, then compatible active searches; enforce server-owned 2-minute holds, expiry, dismissal, and confirmation rules.
-  - Partial: open-match priority now validates the selected time slot and serializes active holds per match; read-time expiry, dismiss, and explicit open-match confirmation endpoints are implemented. Compatible four-player group formation is still pending.
+  - Partial: open-match priority now validates the selected time slot and serializes active holds per match; read-time expiry, dismiss, and explicit open-match confirmation endpoints are implemented. Compatible four-player group proposals are now created after open-match inventory; a cancellation releases the whole group. Court selection/reservation after four confirmations is still pending.
 - [ ] QM-3 Wire mobile data, dependency injection, routes, Cubit, and persistent Quick Match state.
   - Partial: API client/repository/DTO/Cubit now load, start, dismiss, confirm, and cancel persistent state; configuration obtains valid sport/category IDs from the catalog.
 - [ ] QM-4 Implement handoff-faithful Home hero, configuration sheet, active-search, no-match, proposal, confirmation, and expiry UI states.

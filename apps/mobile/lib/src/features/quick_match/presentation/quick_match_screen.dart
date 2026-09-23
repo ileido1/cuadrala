@@ -36,7 +36,7 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                   search.proposal?.status == 'PENDING' =>
             _Proposal(),
           QuickMatchActive(:final search) when search.status == 'CONFIRMED' =>
-            const _Confirmed(),
+            _Confirmed(isNewGroup: search.proposal?.type == 'NEW_GROUP'),
           QuickMatchActive(:final search) => _Searching(
             noMatchYet: search.noMatchYet,
           ),
@@ -311,14 +311,18 @@ final class _Proposal extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            '¡Encontramos una partida!',
+            proposal.type == 'NEW_GROUP'
+                ? '¡Encontramos jugadores!'
+                : '¡Encontramos una partida!',
             style: Theme.of(
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Hay un cupo disponible para vos. Confirmalo antes de que venza el hold.',
+          Text(
+            proposal.type == 'NEW_GROUP'
+                ? 'Tres jugadores compatibles quieren jugar. Confirmá tu disponibilidad antes de que venza el hold.'
+                : 'Hay un cupo disponible para vos. Confirmalo antes de que venza el hold.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -326,7 +330,11 @@ final class _Proposal extends StatelessWidget {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: () => context.read<QuickMatchCubit>().confirmProposal(),
-            child: const Text('Confirmar partida'),
+            child: Text(
+              proposal.type == 'NEW_GROUP'
+                  ? 'Confirmar disponibilidad'
+                  : 'Confirmar partida',
+            ),
           ),
           const SizedBox(height: 10),
           OutlinedButton(
@@ -335,7 +343,9 @@ final class _Proposal extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Confirmar te une a la partida; el pago sigue el flujo habitual.',
+            proposal.type == 'NEW_GROUP'
+                ? 'La cancha y el pago se eligen solo cuando estén los cuatro.'
+                : 'Confirmar te une a la partida; el pago sigue el flujo habitual.',
             textAlign: TextAlign.center,
             style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
           ),
@@ -413,7 +423,9 @@ final class _Searching extends StatelessWidget {
 }
 
 final class _Confirmed extends StatelessWidget {
-  const _Confirmed();
+  const _Confirmed({required this.isNewGroup});
+  final bool isNewGroup;
+
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
@@ -428,14 +440,16 @@ final class _Confirmed extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            '¡Partida confirmada!',
+            isNewGroup ? 'Disponibilidad confirmada' : '¡Partida confirmada!',
             style: Theme.of(
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Ya estás unido. Encontrá los detalles y el pago en Mis partidas.',
+          Text(
+            isNewGroup
+                ? 'Esperamos las confirmaciones restantes. La cancha y el pago se eligen solamente cuando estén los cuatro.'
+                : 'Ya estás unido. Encontrá los detalles y el pago en Mis partidas.',
             textAlign: TextAlign.center,
           ),
         ],

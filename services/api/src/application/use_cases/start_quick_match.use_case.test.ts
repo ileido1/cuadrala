@@ -17,6 +17,8 @@ describe('StartQuickMatchUseCase', () => {
       markNoMatchYetSV: async () => { throw new Error('not used'); },
       dismissProposalForUserSV: async () => { throw new Error('not used'); },
       confirmProposalForUserSV: async () => { throw new Error('not used'); },
+      findCompatibleGroupSV: async () => null,
+      createGroupProposalsSV: async () => null,
     });
 
     await UC.executeSV('user', {
