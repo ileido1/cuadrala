@@ -6,11 +6,11 @@ class QuickMatchRepository {
   final QuickMatchApi _api;
 
   Future<QuickMatchSearchDto?> current() async {
-    final data = await _api.getCurrent();
-    final payload = data['data'] is Map<String, Object?>
-        ? data['data'] as Map<String, Object?>
-        : data;
-    return payload.isEmpty ? null : QuickMatchSearchDto.fromJson(payload);
+    final payload = await _api.getCurrent();
+    if (payload == null || payload.isEmpty) {
+      return null;
+    }
+    return QuickMatchSearchDto.fromJson(payload);
   }
 
   Future<QuickMatchSearchDto> start(Map<String, Object?> preferences) =>

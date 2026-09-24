@@ -6,8 +6,8 @@ import 'api_json.dart';
 
 final class ApiClient {
   ApiClient({required Dio dio, required AppFailureMapper failureMapper})
-      : _dio = dio,
-        _failureMapper = failureMapper;
+    : _dio = dio,
+      _failureMapper = failureMapper;
 
   final Dio _dio;
   final AppFailureMapper _failureMapper;
@@ -135,6 +135,23 @@ final class ApiClient {
       body: body,
     );
     return decodeEnvelopeDataMap(json);
+  }
+
+  Future<Map<String, Object?>?> getNullableEnvelopeDataMap(
+    String path, {
+    Map<String, Object?>? queryParameters,
+    Map<String, Object?>? headers,
+    String? method,
+    Map<String, Object?>? body,
+  }) async {
+    final json = await _requestJson(
+      path,
+      method: method,
+      queryParameters: queryParameters,
+      headers: headers,
+      body: body,
+    );
+    return decodeNullableEnvelopeDataMap(json);
   }
 
   Future<Map<String, Object?>> _requestJson(

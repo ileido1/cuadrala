@@ -68,6 +68,10 @@ The app currently lists open matches and supports manual creation, but has no pe
 - [x] DH-4 No-match actions: implemented functional change-time and expand-zone interactions, preserving search preferences and restarting through the Cubit/API; added Cubit coverage.
 - [x] DH-5 Invitation-specific navigation: tournament notification routes now carry an invitation intent and the detail screen opens the pending invitation flow with accept/reject actions when one exists.
 - [x] DH-6 Final verification and delivery: Flutter and API checks passed; commit `199a1aa` was pushed to `origin/main`.
+- [x] DH-7 Nullable empty Quick Match state: accept the production contract `data: null` when no search exists, keep the generic map decoder strict, and cover the client/API boundary with focused tests.
+  - Route: delegated direct writer for the mobile network/API/repository boundary; no API behavior change is expected because Render logs confirm successful `GET /api/v1/quick-match` responses with a nullable payload.
+  - Acceptance: opening Quick Match with no active search shows the empty configuration state instead of “No pudimos cargar tu búsqueda.”; malformed non-map payloads still fail explicitly.
+  - Checks: focused Flutter network/repository/Cubit tests (13 passed), `flutter analyze`, and the complete Flutter suite (806 passed).
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.
