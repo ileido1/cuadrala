@@ -24,11 +24,18 @@ The deployed Home uses a different hierarchy (`Actividad en Cuádrala`), a gener
   - Acceptance: Home matches the supplied JSX hierarchy; all four actions navigate to their current functional destinations; own matches and nearby open matches retain their data-driven cards.
 - [ ] HHP-3 Verify mobile behavior and visual parity.
   - Acceptance: focused and full Flutter checks pass; Flutter analyzer passes; a fixed-viewport capture is compared against the supplied reference with any remaining data-dependent differences documented.
+- [x] HHP-4 Open the Quick Match configuration bottom sheet from Home.
+  - Route: delegated direct writer required because this spans Home integration, reusable Quick Match configuration presentation, and widget coverage. No callable writer delegation surface is available; execute this bounded task inline.
+  - Acceptance: tapping `Encontrar partida` opens the bottom sheet upward; it presents `¿Cuándo quieres jugar?`, day/time choices and current search preferences; successful submission starts the existing search then opens the existing Quick Match state screen; cancellation performs no request.
 
 ## Progress
 - 2026-09-23: inspected the provided JSX and current Flutter Home implementation. The canonical reference for the attached screenshot is `project/cuadrala-home.jsx`, not the later redesign variant.
 
 ## Verification evidence
+- HHP-4 RED: `flutter test test/features/home/presentation/home_screen_test.dart` failed before implementation because `Encontrar partida` navigated directly to Quick Match and no configuration sheet existed.
+- HHP-4 GREEN: focused Home widget suite passed (15 tests), including opening the sheet and verifying its day controls and submit action.
+- HHP-4: `flutter test` passed; `flutter analyze` passed with no issues.
+- HHP-4 work-unit commit: `30c047d feat(quick-match): open setup sheet from home`; receipt-driven review remains disabled by repository status.
 - HHP-1 RED: `flutter test test/features/home/presentation/home_screen_test.dart` failed because the previous Home did not render `¿Jugamos hoy?`, `Crear partida`, or the new CTA hierarchy.
 - HHP-1/HHP-2 GREEN: focused Home widget suite passed (14 tests).
 - HHP-2: `flutter analyze` passed with no issues.
