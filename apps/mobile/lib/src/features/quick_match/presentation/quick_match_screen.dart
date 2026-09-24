@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'cubit/quick_match_cubit.dart';
 import 'cubit/quick_match_state.dart';
 import '../data/models/quick_match_search_dto.dart';
+import '../../matches/data/matches_repository.dart';
+import '../../matches/data/models/match_detail_dto.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
@@ -29,20 +31,54 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
+      toolbarHeight: 58,
       leading: IconButton(
-        tooltip: 'Volver',
+        tooltip: 'Volver al inicio',
         onPressed: () => context.go(Routes.home),
-        icon: const Icon(Icons.arrow_back_rounded),
+        icon: const Icon(AppIcons.chevronDown),
       ),
-      title: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Encontrar partida'),
-          Text('Matchmaking por horario y nivel'),
-        ],
+      title: BlocBuilder<QuickMatchCubit, QuickMatchState>(
+        builder: (context, state) {
+          final search = state is QuickMatchActive ? state.search : null;
+          final isProposal = search?.status == 'PROPOSAL';
+          if (isProposal) return const Text('Propuesta para ti');
+          if (search != null) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Text('Búsqueda activa'),
+              ],
+            );
+          }
+          return const Text('Encontrar partida');
+        },
       ),
+      actions: [
+        BlocBuilder<QuickMatchCubit, QuickMatchState>(
+          builder: (context, state) {
+            if (state is! QuickMatchActive ||
+                state.search.status != 'SEARCHING') {
+              return const SizedBox(width: 48);
+            }
+            return TextButton(
+              onPressed: () => _showScheduleSheet(context, state.search),
+              child: const Text('Editar'),
+            );
+          },
+        ),
+      ],
     ),
     body: SafeArea(
+      top: false,
       child: BlocBuilder<QuickMatchCubit, QuickMatchState>(
         builder: (context, state) => switch (state) {
           QuickMatchInitial() || QuickMatchLoading() => const Center(
@@ -53,7 +89,7 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
           QuickMatchActive(:final search)
               when search.status == 'PROPOSAL' &&
                   search.proposal?.status == 'PENDING' =>
-            _Proposal(),
+            _Proposal(search: search),
           QuickMatchActive(:final search) when search.status == 'CONFIRMED' =>
             _Confirmed(
               isNewGroup: search.proposal?.type == 'NEW_GROUP',
@@ -66,6 +102,17 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
       ),
     ),
   );
+
+  void _showScheduleSheet(BuildContext context, QuickMatchSearchDto search) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) =>
+          _QuickMatchSheetFrame(child: _ScheduleSheet(search: search)),
+    );
+  }
 }
 
 final class _StartSearch extends StatelessWidget {
@@ -805,162 +852,597 @@ final class _TimeSlot extends StatelessWidget {
   }
 }
 
-final class _Proposal extends StatefulWidget {
-  const _Proposal();
+final class _Proposal extends StatelessWidget {
+  const _Proposal({required this.search});
 
-  @override
-  State<_Proposal> createState() => _ProposalState();
-}
-
-final class _ProposalState extends State<_Proposal> {
-  int? _selectedOption;
+  final QuickMatchSearchDto search;
 
   @override
   Widget build(BuildContext context) {
-    final proposal =
-        (context.watch<QuickMatchCubit>().state as QuickMatchActive)
-            .search
-            .proposal!;
+    final proposal = search.proposal!;
+    if (proposal.type == 'OPEN_MATCH') {
+      return _OpenMatchProposal(search: search, proposal: proposal);
+    }
+    return _NewGroupProposal(proposal: proposal);
+  }
+}
+
+final class _OpenMatchProposal extends StatelessWidget {
+  const _OpenMatchProposal({required this.search, required this.proposal});
+
+  final QuickMatchSearchDto search;
+  final QuickMatchProposalDto proposal;
+
+  @override
+  Widget build(BuildContext context) {
+    final matchId = proposal.matchId;
+    final match = matchId != null && getIt.isRegistered<MatchesRepository>()
+        ? getIt<MatchesRepository>().getMatchDetail(matchId)
+        : Future<MatchDetailDto?>.value(null);
+
+    return FutureBuilder<MatchDetailDto?>(
+      future: match,
+      builder: (context, snapshot) => _OpenMatchProposalLayout(
+        search: search,
+        proposal: proposal,
+        match: snapshot.data,
+      ),
+    );
+  }
+}
+
+final class _OpenMatchProposalLayout extends StatelessWidget {
+  const _OpenMatchProposalLayout({
+    required this.search,
+    required this.proposal,
+    required this.match,
+  });
+
+  final QuickMatchSearchDto search;
+  final QuickMatchProposalDto proposal;
+  final MatchDetailDto? match;
+
+  @override
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+    final title = match == null
+        ? 'Una partida compatible está lista'
+        : '${match!.clubName ?? 'Club'} · ${match!.courtName ?? 'Cancha'}';
+    final location = match?.locationLabel;
+    final date = match?.scheduledAt ?? search.targetDate;
+
+    return Column(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                shape: BoxShape.circle,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            children: [
+              _ProposalEyebrow(),
+              const SizedBox(height: 12),
+              Text(
+                '¡Partida encontrada!',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.6,
+                ),
               ),
-              child: Icon(
-                Icons.groups_rounded,
-                color: scheme.onPrimaryContainer,
-                size: 36,
+              const SizedBox(height: 4),
+              Text(
+                'Falta un jugador. ¿Te sumas?',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 15),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              proposal.type == 'NEW_GROUP'
-                  ? '¡Encontramos jugadores!'
-                  : '¡Encontramos una partida!',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              proposal.type == 'NEW_GROUP'
-                  ? 'Tres jugadores compatibles quieren jugar. Confirmá tu disponibilidad antes de que venza el hold.'
-                  : 'Hay un cupo disponible para vos. Confirmalo antes de que venza el hold.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            _Countdown(expiresAt: proposal.expiresAt),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: scheme.outlineVariant),
+              const SizedBox(height: 18),
+              _OpenMatchCard(
+                match: match,
+                title: title,
+                location: location,
+                date: date,
               ),
-              child: Row(
+              const SizedBox(height: 12),
+              _ProposalHold(expiresAt: proposal.expiresAt),
+              const SizedBox(height: 14),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.groups_rounded, color: scheme.primary),
-                  const SizedBox(width: 12),
+                  Icon(AppIcons.shield, color: scheme.primary, size: 18),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      proposal.type == 'NEW_GROUP'
-                          ? 'Grupo compatible listo para confirmar'
-                          : 'Hay un lugar disponible en una partida cercana',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                      'Nada se cobra hasta que confirmes. Después pagas tu parte desde la partida.',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12.5,
+                        height: 1.35,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            if (proposal.type == 'NEW_GROUP' &&
-                proposal.venueOptions.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Elegí sede y horario',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+            ],
+          ),
+        ),
+        _ProposalFooter(
+          onConfirm: () => context.read<QuickMatchCubit>().confirmProposal(),
+          onContinue: () => context.read<QuickMatchCubit>().dismissProposal(),
+        ),
+      ],
+    );
+  }
+}
+
+final class _ProposalEyebrow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.primary.withValues(alpha: .14),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(AppIcons.people, color: scheme.primary, size: 15),
+              const SizedBox(width: 6),
+              Text(
+                'Partida abierta con cupo',
+                style: TextStyle(
+                  color: scheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 8),
-              ...proposal.venueOptions.asMap().entries.map((entry) {
-                final option = entry.value;
-                final selected = _selectedOption == entry.key;
-                final price = (option.pricePerPlayerCents / 100)
-                    .toStringAsFixed(2);
-                return Card(
-                  child: ListTile(
-                    onTap: () => setState(() => _selectedOption = entry.key),
-                    leading: Icon(
-                      selected
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off,
-                      color: selected
-                          ? scheme.primary
-                          : scheme.onSurfaceVariant,
-                    ),
-                    title: Text(option.venueName),
-                    subtitle: Text(
-                      '${option.courtName} · ${_formatOptionDate(option.scheduledAt)}',
-                    ),
-                    trailing: Text('US\$ $price'),
-                  ),
-                );
-              }),
-            ] else if (proposal.type == 'NEW_GROUP') ...[
-              const SizedBox(height: 16),
-              Text(
-                'Estamos buscando cancha cerca de vos. Te avisaremos antes de reservar.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _OpenMatchCard extends StatelessWidget {
+  const _OpenMatchCard({
+    required this.match,
+    required this.title,
+    required this.location,
+    required this.date,
+  });
+
+  final MatchDetailDto? match;
+  final String title;
+  final String? location;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final participants = match?.participants ?? const <MatchParticipantDto>[];
+    final maxParticipants = match?.maxParticipants ?? 4;
+    final openSpots = match?.openSpots ?? 1;
+    final category = match?.categoryName ?? 'Tu categoría';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  _formatProposalDate(date),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+              if (match != null)
+                _ProposalPrice(
+                  amountCents: match!.pricePerPlayerCents,
+                  currency: match!.displayCurrency ?? match!.pricingCurrency,
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(AppIcons.pin, size: 15, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
             ],
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed:
-                  proposal.type == 'NEW_GROUP' &&
-                      proposal.venueOptions.isNotEmpty &&
-                      _selectedOption == null
-                  ? null
-                  : () => context.read<QuickMatchCubit>().confirmProposal(
-                      option: _selectedOption == null
-                          ? null
-                          : proposal.venueOptions[_selectedOption!],
-                    ),
+          ),
+          if (location != null && location!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Padding(
+              padding: const EdgeInsets.only(left: 21),
               child: Text(
-                proposal.type == 'NEW_GROUP'
-                    ? 'Confirmar disponibilidad'
-                    : 'Confirmar partida',
+                location!,
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
               ),
             ),
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: () =>
-                  context.read<QuickMatchCubit>().dismissProposal(),
-              child: const Text('Seguir buscando'),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _ProposalTag(label: category, emphasized: true),
+              _ProposalTag(
+                label:
+                    '$openSpots cupo${openSpots == 1 ? '' : 's'} disponible${openSpots == 1 ? '' : 's'}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: scheme.outlineVariant, height: 1),
+          const SizedBox(height: 14),
+          _ParticipantRow(
+            participants: participants,
+            maxParticipants: maxParticipants,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            participants.isEmpty
+                ? 'Confirmá para ver a los demás jugadores.'
+                : 'Solo falta completar el último cupo.',
+            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _ProposalPrice extends StatelessWidget {
+  const _ProposalPrice({required this.amountCents, required this.currency});
+
+  final int amountCents;
+  final String? currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final symbol = currency == 'USD' ? 'US\$' : (currency ?? '');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '$symbol${(amountCents / 100).toStringAsFixed(2)} p/p',
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        Text(
+          'Precio por jugador',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _ProposalTag extends StatelessWidget {
+  const _ProposalTag({required this.label, this.emphasized = false});
+
+  final String label;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: emphasized ? scheme.tertiary : scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: emphasized ? scheme.onTertiary : scheme.onSurfaceVariant,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _ParticipantRow extends StatelessWidget {
+  const _ParticipantRow({
+    required this.participants,
+    required this.maxParticipants,
+  });
+
+  final List<MatchParticipantDto> participants;
+  final int maxParticipants;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayed = participants.take(maxParticipants).toList();
+    final openCount = (maxParticipants - displayed.length).clamp(
+      0,
+      maxParticipants,
+    );
+    return Row(
+      children: [
+        ...displayed.map(
+          (participant) => Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: _ParticipantAvatar(
+              name: participant.displayName ?? 'Jugador',
             ),
-            const SizedBox(height: 14),
-            Text(
-              proposal.type == 'NEW_GROUP'
-                  ? 'La cancha y el pago se eligen solo cuando estén los cuatro.'
-                  : 'Confirmar te une a la partida; el pago sigue el flujo habitual.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+          ),
+        ),
+        ...List<Widget>.generate(
+          openCount,
+          (_) => Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: _OpenParticipantAvatar(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _ParticipantAvatar extends StatelessWidget {
+  const _ParticipantAvatar({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = name
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((part) => part[0].toUpperCase())
+        .join();
+    return SizedBox(
+      width: 48,
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: Text(
+              initials,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            name.split(' ').first,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _OpenParticipantAvatar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 48,
+      child: Column(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: scheme.primary, width: 2),
+            ),
+            child: Icon(AppIcons.add, color: scheme.primary, size: 20),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Tu lugar',
+            style: TextStyle(
+              color: scheme.primary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _ProposalHold extends StatelessWidget {
+  const _ProposalHold({required this.expiresAt});
+
+  final DateTime expiresAt;
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<int>(
+    stream: Stream.periodic(const Duration(seconds: 1), (value) => value),
+    builder: (context, _) {
+      final seconds = expiresAt
+          .difference(DateTime.now())
+          .inSeconds
+          .clamp(0, 120);
+      final scheme = Theme.of(context).colorScheme;
+      return Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(AppIcons.clock, color: scheme.primary, size: 17),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Reservamos tu cupo por',
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')} min',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: seconds / 120,
+              minHeight: 3,
+              borderRadius: BorderRadius.circular(99),
             ),
           ],
+        ),
+      );
+    },
+  );
+}
+
+final class _ProposalFooter extends StatelessWidget {
+  const _ProposalFooter({required this.onConfirm, required this.onContinue});
+
+  final VoidCallback onConfirm;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      border: Border(
+        top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+    ),
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+        child: Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onConfirm,
+                icon: const Icon(AppIcons.check),
+                label: const Text('Confirmar cupo'),
+              ),
+            ),
+            TextButton(
+              onPressed: onContinue,
+              child: const Text('Seguir buscando'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+final class _NewGroupProposal extends StatefulWidget {
+  const _NewGroupProposal({required this.proposal});
+
+  final QuickMatchProposalDto proposal;
+
+  @override
+  State<_NewGroupProposal> createState() => _NewGroupProposalState();
+}
+
+final class _NewGroupProposalState extends State<_NewGroupProposal> {
+  int? _selectedOption;
+
+  @override
+  Widget build(BuildContext context) {
+    final proposal = widget.proposal;
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+      children: [
+        Text(
+          '¡Encontramos jugadores!',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Tres jugadores compatibles quieren jugar. Confirmá tu disponibilidad antes de que venza el hold.',
+        ),
+        const SizedBox(height: 20),
+        _Countdown(expiresAt: proposal.expiresAt),
+        if (proposal.venueOptions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Elegí sede y horario',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          ...proposal.venueOptions.asMap().entries.map((entry) {
+            final option = entry.value;
+            final selected = _selectedOption == entry.key;
+            return Card(
+              child: ListTile(
+                onTap: () => setState(() => _selectedOption = entry.key),
+                leading: Icon(
+                  selected ? AppIcons.checkCircle : AppIcons.pending,
+                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                ),
+                title: Text(option.venueName),
+                subtitle: Text(
+                  '${option.courtName} · ${_formatOptionDate(option.scheduledAt)}',
+                ),
+                trailing: Text(
+                  'US\$ ${(option.pricePerPlayerCents / 100).toStringAsFixed(2)}',
+                ),
+              ),
+            );
+          }),
+        ],
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: proposal.venueOptions.isNotEmpty && _selectedOption == null
+              ? null
+              : () => context.read<QuickMatchCubit>().confirmProposal(
+                  option: _selectedOption == null
+                      ? null
+                      : proposal.venueOptions[_selectedOption!],
+                ),
+          child: const Text('Confirmar disponibilidad'),
+        ),
+        OutlinedButton(
+          onPressed: () => context.read<QuickMatchCubit>().dismissProposal(),
+          child: const Text('Seguir buscando'),
         ),
       ],
     );
@@ -972,6 +1454,21 @@ String _formatOptionDate(DateTime value) {
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
   return '$hour:$minute';
+}
+
+String _formatProposalDate(DateTime value) {
+  final local = value.toLocal();
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final date = DateTime(local.year, local.month, local.day);
+  final day = date == today
+      ? 'Hoy'
+      : date == today.add(const Duration(days: 1))
+      ? 'Mañana'
+      : '${local.day}/${local.month}';
+  final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+  final suffix = local.hour >= 12 ? 'pm' : 'am';
+  return '$day · $hour:${local.minute.toString().padLeft(2, '0')} $suffix';
 }
 
 final class _Countdown extends StatelessWidget {
@@ -1005,72 +1502,335 @@ final class _Countdown extends StatelessWidget {
 
 final class _Searching extends StatelessWidget {
   const _Searching({required this.search});
+
   final QuickMatchSearchDto search;
+
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
-    children: [
-      _PulseIcon(
-        icon: search.noMatchYet
-            ? Icons.notifications_none_rounded
-            : Icons.search_rounded,
-      ),
-      const SizedBox(height: 18),
-      Text(
-        search.noMatchYet ? 'Seguimos buscando' : 'Buscando jugadores',
-        textAlign: TextAlign.center,
-        style: Theme.of(
-          context,
-        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        search.noMatchYet
-            ? 'Todavía no encontramos una opción compatible. Te avisamos cuando aparezca.'
-            : 'Estamos revisando partidas abiertas y jugadores con tu mismo horario.',
-        textAlign: TextAlign.center,
-      ),
-      const SizedBox(height: 22),
-      _StepCard(noMatchYet: search.noMatchYet),
-      const SizedBox(height: 16),
-      if (search.noMatchYet) ...[
-        _ActionRow(
-          icon: Icons.schedule_rounded,
-          title: 'Cambiar horario',
-          onTap: () => _showScheduleSheet(context),
+  Widget build(BuildContext context) {
+    final noMatch = search.noMatchYet;
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 32, 20, 20),
+            children: [
+              _PulseIcon(icon: noMatch ? AppIcons.bell : AppIcons.search),
+              const SizedBox(height: 22),
+              Text(
+                noMatch ? 'Seguimos buscando' : 'Buscando jugadores',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.5,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                _searchSummary(search),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                _zoneSummary(search.zoneKm),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12.5,
+                ),
+              ),
+              const SizedBox(height: 22),
+              _QueueProgressCard(search: search),
+              const SizedBox(height: 14),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    AppIcons.bell,
+                    size: 17,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Puedes cerrar la app. Te enviamos una notificación.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (noMatch) ...[
+                const SizedBox(height: 20),
+                _NoMatchActions(search: search),
+              ],
+            ],
+          ),
         ),
-        _ActionRow(
-          icon: Icons.location_on_outlined,
-          title: 'Ampliar zona (${search.zoneKm} km)',
-          onTap: search.zoneKm >= 100
-              ? null
-              : () => context.read<QuickMatchCubit>().expandZone(),
-        ),
-        _ActionRow(
-          icon: Icons.sports_tennis_rounded,
-          title: 'Explorar partidas abiertas',
-          onTap: () => context.go(Routes.discoverMatches),
+        _QueueFooter(
+          onEdit: () => _showScheduleSheet(context),
+          onLeave: () => context.read<QuickMatchCubit>().cancel(),
         ),
       ],
-      const SizedBox(height: 20),
-      FilledButton(
-        onPressed: () => context.go(Routes.home),
-        child: const Text('Listo, avisame'),
-      ),
-      TextButton(
-        onPressed: () => context.read<QuickMatchCubit>().cancel(),
-        child: const Text('Salir de la cola'),
-      ),
-    ],
-  );
+    );
+  }
 
   void _showScheduleSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (_) => _ScheduleSheet(search: search),
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) =>
+          _QuickMatchSheetFrame(child: _ScheduleSheet(search: search)),
     );
   }
+}
+
+String _searchSummary(QuickMatchSearchDto search) {
+  final date = search.targetDate.toLocal();
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final target = DateTime(date.year, date.month, date.day);
+  final day = switch (target.difference(today).inDays) {
+    0 => 'Hoy',
+    1 => 'Mañana',
+    _ => '${date.day}/${date.month}',
+  };
+  final slots = <String, String>{
+    'MORNING': 'mañana',
+    'AFTERNOON': 'tarde',
+    'EVENING': 'noche',
+  };
+  final selected = search.slots
+      .map((slot) => slots[slot] ?? slot.toLowerCase())
+      .join(', ');
+  return '$day · ${selected.isEmpty ? 'tu horario' : selected}';
+}
+
+String _zoneSummary(int zoneKm) =>
+    zoneKm >= 100 ? 'En toda Caracas' : 'Hasta $zoneKm km de tu ubicación';
+
+final class _QueueProgressCard extends StatelessWidget {
+  const _QueueProgressCard({required this.search});
+
+  final QuickMatchSearchDto search;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    child: Column(
+      children: [
+        _QueueProgressStep(
+          state: search.includeOpenMatches
+              ? _QueueStepState.complete
+              : _QueueStepState.pending,
+          title: 'Revisando partidas abiertas',
+          subtitle: search.includeOpenMatches
+              ? 'Ninguna con cupo para ti en este momento'
+              : 'Desactivado en tu búsqueda',
+        ),
+        _QueueProgressStep(
+          state: _QueueStepState.active,
+          title: 'Buscando jugadores cerca de ti',
+          subtitle: 'Personas de tu nivel que también quieren jugar',
+        ),
+        const _QueueProgressStep(
+          state: _QueueStepState.pending,
+          title: 'Te avisaremos apenas haya una opción',
+          subtitle: 'Tendrás 2 minutos para confirmar',
+          isLast: true,
+        ),
+      ],
+    ),
+  );
+}
+
+enum _QueueStepState { complete, active, pending }
+
+final class _QueueProgressStep extends StatelessWidget {
+  const _QueueProgressStep({
+    required this.state,
+    required this.title,
+    required this.subtitle,
+    this.isLast = false,
+  });
+
+  final _QueueStepState state;
+  final String title;
+  final String subtitle;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = state == _QueueStepState.pending
+        ? scheme.outline
+        : scheme.primary;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 22,
+            child: Column(
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: state == _QueueStepState.complete
+                        ? color
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: color, width: 2),
+                  ),
+                  child: state == _QueueStepState.complete
+                      ? Icon(AppIcons.check, size: 14, color: scheme.onPrimary)
+                      : state == _QueueStepState.active
+                      ? Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(width: 2, color: scheme.outlineVariant),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _QueueFooter extends StatelessWidget {
+  const _QueueFooter({required this.onEdit, required this.onLeave});
+
+  final VoidCallback onEdit;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      border: Border(
+        top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+    ),
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+        child: Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(AppIcons.sliders),
+                label: const Text('Editar preferencias'),
+              ),
+            ),
+            TextButton(
+              onPressed: onLeave,
+              child: const Text('Salir de la cola'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+final class _NoMatchActions extends StatelessWidget {
+  const _NoMatchActions({required this.search});
+
+  final QuickMatchSearchDto search;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    child: Column(
+      children: [
+        ListTile(
+          leading: const Icon(AppIcons.clock),
+          title: const Text('Cambiar horario'),
+          subtitle: const Text('Suma la tarde o prueba mañana'),
+          onTap: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) =>
+                _QuickMatchSheetFrame(child: _ScheduleSheet(search: search)),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(AppIcons.pin),
+          title: const Text('Ampliar zona'),
+          subtitle: Text(
+            search.zoneKm >= 100
+                ? 'Ya buscas en toda Caracas'
+                : 'Busca más lejos para encontrar antes',
+          ),
+          onTap: search.zoneKm >= 100
+              ? null
+              : () => context.read<QuickMatchCubit>().expandZone(),
+        ),
+        ListTile(
+          leading: const Icon(AppIcons.list),
+          title: const Text('Ver partidas abiertas'),
+          subtitle: const Text('Elige tú una partida y únete'),
+          onTap: () => context.go(Routes.discoverMatches),
+        ),
+      ],
+    ),
+  );
 }
 
 final class _ScheduleSheet extends StatefulWidget {
@@ -1223,70 +1983,6 @@ final class _PulseIcon extends StatelessWidget {
       ),
     );
   }
-}
-
-final class _StepCard extends StatelessWidget {
-  const _StepCard({required this.noMatchYet});
-  final bool noMatchYet;
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            noMatchYet ? 'Seguimos atentos' : 'Así funciona',
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 12),
-          const _Step(label: 'Revisamos partidas abiertas'),
-          const _Step(label: 'Buscamos jugadores compatibles'),
-          const _Step(label: 'Te avisamos cuando haya una opción'),
-        ],
-      ),
-    ),
-  );
-}
-
-final class _Step extends StatelessWidget {
-  const _Step({required this.label});
-  final String label;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 5),
-    child: Row(
-      children: [
-        Icon(
-          Icons.check_circle_rounded,
-          color: Theme.of(context).colorScheme.primary,
-          size: 18,
-        ),
-        const SizedBox(width: 10),
-        Text(label),
-      ],
-    ),
-  );
-}
-
-final class _ActionRow extends StatelessWidget {
-  const _ActionRow({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String title;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) => Card(
-    child: ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: onTap,
-    ),
-  );
 }
 
 final class _SurfaceMessage extends StatelessWidget {
