@@ -5,10 +5,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
+import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
+import 'package:cuadrala_mobile/src/features/catalog/data/catalog_api.dart';
+import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/home/presentation/cubit/home_cubit.dart';
 import 'package:cuadrala_mobile/src/features/home/presentation/cubit/home_state.dart';
 import 'package:cuadrala_mobile/src/features/home/presentation/home_screen.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/open_match_dto.dart';
+import 'package:cuadrala_mobile/src/features/quick_match/presentation/cubit/quick_match_cubit.dart';
+import 'package:cuadrala_mobile/src/features/quick_match/data/quick_match_api.dart';
+import 'package:cuadrala_mobile/src/features/quick_match/data/quick_match_repository.dart';
 import 'package:cuadrala_mobile/src/features/shell/presentation/cubit/shell_cubit.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/empty_state.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/skeleton_list.dart';
@@ -20,6 +26,10 @@ import 'package:cuadrala_mobile/src/shared/widgets/skeleton_list.dart';
 class _MockHomeCubit extends MockCubit<HomeState> implements HomeCubit {}
 
 class _MockShellCubit extends MockCubit<int> implements ShellCubit {}
+
+class _MockQuickMatchApi extends Mock implements QuickMatchApi {}
+
+class _MockCatalogApi extends Mock implements CatalogApi {}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -85,11 +95,42 @@ Widget _wrap({required HomeCubit homeCubit, ShellCubit? shellCubit}) {
 void main() {
   late _MockHomeCubit homeCubit;
   late _MockShellCubit shellCubit;
+  late QuickMatchCubit quickMatchCubit;
+  late _MockCatalogApi catalogApi;
 
   setUp(() {
     homeCubit = _MockHomeCubit();
     shellCubit = _MockShellCubit();
+    catalogApi = _MockCatalogApi();
+    quickMatchCubit = QuickMatchCubit(
+      repository: QuickMatchRepository(_MockQuickMatchApi()),
+      catalogRepository: CatalogRepository(catalogApi: catalogApi),
+    );
     when(() => shellCubit.state).thenReturn(0);
+    when(() => catalogApi.listSportsEnvelope()).thenAnswer(
+      (_) async => {
+        'sports': [
+          {'id': 'sport-1', 'code': 'PADEL', 'name': 'Pádel'},
+        ],
+      },
+    );
+    when(
+      () => catalogApi.listCategoriesEnvelope(sportId: 'sport-1'),
+    ).thenAnswer(
+      (_) async => {
+        'categories': [
+          {
+            'id': 'cat-1',
+            'sportId': 'sport-1',
+            'name': '7ma',
+            'slug': '7ma',
+            'scheme': 'ORDINAL',
+            'sortOrder': 1,
+          },
+        ],
+      },
+    );
+    getIt.registerFactory<QuickMatchCubit>(() => quickMatchCubit);
     // load() is called by initState — stub it so it doesn't throw
     when(() => homeCubit.load()).thenAnswer((_) async {});
   });
@@ -97,6 +138,8 @@ void main() {
   tearDown(() {
     homeCubit.close();
     shellCubit.close();
+    quickMatchCubit.close();
+    getIt.unregister<QuickMatchCubit>();
   });
 
   // ── 1. Skeleton loading state ─────────────────────────────────────────────
@@ -276,6 +319,27 @@ void main() {
   // ── 6. CTA hierarchy ──────────────────────────────────────────────────────
 
   group('CTA hierarchy fix', () {
+    testWidgets(
+      'opens the Quick Match configuration sheet from Encontrar partida',
+      (tester) async {
+        when(() => homeCubit.state).thenReturn(_loadedState());
+
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Encontrar partida'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('¿Cuándo quieres jugar?'), findsOneWidget);
+        expect(find.text('Hoy'), findsOneWidget);
+        expect(find.text('Mañana'), findsWidgets);
+        expect(find.text('Elegir fecha'), findsOneWidget);
+        expect(find.text('Entrar a la cola'), findsOneWidget);
+      },
+    );
+
     testWidgets('"Encontrar partida" primary button is present', (
       tester,
     ) async {

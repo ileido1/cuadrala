@@ -13,6 +13,8 @@ import '../../../router/routes.dart';
 import '../../matches/data/models/open_match_dto.dart';
 import '../../quick_match/data/quick_match_repository.dart';
 import '../../quick_match/data/models/quick_match_search_dto.dart';
+import '../../quick_match/presentation/quick_match_screen.dart'
+    show showQuickMatchConfigurationSheet;
 import '../../venues/presentation/create_match_panel.dart';
 import '../../matches/presentation/open_match_display.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -222,12 +224,17 @@ final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
   @override
   Widget build(BuildContext context) => FutureBuilder<QuickMatchSearchDto?>(
     future: _search,
-    builder: (context, snapshot) => _HeroCard(
-      activeSearch: _visibleSearch(snapshot.data),
-      onFind: () => context.push(Routes.quickMatch),
-      onCreate: () => showCreateMatchSheet(context),
-      onExplore: () => context.push(Routes.discoverMatches),
-    ),
+    builder: (context, snapshot) {
+      final activeSearch = _visibleSearch(snapshot.data);
+      return _HeroCard(
+        activeSearch: activeSearch,
+        onFind: activeSearch == null
+            ? () => showQuickMatchConfigurationSheet(context)
+            : () => context.push(Routes.quickMatch),
+        onCreate: () => showCreateMatchSheet(context),
+        onExplore: () => context.push(Routes.discoverMatches),
+      );
+    },
   );
 
   QuickMatchSearchDto? _visibleSearch(QuickMatchSearchDto? search) {
