@@ -64,7 +64,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 ## Delivery hardening tasks (2026-09-23)
 - [x] DH-1 API integration timeout: reproduce the reported guest-registration T24 and identify the actual full-suite timeouts. T24 passed; the reproducible timeouts were tournament match materialization exceeding Vitest's 5-second default and two slow DB hooks, fixed with 15-second test and 30-second hook timeouts.
 - [x] DH-2 Flutter regression suite: repaired Home/Router failures without weakening assertions; the full suite passed with 799 tests.
-- [ ] DH-3 Visual QA: capture the Quick Match screen on the available device/emulator and compare it with the handoff states; record any corrections and evidence. Pending: no device/emulator is exposed in the current CUA session.
+- [x] DH-3 Visual QA: captured the deployed Quick Match screen in the in-app browser at phone viewport size and compared it against the handoff hierarchy. Header, green hero card, preference rows, primary CTA, spacing, dark palette, and bottom navigation are aligned; no visible overflow or overlap was found. Production endpoint returned HTTP 200 with the nullable empty state during the flow.
 - [x] DH-4 No-match actions: implemented functional change-time and expand-zone interactions, preserving search preferences and restarting through the Cubit/API; added Cubit coverage.
 - [x] DH-5 Invitation-specific navigation: tournament notification routes now carry an invitation intent and the detail screen opens the pending invitation flow with accept/reject actions when one exists.
 - [x] DH-6 Final verification and delivery: Flutter and API checks passed; commit `199a1aa` was pushed to `origin/main`.
