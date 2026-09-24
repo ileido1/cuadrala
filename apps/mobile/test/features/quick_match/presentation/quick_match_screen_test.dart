@@ -1,6 +1,8 @@
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
+import 'package:cuadrala_mobile/src/features/catalog/data/models/category_dto.dart';
+import 'package:cuadrala_mobile/src/features/catalog/data/models/sport_dto.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/match_detail_dto.dart';
 import 'package:cuadrala_mobile/src/features/quick_match/data/models/quick_match_search_dto.dart';
@@ -154,5 +156,58 @@ void main() {
     expect(find.text('US\$9.00 p/p'), findsOneWidget);
     expect(find.text('Confirmar cupo'), findsOneWidget);
     expect(find.text('Seguir buscando'), findsOneWidget);
+  });
+
+  testWidgets('lets the player choose a sport and submits its category', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => null);
+    when(() => catalog.listSports()).thenAnswer(
+      (_) async => const [
+        SportDto(id: 'padel', code: 'PADEL', name: 'Pádel'),
+        SportDto(id: 'tennis', code: 'TENNIS', name: 'Tenis'),
+      ],
+    );
+    when(() => catalog.listCategories(sportId: 'padel')).thenAnswer(
+      (_) async => const [
+        CategoryDto(
+          id: 'padel-7',
+          sportId: 'padel',
+          name: '7ma',
+          slug: '7ma',
+          scheme: 'ORDINAL',
+          sortOrder: 1,
+        ),
+      ],
+    );
+    when(() => catalog.listCategories(sportId: 'tennis')).thenAnswer(
+      (_) async => const [
+        CategoryDto(
+          id: 'tennis-6',
+          sportId: 'tennis',
+          name: '6ta',
+          slug: '6ta',
+          scheme: 'ORDINAL',
+          sortOrder: 1,
+        ),
+      ],
+    );
+    when(() => repository.start(any())).thenAnswer((_) async => _searching());
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jugá hoy sin armar grupo'), findsNothing);
+    expect(find.text('¿Cuándo quieres jugar?'), findsOneWidget);
+    await tester.tap(find.text('Tenis'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('quick-match.configure.submit')));
+    await tester.pumpAndSettle();
+
+    final captured =
+        verify(() => repository.start(captureAny())).captured.single
+            as Map<String, Object?>;
+    expect(captured['sportId'], 'tennis');
+    expect(captured['categoryId'], 'tennis-6');
   });
 }

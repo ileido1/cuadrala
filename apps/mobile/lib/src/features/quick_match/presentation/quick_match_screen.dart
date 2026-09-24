@@ -13,6 +13,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/date_strip.dart';
+import '../../../shared/widgets/segmented_control.dart';
 
 final class QuickMatchScreen extends StatefulWidget {
   const QuickMatchScreen({super.key});
@@ -85,7 +86,9 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
             child: CircularProgressIndicator(),
           ),
           QuickMatchFailure(:final message) => _Failure(message: message),
-          QuickMatchIdle() => const _StartSearch(),
+          QuickMatchIdle() => _IdleQuickMatch(
+            onOpenConfiguration: _showInitialConfiguration,
+          ),
           QuickMatchActive(:final search)
               when search.status == 'PROPOSAL' &&
                   search.proposal?.status == 'PENDING' =>
@@ -113,112 +116,50 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
           _QuickMatchSheetFrame(child: _ScheduleSheet(search: search)),
     );
   }
-}
 
-final class _StartSearch extends StatelessWidget {
-  const _StartSearch();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return FutureBuilder(
-      future: context.read<QuickMatchCubit>().defaultConfiguration(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final configuration = snapshot.data;
-        if (configuration == null) {
-          return const _Failure(
-            message: 'Completá tu deporte y categoría para buscar una partida.',
-          );
-        }
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: scheme.primary,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: scheme.primary.withValues(alpha: .22),
-                    blurRadius: 22,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.bolt_rounded, color: scheme.onPrimary, size: 34),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Jugá hoy sin armar grupo',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: scheme.onPrimary,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Buscamos primero partidas abiertas y después jugadores compatibles con tu horario.',
-                    style: TextStyle(
-                      color: scheme.onPrimary.withValues(alpha: .86),
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            _InfoRow(
-              icon: Icons.sports_tennis_rounded,
-              label: 'Deporte',
-              value: configuration.sportName,
-            ),
-            _InfoRow(
-              icon: Icons.bar_chart_rounded,
-              label: 'Nivel',
-              value: configuration.categoryName,
-            ),
-            const SizedBox(height: 10),
-            FilledButton.icon(
-              key: const Key('quick-match.start'),
-              onPressed: () => _showConfiguration(context, configuration),
-              icon: const Icon(Icons.search_rounded),
-              label: const Text('Buscar partida'),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'No reservamos cancha ni cobramos nada hasta que confirmes una opción.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: scheme.onSurfaceVariant,
-                fontSize: 12,
-                height: 1.35,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showConfiguration(
-    BuildContext context,
-    ({String sportId, String sportName, String categoryId, String categoryName})
-    config,
-  ) {
-    showModalBottomSheet<bool>(
+  Future<void> _showInitialConfiguration() async {
+    final started = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _QuickMatchSetupSheet(config: config),
+      builder: (_) => BlocProvider.value(
+        value: context.read<QuickMatchCubit>(),
+        child: const _QuickMatchConfigurationLoader(),
+      ),
     );
+    if (!mounted) return;
+    if (started != true &&
+        context.read<QuickMatchCubit>().state is QuickMatchIdle) {
+      context.go(Routes.home);
+    }
   }
+}
+
+final class _IdleQuickMatch extends StatefulWidget {
+  const _IdleQuickMatch({required this.onOpenConfiguration});
+
+  final Future<void> Function() onOpenConfiguration;
+
+  @override
+  State<_IdleQuickMatch> createState() => _IdleQuickMatchState();
+}
+
+class _IdleQuickMatchState extends State<_IdleQuickMatch> {
+  var _opened = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _opened) return;
+      _opened = true;
+      widget.onOpenConfiguration();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 /// Opens the same Quick Match preferences flow from Home before entering the
@@ -291,13 +232,7 @@ final class _QuickMatchSetupError extends StatelessWidget {
 final class _QuickMatchSetupSheet extends StatelessWidget {
   const _QuickMatchSetupSheet({required this.config});
 
-  final ({
-    String sportId,
-    String sportName,
-    String categoryId,
-    String categoryName,
-  })
-  config;
+  final QuickMatchConfiguration config;
 
   @override
   Widget build(BuildContext context) =>
@@ -328,13 +263,7 @@ final class _QuickMatchSheetFrame extends StatelessWidget {
 
 final class _ConfigurationSheet extends StatefulWidget {
   const _ConfigurationSheet({required this.config});
-  final ({
-    String sportId,
-    String sportName,
-    String categoryId,
-    String categoryName,
-  })
-  config;
+  final QuickMatchConfiguration config;
 
   @override
   State<_ConfigurationSheet> createState() => _ConfigurationSheetState();
@@ -350,6 +279,21 @@ final class _ConfigurationSheetState extends State<_ConfigurationSheet> {
   int _zoneKm = 10;
   bool _submitting = false;
   String? _error;
+  late QuickMatchSportOption _selectedSport = widget.config.sports.first;
+
+  void _selectSport(String sportId) {
+    final selected = widget.config.sports.firstWhere(
+      (option) => option.sport.id == sportId,
+    );
+    setState(() => _selectedSport = selected);
+  }
+
+  List<SegmentedOption<String>> _sportOptions() => widget.config.sports
+      .map(
+        (option) =>
+            SegmentedOption(value: option.sport.id, label: option.sport.name),
+      )
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -405,20 +349,10 @@ final class _ConfigurationSheetState extends State<_ConfigurationSheet> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             children: [
               _SectionLabel(label: 'Deporte'),
-              _PreferenceCard(
-                child: Row(
-                  children: [
-                    Icon(AppIcons.racquetSport, color: scheme.primary),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.config.sportName,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    _LevelTag(label: widget.config.categoryName),
-                  ],
-                ),
+              SegmentedControl<String>(
+                value: _selectedSport.sport.id,
+                onChanged: _selectSport,
+                options: _sportOptions(),
               ),
               _SectionLabel(label: 'Día'),
               Wrap(
@@ -489,7 +423,7 @@ final class _ConfigurationSheetState extends State<_ConfigurationSheet> {
               _PreferenceCard(
                 child: Row(
                   children: [
-                    _LevelTag(label: widget.config.categoryName),
+                    _LevelTag(label: _selectedSport.categories.first.name),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -633,8 +567,8 @@ final class _ConfigurationSheetState extends State<_ConfigurationSheet> {
     });
     final cubit = context.read<QuickMatchCubit>();
     await cubit.start({
-      'sportId': widget.config.sportId,
-      'categoryId': widget.config.categoryId,
+      'sportId': _selectedSport.sport.id,
+      'categoryId': _selectedSport.categories.first.id,
       'day': _day,
       if (_day == 'CUSTOM') 'date': _customDate,
       'slots': _slots.toList(),
@@ -2095,29 +2029,6 @@ final class _Failure extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-}
-
-final class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-  final IconData icon;
-  final String label, value;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Row(
-      children: [
-        Icon(icon, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 12),
-        Text(label),
-        const Spacer(),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
-      ],
     ),
   );
 }

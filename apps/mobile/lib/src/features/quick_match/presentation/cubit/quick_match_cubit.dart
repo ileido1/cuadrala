@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../catalog/data/catalog_repository.dart';
+import '../../../catalog/data/models/category_dto.dart';
+import '../../../catalog/data/models/sport_dto.dart';
 import '../../data/models/quick_match_search_dto.dart';
 import '../../data/quick_match_repository.dart';
 import 'quick_match_state.dart';
@@ -128,28 +130,32 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
     });
   }
 
-  Future<
-    ({
-      String sportId,
-      String sportName,
-      String categoryId,
-      String categoryName,
-    })?
-  >
-  defaultConfiguration() async {
+  Future<QuickMatchConfiguration?> defaultConfiguration() async {
     final sports = await _catalogRepository.listSports();
-    if (sports.isEmpty) return null;
-    final sport = sports.first;
-    final categories = await _catalogRepository.listCategories(
-      sportId: sport.id,
-    );
-    if (categories.isEmpty) return null;
-    final category = categories.first;
-    return (
-      sportId: sport.id,
-      sportName: sport.name,
-      categoryId: category.id,
-      categoryName: category.name,
-    );
+    final options = <QuickMatchSportOption>[];
+    for (final sport in sports) {
+      final categories = await _catalogRepository.listCategories(
+        sportId: sport.id,
+      );
+      if (categories.isNotEmpty) {
+        options.add(
+          QuickMatchSportOption(sport: sport, categories: categories),
+        );
+      }
+    }
+    return options.isEmpty ? null : QuickMatchConfiguration(options);
   }
+}
+
+final class QuickMatchConfiguration {
+  const QuickMatchConfiguration(this.sports);
+
+  final List<QuickMatchSportOption> sports;
+}
+
+final class QuickMatchSportOption {
+  const QuickMatchSportOption({required this.sport, required this.categories});
+
+  final SportDto sport;
+  final List<CategoryDto> categories;
 }
