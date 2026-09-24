@@ -42,3 +42,4 @@ Delegated direct exploration completed; implementation is inline because the run
 - The managed Playwright browser was not installed; the runner supports `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` and the smoke used `/usr/bin/google-chrome`, avoiding a browser download.
 - PV-3 remains pending until a real authenticated target route and corresponding handoff screen are captured; no production credentials were used.
 - Follow-up: normalized the handoff capture to exactly 402x874 and hid the handoff board's sticky header before cropping. A real unauthenticated production run now produces a valid 402x874 report and correctly fails at `0.1238572583` because the target redirects to the welcome screen. Web Playwright smoke tests pass (`3 passed`) with Node 20.19.6 and `/usr/bin/google-chrome`.
+- The runner now resolves the `.cz` phone content automatically inside a labelled handoff screen, so the default `02 Configurar` command works without a fragile CSS selector.

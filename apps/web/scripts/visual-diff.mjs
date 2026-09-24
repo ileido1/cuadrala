@@ -118,7 +118,9 @@ async function findHandoffElement(page, label, selector) {
   if (matchIndex < 0) {
     throw new Error(`No handoff element matched data-screen-label containing "${label}". Add that attribute or pass --handoff-selector for legacy handoff HTML.`);
   }
-  return labelled.nth(matchIndex);
+  const screen = labelled.nth(matchIndex);
+  const phone = screen.locator('.cz').first();
+  return (await phone.count()) > 0 ? phone : screen;
 }
 
 async function captureElement(page, element, destination) {

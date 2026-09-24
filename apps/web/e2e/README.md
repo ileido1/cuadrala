@@ -39,7 +39,7 @@ npm run visual:diff -- \
   --target "https://www.cuadrala.app/#/quick-match"
 ```
 
-The handoff screen is selected by a substring in `data-screen-label`; the default is `02 Configurar`. For the supplied legacy prototype, which predates that attribute, select the phone content explicitly:
+The handoff screen is selected by a substring in `data-screen-label`; the default is `02 Configurar`. The runner automatically selects the `.cz` phone content inside that labelled screen. For a legacy handoff without `data-screen-label`, select the phone content explicitly:
 
 ```bash
 npm run visual:diff -- \
