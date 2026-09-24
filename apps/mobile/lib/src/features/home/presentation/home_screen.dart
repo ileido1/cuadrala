@@ -79,11 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   const _QuickMatchHomeBanner(),
-                  const SizedBox(height: 12),
-                  _HeroCard(
-                    onBuscar: () => context.push(Routes.quickMatch),
-                    onCrear: () => showCreateMatchSheet(context),
-                  ),
                   const SizedBox(height: 20),
                   _MyMatchesSection(
                     myMatches: loaded.myMatches,
@@ -94,21 +89,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 20),
                   _SectionHeader(
-                    title: 'Partidas abiertas',
+                    title: 'Cerca de ti',
                     onAction: () => context.push(Routes.discoverMatches),
                   ),
                   const SizedBox(height: 10),
                   if (loaded.openMatches.isEmpty)
                     EmptyState(
-                      title: 'Sin partidas abiertas',
+                      title: 'Sin partidas cerca de ti',
                       message:
-                          'No hay partidas abiertas por ahora. ¡Explorá nuevas!',
-                      ctaLabel: 'Buscar partidas',
+                          'No hay partidas cerca de ti por ahora. ¡Explorá nuevas!',
+                      ctaLabel: 'Explorar partidas',
                       onCtaPressed: () => context.push(Routes.discoverMatches),
                     )
                   else
                     ...loaded.openMatches
-                        .take(3)
+                        .take(2)
                         .map(
                           (m) => Padding(
                             padding: const EdgeInsets.only(bottom: 10),
@@ -207,7 +202,8 @@ String _initialsFrom(String name) {
 }
 
 // ---------------------------------------------------------------------------
-// Hero card — bolt + CTAs Buscar / Crear dentro de la card
+// ---------------------------------------------------------------------------
+// Quick Match home hero — the primary entry point from the supplied handoff.
 // ---------------------------------------------------------------------------
 
 final class _QuickMatchHomeBanner extends StatefulWidget {
@@ -218,209 +214,230 @@ final class _QuickMatchHomeBanner extends StatefulWidget {
 }
 
 final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
-  late final Future _search = getIt.isRegistered<QuickMatchRepository>()
+  late final Future<QuickMatchSearchDto?> _search =
+      getIt.isRegistered<QuickMatchRepository>()
       ? getIt<QuickMatchRepository>().current()
       : Future<QuickMatchSearchDto?>.value(null);
 
   @override
-  Widget build(BuildContext context) => FutureBuilder(
+  Widget build(BuildContext context) => FutureBuilder<QuickMatchSearchDto?>(
     future: _search,
-    builder: (context, snapshot) {
-      final search = snapshot.data;
-      if (search == null ||
-          search.status == 'CANCELLED' ||
-          search.status == 'CONFIRMED') {
-        return const SizedBox.shrink();
-      }
-      final proposalReady = search.status == 'PROPOSAL';
-      final scheme = Theme.of(context).colorScheme;
-      return Material(
-        color: proposalReady ? scheme.primary : scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: () => context.push(Routes.quickMatch),
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Icon(
-                  proposalReady ? Icons.bolt_rounded : Icons.circle,
-                  size: proposalReady ? 24 : 12,
-                  color: proposalReady ? scheme.onPrimary : scheme.primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        proposalReady
-                            ? '¡Tu propuesta está lista!'
-                            : 'Tu búsqueda está activa',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color: proposalReady
-                              ? scheme.onPrimary
-                              : scheme.onPrimaryContainer,
-                        ),
-                      ),
-                      Text(
-                        proposalReady
-                            ? 'Tenés tiempo limitado para confirmar.'
-                            : 'Te avisamos cuando encontremos una opción.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: proposalReady
-                              ? scheme.onPrimary
-                              : scheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: proposalReady
-                      ? scheme.onPrimary
-                      : scheme.onPrimaryContainer,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
+    builder: (context, snapshot) => _HeroCard(
+      activeSearch: _visibleSearch(snapshot.data),
+      onFind: () => context.push(Routes.quickMatch),
+      onCreate: () => showCreateMatchSheet(context),
+      onExplore: () => context.push(Routes.discoverMatches),
+    ),
   );
+
+  QuickMatchSearchDto? _visibleSearch(QuickMatchSearchDto? search) {
+    if (search == null ||
+        search.status == 'CANCELLED' ||
+        search.status == 'CONFIRMED') {
+      return null;
+    }
+    return search;
+  }
 }
 
 final class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.onBuscar, required this.onCrear});
+  const _HeroCard({
+    required this.onFind,
+    required this.onCreate,
+    required this.onExplore,
+    this.activeSearch,
+  });
 
-  final VoidCallback onBuscar;
-  final VoidCallback onCrear;
+  final VoidCallback onFind;
+  final VoidCallback onCreate;
+  final VoidCallback onExplore;
+  final QuickMatchSearchDto? activeSearch;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final active = activeSearch;
+    final proposalReady = active?.status == 'PROPOSAL';
 
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+        gradient: RadialGradient(
+          center: Alignment.topRight,
+          radius: 1.35,
+          colors: [
+            scheme.primary.withValues(alpha: 0.22),
+            scheme.surfaceContainerLow,
+          ],
+        ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: scheme.outlineVariant, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(13),
-                        color: scheme.primary,
-                        boxShadow: [
-                          BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.45),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        AppIcons.bolt,
-                        color: scheme.onPrimary,
-                        size: 24,
-                      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 20, 18, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Jugamos hoy?',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 27,
+                letterSpacing: -0.6,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Encontramos jugadores según tu horario y nivel.',
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+                fontSize: 14.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (active == null)
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: onFind,
+                  style: FilledButton.styleFrom(
+                    elevation: 6,
+                    shadowColor: scheme.primary.withValues(alpha: 0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Encontrar partida',
-                            style: TextStyle(
-                              color: scheme.onSurface,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Jugá según tu disponibilidad',
-                            style: TextStyle(
-                              color: scheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
+                  icon: const Icon(AppIcons.bolt, size: 19),
+                  label: const Text(
+                    'Encontrar partida',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: FilledButton.icon(
-                          onPressed: onBuscar,
-                          style: FilledButton.styleFrom(
-                            elevation: 6,
-                            shadowColor: scheme.primary.withValues(alpha: 0.4),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          icon: const Icon(AppIcons.search, size: 18),
-                          label: const Text(
-                            'Buscar',
-                            style: TextStyle(fontWeight: FontWeight.w800),
-                          ),
+              )
+            else
+              _ActiveSearchCallout(proposalReady: proposalReady, onTap: onFind),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: onCreate,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: scheme.onSurface,
+                        backgroundColor: scheme.surfaceContainerHighest,
+                        side: BorderSide(
+                          color: scheme.outlineVariant,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(AppIcons.add, size: 17),
+                      label: const Text(
+                        'Crear partida',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14.5,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: OutlinedButton.icon(
-                          onPressed: onCrear,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: scheme.onSurface,
-                            backgroundColor: scheme.surfaceContainerHighest,
-                            side: BorderSide(
-                              color: scheme.outlineVariant,
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          icon: const Icon(AppIcons.add, size: 18),
-                          label: const Text(
-                            'Crear',
-                            style: TextStyle(fontWeight: FontWeight.w800),
-                          ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: TextButton.icon(
+                      onPressed: onExplore,
+                      style: TextButton.styleFrom(
+                        foregroundColor: scheme.primary,
+                        padding: EdgeInsets.zero,
+                      ),
+                      iconAlignment: IconAlignment.end,
+                      icon: const Icon(AppIcons.arrowForward, size: 16),
+                      label: const Text(
+                        'Explorar partidas',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _ActiveSearchCallout extends StatelessWidget {
+  const _ActiveSearchCallout({
+    required this.proposalReady,
+    required this.onTap,
+  });
+
+  final bool proposalReady;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = proposalReady
+        ? scheme.onPrimary
+        : scheme.onPrimaryContainer;
+
+    return Material(
+      color: proposalReady ? scheme.primary : scheme.primaryContainer,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          child: Row(
+            children: [
+              Icon(
+                proposalReady ? AppIcons.bolt : AppIcons.target,
+                size: 20,
+                color: foreground,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      proposalReady
+                          ? '¡Tu propuesta está lista!'
+                          : 'Tu búsqueda está activa',
+                      style: TextStyle(
+                        color: foreground,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      proposalReady
+                          ? 'Tenés tiempo limitado para confirmar.'
+                          : 'Te avisamos cuando encontremos una opción.',
+                      style: TextStyle(color: foreground, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(AppIcons.chevronRight, color: foreground),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -490,33 +507,6 @@ final class _MyMatchesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-
-    if (myMatches.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: scheme.outlineVariant),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'No tenés partidas. ¡Buscá una!',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            TextButton(onPressed: onVerTodas, child: const Text('Explorar')),
-          ],
-        ),
-      );
-    }
-
     final visible = myMatches.take(2).toList();
 
     return Column(
@@ -524,16 +514,44 @@ final class _MyMatchesSection extends StatelessWidget {
       children: [
         _SectionHeader(title: 'Mis partidas', onAction: onVerTodas),
         const SizedBox(height: 8),
-        ...visible.map(
-          (m) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _MatchCardFor(
-              match: m,
-              exchangeRates: exchangeRates,
-              onTap: () => onMatchTap(m.id),
+        if (visible.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'No tenés partidas. ¡Buscá una!',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onVerTodas,
+                  child: const Text('Explorar'),
+                ),
+              ],
+            ),
+          )
+        else
+          ...visible.map(
+            (m) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _MatchCardFor(
+                match: m,
+                exchangeRates: exchangeRates,
+                onTap: () => onMatchTap(m.id),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -564,66 +582,51 @@ final class _HomeHeader extends StatelessWidget {
         : '?';
     final hasLevel = levelCategory != null || levelElo != null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: scheme.primary,
-                border: Border.all(color: scheme.tertiary, width: 2),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initials,
-                style: TextStyle(
-                  color: scheme.onPrimary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 19,
-                ),
-              ),
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: scheme.primary,
+            border: Border.all(color: scheme.tertiary, width: 2),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            initials,
+            style: TextStyle(
+              color: scheme.onPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 19,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Hola, $greetingName',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  if (hasLevel) ...[
-                    const SizedBox(height: 4),
-                    _LevelRow(category: levelCategory, elo: levelElo),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            _BellButton(onTap: onBellTap),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Text(
-          'Actividad en Cuádrala',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            fontSize: 27,
-            letterSpacing: -0.5,
-            color: scheme.onSurface,
           ),
         ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Hola, $greetingName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              if (hasLevel) ...[
+                const SizedBox(height: 4),
+                _LevelRow(category: levelCategory, elo: levelElo),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        _BellButton(onTap: onBellTap),
       ],
     );
   }

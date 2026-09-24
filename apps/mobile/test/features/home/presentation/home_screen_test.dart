@@ -59,10 +59,7 @@ HomeLoaded _loadedState({
   );
 }
 
-Widget _wrap({
-  required HomeCubit homeCubit,
-  ShellCubit? shellCubit,
-}) {
+Widget _wrap({required HomeCubit homeCubit, ShellCubit? shellCubit}) {
   final sc = shellCubit ?? _MockShellCubit();
   if (shellCubit == null) {
     when(() => (sc as _MockShellCubit).state).thenReturn(0);
@@ -105,34 +102,48 @@ void main() {
   // ── 1. Skeleton loading state ─────────────────────────────────────────────
 
   group('HomeLoading / HomeInitial shows skeleton', () {
-    testWidgets('HomeLoading renders SkeletonList, not CircularProgressIndicator', (tester) async {
-      when(() => homeCubit.state).thenReturn(const HomeLoading());
+    testWidgets(
+      'HomeLoading renders SkeletonList, not CircularProgressIndicator',
+      (tester) async {
+        when(() => homeCubit.state).thenReturn(const HomeLoading());
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
 
-      expect(find.byType(SkeletonList), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    });
+        expect(find.byType(SkeletonList), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
 
-    testWidgets('HomeInitial renders SkeletonList, not CircularProgressIndicator', (tester) async {
-      when(() => homeCubit.state).thenReturn(const HomeInitial());
+    testWidgets(
+      'HomeInitial renders SkeletonList, not CircularProgressIndicator',
+      (tester) async {
+        when(() => homeCubit.state).thenReturn(const HomeInitial());
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
 
-      expect(find.byType(SkeletonList), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    });
+        expect(find.byType(SkeletonList), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
   });
 
   // ── 2. HomeFailure — scaffold + retry button ───────────────────────────────
 
   group('HomeFailure', () {
-    testWidgets('shows Scaffold with AppBar titled "Inicio" and retry button', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        const HomeFailure(message: 'Error de red'),
-      );
+    testWidgets('shows Scaffold with AppBar titled "Inicio" and retry button', (
+      tester,
+    ) async {
+      when(
+        () => homeCubit.state,
+      ).thenReturn(const HomeFailure(message: 'Error de red'));
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
 
       expect(find.text('Inicio'), findsOneWidget);
       expect(find.text('Error de red'), findsOneWidget);
@@ -140,11 +151,13 @@ void main() {
     });
 
     testWidgets('retry button calls HomeCubit.load()', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        const HomeFailure(message: 'Error de red'),
-      );
+      when(
+        () => homeCubit.state,
+      ).thenReturn(const HomeFailure(message: 'Error de red'));
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
 
       await tester.tap(find.text('Reintentar'));
       await tester.pump();
@@ -156,23 +169,27 @@ void main() {
   // ── 3. Mis partidas section ───────────────────────────────────────────────
 
   group('HomeLoaded — Mis partidas section', () {
-    testWidgets('shows "Mis partidas" heading when myMatches is non-empty', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        _loadedState(myMatches: [_makeOpenMatch(id: 'my-1')]),
-      );
+    testWidgets('shows "Mis partidas" heading when myMatches is non-empty', (
+      tester,
+    ) async {
+      when(
+        () => homeCubit.state,
+      ).thenReturn(_loadedState(myMatches: [_makeOpenMatch(id: 'my-1')]));
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Mis partidas'), findsOneWidget);
     });
 
     testWidgets('shows compact CTA when myMatches is empty', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        _loadedState(myMatches: []),
-      );
+      when(() => homeCubit.state).thenReturn(_loadedState(myMatches: []));
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
       expect(find.textContaining('No tenés partidas'), findsOneWidget);
@@ -180,14 +197,18 @@ void main() {
 
     testWidgets('shows at most 2 items from myMatches', (tester) async {
       when(() => homeCubit.state).thenReturn(
-        _loadedState(myMatches: [
-          _makeOpenMatch(id: 'my-1'),
-          _makeOpenMatch(id: 'my-2'),
-          _makeOpenMatch(id: 'my-3'),
-        ]),
+        _loadedState(
+          myMatches: [
+            _makeOpenMatch(id: 'my-1'),
+            _makeOpenMatch(id: 'my-2'),
+            _makeOpenMatch(id: 'my-3'),
+          ],
+        ),
       );
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
       // The section title should appear once
@@ -200,40 +221,54 @@ void main() {
   // ── 4. Open matches — EmptyState ──────────────────────────────────────────
 
   group('HomeLoaded — open matches section', () {
-    testWidgets('shows EmptyState widget when openMatches is empty', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        _loadedState(openMatches: []),
-      );
+    testWidgets('shows EmptyState widget when openMatches is empty', (
+      tester,
+    ) async {
+      when(() => homeCubit.state).thenReturn(_loadedState(openMatches: []));
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(EmptyState), findsOneWidget);
     });
 
-    testWidgets('does NOT show EmptyState when openMatches is non-empty', (tester) async {
-      when(() => homeCubit.state).thenReturn(
-        _loadedState(openMatches: [_makeOpenMatch()]),
-      );
+    testWidgets('does NOT show EmptyState when openMatches is non-empty', (
+      tester,
+    ) async {
+      when(
+        () => homeCubit.state,
+      ).thenReturn(_loadedState(openMatches: [_makeOpenMatch()]));
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(EmptyState), findsNothing);
     });
   });
 
-  // ── 5. Hero card CTAs ─────────────────────────────────────────────────────
+  // ── 5. Home handoff hero ──────────────────────────────────────────────────
 
-  group('Hero card CTAs', () {
-    testWidgets('hero shows Buscar and Crear buttons', (tester) async {
+  group('Home handoff hero', () {
+    testWidgets('shows the recommended Quick Match hierarchy', (tester) async {
       when(() => homeCubit.state).thenReturn(_loadedState());
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('Buscar'), findsOneWidget);
-      expect(find.text('Crear'), findsOneWidget);
+      expect(find.text('¿Jugamos hoy?'), findsOneWidget);
+      expect(
+        find.text('Encontramos jugadores según tu horario y nivel.'),
+        findsOneWidget,
+      );
+      expect(find.text('Encontrar partida'), findsOneWidget);
+      expect(find.text('Crear partida'), findsOneWidget);
+      expect(find.text('Explorar partidas'), findsWidgets);
       expect(find.text('En vivo'), findsNothing);
     });
   });
@@ -241,45 +276,57 @@ void main() {
   // ── 6. CTA hierarchy ──────────────────────────────────────────────────────
 
   group('CTA hierarchy fix', () {
-    testWidgets('"Buscar" primary button is present', (tester) async {
+    testWidgets('"Encontrar partida" primary button is present', (
+      tester,
+    ) async {
       when(() => homeCubit.state).thenReturn(_loadedState());
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('Buscar'), findsOneWidget);
+      expect(find.text('Encontrar partida'), findsOneWidget);
     });
 
-    testWidgets('"Crear" secondary button is present', (tester) async {
+    testWidgets('"Crear partida" secondary button is present', (tester) async {
       when(() => homeCubit.state).thenReturn(_loadedState());
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('Crear'), findsOneWidget);
+      expect(find.text('Crear partida'), findsOneWidget);
     });
 
     testWidgets('"Nuevo Torneo" CTA is absent', (tester) async {
       when(() => homeCubit.state).thenReturn(_loadedState());
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Nuevo Torneo'), findsNothing);
     });
   });
 
-  // ── 7. Subtitle copy fix ─────────────────────────────────────────────────
+  // ── 7. Handoff title ──────────────────────────────────────────────────────
 
-  group('subtitle copy', () {
-    testWidgets('"Tu resumen" is replaced by "Actividad en Cuádrala"', (tester) async {
+  group('Handoff title', () {
+    testWidgets('replaces "Actividad en Cuádrala" with the Quick Match hero', (
+      tester,
+    ) async {
       when(() => homeCubit.state).thenReturn(_loadedState());
 
-      await tester.pumpWidget(_wrap(homeCubit: homeCubit, shellCubit: shellCubit));
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('Tu resumen'), findsNothing);
-      expect(find.text('Actividad en Cuádrala'), findsOneWidget);
+      expect(find.text('Actividad en Cuádrala'), findsNothing);
+      expect(find.text('¿Jugamos hoy?'), findsOneWidget);
     });
   });
 }
