@@ -122,6 +122,10 @@ async function findHandoffElement(page, label, selector) {
 }
 
 async function captureElement(page, element, destination) {
+  await element.evaluate((node) => node.scrollIntoView({ block: 'start', inline: 'start' }));
+  await page.locator('header').evaluateAll((headers) => headers.forEach((header) => {
+    header.style.display = 'none';
+  }));
   await element.evaluate((node) => {
     let parent = node.parentElement;
     while (parent && parent !== document.body) {
@@ -137,7 +141,17 @@ async function captureElement(page, element, destination) {
   if (Math.round(box.width) !== PHONE.width || Math.round(box.height) !== PHONE.height) {
     throw new Error(`Selected handoff screen is ${Math.round(box.width)}x${Math.round(box.height)}; expected ${PHONE.width}x${PHONE.height}. Select the phone content, not its desktop frame.`);
   }
-  await element.screenshot({ path: destination, animations: 'disabled' });
+  const raw = PNG.sync.read(await element.screenshot({ animations: 'disabled' }));
+  if (raw.width < PHONE.width || raw.height < PHONE.height) {
+    throw new Error(`Handoff screenshot is ${raw.width}x${raw.height}; expected at least ${PHONE.width}x${PHONE.height}.`);
+  }
+  const cropped = new PNG({ width: PHONE.width, height: PHONE.height });
+  for (let y = 0; y < PHONE.height; y += 1) {
+    const sourceOffset = y * raw.width * 4;
+    const targetOffset = y * PHONE.width * 4;
+    raw.data.copy(cropped.data, targetOffset, sourceOffset, sourceOffset + PHONE.width * 4);
+  }
+  writeFileSync(destination, PNG.sync.write(cropped));
 }
 
 function compareImages(baselinePath, targetPath, diffPath, threshold) {
