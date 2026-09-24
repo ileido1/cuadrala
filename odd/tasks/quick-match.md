@@ -90,3 +90,16 @@ The app currently lists open matches and supports manual creation, but has no pe
 - `apps/mobile/lib/src/features/availability/` — availability defaults.
 - `services/api/prisma/schema.prisma` — Quick Match persistence.
 - `services/api/src/application/use_cases/list_open_matches.use_case.ts` — shared open-match inventory.
+
+## Follow-up tasks (2026-09-24)
+- [x] QM-4c Let the player select a sport before entering the Quick Match queue, instead of displaying the default configuration as a fixed value.
+  - Trigger evidence: this changes catalog-driven Quick Match configuration, presentation, and focused widget coverage (three non-trivial files); delegated direct writer would be required, but no callable writer delegation surface is available, so this bounded task proceeds inline.
+  - Acceptance: the setup sheet presents the player’s eligible sports, updates the category/level affordance for the selected sport, and submits the selected sport/category IDs; it must not invent or hardcode sports.
+  - TDD: enabled; add a focused failing widget test before implementation, then run focused Flutter tests and analysis.
+  - Evidence: RED focused widget test failed because `Tenis` was not present and the non-handoff intro rendered. GREEN: the configuration loads catalog sports and each sport's eligible categories, uses a handoff-aligned segmented control, and submits the selected sport/category. `flutter analyze` passed.
+  - Commit: `c1c5c50 fix(quick-match): select sport before queue`.
+- [x] QM-4d Remove the non-handoff Quick Match introduction fallback when the route has no active search.
+  - Acceptance: entering `/quick-match` with no search opens the existing configuration sheet directly; the temporary “Jugá hoy sin armar grupo” card is not rendered.
+  - TDD: enabled; cover the idle route and preserve its close/submit behavior.
+  - Evidence: covered by the QM-4c widget flow; it asserts the intro is absent, the configuration sheet opens directly, and the selected sport/category are sent when entering the queue.
+  - Commit: `c1c5c50 fix(quick-match): select sport before queue`.
