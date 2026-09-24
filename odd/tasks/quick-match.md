@@ -27,6 +27,10 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Partial: API client/repository/DTO/Cubit now load, start, dismiss, confirm, and cancel persistent state; configuration obtains valid sport/category IDs from the catalog.
 - [x] QM-4 Implement handoff-faithful Home hero, configuration sheet, active-search, no-match, proposal, confirmation, and expiry UI states.
   - Completed: Quick Match now uses the handoff hierarchy (header context, pulse/search treatment, progress steps, action rows, fixed decision buttons), exposes a dedicated expired state, and preserves the original search preferences when the player chooses to continue searching. Expired server holds no longer silently re-enter the queue.
+- [x] QM-4b Rebuild the active queue and open-match proposal states against the supplied handoff.
+  - Route: delegated direct writer required because queue/proposal presentation and focused widget coverage span multiple non-trivial files. No callable writer delegation surface is available; execute this bounded work inline.
+  - Acceptance: `SEARCHING` renders the active-queue hierarchy, progress steps, preference summary, edit/leave actions, and fixed footer from the handoff; an open-match `PROPOSAL` renders match, player, hold, price and explicit confirm/continue actions using live DTO data.
+  - TDD: add focused widget expectations, observe RED before implementation, then GREEN with `flutter test`.
 - [x] QM-5 Update Explore framing/banner; add proposal and filled-match notifications/deep links, plus opt-in “Avisos en mi horario” preferences and invitation flow.
   - Completed: availability notifications (`MATCH_SLOT_OPENED`) now open the specific match instead of falling back to the inbox; tournament notifications already resolve by tournament subject and Quick Match proposals resolve to the queue. Existing notification preference toggles remain the source of opt-in behavior.
 - [ ] QM-6 Run API and Flutter verification, record work-unit commits, and perform a visual review against the supplied handoff.
@@ -44,6 +48,10 @@ The app currently lists open matches and supports manual creation, but has no pe
 - 2026-09-22: re-read the updated handoff. It adds explicit queue holds, notifications to already-confirmed players, opt-in availability alerts for non-queued players, invitation/race handling, and a dedicated notification preference surface.
 
 ## Verification evidence
+- QM-4b RED: `flutter test test/features/quick_match/presentation/quick_match_screen_test.dart` failed because the queue lacked the active-search hierarchy and open-match proposals lacked the explicit cup layout/action.
+- QM-4b GREEN: focused Quick Match screen widget tests pass (2); they cover queue hierarchy and dynamic club, court, player, and price data on an open-match proposal.
+- QM-4b: `flutter analyze` passed with no issues; complete `flutter test` passed (809 tests).
+- QM-4b work-unit commit: `a2985b7 feat(quick-match): align queue and proposal screens`; receipt-driven review remains disabled by repository status.
 - QM-1: RED — missing `quick_match.validation.ts` caused the new Vitest suite to fail. GREEN — 3 validation tests passed.
 - QM-1: API `npm run typecheck`, `npm run lint`, and `npx prisma validate` passed.
 - QM-2 slice: API `npm run typecheck`, `npm run lint`, `git diff --check`, and the focused Quick Match Vitest set passed (8 tests). Grouped proposal expiry now releases pending/confirmed group holds atomically and returns all group searches to `SEARCHING` with `noMatchYet`.
@@ -59,7 +67,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 - Delivery hardening verification: Flutter `flutter analyze` passed and the complete suite passed with 799 tests. API `npm run typecheck`, `npm run lint`, and the complete suite passed with 174 files and 1021 tests. T24 passed; the suite timeout issue was resolved by explicit test/hook timeouts for shared-DB integration scenarios.
 
 ## Next step
-- Complete the delivery hardening requested on 2026-09-23: eliminate the API integration timeout, repair the Flutter Home/Router expectations, add visual screenshot QA, make no-match filters functional, and open tournament invitations directly with accept/reject actions.
+- Resume fixed-viewport visual QA for the revised queue and proposal states; court surface is still unavailable in the MatchDetail DTO and must not be fabricated.
 
 ## Delivery hardening tasks (2026-09-23)
 - [x] DH-1 API integration timeout: reproduce the reported guest-registration T24 and identify the actual full-suite timeouts. T24 passed; the reproducible timeouts were tournament match materialization exceeding Vitest's 5-second default and two slow DB hooks, fixed with 15-second test and 30-second hook timeouts.
@@ -72,6 +80,9 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Route: delegated direct writer for the mobile network/API/repository boundary; no API behavior change is expected because Render logs confirm successful `GET /api/v1/quick-match` responses with a nullable payload.
   - Acceptance: opening Quick Match with no active search shows the empty configuration state instead of “No pudimos cargar tu búsqueda.”; malformed non-map payloads still fail explicitly.
   - Checks: focused Flutter network/repository/Cubit tests (13 passed), `flutter analyze`, and the complete Flutter suite (806 passed).
+
+## Design/data note
+- An open-match proposal contains only `matchId`; the mobile screen fetches the existing authenticated match-detail endpoint to render live club, court, players, price, category, and location. `MatchDetailDto` still has no court-surface field, so the `Exterior`/`Cubierta` tag from the handoff is intentionally omitted rather than hardcoded.
 
 ## Relevant Files
 - `apps/mobile/lib/src/features/home/presentation/home_screen.dart` — Home hero integration.
