@@ -48,12 +48,10 @@ describe('useChatMessages', () => {
 
       const response = await apiClient.matches.chat.messages('match-1', {
         limit: 50,
-        cursorCreatedAt: null,
       });
 
       expect(apiClient.matches.chat.messages).toHaveBeenCalledWith('match-1', {
         limit: 50,
-        cursorCreatedAt: null,
       });
 
       const data = response.data;
@@ -80,7 +78,6 @@ describe('useChatMessages', () => {
 
       const response = await apiClient.matches.chat.messages('match-1', {
         limit: 50,
-        cursorCreatedAt: null,
       });
 
       const data = response.data;
@@ -94,7 +91,7 @@ describe('useChatMessages', () => {
       );
 
       await expect(
-        apiClient.matches.chat.messages('match-1', { limit: 50, cursorCreatedAt: null })
+        apiClient.matches.chat.messages('match-1', { limit: 50 })
       ).rejects.toThrow('Network error');
     });
 
@@ -116,7 +113,6 @@ describe('useChatMessages', () => {
 
       const response = await apiClient.tournaments.chat.messages('tournament-1', {
         limit: 50,
-        cursorCreatedAt: null,
       });
 
       expect(apiClient.tournaments.chat.messages).toHaveBeenCalledWith(
@@ -162,7 +158,6 @@ describe('useChatMessages', () => {
       // Initial load
       const initial = await apiClient.matches.chat.messages('match-1', {
         limit: 50,
-        cursorCreatedAt: null,
       });
       expect(initial.data.items).toHaveLength(1);
       expect(initial.data.nextCursorCreatedAt).toBe('2026-05-11T14:00:00Z');

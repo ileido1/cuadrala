@@ -7,10 +7,13 @@ export default defineConfig({
       '~': path.resolve(__dirname, './src'),
     },
   },
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     exclude: ['e2e/**', 'node_modules/**', '.next/**'],
     environment: 'jsdom',
     globals: true,
-    setupFiles: [],
+    setupFiles: ['./src/test/setup.ts'],
   },
 });
