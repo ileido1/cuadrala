@@ -22,7 +22,8 @@ The API typecheck and lint gates are green. The prior full-suite failure (10 fil
 - [x] WBE-3 Correct safe web `useEffect` dependency warnings and verify test/type/build gates.
   - Evidence: stabilized fetch/selection callbacks and venue id dependency; web tests pass 19 files / 109 tests, standalone typecheck passes, and production build has no exhaustive-deps warnings.
 - [ ] WBE-4 Perform deployed web-backoffice login and registration E2E with authorized credentials, then publish verified commits to `origin/main`.
-  - Pending: the repository only configures a local web URL (`http://localhost:3001`); a deployed backoffice URL and a dedicated authorized account are still needed for the remote runtime step.
+  - Local evidence: Playwright smoke suite passes 3/3 with Node 20.19.6 and the installed Google Chrome executable; it validates root redirect, dashboard guard, and responsive login form.
+  - Pending remote runtime: the repository only configures a local web URL (`http://localhost:3001`); a deployed backoffice URL and a dedicated authorized account are still needed for deployed login/registration.
 
 ## Acceptance criteria
 - API `typecheck`, lint, and full `npm test` pass without referential-integrity fixture failures. (Verified: 175 files / 1,023 tests.)
