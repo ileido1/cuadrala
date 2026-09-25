@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { BookingItem, PaymentMethodType, VenuePaymentMethod } from '~/types/api';
 import { apiClient } from '~/lib/api-client';
 import { CurrencyAmountInput } from '~/components/shared/CurrencyAmountInput';
@@ -579,7 +579,7 @@ export function PaymentConfirmDialog({
   const canProceedWithFx =
     !needsFxConversion || fxSnapshot.kind === 'ready';
 
-  const loadExchangeRates = () => {
+  const loadExchangeRates = useCallback(() => {
     setRatesLoading(true);
     setRatesError(null);
     apiClient.exchangeRates
@@ -592,9 +592,9 @@ export function PaymentConfirmDialog({
         setExchangeRates([]);
       })
       .finally(() => setRatesLoading(false));
-  };
+  }, [countryCode]);
 
-  const loadPaymentMethods = () => {
+  const loadPaymentMethods = useCallback(() => {
     if (!venueId) return;
     setPaymentMethodsLoading(true);
     apiClient.venues.paymentMethods
@@ -611,9 +611,9 @@ export function PaymentConfirmDialog({
       )
       .catch(() => setPaymentMethods([]))
       .finally(() => setPaymentMethodsLoading(false));
-  };
+  }, [venueId]);
 
-  const fetchPaymentSummary = async () => {
+  const fetchPaymentSummary = useCallback(async () => {
     setStepLoading(true);
     const base = buildPaymentSummaryFromReservation(reservation);
     setPaymentSummary(base);
@@ -651,7 +651,7 @@ export function PaymentConfirmDialog({
     } finally {
       setStepLoading(false);
     }
-  };
+  }, [reservation, currencyCode]);
 
   useEffect(() => {
     if (!open) return;
@@ -665,7 +665,7 @@ export function PaymentConfirmDialog({
     loadPaymentMethods();
     loadExchangeRates();
     fetchPaymentSummary();
-  }, [open, reservation.id, countryCode]);
+  }, [open, reservation.id, loadExchangeRates, loadPaymentMethods, fetchPaymentSummary]);
 
   useEffect(() => {
     if (paymentStep !== 'method' || paymentMethods.length === 0) return;

@@ -167,6 +167,7 @@ function WeeklyCalendar({ weekColumns, cellHeight, onSlotClick, hourLabels }: We
 
 export default function SchedulePage() {
   const { currentVenue } = useVenue();
+  const currentVenueId = currentVenue?.id;
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [courts, setCourts] = useState<Court[]>([]);
@@ -181,19 +182,19 @@ export default function SchedulePage() {
   const [openingHours, setOpeningHours] = useState<OpeningHoursMap | null>(null);
 
   useEffect(() => {
-    if (!currentVenue) {
+    if (!currentVenueId) {
       setOpeningHours(null);
       return;
     }
 
     apiClient.venues
-      .get(currentVenue.id)
+      .get(currentVenueId)
       .then((res) => {
         const VENUE = res.data.data as Venue;
         setOpeningHours(VENUE.openingHours ?? null);
       })
       .catch(() => setOpeningHours(null));
-  }, [currentVenue?.id]);
+  }, [currentVenueId]);
 
   // Compute week range from selectedDate (monday to sunday)
   const { weekFrom, weekTo } = useMemo(() => {

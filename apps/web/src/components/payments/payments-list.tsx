@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PendingPaymentReviewDialog } from '~/components/payments/pending-payment-review-dialog';
 import { apiClient } from '~/lib/api-client';
@@ -56,15 +56,15 @@ export function PaymentsList({
 
   const isControlled = onExternalSelect !== undefined;
   const selected = isControlled ? (externalSelected ?? null) : internalSelected;
-  const setSelected = (tx: VenuePendingTransaction | null) => {
+  const setSelected = useCallback((tx: VenuePendingTransaction | null) => {
     if (isControlled) {
       onExternalSelect?.(tx);
     } else {
       setInternalSelected(tx);
     }
-  };
+  }, [isControlled, onExternalSelect]);
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     try {
       const response = await apiClient.venues.pendingTransactions(venueId);
       const body = response.data as { data?: VenuePendingTransactionsResponse };
@@ -80,7 +80,7 @@ export function PaymentsList({
       setState('error');
       setError('Error al cargar los pagos pendientes');
     }
-  };
+  }, [venueId]);
 
   useEffect(() => {
     void fetchPayments();
@@ -92,7 +92,7 @@ export function PaymentsList({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [venueId]);
+  }, [fetchPayments]);
 
   useEffect(() => {
     if (!focusTransactionId || payments.length === 0) return;
@@ -101,7 +101,7 @@ export function PaymentsList({
       setSelected(match);
       onFocusConsumed?.();
     }
-  }, [focusTransactionId, payments, onFocusConsumed]);
+  }, [focusTransactionId, payments, onFocusConsumed, setSelected]);
 
   const formatDate = (dateString: string) =>
     new Intl.DateTimeFormat('es-AR', {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiClient } from '~/lib/api-client';
@@ -31,7 +31,7 @@ export default function TournamentBracketPage() {
     isModalOpen: false,
   });
 
-  const fetchBracket = async () => {
+  const fetchBracket = useCallback(async () => {
     setState('loading');
     try {
       const response = await apiClient.tournaments.bracket(tournamentId);
@@ -42,11 +42,11 @@ export default function TournamentBracketPage() {
       setState('error');
       setError('Error al cargar el bracket');
     }
-  };
+  }, [tournamentId]);
 
   useEffect(() => {
     fetchBracket();
-  }, [tournamentId]);
+  }, [fetchBracket]);
 
   const handleMatchClick = (match: BracketMatch) => {
     // Only allow clicking matches that are not BYE and not already completed

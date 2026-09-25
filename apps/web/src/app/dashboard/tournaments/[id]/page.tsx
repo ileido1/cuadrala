@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiClient } from '~/lib/api-client';
 import type { TournamentDetail, Registration } from '~/types/api';
@@ -22,7 +22,7 @@ export default function TournamentDetailPage() {
   const [state, setState] = useState<DetailState>('loading');
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTournament = async () => {
+  const fetchTournament = useCallback(async () => {
     setState('loading');
     try {
       const response = await apiClient.tournaments.get(tournamentId);
@@ -35,11 +35,11 @@ export default function TournamentDetailPage() {
       setState('error');
       setError('Error al cargar el torneo');
     }
-  };
+  }, [tournamentId]);
 
   useEffect(() => {
     fetchTournament();
-  }, [tournamentId]);
+  }, [fetchTournament]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '—';

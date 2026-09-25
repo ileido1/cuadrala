@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiClient } from '~/lib/api-client';
@@ -35,7 +35,7 @@ export default function VenueTournamentsPage({ params }: VenueTournamentsPagePro
   const currentStatus = (searchParams.get('status') as TournamentStatus | null) ?? 'ALL';
   const currentPage = parseInt(searchParams.get('page') ?? '1', 10);
 
-  const fetchTournaments = async (status?: string, page: number = 1) => {
+  const fetchTournaments = useCallback(async (status?: string, page: number = 1) => {
     setState('loading');
     try {
       const response = await apiClient.tournaments.byVenue(params.venueId, {
@@ -56,11 +56,11 @@ export default function VenueTournamentsPage({ params }: VenueTournamentsPagePro
       setState('error');
       setError('Error al cargar los torneos');
     }
-  };
+  }, [params.venueId]);
 
   useEffect(() => {
     fetchTournaments(currentStatus === 'ALL' ? undefined : currentStatus, currentPage);
-  }, [currentStatus, currentPage, params.venueId]);
+  }, [currentStatus, currentPage, fetchTournaments]);
 
   const handleTabClick = (status: TournamentStatus | 'ALL') => {
     const searchParamsLocal = new URLSearchParams();
