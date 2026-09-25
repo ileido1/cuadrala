@@ -182,7 +182,7 @@ class ApiClient {
     list: () => this.client.get('/venues'),
     mine: () => this.client.get('/venues/mine'),
     get: (id: string) => this.client.get(`/venues/${id}`),
-    create: (data: { name: string; address?: string; ownerUserId: string }) =>
+    create: (data: { name: string; address?: string }) =>
       this.client.post('/venues', data),
     dashboardStats: (venueId: string) =>
       this.client.get(`/venues/${venueId}/dashboard-stats`),

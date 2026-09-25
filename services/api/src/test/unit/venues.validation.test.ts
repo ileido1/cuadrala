@@ -3,7 +3,10 @@
  * Contrato Zod para el filtro `sportType` en GET /api/v1/venues.
  */
 import { describe, it, expect } from 'vitest';
-import { LIST_VENUES_QUERY_SCHEMA } from '../../presentation/validation/venues.validation.js';
+import {
+  CREATE_VENUE_BODY_SCHEMA,
+  LIST_VENUES_QUERY_SCHEMA,
+} from '../../presentation/validation/venues.validation.js';
 
 describe('LIST_VENUES_QUERY_SCHEMA — sportType filter', () => {
   it('acepta sportType=PADEL', () => {
@@ -34,5 +37,17 @@ describe('LIST_VENUES_QUERY_SCHEMA — sportType filter', () => {
     expect(result.radiusKm).toBe(10);
     expect(result.limit).toBe(20);
     expect(result.page).toBe(1);
+  });
+});
+
+
+describe('CREATE_VENUE_BODY_SCHEMA — ownership', () => {
+  it('rejects client-controlled ownerUserId', () => {
+    expect(() =>
+      CREATE_VENUE_BODY_SCHEMA.parse({
+        name: 'Club Cuadrala',
+        ownerUserId: '00000000-0000-4000-8000-000000000001',
+      }),
+    ).toThrow();
   });
 });

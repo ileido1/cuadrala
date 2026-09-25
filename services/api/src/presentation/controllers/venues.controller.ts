@@ -54,9 +54,7 @@ export async function getMyVenuesCON(_req: Request, _res: Response): Promise<voi
 }
 
 export async function postVenueCON(_req: Request, _res: Response): Promise<void> {
-  //? TODO: unica escritura del archivo que no resuelve el actor — el ownerUserId
-  //? sale del body, asi que cualquier autenticado crea una sede a nombre de
-  //? quien quiera. Falta definir criterio.
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
   const BODY = CREATE_VENUE_BODY_SCHEMA.parse(_req.body);
   const CREATED = await CREATE_VENUE_UC.executeSV({
     name: BODY.name,
@@ -68,7 +66,7 @@ export async function postVenueCON(_req: Request, _res: Response): Promise<void>
     paymentCvu: BODY.paymentCvu,
     paymentAlias: BODY.paymentAlias,
     paymentNotes: BODY.paymentNotes,
-    ownerUserId: BODY.ownerUserId,
+    ownerUserId: ACTOR_USER_ID,
   });
 
   _res.status(201).json({

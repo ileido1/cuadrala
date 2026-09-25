@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Records the path every request is issued against, so these tests assert the
 // URL the real client builds instead of a mock of itself.
-const calls: Array<{ method: string; url: string }> = [];
+const calls: Array<{ method: string; url: string; data?: unknown }> = [];
 
 function recorder(method: string) {
-  return (url: string) => {
-    calls.push({ method, url });
+  return (url: string, data?: unknown) => {
+    calls.push({ method, url, ...(data !== undefined ? { data } : {}) });
     return Promise.resolve({ data: { data: null } });
   };
 }
@@ -60,5 +60,30 @@ describe('ApiClient profile paths', () => {
     ]);
 
     expect(calls.filter((c) => c.url.startsWith('/profile'))).toEqual([]);
+  });
+});
+
+
+describe('ApiClient authentication and registration paths', () => {
+  beforeEach(() => {
+    calls.length = 0;
+  });
+
+  it('should register through the API contract and create the venue without a client owner id', async () => {
+    await apiClient.auth.register('owner@example.com', 'secure-password', 'Venue Owner');
+    await apiClient.venues.create({ name: 'Club Cuadrala', address: 'Caracas' });
+
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: '/auth/register',
+        data: { email: 'owner@example.com', password: 'secure-password', name: 'Venue Owner' },
+      },
+      {
+        method: 'POST',
+        url: '/venues',
+        data: { name: 'Club Cuadrala', address: 'Caracas' },
+      },
+    ]);
   });
 });

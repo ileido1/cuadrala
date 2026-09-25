@@ -93,7 +93,7 @@ export default function LoginForm() {
   const [registerStep, setRegisterStep] = useState<1 | 2>(1);
   const [step1Error, setStep1Error] = useState<string | null>(null);
   const [step2Error, setStep2Error] = useState<string | null>(null);
-  const [step1Data, setStep1Data] = useState<{ userId?: string; email?: string; password?: string } | null>(null);
+  const [step1Data, setStep1Data] = useState<{ email?: string; password?: string } | null>(null);
 
   const {
     register: loginRegister,
@@ -153,15 +153,12 @@ export default function LoginForm() {
 
     try {
       const response = await apiClient.auth.register(data.email, data.password, data.fullName);
-      const { accessToken, refreshToken, user } = response.data.data;
+      const { accessToken, refreshToken, expiresIn } = response.data.data;
 
-      // Save tokens to localStorage
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      apiClient.setTokens(accessToken, refreshToken, expiresIn ?? 900);
 
       // Store user data for step 2 and NextAuth sign-in
       setStep1Data({
-        userId: user?.id,
         email: data.email,
         password: data.password,
       });
@@ -179,8 +176,8 @@ export default function LoginForm() {
   const onStep2Submit = async (data: Step2FormData) => {
     setStep2Error(null);
 
-    if (!step1Data?.userId) {
-      setStep2Error('Información de usuario no disponible. Volvé al paso 1.');
+    if (!step1Data?.email || !step1Data.password) {
+      setStep2Error('Información de registro no disponible. Volvé al paso 1.');
       return;
     }
 
@@ -188,7 +185,6 @@ export default function LoginForm() {
       await apiClient.venues.create({
         name: data.clubName,
         address: data.address,
-        ownerUserId: step1Data.userId,
       });
 
       // Sign in via NextAuth to establish session
