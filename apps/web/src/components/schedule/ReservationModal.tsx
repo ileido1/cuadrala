@@ -6,7 +6,7 @@ import type {
   CreateReservationRequest,
   ReservationResponsible,
   UserSearchResult,
-  ReservationListItem,
+  BookingItem,
 } from '~/types/api';
 import { apiClient } from '~/lib/api-client';
 import {
@@ -66,7 +66,7 @@ export function ReservationModal({
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [selectedPlayerName, setSelectedPlayerName] = useState<string>('');
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [existingReservations, setExistingReservations] = useState<ReservationListItem[]>([]);
+  const [existingBookings, setExistingBookings] = useState<BookingItem[]>([]);
 
   const selectedCourt = courts.find((c) => c.id === courtId);
   const blockDurationMinutes = selectedCourt?.durationMinutes ?? 60;
@@ -93,7 +93,7 @@ export function ReservationModal({
         : generateCourtBlockSlots({
             blockDurationMinutes,
             pricingTiers,
-            reservations: existingReservations,
+            occupancies: existingBookings,
             openMinutes,
             closeMinutes,
           }),
@@ -101,31 +101,31 @@ export function ReservationModal({
       isClosedDay,
       blockDurationMinutes,
       pricingTiers,
-      existingReservations,
+      existingBookings,
       openMinutes,
       closeMinutes,
     ],
   );
 
-  // Fetch existing reservations for this court and date
+  // Fetch every confirmed occupancy for this court and date.
   useEffect(() => {
     if (!courtId || !date || !venueId) return;
 
-    const fetchReservations = async () => {
+    const fetchBookings = async () => {
       try {
-        const res = await apiClient.venues.reservations.list(venueId, {
+        const res = await apiClient.venues.bookings.list(venueId, {
           courtId,
           from: date,
           to: date,
         });
-        const data = (res.data.data as { items: ReservationListItem[] }).items ?? [];
-        setExistingReservations(data.filter((r) => r.status === 'CONFIRMED'));
+        const data = (res.data.data as { items: BookingItem[] }).items ?? [];
+        setExistingBookings(data.filter((r) => r.status === 'CONFIRMED'));
       } catch {
-        setExistingReservations([]);
+        setExistingBookings([]);
       }
     };
 
-    fetchReservations();
+    fetchBookings();
   }, [courtId, date, venueId]);
 
   useEffect(() => {
@@ -139,8 +139,8 @@ export function ReservationModal({
     setSelectedTime(
       next ?? timeSlots.find((s) => !s.isOccupied)?.time ?? '08:00',
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo re-sincronizar al cambiar cancha/fecha/bloque/reservas
-  }, [courtId, date, blockDurationMinutes, existingReservations, minTime]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo re-sincronizar al cambiar cancha/fecha/bloque/ocupación
+  }, [courtId, date, blockDurationMinutes, existingBookings, minTime]);
 
   const buildResponsible = (): ReservationResponsible | undefined => {
     if (responsibleType === 'player' && selectedPlayerId) {

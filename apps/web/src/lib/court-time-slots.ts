@@ -1,4 +1,9 @@
-import type { CourtPricingTier, ReservationListItem } from '~/types/api';
+import type { CourtPricingTier } from '~/types/api';
+
+export interface CourtOccupancy {
+  scheduledAt: string;
+  durationMinutes: number;
+}
 
 export const DEFAULT_VENUE_OPEN_MINUTES = 8 * 60;
 export const DEFAULT_VENUE_CLOSE_MINUTES = 23 * 60;
@@ -35,20 +40,20 @@ function parseTimeToMinutes(_time: string): number {
 }
 
 /**
- * Comprueba solapamiento entre un bloque [slotStart, slotEnd) y reservas confirmadas.
+ * Comprueba solapamiento entre un bloque [slotStart, slotEnd) y bloques ocupados.
  */
 export function isCourtBlockOccupied(
   _slotStartMinutes: number,
   _blockDurationMinutes: number,
-  _reservations: ReservationListItem[],
+  _occupancies: CourtOccupancy[],
 ): boolean {
   const SLOT_END = _slotStartMinutes + _blockDurationMinutes;
 
-  return _reservations.some((res) => {
+  return _occupancies.some((occupancy) => {
     const RES_TIME =
-      res.scheduledAt.split('T')[1]?.substring(0, 5) ?? res.scheduledAt;
+      occupancy.scheduledAt.split('T')[1]?.substring(0, 5) ?? occupancy.scheduledAt;
     const RES_START = parseTimeToMinutes(RES_TIME);
-    const RES_END = RES_START + res.durationMinutes;
+    const RES_END = RES_START + occupancy.durationMinutes;
     return _slotStartMinutes < RES_END && SLOT_END > RES_START;
   });
 }
@@ -83,14 +88,14 @@ function resolveTierForStart(
 export function generateCourtBlockSlots(_options: {
   blockDurationMinutes: number;
   pricingTiers?: CourtPricingTier[];
-  reservations?: ReservationListItem[];
+  occupancies?: CourtOccupancy[];
   openMinutes?: number;
   closeMinutes?: number;
 }): CourtBlockSlot[] {
   const {
     blockDurationMinutes,
     pricingTiers,
-    reservations = [],
+    occupancies = [],
     openMinutes = DEFAULT_VENUE_OPEN_MINUTES,
     closeMinutes = DEFAULT_VENUE_CLOSE_MINUTES,
   } = _options;
@@ -121,7 +126,7 @@ export function generateCourtBlockSlots(_options: {
       isOccupied: isCourtBlockOccupied(
         start,
         blockDurationMinutes,
-        reservations,
+        occupancies,
       ),
     });
   }
