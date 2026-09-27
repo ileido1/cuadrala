@@ -31,6 +31,8 @@ Production authentication succeeds, but `/dashboard` redirects to `/login?callba
 ## Progress
 - 2026-09-27: Live production reproduction verified the defect: `/api/auth/session` returns an authenticated user while `/dashboard` returns 307 to login.
 - 2026-09-27: Fixed protocol-aware cookie lookup and added the HTTPS/HTTP regression test.
+- 2026-09-27: Implementation committed as `f3102f9` (`fix(web): preserve secure auth sessions`). Receipt-driven review is disabled globally.
+- 2026-09-27: Vercel deployment `dpl_Y1E8cuu8JmGb7Bx2Mti8iki8ZsMV` reached `READY`; production verification authenticated the seed owner and redirected `/dashboard` to `/onboarding`, not back to login.
 
 ## Next step
-Commit the verified work unit, deploy it, and re-run the production login path.
+Completed.
