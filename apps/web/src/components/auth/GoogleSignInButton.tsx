@@ -59,12 +59,9 @@ export function GoogleSignInButton({ onError, isLoading = false }: GoogleSignInB
         throw new Error('Failed to create session');
       }
 
-      // Redirect based on onboarding status
-      if (!user.onboardingComplete) {
-        router.push('/onboarding');
-      } else {
-        router.push(callbackUrl);
-      }
+      // The web is the venue backoffice; onboarding is handled by the mobile
+      // player app, so every authenticated web user enters the dashboard.
+      router.push(callbackUrl);
     } catch (err) {
       const message = getUserMessage(err);
       console.error('Google login error:', err);

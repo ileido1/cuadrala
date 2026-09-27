@@ -11,7 +11,7 @@ vi.mock('next-auth/jwt', () => ({
 vi.mock('next/server', () => ({
   NextResponse: {
     next: vi.fn(() => ({ type: 'next' })),
-    redirect: vi.fn(),
+    redirect: vi.fn((url: URL) => ({ type: 'redirect', url: url.toString() })),
   },
 }));
 
@@ -42,5 +42,33 @@ describe('middleware session cookie protocol', () => {
         secureCookie,
       }),
     );
+  });
+
+  it('redirects unauthenticated users to login for protected routes', async () => {
+    const response = await middleware(createRequest('https://cuadrala.vercel.app/dashboard'));
+
+    expect(response).toEqual({
+      type: 'redirect',
+      url: 'https://cuadrala.vercel.app/login?callbackUrl=%2Fdashboard',
+    });
+  });
+
+  it('allows authenticated users into the dashboard without onboarding', async () => {
+    getTokenMock.mockResolvedValue({ onboardingComplete: false });
+
+    const response = await middleware(createRequest('https://cuadrala.vercel.app/dashboard'));
+
+    expect(response).toEqual({ type: 'next' });
+  });
+
+  it.each(['/login', '/register'])('redirects authenticated %s requests to dashboard', async (path) => {
+    getTokenMock.mockResolvedValue({ onboardingComplete: false });
+
+    const response = await middleware(createRequest(`https://cuadrala.vercel.app${path}`));
+
+    expect(response).toEqual({
+      type: 'redirect',
+      url: 'https://cuadrala.vercel.app/dashboard',
+    });
   });
 });
