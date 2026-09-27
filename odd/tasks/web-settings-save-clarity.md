@@ -55,7 +55,8 @@ User explicitly authorized correcting the misleading save flow.
 - Build: `npm run build` — passed.
 - Lint: `npm run lint` — passed with no warnings or errors.
 - Runtime: production persistence was reproduced before implementation; no post-change deployment was authorized yet.
-- Commit: pending.
+- Review assessment: medium risk (`executable_change`), `under_budget`; no native review due.
+- Behavior commit: `f48050c` (`fix(web): clarify settings save actions`).
 
 ## Next step
 Implement T1 and T2.
