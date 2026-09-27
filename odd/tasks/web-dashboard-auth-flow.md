@@ -55,7 +55,7 @@ User explicitly authorized implementation of the web dashboard redirect fix.
 - Lint: `npm run lint` — passed with no warnings or errors.
 - Static check: no `/onboarding` redirect references remain under `apps/web/src`.
 - Runtime harness: N/A; production deployment was not authorized in this task.
-- Commit: `87d8e54` (`fix(web): route authenticated users to dashboard`).
+- Commit: `c6125ed` (`fix(web): route authenticated users to dashboard`).
 
 ## Next step
 Implement T1, then T2.
