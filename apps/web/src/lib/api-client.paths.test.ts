@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Records the path every request is issued against, so these tests assert the
 // URL the real client builds instead of a mock of itself.
 const calls: Array<{ method: string; url: string; data?: unknown }> = [];
+let createConfig: Record<string, unknown> | undefined;
 
 function recorder(method: string) {
   return (url: string, data?: unknown) => {
@@ -24,7 +25,13 @@ vi.mock('axios', () => {
     },
   };
   return {
-    default: { create: () => instance, post: vi.fn() },
+    default: {
+      create: vi.fn((config) => {
+        createConfig = config;
+        return instance;
+      }),
+      post: vi.fn(),
+    },
   };
 });
 
@@ -60,6 +67,12 @@ describe('ApiClient profile paths', () => {
     ]);
 
     expect(calls.filter((c) => c.url.startsWith('/profile'))).toEqual([]);
+  });
+});
+
+describe('ApiClient request resilience', () => {
+  it('should time out stalled API requests instead of leaving dashboard loading indefinitely', () => {
+    expect(createConfig).toMatchObject({ timeout: 15_000 });
   });
 });
 

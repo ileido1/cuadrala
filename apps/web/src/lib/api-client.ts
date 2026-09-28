@@ -4,6 +4,7 @@ import type { CreateCourtPricingTierRequest, UpdateCourtPricingTierRequest, Venu
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 const API_BASE_PATH = process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/api/v1/';
+const REQUEST_TIMEOUT_MS = 15_000;
 
 class ApiClient {
   private client: AxiosInstance;
@@ -16,6 +17,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: `${API_URL}${API_BASE_PATH}`,
+      timeout: REQUEST_TIMEOUT_MS,
       headers: {
         'Content-Type': 'application/json',
       },
