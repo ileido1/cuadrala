@@ -92,12 +92,16 @@ The user explicitly authorized solving every issue found in the dashboard API/UI
 - WDR-2/3 build: `npm run build` — compiled, typechecked, and generated all 16 static pages.
 - WDR-2/3 runtime harness: production verification remains pending deployment; the static dashboard endpoint paths and all current web checks passed.
 - WDR-2/3 rollback boundary: revert `407b339` to restore the previous all-or-nothing requests and unfinished schedule-list control.
+- WDR-4 focused contract test: `npm test -- src/lib/api-client.paths.test.ts` — 8/8 passed, including the 15-second request timeout.
+- WDR-4 full web suite: `npm test` — 22 files / 123 tests passed.
+- WDR-4 runtime harness: production deployment `dpl_9db5Qb8kTZCiMZpgfYuVzj51xBB7` reached READY; authenticated production agenda loaded with real owner identity and no unfinished Lista control.
 
 ## Commits
 
 - `3d80a3a` — `fix(web): make dashboard venue shell truthful` (WDR-1, 290 authored changed lines).
 - `407b339` — `fix(web): expose dashboard API failures` (WDR-2/WDR-3, 262 authored changed lines).
+- `90fb2de` — `fix(web): time out stalled dashboard requests` (WDR-4, 17 authored changed lines).
 
 ## Next step
 
-Publish Slice 2 to main and verify production behavior for the dashboard, payments, courts, and schedule pages.
+Completed. Monitor the 15-second timeout in production and investigate the external API only if retry states start appearing.
