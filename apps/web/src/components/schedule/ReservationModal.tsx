@@ -36,6 +36,17 @@ interface ReservationModalProps {
 
 type ResponsibleType = 'player' | 'guest';
 
+const OCCUPYING_BOOKING_STATUSES = new Set(['HELD', 'CONFIRMED']);
+
+function getApiErrorMessage(error: unknown): string {
+  const message = (error as { response?: { data?: { message?: unknown } } })
+    ?.response?.data?.message;
+
+  return typeof message === 'string' && message.trim()
+    ? message
+    : 'No se pudo crear la reserva. Intenta de nuevo.';
+}
+
 function isToday(dateStr: string): boolean {
   const today = new Date().toISOString().split('T')[0];
   return dateStr === today;
@@ -107,7 +118,7 @@ export function ReservationModal({
     ],
   );
 
-  // Fetch every confirmed occupancy for this court and date.
+  // Fetch every live occupancy for this court and date.
   useEffect(() => {
     if (!courtId || !date || !venueId) return;
 
@@ -119,7 +130,9 @@ export function ReservationModal({
           to: date,
         });
         const data = (res.data.data as { items: BookingItem[] }).items ?? [];
-        setExistingBookings(data.filter((r) => r.status === 'CONFIRMED'));
+        setExistingBookings(
+          data.filter((booking) => OCCUPYING_BOOKING_STATUSES.has(booking.status)),
+        );
       } catch {
         setExistingBookings([]);
       }
@@ -239,8 +252,8 @@ export function ReservationModal({
       await apiClient.venues.reservations.create(venueId, data);
       onSuccess(date);
       onClose();
-    } catch {
-      setError('No se pudo crear la reserva. Intenta de nuevo.');
+    } catch (error) {
+      setError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
