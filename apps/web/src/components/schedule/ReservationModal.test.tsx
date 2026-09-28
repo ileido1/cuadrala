@@ -5,16 +5,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Court } from '~/types/api';
 
 const mocks = vi.hoisted(() => ({
-  listBookings: vi.fn(),
-  listReservations: vi.fn(),
+  courtSlots: vi.fn(),
   createReservation: vi.fn(),
 }));
 
 vi.mock('~/lib/api-client', () => ({
   apiClient: {
     venues: {
-      bookings: { list: mocks.listBookings },
-      reservations: { list: mocks.listReservations, create: mocks.createReservation },
+      courts: { slots: mocks.courtSlots },
+      reservations: { create: mocks.createReservation },
     },
     profile: { searchByDocument: vi.fn() },
   },
@@ -37,26 +36,24 @@ const court: Court = {
   createdAt: '2026-09-25T00:00:00.000Z',
 };
 
-const heldBooking = {
-  id: 'booking-held',
-  type: 'DIRECT',
+const availableCourtSlots = {
   courtId: 'court-1',
-  courtName: 'Cancha 1',
-  sportId: 'sport-1',
-  categoryId: 'category-1',
-  scheduledAt: `${reservationDate}T08:00:00.000Z`,
+  date: reservationDate,
   durationMinutes: 60,
-  status: 'HELD',
-} as unknown as BookingItem;
+  stepMinutes: 30,
+  slots: [
+    { start: '08:00', end: '09:00', isAvailable: true },
+    { start: '09:00', end: '10:00', isAvailable: true },
+  ],
+};
 
 describe('ReservationModal availability', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.listBookings.mockResolvedValue({ data: { data: { items: [] } } });
-    mocks.listReservations.mockResolvedValue({ data: { data: { items: [] } } });
+    mocks.courtSlots.mockResolvedValue({ data: availableCourtSlots });
   });
 
-  it('should request unified bookings so match and blocked occupancy is respected', async () => {
+  it('should request authoritative court slots with the selected venue, court, date, and duration', async () => {
     render(
       <ReservationModal
         venueId="venue-1"
@@ -68,18 +65,22 @@ describe('ReservationModal availability', () => {
     );
 
     await waitFor(() =>
-      expect(mocks.listBookings).toHaveBeenCalledWith('venue-1', {
-        courtId: 'court-1',
-        from: reservationDate,
-        to: reservationDate,
+      expect(mocks.courtSlots).toHaveBeenCalledWith('venue-1', 'court-1', {
+        date: reservationDate,
+        durationMinutes: 60,
       }),
     );
-    expect(mocks.listReservations).not.toHaveBeenCalled();
   });
 
-  it('should mark held bookings as unavailable', async () => {
-    mocks.listBookings.mockResolvedValue({
-      data: { data: { items: [heldBooking] } },
+  it('should mark slots unavailable when the authoritative API rejects them', async () => {
+    mocks.courtSlots.mockResolvedValue({
+      data: {
+        ...availableCourtSlots,
+        slots: [
+          { start: '08:00', end: '09:00', isAvailable: false, reason: 'Ocupado' },
+          { start: '09:00', end: '10:00', isAvailable: true },
+        ],
+      },
     });
 
     render(

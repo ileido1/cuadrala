@@ -6,7 +6,6 @@ import type {
   CreateReservationRequest,
   ReservationResponsible,
   UserSearchResult,
-  BookingItem,
 } from '~/types/api';
 import { apiClient } from '~/lib/api-client';
 import {
@@ -36,8 +35,6 @@ interface ReservationModalProps {
 
 type ResponsibleType = 'player' | 'guest';
 
-const OCCUPYING_BOOKING_STATUSES = new Set(['HELD', 'CONFIRMED']);
-
 function getApiErrorMessage(error: unknown): string {
   const message = (error as { response?: { data?: { message?: unknown } } })
     ?.response?.data?.message;
@@ -50,6 +47,11 @@ function getApiErrorMessage(error: unknown): string {
 function isToday(dateStr: string): boolean {
   const today = new Date().toISOString().split('T')[0];
   return dateStr === today;
+}
+
+function getSlotStartTime(start: string): string {
+  const match = start.match(/(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/);
+  return match?.[1] ?? start;
 }
 
 export function ReservationModal({
@@ -77,7 +79,7 @@ export function ReservationModal({
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [selectedPlayerName, setSelectedPlayerName] = useState<string>('');
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [existingBookings, setExistingBookings] = useState<BookingItem[]>([]);
+  const [courtSlotAvailability, setCourtSlotAvailability] = useState<Map<string, boolean> | null>(null);
 
   const selectedCourt = courts.find((c) => c.id === courtId);
   const blockDurationMinutes = selectedCourt?.durationMinutes ?? 60;
@@ -104,7 +106,6 @@ export function ReservationModal({
         : generateCourtBlockSlots({
             blockDurationMinutes,
             pricingTiers,
-            occupancies: existingBookings,
             openMinutes,
             closeMinutes,
           }),
@@ -112,48 +113,68 @@ export function ReservationModal({
       isClosedDay,
       blockDurationMinutes,
       pricingTiers,
-      existingBookings,
       openMinutes,
       closeMinutes,
     ],
   );
 
-  // Fetch every live occupancy for this court and date.
+  const authoritativeTimeSlots = useMemo(
+    () =>
+      timeSlots.map((slot) => ({
+        ...slot,
+        isOccupied: courtSlotAvailability?.get(slot.time) !== true,
+      })),
+    [courtSlotAvailability, timeSlots],
+  );
+
+  // The API applies the same conflict rules used when creating a reservation.
   useEffect(() => {
     if (!courtId || !date || !venueId) return;
 
-    const fetchBookings = async () => {
+    let cancelled = false;
+    setCourtSlotAvailability(null);
+
+    const fetchCourtSlots = async () => {
       try {
-        const res = await apiClient.venues.bookings.list(venueId, {
-          courtId,
-          from: date,
-          to: date,
+        const res = await apiClient.venues.courts.slots(venueId, courtId, {
+          date,
+          durationMinutes: blockDurationMinutes,
         });
-        const data = (res.data.data as { items: BookingItem[] }).items ?? [];
-        setExistingBookings(
-          data.filter((booking) => OCCUPYING_BOOKING_STATUSES.has(booking.status)),
-        );
+        if (!cancelled) {
+          setCourtSlotAvailability(
+            new Map(
+              res.data.slots.map((slot) => [
+                getSlotStartTime(slot.start),
+                slot.isAvailable,
+              ]),
+            ),
+          );
+        }
       } catch {
-        setExistingBookings([]);
+        if (!cancelled) {
+          setCourtSlotAvailability(new Map());
+        }
       }
     };
 
-    fetchBookings();
-  }, [courtId, date, venueId]);
+    fetchCourtSlots();
+    return () => {
+      cancelled = true;
+    };
+  }, [blockDurationMinutes, courtId, date, venueId]);
 
   useEffect(() => {
-    const current = timeSlots.find((s) => s.time === selectedTime);
+    const current = authoritativeTimeSlots.find((s) => s.time === selectedTime);
     const isCurrentValid =
       current != null && !current.isOccupied && current.time >= minTime;
     if (isCurrentValid) {
       return;
     }
-    const next = findFirstSelectableBlockTime(timeSlots, minTime);
+    const next = findFirstSelectableBlockTime(authoritativeTimeSlots, minTime);
     setSelectedTime(
-      next ?? timeSlots.find((s) => !s.isOccupied)?.time ?? '08:00',
+      next ?? authoritativeTimeSlots.find((s) => !s.isOccupied)?.time ?? '08:00',
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo re-sincronizar al cambiar cancha/fecha/bloque/ocupación
-  }, [courtId, date, blockDurationMinutes, existingBookings, minTime]);
+  }, [authoritativeTimeSlots, minTime, selectedTime]);
 
   const buildResponsible = (): ReservationResponsible | undefined => {
     if (responsibleType === 'player' && selectedPlayerId) {
@@ -353,7 +374,7 @@ export function ReservationModal({
               Horario <span className="text-gray-400 normal-case">(seleccioná un bloque)</span>
             </label>
             <div className="grid grid-cols-4 gap-2">
-              {timeSlots.map((slot) => {
+              {authoritativeTimeSlots.map((slot) => {
                 const isDisabled = slot.time < minTime || slot.isOccupied;
                 const isSelected = selectedTime === slot.time;
                 return (
