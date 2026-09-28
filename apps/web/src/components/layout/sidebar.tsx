@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 
 const NAV_LINKS = [
@@ -49,7 +49,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { currentVenue } = useVenue();
+  const { currentVenue, venues, setCurrentVenue } = useVenue();
 
   // Close drawer on route change (mobile)
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  const clubName = currentVenue?.name ?? 'Club Palermo';
+  const clubName = currentVenue?.name ?? 'Cuádrala';
   const clubInitial = clubName.charAt(0).toUpperCase();
 
   return (
@@ -96,6 +96,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <span className="text-xs text-secondary-400 truncate">
                 Administrador
               </span>
+              {venues.length > 1 ? (
+                <label className="mt-2">
+                  <span className="sr-only">Sede activa</span>
+                  <select
+                    aria-label="Sede activa"
+                    value={currentVenue?.id ?? ''}
+                    onChange={(event) => {
+                      const venue = venues.find((item) => item.id === event.target.value);
+                      if (venue) setCurrentVenue(venue);
+                    }}
+                    className="w-full rounded-md border border-secondary-600 bg-secondary-800 px-2 py-1 text-xs text-white"
+                  >
+                    {venues.map((venue) => (
+                      <option key={venue.id} value={venue.id}>{venue.name}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
           </div>
 

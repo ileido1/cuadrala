@@ -16,6 +16,7 @@ interface VenueContextValue {
   venues: Venue[];
   currentVenue: Venue | null;
   setCurrentVenue: (venue: Venue) => void;
+  reloadVenues: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
 }
@@ -31,33 +32,34 @@ export function VenueProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch venues on mount
-  useEffect(() => {
-    if (!session?.accessToken) return;
+  const reloadVenues = useCallback(async () => {
+    if (!session?.accessToken) {
+      setIsLoading(false);
+      return;
+    }
 
-    const fetchVenues = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await apiClient.venues.mine();
-        const venuesData = (response.data.data?.items ?? response.data.data ?? []) as Venue[];
-        setVenues(venuesData);
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await apiClient.venues.mine();
+      const venuesData = (response.data.data?.items ?? response.data.data ?? []) as Venue[];
+      setVenues(venuesData);
 
-        // Restore from sessionStorage or default to first venue
-        const storedId = sessionStorage.getItem(SESSION_STORAGE_KEY);
-        const stored = venuesData.find((v) => v.id === storedId);
-        const selected = stored ?? venuesData[0] ?? null;
-        setCurrentVenueState(selected);
-      } catch {
-        setError('No se pudieron cargar las sedes');
-        setVenues([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchVenues();
+      const storedId = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      const stored = venuesData.find((venue) => venue.id === storedId);
+      setCurrentVenueState(stored ?? venuesData[0] ?? null);
+    } catch {
+      setError('No se pudieron cargar las sedes');
+      setVenues([]);
+      setCurrentVenueState(null);
+    } finally {
+      setIsLoading(false);
+    }
   }, [session?.accessToken]);
+
+  useEffect(() => {
+    void reloadVenues();
+  }, [reloadVenues]);
 
   const setCurrentVenue = useCallback((venue: Venue) => {
     setCurrentVenueState(venue);
@@ -66,7 +68,7 @@ export function VenueProvider({ children }: { children: ReactNode }) {
 
   return (
     <VenueContext.Provider
-      value={{ venues, currentVenue, setCurrentVenue, isLoading, error }}
+      value={{ venues, currentVenue, setCurrentVenue, reloadVenues, isLoading, error }}
     >
       {children}
     </VenueContext.Provider>
