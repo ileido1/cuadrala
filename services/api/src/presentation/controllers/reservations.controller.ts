@@ -20,6 +20,10 @@ import {
   COURT_ID_PARAM_SCHEMA,
   BLOCK_SLOT_BODY_SCHEMA,
 } from '../validation/reservations.validation.js';
+import {
+  mapBookingToResponseSV,
+  mapBookingsListToResponseSV,
+} from '../mappers/booking_response.mapper.js';
 
 export async function postReservationCON(_req: Request, _res: Response): Promise<void> {
   const ACTOR_USER_ID = _req.authUser?.id;
@@ -57,7 +61,7 @@ export async function postReservationCON(_req: Request, _res: Response): Promise
   _res.status(201).json({
     success: true,
     message: 'Reserva creada correctamente.',
-    data: RESULT.reservation,
+    data: mapBookingToResponseSV(RESULT.reservation),
   });
 }
 
@@ -93,7 +97,10 @@ export async function listReservationsCON(_req: Request, _res: Response): Promis
   _res.status(200).json({
     success: true,
     message: 'Reservas obtenidas correctamente.',
-    data: RESULT,
+    data: {
+      ...RESULT,
+      items: mapBookingsListToResponseSV(RESULT.items),
+    },
   });
 }
 
@@ -112,7 +119,7 @@ export async function deleteReservationCON(_req: Request, _res: Response): Promi
   _res.status(200).json({
     success: true,
     message: 'Reserva cancelada correctamente.',
-    data: RESULT.reservation,
+    data: mapBookingToResponseSV(RESULT.reservation),
   });
 }
 
@@ -143,7 +150,7 @@ export async function postBlockSlotCON(_req: Request, _res: Response): Promise<v
   _res.status(201).json({
     success: true,
     message: 'Horario bloqueado correctamente.',
-    data: RESULT.reservation,
+    data: mapBookingToResponseSV(RESULT.reservation),
   });
 }
 
@@ -171,6 +178,6 @@ export async function deleteBlockSlotCON(_req: Request, _res: Response): Promise
   _res.status(200).json({
     success: true,
     message: 'Horario desbloqueado correctamente.',
-    data: RESULT.reservation,
+    data: mapBookingToResponseSV(RESULT.reservation),
   });
 }
