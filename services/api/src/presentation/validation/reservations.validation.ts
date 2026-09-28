@@ -72,6 +72,7 @@ export const COURT_ID_PARAM_SCHEMA = z
 
 export const BLOCK_SLOT_BODY_SCHEMA = z
   .object({
+    courtId: z.string().uuid('courtId debe ser un UUID valido.').optional(),
     scheduledAt: z.string().datetime({ offset: true }),
     durationMinutes: z.coerce.number().int().positive().default(60),
     notes: z.string().max(500).nullable().optional(),
