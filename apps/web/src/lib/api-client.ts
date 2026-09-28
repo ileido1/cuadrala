@@ -293,8 +293,7 @@ class ApiClient {
     },
     slots: {
       block: (venueId: string, courtId: string, data: {
-        date: string;
-        startTime: string;
+        scheduledAt: string;
         durationMinutes: number;
         notes?: string;
       }) =>
