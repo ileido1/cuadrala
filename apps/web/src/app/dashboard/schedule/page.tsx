@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useVenue } from '~/contexts/venue-context';
 import { apiClient } from '~/lib/api-client';
 import type { BookingItem, Court, Venue } from '~/types/api';
@@ -168,7 +168,6 @@ function WeeklyCalendar({ weekColumns, cellHeight, onSlotClick, hourLabels }: We
 export default function SchedulePage() {
   const { currentVenue } = useVenue();
   const currentVenueId = currentVenue?.id;
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [courts, setCourts] = useState<Court[]>([]);
   const [loading, setLoading] = useState(true);
@@ -219,32 +218,32 @@ export default function SchedulePage() {
 
   const hourLabels = useMemo(() => buildHourLabels(maxDurationMinutes), [maxDurationMinutes]);
 
-  // Fetch unified bookings + courts
-  useEffect(() => {
+  const loadSchedule = useCallback(async () => {
     if (!currentVenue) return;
 
-    Promise.all([
+    setLoading(true);
+    setError(false);
+    const [bookingsResult, courtsResult] = await Promise.allSettled([
       apiClient.venues.bookings.list(currentVenue.id, {
         from: weekFrom,
         to: weekTo,
         limit: 100,
       }),
       apiClient.venues.courts.list(currentVenue.id, { status: 'ACTIVE' }),
-    ])
-      .then(([bookingsRes, courtsRes]) => {
-        const bookingsData = bookingsRes.data.data as { items: BookingItem[] };
-        const courtsData = (courtsRes.data.data as { items: Court[] }).items ?? [];
-        console.debug('[Schedule] bookings response:', bookingsRes.data);
-        console.debug('[Schedule] courts response:', courtsRes.data);
-        setBookings(bookingsData.items);
-        setCourts(courtsData);
-      })
-      .catch((err) => {
-        console.error('[Schedule] fetch error:', err);
-        setError(true);
-      })
-      .finally(() => setLoading(false));
+    ]);
+    if (bookingsResult.status === 'fulfilled') {
+      setBookings((bookingsResult.value.data.data as { items: BookingItem[] }).items);
+    }
+    if (courtsResult.status === 'fulfilled') {
+      setCourts((courtsResult.value.data.data as { items: Court[] }).items ?? []);
+    }
+    setError(bookingsResult.status === 'rejected' || courtsResult.status === 'rejected');
+    setLoading(false);
   }, [currentVenue, weekFrom, weekTo]);
+
+  useEffect(() => {
+    void loadSchedule();
+  }, [loadSchedule]);
 
   // Build week columns from unified bookings
   const weekColumns = useMemo(() => {
@@ -403,30 +402,6 @@ export default function SchedulePage() {
             {dateRange}
           </span>
 
-          {/* Tab filters */}
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
-            <button
-              onClick={() => setViewMode('calendar')}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                viewMode === 'calendar'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-muted hover:text-secondary'
-              }`}
-            >
-              Calendario
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-muted hover:text-secondary'
-              }`}
-            >
-              Lista
-            </button>
-          </div>
-
           {/* Nueva Reserva button */}
           <button
             onClick={() => setShowReservationModal(true)}
@@ -479,29 +454,18 @@ export default function SchedulePage() {
       )}
 
       {error && !loading && (
-        <div className="card p-8 text-center">
-          <p className="text-red-600">No se pudieron cargar las reservas. Intenta de nuevo.</p>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 flex flex-wrap items-center justify-between gap-3">
+          <p>No se pudieron actualizar todos los datos de la agenda.</p>
+          <button type="button" onClick={() => void loadSchedule()} className="font-semibold underline">
+            Reintentar
+          </button>
         </div>
       )}
 
       {/* Weekly Calendar */}
-      {!loading && !error && viewMode === 'calendar' && (
+      {!loading && (
         <div className="animate-fade-in stagger-1 overflow-x-auto">
           <WeeklyCalendar weekColumns={weekColumns} cellHeight={64} onSlotClick={handleSlotClick} hourLabels={hourLabels} />
-        </div>
-      )}
-
-      {/* List view placeholder */}
-      {viewMode === 'list' && !loading && (
-        <div className="animate-fade-in stagger-1">
-          <div className="card p-8">
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <svg className="mb-3 h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <p className="text-sm font-medium text-muted">Vista en lista — próxima implementación</p>
-            </div>
-          </div>
         </div>
       )}
 

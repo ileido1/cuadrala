@@ -15,6 +15,7 @@ import {
   transactionStatusBadgeClass,
 } from '~/lib/transaction-status';
 import { resolveVenueTimezone } from '~/lib/venue-timezone';
+import { ErrorState } from '~/components/shared/ErrorState';
 import type {
   TransactionStatsResponse,
   TransactionHistoryItem,
@@ -39,7 +40,8 @@ export default function PaymentsPage() {
   const [stats, setStats] = useState<TransactionStatsResponse | null>(null);
   const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [statsError, setStatsError] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [page, setPage] = useState(1);
   const [selectedPending, setSelectedPending] =
@@ -53,22 +55,28 @@ export default function PaymentsPage() {
     if (!currentVenue) return;
     const venueId = currentVenue.id;
     setLoading(true);
-    setError(false);
-    try {
-      const [statsRes, historyRes] = await Promise.all([
+    setStatsError(false);
+    setHistoryError(false);
+    const [statsResult, historyResult] = await Promise.allSettled([
         apiClient.venues.transactions.stats(venueId),
         apiClient.venues.transactions.history(venueId, 1),
       ]);
-      setStats(statsRes.data.data as TransactionStatsResponse);
-      const historyData = historyRes.data.data as {
+    if (statsResult.status === 'fulfilled') {
+      setStats(statsResult.value.data.data as TransactionStatsResponse);
+    } else {
+      setStats(null);
+      setStatsError(true);
+    }
+    if (historyResult.status === 'fulfilled') {
+      const historyData = historyResult.value.data.data as {
         items: TransactionHistoryItem[];
       };
       setTransactions(historyData.items);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
+    } else {
+      setTransactions([]);
+      setHistoryError(true);
     }
+    setLoading(false);
   }, [currentVenue]);
 
   useEffect(() => {
@@ -194,6 +202,10 @@ export default function PaymentsPage() {
       ) : null}
 
       {activeTab === 'overview' ? (
+        <>
+      {statsError ? (
+        <ErrorState message="No se pudo cargar el resumen de pagos." onRetry={() => void loadOverview()} />
+      ) : (
         <>
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in stagger-1">
@@ -354,6 +366,8 @@ export default function PaymentsPage() {
           )}
         </div>
       </div>
+        </>
+      )}
 
       {/* Transaction History */}
       <div className="card overflow-hidden animate-fade-in stagger-3">
@@ -361,6 +375,12 @@ export default function PaymentsPage() {
           <h2 className="section-heading">Historial de transacciones</h2>
           {historyActionError ? (
             <p className="mt-2 text-sm text-red-600">{historyActionError}</p>
+          ) : null}
+          {historyError ? (
+            <div className="mt-2 flex items-center justify-between gap-3 text-sm text-red-600">
+              <span>No se pudo cargar el historial de transacciones.</span>
+              <button type="button" className="font-semibold underline" onClick={() => void loadOverview()}>Reintentar</button>
+            </div>
           ) : null}
         </div>
         <div className="overflow-x-auto">
@@ -395,6 +415,8 @@ export default function PaymentsPage() {
                     <td className="px-4 py-3 sm:px-6 sm:py-4"><div className="h-6 bg-secondary-200 rounded w-16 animate-pulse" /></td>
                   </tr>
                 ))
+              ) : historyError ? (
+                <tr><td colSpan={5} className="px-6 py-6 text-center text-sm text-red-600">El historial no está disponible.</td></tr>
               ) : (
                 displayedTransactions.map((transaction) => {
                   const isPending = isPendingApiStatus(transaction.status);

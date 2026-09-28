@@ -522,7 +522,7 @@ export default function DashboardStats() {
     [venueCurrency],
   );
 
-  const loadStats = useCallback(() => {
+  const loadStats = useCallback(async () => {
     if (!currentVenue) return;
 
     setLoading(true);
@@ -531,7 +531,7 @@ export default function DashboardStats() {
     const WEEK = getWeekRangeIso();
     const VENUE_ID = currentVenue.id;
 
-    Promise.all([
+    const results = await Promise.allSettled([
       apiClient.venues.dashboardStats(VENUE_ID),
       apiClient.venues.transactions.stats(VENUE_ID),
       apiClient.venues.courts.list(VENUE_ID, { status: 'ACTIVE' }),
@@ -540,35 +540,33 @@ export default function DashboardStats() {
         to: WEEK.to,
         limit: 100,
       }),
-    ])
-      .then(([dashRes, txRes, courtsRes, bookingsRes]) => {
-        const DASH = dashRes.data.data as Omit<
-          DashboardStatsResponse,
-          'weeklyIncome' | 'courtOccupancy' | 'mostReservedCourt'
-        >;
-        const TX = txRes.data.data as TransactionStatsResponse;
-        const COURTS = (
-          (courtsRes.data.data as { items: Court[] }).items ?? []
-        );
-        const BOOKINGS =
-          (bookingsRes.data.data as { items: BookingItem[] }).items ?? [];
-
-        const WEEKLY =
-          TX.weeklyIncome?.length > 0 ? TX.weeklyIncome : EMPTY_WEEKLY_INCOME;
-        const COURT_ANALYTICS = buildCourtAnalytics(COURTS, BOOKINGS);
-
-        setStats({
-          ...DASH,
-          weeklyIncome: WEEKLY,
-          ...COURT_ANALYTICS,
-        });
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+    ]);
+    const [dashResult, txResult, courtsResult, bookingsResult] = results;
+    const DASH = dashResult.status === 'fulfilled'
+      ? dashResult.value.data.data as Omit<DashboardStatsResponse, 'weeklyIncome' | 'courtOccupancy' | 'mostReservedCourt'>
+      : null;
+    const TX = txResult.status === 'fulfilled' ? txResult.value.data.data as TransactionStatsResponse : null;
+    const COURTS = courtsResult.status === 'fulfilled' ? ((courtsResult.value.data.data as { items: Court[] }).items ?? []) : [];
+    const BOOKINGS = bookingsResult.status === 'fulfilled' ? ((bookingsResult.value.data.data as { items: BookingItem[] }).items ?? []) : [];
+    if (DASH || TX || courtsResult.status === 'fulfilled' || bookingsResult.status === 'fulfilled') {
+      const COURT_ANALYTICS = buildCourtAnalytics(COURTS, BOOKINGS);
+      setStats({
+        totalRevenue: DASH?.totalRevenue ?? 0,
+        totalCourts: DASH?.totalCourts ?? COURTS.length,
+        occupancyRate: DASH?.occupancyRate ?? `0/${COURTS.length}`,
+        conversionRate: DASH?.conversionRate ?? 0,
+        revenueTrend: DASH?.revenueTrend ?? 0,
+        conversionTrend: DASH?.conversionTrend ?? 0,
+        weeklyIncome: TX?.weeklyIncome?.length ? TX.weeklyIncome : EMPTY_WEEKLY_INCOME,
+        ...COURT_ANALYTICS,
+      });
+    }
+    setError(results.some((result) => result.status === 'rejected'));
+    setLoading(false);
   }, [currentVenue]);
 
   useEffect(() => {
-    loadStats();
+    void loadStats();
   }, [loadStats]);
 
   if (!currentVenue) {

@@ -87,3 +87,37 @@ describe('ApiClient authentication and registration paths', () => {
     ]);
   });
 });
+
+describe('ApiClient dashboard paths', () => {
+  beforeEach(() => {
+    calls.length = 0;
+  });
+
+  it('should request every route used by the active venue dashboard', async () => {
+    await apiClient.venues.mine();
+    await apiClient.venues.get('v1');
+    await apiClient.venues.update('v1', { name: 'Club' });
+    await apiClient.venues.dashboardStats('v1');
+    await apiClient.venues.transactions.stats('v1');
+    await apiClient.venues.transactions.history('v1', 1);
+    await apiClient.venues.pendingTransactions('v1');
+    await apiClient.venues.courts.list('v1', { status: 'ACTIVE' });
+    await apiClient.venues.bookings.list('v1', { limit: 100 });
+    await apiClient.venues.paymentMethods.list('v1');
+    await apiClient.sports.list();
+
+    expect(calls.map(({ method, url }) => ({ method, url }))).toEqual([
+      { method: 'GET', url: '/venues/mine' },
+      { method: 'GET', url: '/venues/v1' },
+      { method: 'PATCH', url: '/venues/v1' },
+      { method: 'GET', url: '/venues/v1/dashboard-stats' },
+      { method: 'GET', url: '/venues/v1/transactions/stats' },
+      { method: 'GET', url: '/venues/v1/transactions/history' },
+      { method: 'GET', url: '/venues/v1/transactions/pending' },
+      { method: 'GET', url: '/venues/v1/courts' },
+      { method: 'GET', url: '/venues/v1/bookings' },
+      { method: 'GET', url: '/venues/v1/payment-methods' },
+      { method: 'GET', url: '/sports' },
+    ]);
+  });
+});
