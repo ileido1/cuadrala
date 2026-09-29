@@ -227,6 +227,7 @@ export default function SchedulePage() {
       apiClient.venues.bookings.list(currentVenue.id, {
         from: weekFrom,
         to: weekTo,
+        status: 'CONFIRMED',
         limit: 100,
       }),
       apiClient.venues.courts.list(currentVenue.id, { status: 'ACTIVE' }),
@@ -353,6 +354,7 @@ export default function SchedulePage() {
       const bookingsRes = await apiClient.venues.bookings.list(currentVenue.id, {
         from: from.weekFrom,
         to: from.weekTo,
+        status: 'CONFIRMED',
         limit: 100,
       });
       const bookingsData = bookingsRes.data.data as { items: BookingItem[] };

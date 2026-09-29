@@ -39,6 +39,7 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - [x] DRA-11 — Added safe diagnostics to identify the runtime input seen by deployed block-slot validation. Route: delegated direct (writer trigger: error middleware/logger and regression test). Evidence: block-slot Zod failures log only body type/keys, route-param keys, and sanitized issue metadata; 8 focused tests, API typecheck, and lint passed. Commit `7fdf7bf`.
 - [x] DRA-12 — Replaced separate strict venue/court validation in block operations with one combined schema. Route: delegated direct (writer trigger: validation, controller, and regression test). Evidence: RED reproduced both block/unblock with `Unrecognized key: "courtId"`; focused controller regression 4/4, typecheck, and lint passed.
 - [x] DRA-13 — Make blocked schedule entries present only the `Liberar bloque` action, never payment or reservation-cancellation actions. Route: delegated direct (writer trigger: modal, API client, and focused regression test). Evidence: release requires confirmation, sends `scheduledAt`/`durationMinutes`, then closes and reloads; focused modal tests 2/2, web lint, and production build passed.
+- [x] DRA-14 — Remove a released block from the schedule grid after a successful unblock response. Route: delegated direct (mapping trigger: modal, page state, API client, and regression test). Evidence: both schedule booking loads request `status: CONFIRMED`; focused SchedulePage regression, lint, and production build passed.
 
 ## Acceptance criteria
 - The modal disables every slot reported unavailable by `/courts/:courtId/slots`.
@@ -62,6 +63,8 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - Diagnostic result: body keys are exactly `scheduledAt` and `durationMinutes`; the unrecognized `courtId` comes from parsing the full route params with `VENUE_ID_PARAM_SCHEMA.strict()`, which rejects the sibling court key.
 - Fixed: `VENUE_COURT_ID_PARAM_SCHEMA.strict()` validates the entire Express route parameter set once, so each block operation accepts both required route IDs.
 - New report: BLOCKED entries incorrectly expose `Cancelar reserva` and `Confirmar pago`; they must expose only `Liberar bloque`.
+- New report: after a successful release response, the grid still renders the block instead of removing it.
+- Fixed: unblocking soft-cancels the record, so both schedule reload paths now request only `CONFIRMED` bookings and cancelled blocks no longer return to the grid.
 
 ## Verification
 - `cd apps/web && npm test -- src/components/schedule/ReservationModal.test.tsx` — 3/3 passed.
@@ -75,6 +78,9 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - `cd services/api && npm test -- src/test/unit/reservations.controller.test.ts` — 2/2 passed.
 - `cd services/api && npm test -- src/test/unit/reservations.controller.test.ts` — 4/4 passed (DRA-12 regression).
 - `cd apps/web && npm test -- ReservationDetailModal.test.tsx` — 2/2 passed (DRA-13 regression).
+- `cd apps/web && npm test -- --run src/app/dashboard/schedule/page.test.tsx` — 1/1 passed (DRA-14 regression).
+- `cd apps/web && npm run lint` — passed (DRA-14).
+- `cd apps/web && npm run build` — passed (DRA-14).
 - `cd services/api && npm run typecheck` — passed.
 - `cd services/api && npm run lint` — passed.
 - `cd services/api && npm run typecheck` — passed.
