@@ -299,8 +299,8 @@ class ApiClient {
       }) =>
         this.client.post(`/venues/${venueId}/courts/${courtId}/slots/block`, data),
       unblock: (venueId: string, courtId: string, data: {
-        date: string;
-        startTime: string;
+        scheduledAt: string;
+        durationMinutes: number;
       }) =>
         this.client.delete(`/venues/${venueId}/courts/${courtId}/slots/block`, { data }),
     },

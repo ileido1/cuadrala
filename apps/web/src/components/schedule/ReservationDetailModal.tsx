@@ -52,6 +52,7 @@ export function ReservationDetailModal({
     paidAmountCents: number;
     paymentStatus: BookingItem['paymentStatus'];
   } | null>(null);
+  const isBlocked = reservation.type === 'BLOCKED';
   // Sincroniza total (cancha) y pagado (transacciones) al abrir el detalle
   useEffect(() => {
     if (!reservation.id) return;
@@ -93,6 +94,30 @@ export function ReservationDetailModal({
       const message = err instanceof Error && 'response' in err
         ? (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'No se pudo cancelar la reserva.'
         : 'No se pudo cancelar la reserva.';
+      setError(message);
+      showToast(message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmRelease = async () => {
+    setShowConfirm(false);
+    setLoading(true);
+    setError(null);
+
+    try {
+      await apiClient.venues.slots.unblock(venueId, reservation.courtId, {
+        scheduledAt: reservation.scheduledAt,
+        durationMinutes: reservation.durationMinutes,
+      });
+      showToast('Bloque liberado correctamente', 'success');
+      onCancel();
+      onClose();
+    } catch (err: unknown) {
+      const message = err instanceof Error && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'No se pudo liberar el bloque.'
+        : 'No se pudo liberar el bloque.';
       setError(message);
       showToast(message, 'error');
     } finally {
@@ -239,15 +264,25 @@ export function ReservationDetailModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between">
-          <button
-            onClick={handleCancel}
-            disabled={loading || reservation.status === 'CANCELLED'}
-            className="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Cancelando...' : 'Cancelar Reserva'}
-          </button>
+          {isBlocked ? (
+            <button
+              onClick={handleCancel}
+              disabled={loading || reservation.status === 'CANCELLED'}
+              className="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Liberando...' : 'Liberar bloque'}
+            </button>
+          ) : (
+            <button
+              onClick={handleCancel}
+              disabled={loading || reservation.status === 'CANCELLED'}
+              className="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Cancelando...' : 'Cancelar Reserva'}
+            </button>
+          )}
           <div className="flex gap-2">
-            {reservation.paymentStatus !== 'PAID' && reservation.status !== 'CANCELLED' && (
+            {!isBlocked && reservation.paymentStatus !== 'PAID' && reservation.status !== 'CANCELLED' && (
               <button
                 onClick={handleConfirmPayment}
                 disabled={loading}
@@ -274,9 +309,13 @@ export function ReservationDetailModal({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-slate-800 text-center mb-2">Cancelar reserva</h2>
+              <h2 className="text-xl font-bold text-slate-800 text-center mb-2">
+                {isBlocked ? 'Liberar bloque' : 'Cancelar reserva'}
+              </h2>
               <p className="text-slate-500 text-sm text-center mb-6">
-                ¿Estás seguro de cancelar esta reserva? Esta acción no se puede deshacer.
+                {isBlocked
+                  ? '¿Estás seguro de liberar este bloque? El horario volverá a estar disponible.'
+                  : '¿Estás seguro de cancelar esta reserva? Esta acción no se puede deshacer.'}
               </p>
               <div className="flex gap-3">
                 <button
@@ -286,11 +325,11 @@ export function ReservationDetailModal({
                   Volver
                 </button>
                 <button
-                  onClick={handleConfirmCancel}
+                  onClick={isBlocked ? handleConfirmRelease : handleConfirmCancel}
                   disabled={loading}
                   className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
-                  {loading ? 'Cancelando...' : 'Sí, cancelar'}
+                  {loading ? (isBlocked ? 'Liberando...' : 'Cancelando...') : (isBlocked ? 'Sí, liberar' : 'Sí, cancelar')}
                 </button>
               </div>
             </div>

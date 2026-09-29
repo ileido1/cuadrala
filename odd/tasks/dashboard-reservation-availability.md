@@ -14,6 +14,7 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - Tolerate the legacy redundant `courtId` payload field at the strict block endpoint while continuing to use the court ID from the URL.
 - Emit safe, structured diagnostics for block-slot validation failures without logging payload values or credentials.
 - Validate venue/court route params together for block operations; separate strict schemas reject each other's key.
+- Give BLOCKED schedule entries an explicit release action and hide irrelevant payment/cancellation actions.
 - Fetch each selected court/date availability from the authoritative court-slots endpoint.
 - Render only API-authorized slots as selectable, preserving venue hours and pricing display.
 - Keep the API conflict message on failed creation as a race-condition fallback.
@@ -37,6 +38,7 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - [x] DRA-10 — Added backwards-compatible validation for a redundant legacy `courtId` body key on block requests. Route: delegated direct (writer trigger: schema and regression test). Evidence: optional UUID is accepted while the controller continues using the URL court ID; regression test 2/2, API typecheck, and lint passed. Commit `4205c70`.
 - [x] DRA-11 — Added safe diagnostics to identify the runtime input seen by deployed block-slot validation. Route: delegated direct (writer trigger: error middleware/logger and regression test). Evidence: block-slot Zod failures log only body type/keys, route-param keys, and sanitized issue metadata; 8 focused tests, API typecheck, and lint passed. Commit `7fdf7bf`.
 - [x] DRA-12 — Replaced separate strict venue/court validation in block operations with one combined schema. Route: delegated direct (writer trigger: validation, controller, and regression test). Evidence: RED reproduced both block/unblock with `Unrecognized key: "courtId"`; focused controller regression 4/4, typecheck, and lint passed.
+- [x] DRA-13 — Make blocked schedule entries present only the `Liberar bloque` action, never payment or reservation-cancellation actions. Route: delegated direct (writer trigger: modal, API client, and focused regression test). Evidence: release requires confirmation, sends `scheduledAt`/`durationMinutes`, then closes and reloads; focused modal tests 2/2, web lint, and production build passed.
 
 ## Acceptance criteria
 - The modal disables every slot reported unavailable by `/courts/:courtId/slots`.
@@ -59,6 +61,7 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - New production evidence: even a curl request with no `courtId` body receives the same unrecognized-key error, so the running service is adding or parsing route parameters as input.
 - Diagnostic result: body keys are exactly `scheduledAt` and `durationMinutes`; the unrecognized `courtId` comes from parsing the full route params with `VENUE_ID_PARAM_SCHEMA.strict()`, which rejects the sibling court key.
 - Fixed: `VENUE_COURT_ID_PARAM_SCHEMA.strict()` validates the entire Express route parameter set once, so each block operation accepts both required route IDs.
+- New report: BLOCKED entries incorrectly expose `Cancelar reserva` and `Confirmar pago`; they must expose only `Liberar bloque`.
 
 ## Verification
 - `cd apps/web && npm test -- src/components/schedule/ReservationModal.test.tsx` — 3/3 passed.
@@ -71,6 +74,7 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - `cd services/api && npm test -- src/test/unit/error.middleware.test.ts` — 8/8 passed.
 - `cd services/api && npm test -- src/test/unit/reservations.controller.test.ts` — 2/2 passed.
 - `cd services/api && npm test -- src/test/unit/reservations.controller.test.ts` — 4/4 passed (DRA-12 regression).
+- `cd apps/web && npm test -- ReservationDetailModal.test.tsx` — 2/2 passed (DRA-13 regression).
 - `cd services/api && npm run typecheck` — passed.
 - `cd services/api && npm run lint` — passed.
 - `cd services/api && npm run typecheck` — passed.
