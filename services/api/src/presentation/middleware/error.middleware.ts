@@ -4,6 +4,45 @@ import { ZodError } from 'zod';
 import { AppError } from '../../domain/errors/app_error.js';
 import { logError } from '../observability/error_logger.js';
 
+const BLOCK_SLOT_ROUTE_PATH = '/venues/:venueId/courts/:courtId/slots/block';
+
+function isBlockSlotPostRequestSV(_req: Request): boolean {
+  if (_req.method !== 'POST') return false;
+
+  if (_req.route?.path === BLOCK_SLOT_ROUTE_PATH) return true;
+
+  const PATH = _req.path.replace(/^\/api\/v1/, '');
+  return /^\/venues\/[^/]+\/courts\/[^/]+\/slots\/block$/.test(PATH);
+}
+
+function bodyTypeSV(_body: unknown): string {
+  if (_body === null) return 'null';
+  if (Array.isArray(_body)) return 'array';
+  return typeof _body;
+}
+
+function sortedKeysSV(_value: unknown): string[] {
+  if (_value === null || typeof _value !== 'object') return [];
+  return Object.keys(_value).sort();
+}
+
+function blockSlotZodDiagnosticsSV(_req: Request, _error: ZodError): Record<string, unknown> {
+  return {
+    diagnostics: {
+      bodyType: bodyTypeSV(_req.body),
+      bodyKeys: sortedKeysSV(_req.body),
+      routeParamKeys: sortedKeysSV(_req.params),
+      zodIssues: _error.issues.map((_issue) => ({
+        code: _issue.code,
+        path: _issue.path,
+        ...(_issue.code === 'unrecognized_keys' && {
+          unrecognizedKeys: [..._issue.keys].sort(),
+        }),
+      })),
+    },
+  };
+}
+
 /**
  * @name    :errorMiddleware
  * @version :1.0.0
@@ -45,7 +84,14 @@ export function errorMiddleware(
   //? 3. Body o params malformados: se devuelve el detalle de Zod para que el
   //? cliente sepa qué campo corregir.
   if (_err instanceof ZodError) {
-    logError('warn', 'VALIDACION_FALLIDA', 'Datos de entrada malformados.', _req, _err);
+    logError(
+      'warn',
+      'VALIDACION_FALLIDA',
+      'Datos de entrada malformados.',
+      _req,
+      _err,
+      isBlockSlotPostRequestSV(_req) ? blockSlotZodDiagnosticsSV(_req, _err) : undefined,
+    );
     _res.status(400).json({
       success: false,
       code: 'VALIDACION_FALLIDA',

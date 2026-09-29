@@ -79,6 +79,55 @@ describe('errorMiddleware', () => {
     vi.restoreAllMocks();
   });
 
+  it('registra diagnóstico saneado para Zod en el bloqueo de horario', () => {
+    const SPY = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const RES = buildResSV();
+    const BODY = {
+      scheduledAt: '2026-10-01T12:00:00.000Z',
+      durationMinutes: 60,
+      courtId: 'court-secret-id',
+      notes: 'private player note',
+      token: 'body-secret-token',
+    };
+    const PARSED = z
+      .object({ scheduledAt: z.string(), durationMinutes: z.number() })
+      .strict()
+      .safeParse(BODY);
+    const REQ = {
+      method: 'POST',
+      path: '/api/v1/venues/venue-private/courts/court-private/slots/block',
+      params: { venueId: 'venue-private', courtId: 'court-private' },
+      body: BODY,
+      headers: { authorization: 'Bearer authorization-secret' },
+    } as unknown as Request;
+
+    errorMiddleware(
+      (PARSED as { error: unknown }).error,
+      REQ,
+      RES,
+      vi.fn() as unknown as NextFunction,
+    );
+
+    const OUTPUT = SPY.mock.calls[0]?.[0] as string;
+    const ENTRY = JSON.parse(OUTPUT);
+    expect(ENTRY.diagnostics).toEqual({
+      bodyType: 'object',
+      bodyKeys: ['courtId', 'durationMinutes', 'notes', 'scheduledAt', 'token'],
+      routeParamKeys: ['courtId', 'venueId'],
+      zodIssues: [
+        { code: 'unrecognized_keys', path: [], unrecognizedKeys: ['courtId', 'notes', 'token'] },
+      ],
+    });
+    expect(OUTPUT).not.toContain('2026-10-01T12:00:00.000Z');
+    expect(OUTPUT).not.toContain('court-secret-id');
+    expect(OUTPUT).not.toContain('private player note');
+    expect(OUTPUT).not.toContain('body-secret-token');
+    expect(OUTPUT).not.toContain('authorization-secret');
+    expect(RES.body.code).toBe('VALIDACION_FALLIDA');
+
+    SPY.mockRestore();
+  });
+
   //? Frontera de seguridad: una excepción inesperada nunca debe llegar al cliente.
   it('ante una excepción inesperada responde 500 sin filtrar el error', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});

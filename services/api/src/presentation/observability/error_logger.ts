@@ -17,6 +17,8 @@ import type {} from '../../types/express.js';
  * @param {Request} [_req] - Request de Express; aporta método, ruta y actor.
  * El actor sale de `_req.authUser`, que ya resolvieron `requireAuth`/`optionalAuth`
  * @param {unknown} [_error] - Error original; su stack se adjunta solo en nivel `error`
+ * @param {Record<string, unknown>} [_context] - Contexto adicional ya saneado por
+ * quien llama. No debe contener valores de body, headers ni datos personales.
  * @return {void}
  */
 export function logError(
@@ -25,6 +27,7 @@ export function logError(
   _message: string,
   _req?: Request,
   _error?: unknown,
+  _context?: Record<string, unknown>,
 ): void {
   const STACK = _level === 'error' && _error instanceof Error ? _error.stack : undefined;
 
@@ -41,6 +44,7 @@ export function logError(
         actor: _req?.authUser?.id ?? 'anonymous',
       },
       ...(STACK !== undefined && { stack: STACK }),
+      ...(_context !== undefined && _context),
     }),
   );
 }

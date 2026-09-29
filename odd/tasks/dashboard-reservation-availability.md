@@ -12,6 +12,7 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - Request authoritative court slots and make unavailable blocks unselectable before blocking.
 - Surface the API error message when blocking fails instead of a generic failure.
 - Tolerate the legacy redundant `courtId` payload field at the strict block endpoint while continuing to use the court ID from the URL.
+- Emit safe, structured diagnostics for block-slot validation failures without logging payload values or credentials.
 - Fetch each selected court/date availability from the authoritative court-slots endpoint.
 - Render only API-authorized slots as selectable, preserving venue hours and pricing display.
 - Keep the API conflict message on failed creation as a race-condition fallback.
@@ -33,6 +34,7 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - [x] DRA-8 — Aligned BlockSlotModal with the New Reservation four-column block grid and authoritative court-slot availability. Route: delegated direct (writer trigger: modal, API client, and regression test). Evidence: block duration comes from the selected court; loading, fetch failure, and unavailable blocks are disabled.
 - [x] DRA-9 — Preserved block API errors and verified the full UI contract. Route: delegated direct (same work unit). Evidence: payload uses `scheduledAt` ISO instead of incompatible `date`/`startTime`; regression tests 3/3, lint, and production build passed.
 - [x] DRA-10 — Added backwards-compatible validation for a redundant legacy `courtId` body key on block requests. Route: delegated direct (writer trigger: schema and regression test). Evidence: optional UUID is accepted while the controller continues using the URL court ID; regression test 2/2, API typecheck, and lint passed. Commit `4205c70`.
+- [x] DRA-11 — Added safe diagnostics to identify the runtime input seen by deployed block-slot validation. Route: delegated direct (writer trigger: error middleware/logger and regression test). Evidence: block-slot Zod failures log only body type/keys, route-param keys, and sanitized issue metadata; 8 focused tests, API typecheck, and lint passed. Commit `7fdf7bf`.
 
 ## Acceptance criteria
 - The modal disables every slot reported unavailable by `/courts/:courtId/slots`.
@@ -52,7 +54,9 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - Fixed in commit `cd39c7e`: UI now mirrors reservation block selection and sends the valid contract.
 - Production report after redeploy: Render rejected a redundant `courtId` sent by a legacy client artifact, even with valid `scheduledAt` and duration.
 - Compatibility fix: `BLOCK_SLOT_BODY_SCHEMA` accepts optional UUID `courtId`; the endpoint remains URL-param authoritative.
-- Next step: push and let Render deploy the API fix.
+- New production evidence: even a curl request with no `courtId` body receives the same unrecognized-key error, so the running service is adding or parsing route parameters as input.
+- Diagnostic fix: next deployed request will log sanitized keys and Zod issue metadata without leaking payload values, notes, tokens, or headers.
+- Next step: push `7fdf7bf`, deploy it in Render, reproduce once, and inspect the structured WARN log.
 
 ## Verification
 - `cd apps/web && npm test -- src/components/schedule/ReservationModal.test.tsx` — 3/3 passed.
@@ -62,9 +66,11 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - `cd services/api && npm test -- src/test/unit/block_slot_body_schema.test.ts` — 2/2 passed.
 - `cd services/api && npm run typecheck` — passed.
 - `cd services/api && npm run lint` — passed.
+- `cd services/api && npm test -- src/test/unit/error.middleware.test.ts` — 8/8 passed.
 - `cd services/api && npm test -- src/test/unit/reservations.controller.test.ts` — 2/2 passed.
 - `cd services/api && npm run typecheck` — passed.
 - `cd services/api && npm run lint` — passed.
+- `cd services/api && npm test -- src/test/unit/error.middleware.test.ts` — 8/8 passed.
 - `cd services/api && npm test` — not clean: integration failures are unrelated to this controller change (Resend 422 notification delivery and tournament integration fixtures).
 - `cd apps/web && npm test -- src/components/schedule/BlockSlotModal.test.tsx` — 3/3 passed.
 - `cd apps/web && npm run lint` — passed.
@@ -72,5 +78,6 @@ Production reproduction on 2026-09-28: Cancha 1, 2026-10-04, 10:00–11:00 was r
 - `cd services/api && npm test -- src/test/unit/block_slot_body_schema.test.ts` — 2/2 passed.
 - `cd services/api && npm run typecheck` — passed.
 - `cd services/api && npm run lint` — passed.
+- `cd services/api && npm test -- src/test/unit/error.middleware.test.ts` — 8/8 passed.
 - Runtime harness: production reproduction proved the prior availability false positive. The test reservation was persisted and then confirmed cancelled after reload.
 - Rollback boundary: revert the court-slots API client typing and ReservationModal availability source, and the JSON-safe mapping in the legacy reservations controller.
