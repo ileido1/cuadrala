@@ -5,9 +5,12 @@ import { ReservationStatus, ReservationType, type ReservationDTO } from '../../d
 import {
   CANCEL_RESERVATION_UC,
   CREATE_RESERVATION_UC,
+  UNBLOCK_COURT_SLOT_UC,
 } from '../../presentation/composition/reservations.composition.js';
 import {
+  deleteBlockSlotCON,
   deleteReservationCON,
+  postBlockSlotCON,
   postReservationCON,
 } from '../../presentation/controllers/reservations.controller.js';
 
@@ -115,5 +118,51 @@ describe('legacy reservations controller JSON responses', () => {
     expect(RES.body).toMatchObject({
       data: { status: ReservationStatus.CANCELLED, totalAmountMinor: '5000', paidAmountMinor: '0' },
     });
+  });
+});
+
+describe('block slot controllers', () => {
+  it('reaches the create use case when the route has both venue and court params', async () => {
+    const EXECUTE = vi.spyOn(CREATE_RESERVATION_UC, 'executeSV').mockResolvedValue({
+      reservation: { ...buildReservationDTO(), type: ReservationType.BLOCKED },
+    });
+    const RES = buildResponse();
+
+    await postBlockSlotCON(
+      {
+        authUser: { id: '550e8400-e29b-41d4-a716-446655440006' },
+        params: { venueId: VENUE_ID, courtId: COURT_ID },
+        body: { scheduledAt: '2026-10-04T10:00:00Z', durationMinutes: 60 },
+      } as unknown as Request,
+      RES.response,
+    );
+
+    expect(EXECUTE).toHaveBeenCalledWith(
+      expect.objectContaining({ venueId: VENUE_ID, courtId: COURT_ID, type: ReservationType.BLOCKED }),
+      '550e8400-e29b-41d4-a716-446655440006',
+    );
+    expect(RES.statusCode).toBe(201);
+  });
+
+  it('reaches the unblock use case when the route has both venue and court params', async () => {
+    const EXECUTE = vi.spyOn(UNBLOCK_COURT_SLOT_UC, 'executeSV').mockResolvedValue({
+      reservation: { ...buildReservationDTO(), type: ReservationType.BLOCKED },
+    });
+    const RES = buildResponse();
+
+    await deleteBlockSlotCON(
+      {
+        authUser: { id: '550e8400-e29b-41d4-a716-446655440006' },
+        params: { venueId: VENUE_ID, courtId: COURT_ID },
+        body: { scheduledAt: '2026-10-04T10:00:00Z' },
+      } as unknown as Request,
+      RES.response,
+    );
+
+    expect(EXECUTE).toHaveBeenCalledWith(
+      expect.objectContaining({ venueId: VENUE_ID, courtId: COURT_ID }),
+      '550e8400-e29b-41d4-a716-446655440006',
+    );
+    expect(RES.statusCode).toBe(200);
   });
 });

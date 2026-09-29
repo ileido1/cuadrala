@@ -70,6 +70,13 @@ export const COURT_ID_PARAM_SCHEMA = z
   })
   .strict();
 
+export const VENUE_COURT_ID_PARAM_SCHEMA = z
+  .object({
+    venueId: z.string().uuid('venueId debe ser un UUID valido.'),
+    courtId: z.string().uuid('courtId debe ser un UUID valido.'),
+  })
+  .strict();
+
 export const BLOCK_SLOT_BODY_SCHEMA = z
   .object({
     courtId: z.string().uuid('courtId debe ser un UUID valido.').optional(),

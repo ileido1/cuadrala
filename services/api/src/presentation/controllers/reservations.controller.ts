@@ -17,7 +17,7 @@ import {
   LIST_RESERVATIONS_QUERY_SCHEMA,
   RESERVATION_ID_PARAM_SCHEMA,
   VENUE_ID_PARAM_SCHEMA,
-  COURT_ID_PARAM_SCHEMA,
+  VENUE_COURT_ID_PARAM_SCHEMA,
   BLOCK_SLOT_BODY_SCHEMA,
 } from '../validation/reservations.validation.js';
 import {
@@ -129,10 +129,7 @@ export async function postBlockSlotCON(_req: Request, _res: Response): Promise<v
     throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
   }
 
-  const PARAMS = {
-    ...VENUE_ID_PARAM_SCHEMA.parse(_req.params),
-    ...COURT_ID_PARAM_SCHEMA.parse(_req.params),
-  };
+  const PARAMS = VENUE_COURT_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = BLOCK_SLOT_BODY_SCHEMA.parse(_req.body);
 
   const RESULT = await CREATE_RESERVATION_UC.executeSV(
@@ -160,10 +157,7 @@ export async function deleteBlockSlotCON(_req: Request, _res: Response): Promise
     throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
   }
 
-  const PARAMS = {
-    ...VENUE_ID_PARAM_SCHEMA.parse(_req.params),
-    ...COURT_ID_PARAM_SCHEMA.parse(_req.params),
-  };
+  const PARAMS = VENUE_COURT_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = BLOCK_SLOT_BODY_SCHEMA.parse(_req.body);
 
   const RESULT = await UNBLOCK_COURT_SLOT_UC.executeSV(
