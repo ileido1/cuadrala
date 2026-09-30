@@ -32,6 +32,15 @@ final class TournamentListFilters extends Equatable {
   final int? radiusKm;
 
   TournamentListFilters copyWith({
+    String? venueId,
+    bool clearVenueId = false,
+    DateTime? startsAtFrom,
+    DateTime? startsAtTo,
+    bool clearDates = false,
+    String? status,
+    bool clearStatus = false,
+    String? sportId,
+    bool clearSportId = false,
     String? categoryId,
     bool clearCategoryId = false,
     String? near,
@@ -39,11 +48,11 @@ final class TournamentListFilters extends Equatable {
     bool clearNear = false,
   }) {
     return TournamentListFilters(
-      venueId: venueId,
-      startsAtFrom: startsAtFrom,
-      startsAtTo: startsAtTo,
-      status: status,
-      sportId: sportId,
+      venueId: clearVenueId ? null : (venueId ?? this.venueId),
+      startsAtFrom: clearDates ? null : (startsAtFrom ?? this.startsAtFrom),
+      startsAtTo: clearDates ? null : (startsAtTo ?? this.startsAtTo),
+      status: clearStatus ? null : (status ?? this.status),
+      sportId: clearSportId ? null : (sportId ?? this.sportId),
       categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
       near: clearNear ? null : (near ?? this.near),
       radiusKm: clearNear ? null : (radiusKm ?? this.radiusKm),

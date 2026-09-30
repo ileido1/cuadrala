@@ -16,32 +16,40 @@ import 'cubit/tournaments_list_cubit.dart';
 import 'cubit/tournaments_list_state.dart';
 import 'widgets/tournament_list_item_tile.dart';
 import '../../../shared/widgets/segmented_control.dart';
+import '../../../core/theme/tournament_theme.dart';
+import '../../../core/formatting/money_conversion.dart';
+import '../../../core/formatting/fx_price_labels.dart';
+import '../../../core/models/currency_code.dart';
+import 'widgets/tournament_primitives.dart';
 
 final class TournamentsHomeScreen extends StatelessWidget {
   const TournamentsHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) =>
-          TournamentsListCubit(
-              tournamentsRepository: getIt<TournamentsRepository>(),
-              catalogRepository: getIt<CatalogRepository>(),
-              venuesRepository: getIt<VenuesRepository>(),
-              profileRepository: getIt<ProfileRepository>(),
-              //? Opcionales: en tests que no registran estos dos en getIt,
-              //? el chip "Cerca" simplemente no resuelve ubicación (M3d).
-              onboardingRepository: getIt.isRegistered<OnboardingRepository>()
-                  ? getIt<OnboardingRepository>()
-                  : null,
-              locationService: getIt.isRegistered<LocationService>()
-                  ? getIt<LocationService>()
-                  : null,
-            )
-            ..loadSportsAndCategories()
-            ..loadVenues()
-            ..load(),
-      child: const _TournamentsHomeView(),
+    return Theme(
+      data: TournamentTheme.apply(Theme.of(context)),
+      child: BlocProvider(
+        create: (_) =>
+            TournamentsListCubit(
+                tournamentsRepository: getIt<TournamentsRepository>(),
+                catalogRepository: getIt<CatalogRepository>(),
+                venuesRepository: getIt<VenuesRepository>(),
+                profileRepository: getIt<ProfileRepository>(),
+                //? Opcionales: en tests que no registran estos dos en getIt,
+                //? el chip "Cerca" simplemente no resuelve ubicación (M3d).
+                onboardingRepository: getIt.isRegistered<OnboardingRepository>()
+                    ? getIt<OnboardingRepository>()
+                    : null,
+                locationService: getIt.isRegistered<LocationService>()
+                    ? getIt<LocationService>()
+                    : null,
+              )
+              ..loadSportsAndCategories()
+              ..loadVenues()
+              ..load(),
+        child: const _TournamentsHomeView(),
+      ),
     );
   }
 }
@@ -54,365 +62,447 @@ final class _TournamentsHomeView extends StatefulWidget {
 }
 
 final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
-  var _section = 'Abiertos';
+  var _section = 'Explorar';
+  List<ExchangeRateRow> _rates = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadExchangeRatesSafelySV().then((rates) {
+      if (mounted) setState(() => _rates = rates);
+    });
+  }
+
+  void _open(ViewerTournamentDto viewer) {
+    context.push(
+      Routes.tournamentDetail(
+        viewer.tournament.id,
+        invitation: viewer.pendingInvitationId != null && !viewer.isOrganizer,
+      ),
+      extra: viewer,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       key: const Key('tournaments.home'),
-      body: BlocBuilder<TournamentsListCubit, TournamentsListState>(
-        builder: (context, state) {
-          if (state is TournamentsListLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is TournamentsListFailure) {
-            return Center(
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                MediaQuery.paddingOf(context).top.clamp(54, double.infinity),
+                20,
+                4,
+              ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(AppIcons.warning, size: 48),
-                  const SizedBox(height: 16),
-                  Text(state.message),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () =>
-                        context.read<TournamentsListCubit>().load(),
-                    child: const Text('Reintentar'),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Torneos',
+                              style: TextStyle(
+                                fontSize: 27,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Nivel, precio, fecha y sede antes de anotarte',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: () => context.push(Routes.createTournament),
+                        icon: const Icon(AppIcons.add, size: 18),
+                        label: const Text('Crear'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          textStyle: TextStyle(
+                            fontFamily: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.fontFamily,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SegmentedControl<String>(
+                    options: const [
+                      SegmentedOption(value: 'Explorar', label: 'Explorar'),
+                      SegmentedOption(
+                        value: 'Mis torneos',
+                        label: 'Mis torneos',
+                      ),
+                    ],
+                    value: _section,
+                    onChanged: (value) => setState(() => _section = value),
                   ),
                 ],
               ),
-            );
-          }
-          if (state is TournamentsListLoaded) {
-            //? "Mis torneos" (M4a, cuadrala-torneos.jsx:150): real data desde
-            //? GET /api/v1/users/me/tournaments — ya no una lista hardcodeada.
-            final isMine = _section == 'Mis torneos';
-            final openItems =
-                state.items.where((item) => item.status == 'OPEN').toList();
-            final mineItems = state.myTournaments;
-            final isEmpty = isMine ? mineItems.isEmpty : openItems.isEmpty;
-            return SafeArea(
-              child: Column(
-                children: [
-                  _TournamentsHeader(
-                    onCreate: () => context.push(Routes.createTournament),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-                    child: SegmentedControl<String>(
-                      options: const [
-                        SegmentedOption(value: 'Abiertos', label: 'Abiertos'),
-                        SegmentedOption(
-                          value: 'Mis torneos',
-                          label: 'Mis torneos',
-                        ),
-                      ],
-                      value: _section,
-                      onChanged: (value) => setState(() => _section = value),
-                    ),
-                  ),
-                  if (!isMine)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                      child: Row(
-                        children: [
-                          //? "Mi categoría {N}" (cuadrala-torneos.jsx:188):
-                          //? sólo se dibuja cuando el visor tiene categoría
-                          //? propia (M3c-1's hasOwnCategory). Tocarlo alterna
-                          //? el filtro de categoría vía el applyFilters ya
-                          //? existente del cubit, sin reinventar esa lógica.
-                          if (state.hasOwnCategory)
-                            _CategoryFilterChip(
-                              label:
-                                  'Mi categoría ${state.ownCategoryLabel}',
-                              selected: state.filters.categoryId != null,
-                              onTap: () {
-                                final cubit =
-                                    context.read<TournamentsListCubit>();
-                                if (state.filters.categoryId != null) {
-                                  cubit.applyFilters(
-                                    state.filters.copyWith(
-                                      clearCategoryId: true,
-                                    ),
-                                  );
-                                } else {
-                                  cubit.applyFilters(
-                                    state.filters.copyWith(
-                                      categoryId: state.ownCategoryId,
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          if (state.hasOwnCategory) const SizedBox(width: 8),
-                          //? "Cerca" (M3d, cuadrala-torneos.jsx:189): activo
-                          //? sólo cuando `near` se resolvió (ubicación
-                          //? guardada u GPS); si ninguna resuelve el chip se
-                          //? queda inactivo, sin filtro roto.
-                          _CategoryFilterChip(
-                            label: 'Cerca',
-                            selected: state.filters.near != null,
-                            icon: AppIcons.pin,
-                            onTap: () => context
-                                .read<TournamentsListCubit>()
-                                .toggleNear(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Expanded(
-                    child: isEmpty
-                        ? _EmptyState(mine: isMine)
-                        : NotificationListener<ScrollNotification>(
+            ),
+            Expanded(
+              child: BlocBuilder<TournamentsListCubit, TournamentsListState>(
+                builder: (context, state) {
+                  if (state is TournamentsListFailure) {
+                    return _error(state.message);
+                  }
+                  if (state is! TournamentsListLoaded) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final mine = _section == 'Mis torneos';
+                  final visible = state.items
+                      .where(
+                        (t) => t.visibility == 'PUBLIC' && t.status != 'DRAFT',
+                      )
+                      .toList();
+                  final invited = state.myTournaments
+                      .where(
+                        (t) => t.pendingInvitationId != null && !t.isOrganizer,
+                      )
+                      .firstOrNull;
+                  return Column(
+                    children: [
+                      if (!mine) _filters(state),
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: context.read<TournamentsListCubit>().load,
+                          child: NotificationListener<ScrollNotification>(
                             onNotification: (notification) {
-                              if (!isMine &&
-                                  notification is ScrollEndNotification &&
-                                  notification.metrics.pixels >=
-                                      notification.metrics.maxScrollExtent -
-                                          100) {
+                              if (!mine &&
+                                  notification.metrics.extentAfter < 240) {
                                 context.read<TournamentsListCubit>().loadMore();
                               }
                               return false;
                             },
-                            child: RefreshIndicator(
-                              onRefresh: () =>
-                                  context.read<TournamentsListCubit>().load(),
-                              child: ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  8,
-                                  16,
-                                  24,
-                                ),
-                                itemCount: isMine
-                                    ? mineItems.length
-                                    : openItems.length +
-                                        (state.isLoadingMore ? 1 : 0),
-                                itemBuilder: (ctx, index) {
-                                  if (isMine) {
-                                    return _ViewerTournamentTile(
-                                      item: mineItems[index],
-                                    );
-                                  }
-                                  if (index == openItems.length) {
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      child: Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                    );
-                                  }
-                                  return TournamentListItemTile(
-                                    tournament: openItems[index],
-                                  );
-                                },
+                            child: ListView(
+                              padding: const EdgeInsets.fromLTRB(
+                                20,
+                                14,
+                                20,
+                                24,
                               ),
+                              children: [
+                                if (invited != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: TournamentBanner(
+                                      tone: TournamentTone.lime,
+                                      icon: AppIcons.mail,
+                                      title:
+                                          'Te invitaron a ${invited.tournament.name}',
+                                      body:
+                                          invited.tournament.organizerName ==
+                                              null
+                                          ? 'Revisá los datos y respondé.'
+                                          : '${invited.tournament.organizerName} te invitó. Revisá los datos y respondé.',
+                                      action: 'Ver invitación',
+                                      onAction: () => _open(invited),
+                                    ),
+                                  ),
+                                if (mine && state.myTournamentsError != null)
+                                  _error(state.myTournamentsError!)
+                                else if (mine) ...[
+                                  for (final viewer in state.myTournaments)
+                                    _card(viewer, state),
+                                  Text(
+                                    'Acá aparecen los torneos donde participás, te invitaron u organizás.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      height: 1.5,
+                                      color: TournamentTheme.of(context).muted2,
+                                    ),
+                                  ),
+                                ] else ...[
+                                  for (final t in visible)
+                                    _card(
+                                      state.myTournaments
+                                              .where(
+                                                (v) => v.tournament.id == t.id,
+                                              )
+                                              .firstOrNull ??
+                                          ViewerTournamentDto(
+                                            tournament: t,
+                                            registrationStatus: null,
+                                            pendingInvitationId: null,
+                                            pendingRegistrationsCount: null,
+                                            isOrganizer: false,
+                                          ),
+                                      state,
+                                    ),
+                                  if (visible.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 36,
+                                        horizontal: 20,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            AppIcons.trophy,
+                                            size: 30,
+                                            color: TournamentTheme.of(
+                                              context,
+                                            ).muted2,
+                                          ),
+                                          const SizedBox(height: 10),
+                                          const Text(
+                                            'Nada con estos filtros',
+                                            style: TextStyle(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Quitá alguno para ver el resto.',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (state.isLoadingMore)
+                                    const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  if (state.loadMoreError != null)
+                                    _error(state.loadMoreError!, more: true),
+                                ],
+                              ],
                             ),
                           ),
-                  ),
-                ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
-    );
-  }
-}
-
-final class _TournamentsHeader extends StatelessWidget {
-  const _TournamentsHeader({required this.onCreate});
-
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 26, 20, 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Torneos',
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    fontSize: 27,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Nivel, precio, fecha y sede antes de anotarte',
-                  style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: 13.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          FilledButton.icon(
-            onPressed: onCreate,
-            icon: const Icon(AppIcons.add, size: 18),
-            label: const Text('Crear'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, 42),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _CategoryFilterChip extends StatelessWidget {
-  const _CategoryFilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.icon,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon ?? (selected ? AppIcons.check : AppIcons.sliders), size: 16),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 38),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        foregroundColor: selected ? scheme.primary : scheme.onSurfaceVariant,
-        backgroundColor: selected
-            ? scheme.primary.withValues(alpha: 0.12)
-            : scheme.surfaceContainerHighest,
-        side: BorderSide(
-          color: selected ? scheme.primary : scheme.outlineVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// Tarjeta de "Mis torneos" (M4a): la tarjeta estándar del listado más el
-/// estado de inscripción del visor, sourced de `GET
-/// /api/v1/users/me/tournaments` — nunca inventado.
-///
-/// La fidelidad completa de la insignia (posición, invitaciones, fila de
-/// organizador) llega en M4b; acá sólo se muestra el estado real para que
-/// "Mis torneos" deje de estar hardcodeado a una lista vacía.
-final class _ViewerTournamentTile extends StatelessWidget {
-  const _ViewerTournamentTile({required this.item});
-
-  final ViewerTournamentDto item;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final label = _viewerStatusLabelSV(item);
-    return Stack(
-      children: [
-        //? `pendingInvitationId`/`isOrganizer` venían de M4a en el DTO pero
-        //? sin cruzar a la tarjeta (M4b-1 los agregó al tile a propósito sin
-        //? tocar esta pantalla, ver apply-progress); acá se cierra ese
-        //? cableado para que el banner/fila lime de M4b-1 dejen de ser
-        //? código muerto.
-        TournamentListItemTile(
-          tournament: item.tournament,
-          detailExtra: item,
-          pendingInvitationId: item.pendingInvitationId,
-          isOrganizer: item.isOrganizer,
-        ),
-        if (label != null)
-          Positioned(
-            top: 22,
-            right: 26,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: item.registrationStatus == 'CONFIRMED'
-                    ? scheme.primary
-                    : scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  //? cuadrala-torneos.jsx:118-122 — insignia inline: "Adentro" para
-  //? CONFIRMED, "Pendiente" para cualquier otro estado de inscripción
-  //? vigente. Sin inscripción vigente (sólo invitado u organizador) no se
-  //? dibuja nada acá — esos casos tienen su propia UI dedicada en M4b.
-  static String? _viewerStatusLabelSV(ViewerTournamentDto item) {
-    final status = item.registrationStatus;
-    if (status == null) return null;
-    return status == 'CONFIRMED' ? 'Adentro' : 'Pendiente';
-  }
-}
-
-final class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.mine});
-
-  final bool mine;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              AppIcons.trophy,
-              size: 30,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              mine
-                  ? 'Todavía no te anotaste a ninguno'
-                  : 'Nada abierto en tu categoría',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              mine
-                  ? 'Cuando te inscribas, va a aparecer acá.'
-                  : 'Quitá el filtro para ver el resto.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.7,
-                ),
-              ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _card(
+    ViewerTournamentDto viewer,
+    TournamentsListLoaded state,
+  ) => TournamentListItemTile(
+    tournament: viewer.tournament,
+    detailExtra: viewer,
+    pendingInvitationId: viewer.pendingInvitationId,
+    isOrganizer: viewer.isOrganizer,
+    registrationStatus: viewer.registrationStatus,
+    pendingRegistrationsCount: viewer.pendingRegistrationsCount,
+    matchesCategory: viewer.tournament.categoryId == state.ownCategoryId,
+    secondaryPriceLabel: viewer.tournament.inscriptionPrice == null
+        ? null
+        : secondaryBsLabelSV(
+            primaryMinor: (viewer.tournament.inscriptionPrice! * 100).round(),
+            primaryCurrency: CurrencyCode.usd,
+            rates: _rates,
+            effectiveDateIso: DateTime.now().toIso8601String().substring(0, 10),
+          ),
+    onOrganizerTap: () => _open(viewer),
+  );
+
+  Widget _error(String message, {bool more = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 36),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(AppIcons.warning, size: 30),
+        const SizedBox(height: 12),
+        Text(message, textAlign: TextAlign.center),
+        TextButton(
+          onPressed: () => more
+              ? context.read<TournamentsListCubit>().loadMore()
+              : context.read<TournamentsListCubit>().load(),
+          child: const Text('Reintentar'),
+        ),
+      ],
+    ),
+  );
+
+  Widget _filters(TournamentsListLoaded state) {
+    final f = state.filters;
+    final cubit = context.read<TournamentsListCubit>();
+    Widget chip(String label, bool active, VoidCallback action) => Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: TournamentFilterChip(label: label, active: active, onTap: action),
+    );
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(20, 14, 12, 2),
+      child: Row(
+        children: [
+          chip(
+            state.hasOwnCategory
+                ? 'Categoría ${state.ownCategoryLabel}'
+                : 'Categoría',
+            f.categoryId != null,
+            () async {
+              if (state.hasOwnCategory) {
+                cubit.applyFilters(
+                  f.copyWith(
+                    categoryId: state.ownCategoryId,
+                    clearCategoryId: f.categoryId != null,
+                  ),
+                );
+              } else if (f.sportId != null) {
+                await cubit.loadCategoriesForSport(f.sportId!);
+                if (!mounted) return;
+                final value = await _choice(
+                  'Categoría',
+                  cubit.categories.map((c) => (c.id, c.name)).toList(),
+                );
+                if (value != null) {
+                  cubit.applyFilters(
+                    f.copyWith(
+                      categoryId: value,
+                      clearCategoryId: value.isEmpty,
+                    ),
+                  );
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Elegí un deporte para filtrar por categoría.',
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+          chip('Cerca', f.near != null, () => cubit.toggleNear()),
+          chip('Estado', f.status != null, () async {
+            final value = await _choice('Estado', const [
+              ('OPEN', 'Inscripción abierta'),
+              ('IN_PROGRESS', 'En juego'),
+              ('COMPLETED', 'Finalizado'),
+              ('CANCELLED', 'Cancelado'),
+            ]);
+            if (value != null) {
+              cubit.applyFilters(
+                f.copyWith(status: value, clearStatus: value.isEmpty),
+              );
+            }
+          }),
+          chip('Fechas', f.startsAtFrom != null, () async {
+            if (f.startsAtFrom != null) {
+              cubit.applyFilters(f.copyWith(clearDates: true));
+              return;
+            }
+            final now = DateTime.now();
+            final range = await showDateRangePicker(
+              context: context,
+              firstDate: DateTime(now.year - 1),
+              lastDate: DateTime(now.year + 3),
+            );
+            if (range != null) {
+              cubit.applyFilters(
+                f.copyWith(
+                  startsAtFrom: range.start,
+                  startsAtTo: range.end
+                      .add(const Duration(days: 1))
+                      .subtract(const Duration(milliseconds: 1)),
+                ),
+              );
+            }
+          }),
+          chip('Sede', f.venueId != null, () async {
+            await cubit.loadVenues();
+            if (!mounted) return;
+            final value = await _choice(
+              'Sede',
+              cubit.venues.map((v) => (v.id, v.name)).toList(),
+            );
+            if (value != null) {
+              cubit.applyFilters(
+                f.copyWith(venueId: value, clearVenueId: value.isEmpty),
+              );
+            }
+          }),
+          chip('Deporte', f.sportId != null, () async {
+            await cubit.loadSportsAndCategories();
+            if (!mounted) return;
+            final value = await _choice(
+              'Deporte',
+              cubit.sports.map((s) => (s.id, s.name)).toList(),
+            );
+            if (value != null) {
+              cubit.applyFilters(
+                f.copyWith(
+                  sportId: value,
+                  clearSportId: value.isEmpty,
+                  clearCategoryId: true,
+                ),
+              );
+            }
+          }),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _choice(String title, List<(String, String)> options) =>
+      showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * .65,
+            ),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  title: const Text('Todos'),
+                  onTap: () => Navigator.pop(context, ''),
+                ),
+                for (final option in options)
+                  ListTile(
+                    title: Text(option.$2),
+                    onTap: () => Navigator.pop(context, option.$1),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
 }

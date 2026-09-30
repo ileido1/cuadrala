@@ -23,14 +23,14 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
     OnboardingRepository? onboardingRepository,
     LocationService? locationService,
     TournamentListFilters? initialFilters,
-  })  : _tournamentsRepository = tournamentsRepository,
-        _catalogRepository = catalogRepository,
-        _venuesRepository = venuesRepository,
-        _profileRepository = profileRepository,
-        _onboardingRepository = onboardingRepository,
-        _locationService = locationService,
-        _currentFilters = initialFilters ?? const TournamentListFilters(),
-        super(const TournamentsListInitial());
+  }) : _tournamentsRepository = tournamentsRepository,
+       _catalogRepository = catalogRepository,
+       _venuesRepository = venuesRepository,
+       _profileRepository = profileRepository,
+       _onboardingRepository = onboardingRepository,
+       _locationService = locationService,
+       _currentFilters = initialFilters ?? const TournamentListFilters(),
+       super(const TournamentsListInitial());
 
   final TournamentsRepository _tournamentsRepository;
   final CatalogRepository _catalogRepository;
@@ -60,8 +60,9 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
 
   /// "Mis torneos" (M4a): torneos donde el visor está inscrito, invitado, o
   /// que organiza. Se recarga en cada [load] (incluye pull-to-refresh); una
-  /// falla la deja vacía sin romper el resto del listado.
+  /// falla conserva un error independiente del listado público.
   List<ViewerTournamentDto> _myTournaments = [];
+  String? _myTournamentsError;
 
   /// Primera vez que se carga: si el visor tiene categoría propia (rating
   /// primario) y todavía no hay un filtro de categoría explícito, la usa
@@ -85,17 +86,20 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
     }
   }
 
-  /// "Mis torneos" (M4a): trae los torneos del visor. Una falla los deja
-  /// vacíos — el listado principal ("Abiertos") funciona igual sin esto.
+  /// "Mis torneos" (M4a): trae los torneos del visor. Una falla se muestra
+  /// en su sección sin ocultarla como una respuesta vacía.
   Future<void> _loadMyTournamentsSV() async {
     try {
       _myTournaments = await _tournamentsRepository.listMyTournaments();
+      _myTournamentsError = null;
     } catch (_) {
       _myTournaments = [];
+      _myTournamentsError = 'No se pudieron cargar tus torneos.';
     }
   }
 
   Future<void> load() async {
+    emit(const TournamentsListLoading());
     await _applyOwnCategoryDefaultIfNeededSV();
     await _loadMyTournamentsSV();
     emit(const TournamentsListLoading());
@@ -105,24 +109,30 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         limit: _pageLimit,
         filters: _currentFilters,
       );
-      emit(TournamentsListLoaded(
-        items: page.items,
-        page: page.page,
-        limit: page.limit,
-        total: page.total,
-        isLoadingMore: false,
-        hasReachedEnd: page.hasReachedEnd,
-        filters: _currentFilters,
-        hasOwnCategory: _hasOwnCategory,
-        ownCategoryId: _ownCategoryId,
-        ownCategoryLabel: _ownCategoryLabel,
-        myTournaments: _myTournaments,
-      ));
+      emit(
+        TournamentsListLoaded(
+          items: page.items,
+          page: page.page,
+          limit: page.limit,
+          total: page.total,
+          isLoadingMore: false,
+          hasReachedEnd: page.hasReachedEnd,
+          filters: _currentFilters,
+          hasOwnCategory: _hasOwnCategory,
+          ownCategoryId: _ownCategoryId,
+          ownCategoryLabel: _ownCategoryLabel,
+          myTournaments: _myTournaments,
+          myTournamentsError: _myTournamentsError,
+        ),
+      );
     } on AppFailure catch (e) {
       emit(TournamentsListFailure(message: e.message));
     } catch (e) {
-      emit(const TournamentsListFailure(
-          message: 'No se pudo cargar el listado de torneos.'));
+      emit(
+        const TournamentsListFailure(
+          message: 'No se pudo cargar el listado de torneos.',
+        ),
+      );
     }
   }
 
@@ -131,7 +141,7 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
     if (current is! TournamentsListLoaded) return;
     if (current.isLoadingMore || current.hasReachedEnd) return;
 
-    emit(current.copyWith(isLoadingMore: true));
+    emit(current.copyWith(isLoadingMore: true, clearLoadMoreError: true));
 
     try {
       final nextPage = current.page + 1;
@@ -140,27 +150,36 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         limit: current.limit,
         filters: current.filters,
       );
-      emit(current.copyWith(
-        items: [...current.items, ...page.items],
-        page: page.page,
-        total: page.total,
-        isLoadingMore: false,
-        hasReachedEnd: page.hasReachedEnd,
-      ));
+      emit(
+        current.copyWith(
+          items: [...current.items, ...page.items],
+          page: page.page,
+          total: page.total,
+          isLoadingMore: false,
+          hasReachedEnd: page.hasReachedEnd,
+        ),
+      );
     } on AppFailure catch (e) {
-      emit(current.copyWith(isLoadingMore: false));
-      emit(TournamentsListFailure(message: e.message));
+      emit(current.copyWith(isLoadingMore: false, loadMoreError: e.message));
     } catch (e) {
-      emit(current.copyWith(isLoadingMore: false));
+      emit(
+        current.copyWith(
+          isLoadingMore: false,
+          loadMoreError: 'No se pudieron cargar más torneos.',
+        ),
+      );
     }
   }
 
   Future<void> applyFilters(TournamentListFilters filters) async {
+    final previousSport = _currentFilters.sportId;
     _currentFilters = filters;
     // Reload categories if sport changed
-    if (filters.sportId != null && filters.sportId != _currentFilters.sportId) {
+    if (filters.sportId != null && filters.sportId != previousSport) {
       try {
-        _categories = await _catalogRepository.listCategories(sportId: filters.sportId);
+        _categories = await _catalogRepository.listCategories(
+          sportId: filters.sportId,
+        );
       } catch (_) {
         _categories = [];
       }
@@ -172,24 +191,30 @@ final class TournamentsListCubit extends Cubit<TournamentsListState> {
         limit: _pageLimit,
         filters: filters,
       );
-      emit(TournamentsListLoaded(
-        items: page.items,
-        page: page.page,
-        limit: page.limit,
-        total: page.total,
-        isLoadingMore: false,
-        hasReachedEnd: page.hasReachedEnd,
-        filters: filters,
-        hasOwnCategory: _hasOwnCategory,
-        ownCategoryId: _ownCategoryId,
-        ownCategoryLabel: _ownCategoryLabel,
-        myTournaments: _myTournaments,
-      ));
+      emit(
+        TournamentsListLoaded(
+          items: page.items,
+          page: page.page,
+          limit: page.limit,
+          total: page.total,
+          isLoadingMore: false,
+          hasReachedEnd: page.hasReachedEnd,
+          filters: filters,
+          hasOwnCategory: _hasOwnCategory,
+          ownCategoryId: _ownCategoryId,
+          ownCategoryLabel: _ownCategoryLabel,
+          myTournaments: _myTournaments,
+          myTournamentsError: _myTournamentsError,
+        ),
+      );
     } on AppFailure catch (e) {
       emit(TournamentsListFailure(message: e.message));
     } catch (e) {
-      emit(const TournamentsListFailure(
-          message: 'No se pudieron aplicar los filtros.'));
+      emit(
+        const TournamentsListFailure(
+          message: 'No se pudieron aplicar los filtros.',
+        ),
+      );
     }
   }
 

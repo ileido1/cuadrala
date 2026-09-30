@@ -25,6 +25,7 @@ final class TournamentListItemTile extends StatelessWidget {
     this.registrationStatus,
     this.pendingRegistrationsCount,
     this.matchesCategory = false,
+    this.secondaryPriceLabel,
   });
   final TournamentListItemDto tournament;
   final Object? detailExtra;
@@ -35,6 +36,7 @@ final class TournamentListItemTile extends StatelessWidget {
   final String? registrationStatus;
   final int? pendingRegistrationsCount;
   final bool matchesCategory;
+  final String? secondaryPriceLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +94,10 @@ final class TournamentListItemTile extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push(
-            Routes.tournamentDetail(t.id),
+            Routes.tournamentDetail(
+              t.id,
+              invitation: pendingInvitationId != null && !isOrganizer,
+            ),
             extra: detailExtra ?? t,
           ),
           child: Padding(
@@ -189,28 +194,41 @@ final class TournamentListItemTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      price == null
-                          ? 'Sin precio'
-                          : price == 0
-                          ? 'Gratis'
-                          : formatMoneyFromMajor(price, CurrencyCode.usd)
-                                .replaceFirst('US\$ ', 'US\$')
-                                .replaceFirst(RegExp(r'\.00\$'), ''),
-                      key: Key(
-                        price == null
-                            ? 'tournament.card.pricePlaceholder'
-                            : 'tournament.card.price',
-                      ),
-                      style: TextStyle(
-                        fontSize: price == null ? 12.5 : 16,
-                        fontWeight: price == null
-                            ? FontWeight.w700
-                            : FontWeight.w800,
-                        color: price == null
-                            ? scheme.onSurfaceVariant
-                            : scheme.onSurface,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          price == null
+                              ? 'Sin precio'
+                              : price == 0
+                              ? 'Gratis'
+                              : formatMoneyFromMajor(price, CurrencyCode.usd)
+                                    .replaceFirst('US\$ ', 'US\$')
+                                    .replaceFirst(RegExp(r'\.00\$'), ''),
+                          key: Key(
+                            price == null
+                                ? 'tournament.card.pricePlaceholder'
+                                : 'tournament.card.price',
+                          ),
+                          style: TextStyle(
+                            fontSize: price == null ? 12.5 : 16,
+                            fontWeight: price == null
+                                ? FontWeight.w700
+                                : FontWeight.w800,
+                            color: price == null
+                                ? scheme.onSurfaceVariant
+                                : scheme.onSurface,
+                          ),
+                        ),
+                        if (secondaryPriceLabel != null && price != null)
+                          Text(
+                            secondaryPriceLabel!,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
