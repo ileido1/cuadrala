@@ -8,7 +8,7 @@ final class AppTheme {
   static const _radius = 12.0;
   static const _radiusLg = 18.0;
 
-  /// Family name registered by [google_fonts] for Plus Jakarta Sans.
+  /// Bundled Plus Jakarta Sans family; no network font loading.
   static const plusJakartaFontFamily = 'PlusJakartaSans';
 
   // ─── Light ─────────────────────────────────────────────────────────────────
@@ -211,8 +211,7 @@ final class AppTheme {
 
   /// Plus Jakarta Sans — alineado con mockups (`DESIGN_SPEC.md`).
   ///
-  /// Usa `fontFamily` en el [TextTheme] sin descargar fuentes en build:
-  /// [google_fonts] resuelve el glyph en runtime al pintar texto.
+  /// The bundled 400/600/700/800 files keep runtime and goldens identical.
   static TextTheme _textTheme(ColorScheme scheme) {
     final base = ThemeData(useMaterial3: true, colorScheme: scheme).textTheme;
     return base.apply(

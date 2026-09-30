@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/brand_colors.dart';
+import '../../../../core/theme/tournament_theme.dart';
 import '../tournament_status_view.dart';
 
 /// Pill de estado del torneo (rediseño: listado y detalle).
@@ -11,9 +12,16 @@ import '../tournament_status_view.dart';
 /// modelo anterior— así que `OPEN` y `COMPLETED` caían en el `default` y el
 /// usuario veía el enum crudo. Un solo traductor evita que vuelva a pasar.
 class TournamentStatusPill extends StatelessWidget {
-  const TournamentStatusPill({super.key, required this.status});
+  const TournamentStatusPill({
+    super.key,
+    required this.status,
+    this.small = false,
+    this.short = false,
+  });
 
   final String? status;
+  final bool small;
+  final bool short;
 
   @override
   Widget build(BuildContext context) {
@@ -27,32 +35,36 @@ class TournamentStatusPill extends StatelessWidget {
     //? estado desconocido usa el mismo gris como resguardo, nunca el enum
     //? crudo.
     final (Color bg, Color fg) = switch (status?.toUpperCase()) {
-      'DRAFT' || 'COMPLETED' => (
-          scheme.surfaceContainerHighest,
-          scheme.onSurfaceVariant,
-        ),
-      'OPEN' => (scheme.primary.withValues(alpha: 0.15), scheme.primary),
+      'DRAFT' ||
+      'COMPLETED' => (scheme.surfaceContainerHighest, scheme.onSurfaceVariant),
+      'OPEN' => (
+        TournamentTheme.of(context).green.withValues(alpha: 0.15),
+        TournamentTheme.of(context).green,
+      ),
       'IN_PROGRESS' => (BrandColors.limeAccent, BrandColors.onLime),
       'CANCELLED' => (
-          BrandColors.dangerRed.withValues(alpha: 0.16),
-          BrandColors.dangerRed,
-        ),
+        BrandColors.dangerRed.withValues(alpha: 0.16),
+        BrandColors.dangerRed,
+      ),
       _ => (scheme.surfaceContainerHighest, scheme.onSurfaceVariant),
     };
 
     return Container(
       key: const Key('tournament.status.pill'),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: EdgeInsets.symmetric(
+        horizontal: small ? 7 : 9,
+        vertical: small ? 2 : 3,
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        tournamentStatusLabel(status),
+        short && status == 'OPEN' ? 'Abierta' : tournamentStatusLabel(status),
         style: TextStyle(
-          fontSize: 11,
+          fontSize: small ? 10.5 : 11.5,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.3,
+
           color: fg,
         ),
       ),
