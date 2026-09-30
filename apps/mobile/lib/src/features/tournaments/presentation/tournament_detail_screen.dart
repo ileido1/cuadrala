@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -11,9 +9,9 @@ import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
+import '../../../core/theme/tournament_theme.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/app_header.dart';
-import '../../../shared/widgets/avatar_stack.dart';
 import '../../../shared/widgets/pill_toggle.dart';
 import '../../../shared/widgets/segmented_control.dart';
 import '../../profile/data/models/user_rating_dto.dart';
@@ -24,7 +22,6 @@ import '../data/models/tournament_invitation_dto.dart';
 import '../data/models/tournament_list_item_dto.dart';
 import '../data/models/my_tournament_match_dto.dart';
 import '../data/models/viewer_tournament_dto.dart';
-import '../domain/tournament_eligibility_resolver.dart';
 import 'tournament_format_label.dart';
 import '../data/models/tournament_registration_dto.dart';
 import '../data/models/tournament_schedule_dto.dart';
@@ -39,18 +36,17 @@ import 'cubit/tournament_schedule_cubit.dart';
 import 'cubit/tournament_schedule_state.dart';
 import 'cubit/tournament_scoreboard_cubit.dart';
 import 'cubit/tournament_scoreboard_state.dart';
-import 'tournament_status_view.dart';
 import 'tournament_roster_grouping.dart';
-import 'tournament_roster_summary.dart';
 import 'widgets/result_entry_sheet.dart';
 import 'widgets/reschedule_sheet.dart';
 import 'widgets/tournament_entry_check.dart';
 import 'widgets/tournament_pairing_section.dart';
-import 'widgets/tournament_roster_sheet.dart';
 import 'screens/bracket_screen.dart';
 import 'tournament_invitation_screen.dart';
 import 'widgets/invite_guest_sheet.dart';
 import 'widgets/my_tournament_match_card.dart';
+import 'widgets/tournament_status_pill.dart';
+import 'widgets/tournament_primitives.dart';
 part 'tournament_detail/header_footer.dart';
 part 'tournament_detail/player_tabs.dart';
 part 'tournament_detail/org_bracket_tab.dart';
@@ -65,7 +61,7 @@ part 'tournament_detail/info_tab.dart';
 /// (Inscripciones → Inscritos → Registrados) dejando la suite en rojo cada
 /// vez, porque el texto estaba duplicado en los tests. Renombrar acá ahora
 /// arrastra a los tests con él.
-const tournamentDetailTabLabels = <String>['Info', 'Mis partidos', 'Tabla'];
+const tournamentDetailTabLabels = <String>['Info', 'Calendario', 'Tabla'];
 
 /// Índice de la pestaña de información del torneo.
 const tournamentInfoTabIndex = 0;
@@ -146,9 +142,9 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
   TournamentListItemDto? _tournament;
   bool? _viewerIsOrganizer;
   bool _loadingTournament = false;
+  bool _tournamentLoadFailed = false;
   bool _invitationOpened = false;
   List<UserRatingDto>? _playerRatings;
-  TabController? _tabController;
 
   @override
   void initState() {
@@ -199,46 +195,6 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    //? Load player data only when the conditional tabs are accessed.
-    final tabController = DefaultTabController.maybeOf(context);
-    if (_tabController == tabController) return;
-    _tabController?.animation?.removeListener(_onTabChanged);
-    _tabController = tabController;
-    _tabController?.animation?.addListener(_onTabChanged);
-  }
-
-  void _onTabChanged() {
-    final tabController = DefaultTabController.maybeOf(context);
-    if (tabController == null) return;
-
-    final index = tabController.index;
-    //? The player schedule is fetched by `_MyMatchesTab`; keep this load for
-    //? organizer calendar generation and the existing repository contract.
-    if (index == 1 && _scheduleCubit.state is TournamentScheduleInitial) {
-      _scheduleCubit.load();
-    }
-    // En la pestaña Cuadro del organizador los formatos round-robin muestran
-    // la tabla, no el bracket. Cargarla al entrar evita dejar al usuario en
-    // la tarjeta de "Cuadro generado" sin ningún contenido navegable.
-    final isOrganizer =
-        _viewerIsOrganizer ??
-        _isOrganizer(
-          _tournament?.organizerUserId,
-          _registrationsCubit.currentUserId,
-        );
-    if (index == 1 &&
-        isOrganizer &&
-        _scoreboardCubit.state is TournamentScoreboardInitial) {
-      _scoreboardCubit.load();
-    }
-    if (index == 2 && _scoreboardCubit.state is TournamentScoreboardInitial) {
-      _scoreboardCubit.load();
-    }
-  }
-
   Future<void> _fetchTournament() async {
     try {
       final t = await getIt<TournamentsRepository>().getTournamentById(
@@ -248,6 +204,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
       setState(() {
         _tournament = t;
         _loadingTournament = false;
+        _tournamentLoadFailed = false;
       });
       _loadOrganizerData();
       final registrationsState = _registrationsCubit.state;
@@ -256,7 +213,10 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
       }
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loadingTournament = false);
+      setState(() {
+        _loadingTournament = false;
+        _tournamentLoadFailed = true;
+      });
     }
   }
 
@@ -291,7 +251,6 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
 
   @override
   void dispose() {
-    _tabController?.animation?.removeListener(_onTabChanged);
     _scheduleCubit.close();
     _scoreboardCubit.close();
     _registrationsCubit.close();
@@ -320,6 +279,21 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             child: _loadingTournament
                 ? const Scaffold(
                     body: Center(child: CircularProgressIndicator()),
+                  )
+                : _tournamentLoadFailed
+                ? Scaffold(
+                    body: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Center(
+                        child: _ErrorBox(
+                          message: 'No se pudo cargar el torneo.',
+                          onRetry: () {
+                            setState(() => _loadingTournament = true);
+                            _fetchTournament();
+                          },
+                        ),
+                      ),
+                    ),
                   )
                 : TournamentDetailBody(
                     tournamentId: widget.tournamentId,
@@ -379,7 +353,6 @@ final class TournamentDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd MMM yyyy', 'es_ES');
     final registrationsState = context
         .watch<TournamentRegistrationsCubit>()
         .state;
@@ -397,7 +370,7 @@ final class TournamentDetailBody extends StatelessWidget {
         );
     final showPlayerTabs =
         currentRegistration?.status == 'CONFIRMED' ||
-        tournament?.status == 'IN_PROGRESS';
+        const {'IN_PROGRESS', 'COMPLETED'}.contains(tournament?.status);
     final tabs = isOrganizer
         ? const <String>['Inscritos', 'Cuadro', 'Publicar']
         : showPlayerTabs
@@ -422,165 +395,195 @@ final class TournamentDetailBody extends StatelessWidget {
     // below; without it, mounting this screen throws
     // "No TabController for TabBarView" (pre-existing gap fixed here since
     // it blocks every tab, including the invitations/schedule work below).
-    return DefaultTabController(
-      key: ValueKey(tabs.join('|')),
-      length: tabs.length,
-      child: Scaffold(
-        key: const Key('tournament.detail'),
-        body: Column(
-          children: [
-            // Static header (req. 5): replaces the collapsing `SliverAppBar` +
-            // `_TournamentHeaderBg` pair. Scrolling the tab content below no
-            // longer resizes or hides this header.
-            AppHeader(
-              title: tournament?.name ?? '',
-              subtitle: _tournamentHeaderSubtitle(tournament),
-              showBack: true,
-              onBack: () {
-                //? Si entramos vía context.go (p. ej. tras crear el torneo)
-                //? no hay historial que hacer pop; caemos al home de torneos.
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(Routes.torneosHome);
-                }
-              },
-              rightAction: isOrganizer ? const _OrgBadge() : null,
-            ),
-
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-              child: Row(
-                children: [
-                  _StatusBadge(status: tournament?.status ?? ''),
-                  if (tournament?.visibility == 'PRIVATE') ...[
-                    const SizedBox(width: 8),
-                    const _SmallTag(label: 'Privado'),
-                  ],
-                  const Spacer(),
-                  if (tournament?.startsAt != null)
-                    Text(
-                      dateFormat.format(tournament!.startsAt!),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Tab switcher (M5b): replaces the Material `TabBar` with the
-            // shared `SegmentedControl`, matching the handoff's tap-only
-            // `Segmented` (`cuadrala-torneos.jsx:220`) instead of a
-            // swipeable strip. `AnimatedBuilder` rebuilds it whenever the
-            // (still shared) `TabController` index changes.
-            Container(
-              color: Theme.of(context).colorScheme.surface,
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              //? `Builder` para obtener el `TabController` desde un contexto
-              //? descendiente del `DefaultTabController` de más abajo: el
-              //? `context` del `build()` de este widget es ancestro del
-              //? `DefaultTabController` que retorna, no descendiente.
-              child: Builder(
-                builder: (context) {
-                  final tabController = DefaultTabController.of(context);
-                  return AnimatedBuilder(
-                    animation: tabController,
-                    builder: (context, _) => SegmentedControl<int>(
-                      options: [
-                        for (var i = 0; i < tabs.length; i++)
-                          SegmentedOption(value: i, label: tabs[i]),
-                      ],
-                      value: tabController.index,
-                      //? Salto directo de índice (sin animar): igual al
-                      //? `Segmented` del handoff, que sólo cambia de estado
-                      //? al tocar, sin swipe.
-                      onChanged: (index) => tabController.index = index,
-                    ),
-                  );
+    return Theme(
+      data: TournamentTheme.apply(Theme.of(context)),
+      child: DefaultTabController(
+        key: ValueKey(tabs.join('|')),
+        length: tabs.length,
+        child: Scaffold(
+          key: const Key('tournament.detail'),
+          body: Column(
+            children: [
+              // Static header (req. 5): replaces the collapsing `SliverAppBar` +
+              // `_TournamentHeaderBg` pair. Scrolling the tab content below no
+              // longer resizes or hides this header.
+              AppHeader(
+                title: tournament?.name ?? '',
+                subtitle: _tournamentHeaderSubtitle(tournament),
+                showBack: true,
+                onBack: () {
+                  //? Si entramos vía context.go (p. ej. tras crear el torneo)
+                  //? no hay historial que hacer pop; caemos al home de torneos.
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(Routes.torneosHome);
+                  }
                 },
+                tournamentStyle: true,
+                rightAction: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TournamentStatusPill(
+                      status: tournament?.status,
+                      small: true,
+                      short: true,
+                    ),
+                    if (isOrganizer) ...[
+                      const SizedBox(width: 6),
+                      const _OrgBadge(),
+                    ],
+                  ],
+                ),
               ),
-            ),
 
-            Expanded(
-              child: TabBarView(
-                //? Sin swipe: el handoff cambia de pestaña únicamente con el
-                //? `Segmented` de arriba (`cuadrala-torneos.jsx:220`).
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  if (isOrganizer) ...[
-                    _RegistrationsTab(
-                      tournamentId: tournamentId,
-                      organizerUserId: tournament?.organizerUserId,
-                      organizerName: tournament?.organizerName,
-                      tournamentStatus: tournament?.status,
-                      categoryName: tournament?.categoryName,
-                      pairedRegistration:
-                          tournament?.pairedRegistration ?? false,
-                      maxSlots: tournament?.maxSlots,
-                    ),
-                    _OrganizerBracketTab(
-                      tournamentId: tournamentId,
-                      organizerUserId: tournament?.organizerUserId,
-                      tournamentsRepository: tournamentsRepository,
-                      formatPresetName: tournament?.formatPresetName,
-                      venueId: tournament?.venueId,
-                    ),
-                    _OrganizerPublishTab(
-                      tournament: tournament,
-                      tournamentId: tournamentId,
-                      organizerUserId: tournament?.organizerUserId,
-                      tournamentsRepository: tournamentsRepository,
-                    ),
-                  ] else ...[
-                    _InfoTab(
-                      tournament: tournament,
-                      playerRatings: playerRatings,
-                      registration: currentRegistration,
-                      registrationsState: registrationsState,
-                      invited: invited,
-                      invitation: pendingInvitation,
-                      onOpenInvitation: pendingInvitation == null
-                          ? null
-                          : () {
-                              final cubit = context
-                                  .read<TournamentRegistrationsCubit>();
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => BlocProvider.value(
-                                    value: cubit,
-                                    child: TournamentInvitationScreen(
-                                      tournament: tournament!,
-                                      invitation: pendingInvitation,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                    ),
-                    if (showPlayerTabs)
-                      _ScheduleTab(
+              // Tab switcher (M5b): replaces the Material `TabBar` with the
+              // shared `SegmentedControl`, matching the handoff's tap-only
+              // `Segmented` (`cuadrala-torneos.jsx:220`) instead of a
+              // swipeable strip. `AnimatedBuilder` rebuilds it whenever the
+              // (still shared) `TabController` index changes.
+              Container(
+                color: Theme.of(context).colorScheme.surface,
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                //? `Builder` para obtener el `TabController` desde un contexto
+                //? descendiente del `DefaultTabController` de más abajo: el
+                //? `context` del `build()` de este widget es ancestro del
+                //? `DefaultTabController` que retorna, no descendiente.
+                child: Builder(
+                  builder: (context) {
+                    final tabController = DefaultTabController.of(context);
+                    return AnimatedBuilder(
+                      animation: tabController,
+                      builder: (context, _) => SegmentedControl<int>(
+                        options: [
+                          for (var i = 0; i < tabs.length; i++)
+                            SegmentedOption(value: i, label: tabs[i]),
+                        ],
+                        value: tabController.index,
+                        //? Salto directo de índice (sin animar): igual al
+                        //? `Segmented` del handoff, que sólo cambia de estado
+                        //? al tocar, sin swipe.
+                        onChanged: (index) {
+                          tabController.index = index;
+                          final organizer = isOrganizer;
+                          if (organizer && index == 1) {
+                            if (context.read<TournamentScheduleCubit>().state
+                                is TournamentScheduleInitial) {
+                              context.read<TournamentScheduleCubit>().load();
+                            }
+                            if (context.read<TournamentScoreboardCubit>().state
+                                is TournamentScoreboardInitial) {
+                              context.read<TournamentScoreboardCubit>().load();
+                            }
+                          } else if (!organizer &&
+                              index == 1 &&
+                              currentRegistration?.status != 'CONFIRMED' &&
+                              context.read<TournamentScheduleCubit>().state
+                                  is TournamentScheduleInitial) {
+                            context.read<TournamentScheduleCubit>().load();
+                          } else if (index == 2 &&
+                              context.read<TournamentScoreboardCubit>().state
+                                  is TournamentScoreboardInitial) {
+                            context.read<TournamentScoreboardCubit>().load();
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              Expanded(
+                child: TabBarView(
+                  //? Sin swipe: el handoff cambia de pestaña únicamente con el
+                  //? `Segmented` de arriba (`cuadrala-torneos.jsx:220`).
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    if (isOrganizer) ...[
+                      _RegistrationsTab(
                         tournamentId: tournamentId,
                         organizerUserId: tournament?.organizerUserId,
+                        organizerName: tournament?.organizerName,
+                        tournamentStatus: tournament?.status,
+                        categoryName: tournament?.categoryName,
+                        pairedRegistration:
+                            tournament?.pairedRegistration ?? false,
+                        maxSlots: tournament?.maxSlots,
                       ),
-                    if (showPlayerTabs)
-                      _ScoreboardTab(
+                      _OrganizerBracketTab(
                         tournamentId: tournamentId,
+                        organizerUserId: tournament?.organizerUserId,
+                        tournamentsRepository: tournamentsRepository,
+                        formatPresetName: tournament?.formatPresetName,
+                        venueId: tournament?.venueId,
+                      ),
+                      _OrganizerPublishTab(
+                        tournament: tournament,
+                        tournamentId: tournamentId,
+                        organizerUserId: tournament?.organizerUserId,
                         tournamentsRepository: tournamentsRepository,
                       ),
+                    ] else ...[
+                      _InfoTab(
+                        tournament: tournament,
+                        playerRatings: playerRatings,
+                        registration: currentRegistration,
+                        registrationsState: registrationsState,
+                        invited: invited,
+                        invitation: pendingInvitation,
+                        onOpenInvitation: pendingInvitation == null
+                            ? null
+                            : () {
+                                final cubit = context
+                                    .read<TournamentRegistrationsCubit>();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => BlocProvider.value(
+                                      value: cubit,
+                                      child: TournamentInvitationScreen(
+                                        tournament: tournament!,
+                                        invitation: pendingInvitation,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                      ),
+                      if (showPlayerTabs)
+                        currentRegistration?.status == 'CONFIRMED'
+                            ? _MyMatchesTab(
+                                tournamentId: tournamentId,
+                                tournamentsRepository: tournamentsRepository,
+                              )
+                            : _ScheduleTab(
+                                tournamentId: tournamentId,
+                                organizerUserId: tournament?.organizerUserId,
+                              ),
+                      if (showPlayerTabs)
+                        _ScoreboardTab(
+                          tournamentId: tournamentId,
+                          tournamentsRepository: tournamentsRepository,
+                        ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          bottomNavigationBar: isOrganizer
+              ? null
+              : Builder(
+                  builder: (context) {
+                    final controller = DefaultTabController.of(context);
+                    return AnimatedBuilder(
+                      animation: controller,
+                      builder: (context, _) => controller.index == 0
+                          ? _TournamentFooter(tournament: tournament)
+                          : const SizedBox.shrink(),
+                    );
+                  },
+                ),
         ),
-        bottomNavigationBar: isOrganizer
-            ? null
-            : _TournamentFooter(
-                tournament: tournament,
-                playerRatings: playerRatings,
-                invited: invited,
-              ),
       ),
     );
   }

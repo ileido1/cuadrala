@@ -16,6 +16,7 @@ final class _MyMatchesTab extends StatefulWidget {
 final class _MyMatchesTabState extends State<_MyMatchesTab> {
   late Future<List<MyTournamentMatchDto>> _future;
   String? _busy;
+  String? _responseError;
 
   @override
   void initState() {
@@ -27,19 +28,27 @@ final class _MyMatchesTabState extends State<_MyMatchesTab> {
 
   Future<void> _respond(MyTournamentMatchDto match, String response) async {
     setState(() => _busy = '${match.roundNumber}.${match.matchNumber}');
-    await widget.tournamentsRepository.respondToTournamentSlot(
-      tournamentId: widget.tournamentId,
-      roundNumber: match.roundNumber,
-      matchNumber: match.matchNumber,
-      response: response,
-    );
-    if (!mounted) return;
-    setState(() {
-      _busy = null;
-      _future = widget.tournamentsRepository.listMyTournamentMatches(
+    try {
+      await widget.tournamentsRepository.respondToTournamentSlot(
         tournamentId: widget.tournamentId,
+        roundNumber: match.roundNumber,
+        matchNumber: match.matchNumber,
+        response: response,
       );
-    });
+      if (!mounted) return;
+      setState(() {
+        _responseError = null;
+        _future = widget.tournamentsRepository.listMyTournamentMatches(
+          tournamentId: widget.tournamentId,
+        );
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _responseError = 'No se pudo guardar tu respuesta.');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
   }
 
   @override
@@ -51,20 +60,40 @@ final class _MyMatchesTabState extends State<_MyMatchesTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return const _InfoBox(message: 'No se pudieron cargar tus partidos.');
+          return _ErrorBox(
+            message: 'No se pudieron cargar tus partidos.',
+            onRetry: () => setState(() {
+              _future = widget.tournamentsRepository.listMyTournamentMatches(
+                tournamentId: widget.tournamentId,
+              );
+            }),
+          );
         }
         final matches = snapshot.data ?? const <MyTournamentMatchDto>[];
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 130),
           children: [
             Text(
-              'Sólo tus partidos. El cuadro completo está en Tabla.',
+              'Tus partidos. Los resultados se ven en Tabla.',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 height: 1.45,
               ),
             ),
             const SizedBox(height: 12),
+            if (_responseError != null) ...[
+              _ErrorBox(
+                message: _responseError!,
+                onRetry: () => setState(() {
+                  _future = widget.tournamentsRepository
+                      .listMyTournamentMatches(
+                        tournamentId: widget.tournamentId,
+                      );
+                  _responseError = null;
+                }),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (matches.isEmpty)
               const _InfoBox(message: 'Todavía no hay partidos asignados.'),
             for (final match in matches)

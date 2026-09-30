@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_invitation_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/my_tournament_match_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_registration_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_schedule_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_scoreboard_dto.dart';
@@ -22,6 +23,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/tournament_primitives.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/pill_toggle.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
@@ -326,7 +328,7 @@ void main() {
       );
       await tester.pump();
       expect(find.byKey(const Key('tournament.detail')), findsOneWidget);
-      expect(find.text('Calendario'), findsNothing);
+      expect(find.text('Calendario'), findsOneWidget);
     });
 
     testWidgets(
@@ -373,7 +375,7 @@ void main() {
         await tester.pump();
 
         expect(find.byKey(const Key('tournament.detail')), findsOneWidget);
-        expect(find.text('Calendario'), findsNothing);
+        expect(find.text('Calendario'), findsOneWidget);
       },
     );
   });
@@ -1311,6 +1313,10 @@ void main() {
       when(
         () => scheduleCubit.state,
       ).thenReturn(const TournamentScheduleEmpty());
+      final repository = _MockTournamentsRepository();
+      when(
+        () => repository.listMyTournamentMatches(tournamentId: 't-1'),
+      ).thenAnswer((_) async => const <MyTournamentMatchDto>[]);
 
       await tester.pumpWidget(
         _buildTestApp(
@@ -1318,6 +1324,7 @@ void main() {
           scheduleCubit: scheduleCubit,
           scoreboardCubit: scoreboardCubit,
           tournament: _tournament(organizerUserId: null),
+          tournamentsRepository: repository,
         ),
       );
       await tester.pumpAndSettle();
@@ -1330,29 +1337,24 @@ void main() {
 
         expect(find.byType(TabBar), findsNothing);
         expect(find.text('Info'), findsOneWidget);
-        expect(find.text('Mis partidos'), findsOneWidget);
+        expect(find.text('Calendario'), findsOneWidget);
         expect(find.text('Tabla'), findsOneWidget);
         //? Info es la pestaña por defecto (índice 0).
         expect(find.text('Cómo se juega'), findsOneWidget);
       },
     );
 
-    testWidgets(
-      'tapping the "Mis partidos" segment switches to the schedule tab content',
-      (tester) async {
-        await pumpPlayerTabs(tester);
+    testWidgets('tapping Calendar shows only the current player matches', (
+      tester,
+    ) async {
+      await pumpPlayerTabs(tester);
 
-        await tester.tap(find.text('Mis partidos'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Calendario'));
+      await tester.pumpAndSettle();
 
-        expect(
-          find.text(
-            'El organizador debe generar el calendario cuando haya al menos 2 participantes.',
-          ),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(find.text('Todavía no hay partidos asignados.'), findsOneWidget);
+      expect(find.text('Participantes: 0/2'), findsNothing);
+    });
 
     testWidgets(
       'tapping the "Tabla" segment switches to the scoreboard tab content',
@@ -1551,7 +1553,7 @@ void main() {
     );
 
     testWidgets(
-      'shows maxSlots as "{n} jugadores" on the Cuadro tile when declared',
+      'shows declared capacity and uses CupoBar when maxSlots is present',
       (tester) async {
         await pumpInfoTab(
           tester,
@@ -1559,23 +1561,23 @@ void main() {
           maxSlots: 16,
         );
 
-        expect(find.text('Cuadro'), findsOneWidget);
-        expect(find.text('16 jugadores'), findsOneWidget);
+        expect(find.text('Cupos'), findsOneWidget);
+        expect(find.text('0 de 16'), findsOneWidget);
+        expect(find.byType(TournamentCupoBar), findsOneWidget);
       },
     );
 
-    //? El diseño prohíbe explícitamente un placeholder inventado ("Cupos no
-    //? declarados"): sin `maxSlots` la tarjeta entera se omite.
-    testWidgets('omits the Cuadro tile entirely when maxSlots is null', (
+    testWidgets('shows the real registration count without an invented cap', (
       tester,
     ) async {
       await pumpInfoTab(tester, formatPresetName: 'SINGLE_ELIMINATION');
 
-      expect(find.text('Cuadro'), findsNothing);
-      expect(find.textContaining('Cupos no declarados'), findsNothing);
+      expect(find.text('Cupos'), findsOneWidget);
+      expect(find.text('0 · sin tope'), findsOneWidget);
+      expect(find.byType(TournamentCupoBar), findsNothing);
     });
 
-    testWidgets('still shows Formato and Anotados when Cuadro is omitted', (
+    testWidgets('shows the real count and individual mode without a cap', (
       tester,
     ) async {
       await pumpInfoTab(
@@ -1585,119 +1587,79 @@ void main() {
       );
 
       expect(find.text('Round robin'), findsOneWidget);
-      expect(find.text('5'), findsOneWidget);
+      expect(find.text('5 · sin tope'), findsOneWidget);
+      expect(find.text('Individual'), findsOneWidget);
     });
   });
 
-  group('Inscritos summary (M6b-3)', () {
-    Future<void> pumpInscritos(
-      WidgetTester tester, {
-      required TournamentRegistrationsState state,
-      bool pairedRegistration = false,
-    }) async {
-      when(() => registrationsCubit.state).thenReturn(state);
+  group('Player detail roster privacy (v2)', () {
+    testWidgets('does not reveal the public roster on the Info tab', (
+      tester,
+    ) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [_authRegistration(userId: 'other-player')],
+          total: 1,
+        ),
+      );
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
       when(
         () => scheduleCubit.state,
       ).thenReturn(const TournamentScheduleEmpty());
-
       await tester.pumpWidget(
         _buildTestApp(
           registrationsCubit: registrationsCubit,
           scheduleCubit: scheduleCubit,
           scoreboardCubit: scoreboardCubit,
-          tournament: _tournament(
-            organizerUserId: null,
-            //? El total de "Anotados" no debe filtrarse con confirmados: son
-            //? dos números del handoff (`cuadrala-torneos.jsx:268,281`).
-            registrationCount: 99,
-            pairedRegistration: pairedRegistration,
-          ),
+          tournament: _tournament(organizerUserId: null),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Inscritos'), findsNothing);
+      expect(find.text('other-player'), findsNothing);
+    });
+  });
+
+  group('Player detail registration footer (v2)', () {
+    Future<void> pumpFooter(WidgetTester tester, String status) async {
+      when(
+        () => registrationsCubit.state,
+      ).thenReturn(const TournamentRegistrationsLoaded(items: [], total: 0));
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(status: status, organizerUserId: null),
         ),
       );
       await tester.pumpAndSettle();
     }
 
-    //? El resumen usa confirmados/pendientes de `items`, no el
-    //? `registrationCount` crudo del torneo (que en este fixture es 99: el
-    //? mismo número sigue apareciendo, sin cambios, en la tarjeta
-    //? "Anotados" — lo que no debe pasar es que el resumen de Inscritos lo
-    //? reutilice como si fueran confirmados).
-    testWidgets(
-      'shows confirmed and pending counts from registrations items, not registrationCount',
-      (tester) async {
-        await pumpInscritos(
-          tester,
-          state: TournamentRegistrationsLoaded(
-            items: [
-              _authRegistration(userId: 'p1'),
-              _authRegistration(userId: 'p2'),
-              _guestRegistration(id: 'g1', status: 'PENDING'),
-            ],
-            total: 3,
-          ),
-        );
+    testWidgets('keeps DRAFT enrollment disabled until registration opens', (
+      tester,
+    ) async {
+      await pumpFooter(tester, 'DRAFT');
+      expect(find.text('Todavía no abrió la inscripción'), findsOneWidget);
+      final button = tester.widget<OutlinedButton>(
+        find.byKey(const Key('tournament.detail.closedRegistration')),
+      );
+      expect(button.onPressed, isNull);
+    });
 
-        expect(find.text(inscritosConfirmedLabel(2)), findsOneWidget);
-        expect(find.text(inscritosPendingLabel(1)), findsOneWidget);
-        expect(find.text(inscritosConfirmedLabel(99)), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'omits the pending line when nobody is waiting on the organizer',
-      (tester) async {
-        await pumpInscritos(
-          tester,
-          state: TournamentRegistrationsLoaded(
-            items: [_authRegistration(userId: 'p1')],
-            total: 1,
-          ),
-        );
-
-        expect(find.text(inscritosConfirmedLabel(1)), findsOneWidget);
-        expect(find.textContaining('esperando al organizador'), findsNothing);
-      },
-    );
-
-    //? Diseño D17: "The section is hidden until the registrations are
-    //? Loaded" — antes de eso no hay confirmados/pendientes que mostrar.
-    testWidgets(
-      'hides the Inscritos section before registrations finish loading',
-      (tester) async {
-        await pumpInscritos(
-          tester,
-          state: const TournamentRegistrationsLoading(),
-        );
-
-        expect(find.text('Inscritos'), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'tapping the summary opens a roster sheet listing registrant names',
-      (tester) async {
-        await pumpInscritos(
-          tester,
-          state: TournamentRegistrationsLoaded(
-            items: [
-              _authRegistration(userId: 'p1'),
-              _guestRegistration(id: 'g1', status: 'PENDING'),
-            ],
-            total: 2,
-          ),
-        );
-
-        //? La tarjeta vive debajo del fold del área de 800x600 del test.
-        final summaryFinder = find.text(inscritosConfirmedLabel(1));
-        await tester.ensureVisible(summaryFinder);
-        await tester.tap(summaryFinder);
-        await tester.pumpAndSettle();
-
-        expect(find.byKey(const Key('tournament.rosterSheet')), findsOneWidget);
-        expect(find.text('Carlos'), findsOneWidget);
-      },
-    );
+    testWidgets('does not block an OPEN tournament by profile category', (
+      tester,
+    ) async {
+      await pumpFooter(tester, 'OPEN');
+      final button = tester.widget<FilledButton>(
+        find.byKey(const Key('tournament.detail.register')),
+      );
+      expect(button.onPressed, isNotNull);
+    });
   });
 
   group('_OrganizerBracketTab — Partidos programados rows (M11b)', () {

@@ -16,6 +16,7 @@ void main() {
     String? playerCategoryName = '7ma',
     double? inscriptionPrice,
     DateTime? startsAt,
+    DateTime? endsAt,
     DateTime? registrationClosesAt,
     String? venueName,
   }) async {
@@ -28,6 +29,7 @@ void main() {
             playerCategoryName: playerCategoryName,
             inscriptionPrice: inscriptionPrice,
             startsAt: startsAt,
+            endsAt: endsAt,
             registrationClosesAt: registrationClosesAt,
             venueName: venueName,
           ),
@@ -97,10 +99,7 @@ void main() {
           playerCategoryName: null,
         );
 
-        expect(
-          find.text('Este torneo es para Masculino 5ta.'),
-          findsOneWidget,
-        );
+        expect(find.text('Este torneo es para Masculino 5ta.'), findsOneWidget);
       },
     );
 
@@ -168,22 +167,20 @@ void main() {
       expect(icon.color, scheme.primary);
     });
 
-    testWidgets('should show the check icon when invited too', (
-      tester,
-    ) async {
+    testWidgets('should show the check icon when invited too', (tester) async {
       await pump(tester, eligibility: TournamentEligibility.invited);
 
       expect(find.byKey(const Key('entry.level.check')), findsOneWidget);
     });
 
-    testWidgets('should show a declared price as paid per player', (
+    testWidgets('should show the prototype copy for a declared price', (
       tester,
     ) async {
       await pump(tester, inscriptionPrice: 12.5);
 
       expect(find.text('INSCRIPCIÓN'), findsOneWidget);
       expect(find.textContaining('12.50'), findsOneWidget);
-      expect(find.textContaining('Por jugador'), findsOneWidget);
+      expect(find.text('Precio informado por el organizador'), findsOneWidget);
     });
 
     //? La fila Inscripción usa el widget compartido `DualPrice` (USD + Bs)
@@ -204,17 +201,17 @@ void main() {
       expect(find.byType(DualPrice), findsNothing);
     });
 
-    //? La estructura responde siempre las cuatro preguntas sin inventar el dato.
-    testWidgets('should show a neutral price row when nothing was declared', (
-      tester,
-    ) async {
-      await pump(tester);
+    testWidgets(
+      'should omit the optional price row when nothing was declared',
+      (tester) async {
+        await pump(tester);
 
-      expect(find.text('INSCRIPCIÓN'), findsOneWidget);
-      expect(find.text('Precio por confirmar'), findsOneWidget);
-      expect(find.text('Gratis'), findsNothing);
-      expect(find.byType(DualPrice), findsNothing);
-    });
+        expect(find.text('INSCRIPCIÓN'), findsNothing);
+        expect(find.text('Precio por confirmar'), findsNothing);
+        expect(find.text('Gratis'), findsNothing);
+        expect(find.byType(DualPrice), findsNothing);
+      },
+    );
 
     testWidgets('should show when it starts and when registration closes', (
       tester,
@@ -227,6 +224,18 @@ void main() {
 
       expect(find.text('CUÁNDO'), findsOneWidget);
       expect(find.textContaining('Inscripción hasta'), findsOneWidget);
+    });
+
+    testWidgets('should show the optional end time from the tournament DTO', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        startsAt: DateTime(2026, 9, 12, 9),
+        endsAt: DateTime(2026, 9, 12, 11, 30),
+      );
+
+      expect(find.textContaining('→ 11:30'), findsOneWidget);
     });
 
     testWidgets('should show the venue when there is one', (tester) async {

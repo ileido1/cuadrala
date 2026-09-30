@@ -24,7 +24,9 @@ class MyTournamentMatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final rival = match.opponents.isEmpty ? 'Rival a definir' : match.opponents.join(' · ');
+    final rival = match.opponents.isEmpty
+        ? 'Se define en la ronda anterior'
+        : match.opponents.join(' · ');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -68,7 +70,7 @@ class MyTournamentMatchCard extends StatelessWidget {
           //? Sin cancha apartada no se inventa un horario: decirlo es mejor que
           //? mostrar una fecha que después cambia.
           Text(
-            match.hasSlot ? _whenAndWhereSV(match) : 'Horario a confirmar',
+            match.hasSlot ? _whenAndWhereSV(match) : 'Horario por definir',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -77,7 +79,9 @@ class MyTournamentMatchCard extends StatelessWidget {
           ),
           //? Solo se pregunta cuando hay algo concreto que aceptar y todavía
           //? no contesté: ya contestado, repreguntar no tiene sentido.
-          if (match.hasSlot && match.decision == 'PENDING' && !match.answered) ...[
+          if (match.hasSlot &&
+              match.decision == 'PENDING' &&
+              !match.answered) ...[
             const SizedBox(height: 12),
             Text(
               'El organizador propuso este horario. ¿Te sirve?',
@@ -97,7 +101,9 @@ class MyTournamentMatchCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: FilledButton(
-                      key: Key('tournament.acceptSlot.${match.roundNumber}.${match.matchNumber}'),
+                      key: Key(
+                        'tournament.acceptSlot.${match.roundNumber}.${match.matchNumber}',
+                      ),
                       onPressed: () => onRespond('ACCEPTED'),
                       child: const Text('Me sirve'),
                     ),
@@ -105,9 +111,11 @@ class MyTournamentMatchCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton(
-                      key: Key('tournament.rejectSlot.${match.roundNumber}.${match.matchNumber}'),
+                      key: Key(
+                        'tournament.rejectSlot.${match.roundNumber}.${match.matchNumber}',
+                      ),
                       onPressed: () => onRespond('REJECTED'),
-                      child: const Text('No puedo'),
+                      child: const Text('Pedir cambio'),
                     ),
                   ),
                 ],
@@ -135,7 +143,10 @@ class MyTournamentMatchCard extends StatelessWidget {
 String _whenAndWhereSV(MyTournamentMatchDto match) {
   final at = match.scheduledAt;
   if (at == null) return 'Horario a confirmar';
-  final when = DateFormat("EEEE d 'de' MMMM, HH:mm", 'es_ES').format(at.toLocal());
+  final when = DateFormat(
+    "EEEE d 'de' MMMM, HH:mm",
+    'es_ES',
+  ).format(at.toLocal());
   final where = match.courtName;
   return where == null ? when : '$when · $where';
 }
@@ -157,7 +168,11 @@ class _DecisionChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color),
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
@@ -166,15 +181,16 @@ class _DecisionChip extends StatelessWidget {
     //? Sin cancha materializada el partido depende de resultados previos del
     //? cuadro (`README.md:84`); no es "todavía no hay cancha", es "todavía no
     //? sabemos quién juega".
-    if (!match.hasSlot) return ('Depende del cuadro', Colors.grey);
+    if (!match.hasSlot) return ('Horario por definir', Colors.grey);
     return switch (match.decision) {
-      'ACCEPTED' => ('Confirmado', Colors.green),
-      'REJECTED' => ('Se reubica', Colors.orange),
+      'ACCEPTED' => ('Horario confirmado', Colors.green),
+      'REJECTED' => ('Cambio pedido', Colors.orange),
       //? Ya contesté pero falta el resto: distinto de "no contestaste",
       //? que es lo que la app tiene que pedirte.
-      _ => match.answered
-          ? ('Esperando al resto', Colors.blue)
-          : ('Falta tu respuesta', Colors.orange),
+      _ =>
+        match.answered
+            ? ('Aceptaste · faltan los demás', Colors.blue)
+            : ('Falta tu respuesta', Colors.orange),
     };
   }
 }
