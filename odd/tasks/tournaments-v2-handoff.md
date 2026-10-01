@@ -18,10 +18,10 @@ Branch: codex/tournaments-v2-handoff. Base: bbb980ae0547ba3b6ca401f84441c726c682
 Route: delegated direct for every task (mapping requires 4+ files; writing prepares multiple non-trivial files).
 TDD: ON, source AGENTS.md and .cursor/rules/tdd-guidelines.mdc. Runner: flutter test from apps/mobile; observed RED -> GREEN -> refactor.
 RDD: disabled/unmanaged, global OFF verified; no native review.
-Delivery: feature-branch-chain, seven work-unit commits; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
+Delivery: feature-branch-chain, seven core work-unit commits plus the T6b golden-coverage follow-up; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 9,083 (T1–T7 + T6b and final evidence; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 9,088 (T1–T7 + T6b and final evidence; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [ ] T1 Theme tokens and base widgets. Reuse status pill, card, chips, header; semantic theme extension if required. Add Banner/FactRow/CupoBar/viewer badge only where absent. Deterministic Plus Jakarta Sans and golden helper. Acceptance: exact v2 tokens both themes, header trailing content width, >=44 touch targets; base widget/theme tests and golden. Route: delegated.
@@ -128,6 +128,7 @@ T6 commit: 3097ba08cbea30e800f3a74527ae283452966f04 (`feat(tournaments): align c
 - Added four 402×874 configured-form/error regression snapshots: each state in dark and light mode. The configured capture selects the real fixture preset “Liga” and schema values; the error capture uses the repository's mocked `AppFailure` response.
 - Scroll position is stabilized by scrolling to the target fields at the actual 402×874 test viewport; production widgets/layout were not changed.
 - Writer observed RED (missing goldens); parent reran `flutter test test/features/tournaments/presentation/create_tournament_screen_test.dart --reporter compact`: all 28 tests passed. Focused `flutter analyze test/features/tournaments/presentation/create_tournament_screen_test.dart` and `git diff --check` clean.
+- Final integration after T6b: `flutter test --reporter compact` passed all 883 tests; full `flutter analyze` clean.
 - Snapshots are local regression references, not visual parity proof. Browser/Tweaks remains unavailable. Route: delegated. Rollback: create-screen golden tests and their four generated fixtures only.
 
 T6b commit: b90e0c94256bd8ba679773cea1e2bbbf72782cbc (`test(tournaments): cover configured create states`).
