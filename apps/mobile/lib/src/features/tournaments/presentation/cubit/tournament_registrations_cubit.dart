@@ -51,13 +51,15 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
     }
   }
 
-  Future<void> load() async {
+  Future<void> load({bool loadInvitationList = true}) async {
     emit(const TournamentRegistrationsLoading());
     try {
       final me = await _profileRepository.getMe();
       _currentUserId = me.id;
       final items = await _repo.listRegistrations(tournamentId: _tournamentId);
-      final invitationsResult = await _loadInvitationsSV();
+      final invitationsResult = loadInvitationList
+          ? await _loadInvitationsSV()
+          : (invitations: const <TournamentInvitationDto>[], canManage: false);
       emit(TournamentRegistrationsLoaded(
         items: items,
         total: items.length,
@@ -190,7 +192,9 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
         accept: accept,
       );
       final refreshedItems = await _repo.listRegistrations(tournamentId: _tournamentId);
-      final invitationsResult = await _loadInvitationsSV();
+      final invitationsResult = current.canManageInvitations
+          ? await _loadInvitationsSV()
+          : (invitations: current.invitations, canManage: false);
       emit(current.copyWith(
         items: refreshedItems,
         total: refreshedItems.length,

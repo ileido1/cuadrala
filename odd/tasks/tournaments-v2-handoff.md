@@ -21,7 +21,7 @@ RDD: disabled/unmanaged, global OFF verified; no native review.
 Delivery: feature-branch-chain, seven work-unit commits; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 4,170 (T1+T2+T3; excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 4,538 (T1+T2+T3+T4; excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [ ] T1 Theme tokens and base widgets. Reuse status pill, card, chips, header; semantic theme extension if required. Add Banner/FactRow/CupoBar/viewer badge only where absent. Deterministic Plus Jakarta Sans and golden helper. Acceptance: exact v2 tokens both themes, header trailing content width, >=44 touch targets; base widget/theme tests and golden. Route: delegated.
@@ -43,7 +43,7 @@ Running authored count: 4,170 (T1+T2+T3; excludes generated binary fonts/goldens
 
 ## Progress and verification
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
-Next: T4 invitation screen. T5 organizer preparation received. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
+Next: T5 organizer panel. T5 organizer preparation received. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 
 
 ### T1 evidence
@@ -84,7 +84,17 @@ T2 commit: 69bd1ef43e37deac592bf739341190378675bd5e.
 - Route: delegated direct. Rollback: detail presentation, player match/entry widgets and their tests/goldens.
 - Manual browser visual acceptance remains pending; no browser surface was available.
 
-T3 commit: c3f26cb99372e66cc68ccc2c15f023ff13d3ce1c (`feat(tournaments): align player detail with v2`).
+T3 commit: 5483f2f1bd09b68f54391c0578025caaf6161fd1 (`feat(tournaments): align player detail with v2`).
+
+### T4 evidence
+- Player invitation opens from the real `ViewerTournamentDto.pendingInvitationId`; invitation-list requests require explicit organizer role, and `null`/player role skips the organizer-only read endpoint.
+- Accept/reject retain the real response API. Acceptance is shown only after the refreshed registration is `CONFIRMED`; failure remains visible and retry reload is available.
+- RED/GREEN observed for the authorization rule and invitation response behavior. Parent focused run passed 63 invitation/detail tests including pending/accepted × dark/light 402×874 goldens; `flutter analyze` clean; `flutter build web --debug` succeeded (83.9s); `git diff --check` clean.
+- Browser/Tweaks comparison unavailable; goldens are automated regression references, not visual parity proof. No endpoint/DTO invented.
+- Route: delegated direct. Rollback: invitation screen/cubit gate/detail launch plus focused tests/goldens.
+- Manual browser visual acceptance remains pending because no browser surface is available.
+
+T4 commit: pending.
 
 ### T5 preparation findings
 - Paired organizer view currently replaces roster rows, so add duplas alongside—not instead of—individual confirm/delete. Locked roster should retain counts/read-only people.

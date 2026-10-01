@@ -129,6 +129,10 @@ final class TournamentDetailScreen extends StatefulWidget {
   final bool? viewerIsOrganizer;
   final bool openInvitation;
 
+  @visibleForTesting
+  static bool mayLoadInvitations(bool? viewerIsOrganizer) =>
+      viewerIsOrganizer == true;
+
   @override
   State<TournamentDetailScreen> createState() => _TournamentDetailScreenState();
 }
@@ -144,6 +148,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
   bool _loadingTournament = false;
   bool _tournamentLoadFailed = false;
   bool _invitationOpened = false;
+  String? _pendingInvitationId;
   List<UserRatingDto>? _playerRatings;
 
   @override
@@ -157,21 +162,10 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     _scoreboardCubit = getIt<TournamentScoreboardCubit>(
       param1: widget.tournamentId,
     );
-    _registrationsCubit = getIt<TournamentRegistrationsCubit>(
-      param1: widget.tournamentId,
-    )..load();
-    _tournamentsRepository = getIt<TournamentsRepository>();
-    //? Only load registrations eagerly; others load on tab switch
-
-    //? Cargar ratings del jugador en background para saber eligibilidad
-    //? No awaitar acá para que el detalle se muestre rápido; el resolver
-    //? maneja ratings == null como "no determinado aún".
-    Future.microtask(_loadPlayerRatings);
-
-    //? Validar tipo antes de asignar (evita silent null cuando extra es tipo incorrecto)
     final viewerTournament = widget.extra is ViewerTournamentDto
         ? widget.extra as ViewerTournamentDto
         : null;
+    _pendingInvitationId = viewerTournament?.pendingInvitationId;
     _tournament =
         viewerTournament?.tournament ??
         (widget.extra is TournamentListItemDto
@@ -179,6 +173,19 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             : null);
     _viewerIsOrganizer =
         widget.viewerIsOrganizer ?? viewerTournament?.isOrganizer;
+    _registrationsCubit =
+        getIt<TournamentRegistrationsCubit>(param1: widget.tournamentId)..load(
+          loadInvitationList: TournamentDetailScreen.mayLoadInvitations(
+            _viewerIsOrganizer,
+          ),
+        );
+    _tournamentsRepository = getIt<TournamentsRepository>();
+    //? Only load registrations eagerly; others load on tab switch
+
+    //? Cargar ratings del jugador en background para saber eligibilidad
+    //? No awaitar acá para que el detalle se muestre rápido; el resolver
+    //? maneja ratings == null como "no determinado aún".
+    Future.microtask(_loadPlayerRatings);
     _loadOrganizerData();
     //? Solo fetch si: 1) no tenemos extra, 2) falta organizerUserId, o
     //? 3) el item del listado todavía no trae el preset de formato.
@@ -193,6 +200,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
       _loadingTournament = true;
       _fetchTournament();
     }
+    _openPendingInvitationIfRequested();
   }
 
   Future<void> _fetchTournament() async {
@@ -207,10 +215,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
         _tournamentLoadFailed = false;
       });
       _loadOrganizerData();
-      final registrationsState = _registrationsCubit.state;
-      if (registrationsState is TournamentRegistrationsLoaded) {
-        _openPendingInvitationIfRequested(registrationsState);
-      }
+      _openPendingInvitationIfRequested();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -273,7 +278,6 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             listener: (_, state) {
               if (state is TournamentRegistrationsLoaded) {
                 _loadOrganizerData();
-                _openPendingInvitationIfRequested(state);
               }
             },
             child: _loadingTournament
@@ -306,14 +310,13 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     );
   }
 
-  void _openPendingInvitationIfRequested(TournamentRegistrationsLoaded state) {
-    if (!widget.openInvitation || _invitationOpened || _tournament == null) {
+  void _openPendingInvitationIfRequested() {
+    if (!widget.openInvitation ||
+        _invitationOpened ||
+        _tournament == null ||
+        _pendingInvitationId == null) {
       return;
     }
-    final userId = _registrationsCubit.currentUserId;
-    if (userId == null) return;
-    final invitation = state.pendingInvitationFor(userId);
-    if (invitation == null) return;
     _invitationOpened = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -323,7 +326,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             value: _registrationsCubit,
             child: TournamentInvitationScreen(
               tournament: _tournament!,
-              invitation: invitation,
+              invitationId: _pendingInvitationId!,
             ),
           ),
         ),
@@ -542,7 +545,7 @@ final class TournamentDetailBody extends StatelessWidget {
                                       value: cubit,
                                       child: TournamentInvitationScreen(
                                         tournament: tournament!,
-                                        invitation: pendingInvitation,
+                                        invitationId: pendingInvitation.id,
                                       ),
                                     ),
                                   ),

@@ -346,10 +346,7 @@ void main() {
             value: registrationsCubit,
             child: TournamentInvitationBody(
               tournament: _tournament(),
-              invitation:
-                  (registrationsCubit.state as TournamentRegistrationsLoaded)
-                      .invitations
-                      .single,
+              invitationId: 'i-1',
             ),
           ),
         ),
@@ -400,10 +397,7 @@ void main() {
                 venueName: null,
                 organizerName: 'Juan Pérez',
               ),
-              invitation:
-                  (registrationsCubit.state as TournamentRegistrationsLoaded)
-                      .invitations
-                      .single,
+              invitationId: 'i-1',
             ),
           ),
         ),

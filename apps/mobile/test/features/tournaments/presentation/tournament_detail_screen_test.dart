@@ -179,6 +179,12 @@ void main() {
     when(() => registrationsCubit.isCurrentUserRegistered).thenReturn(false);
   });
 
+  test('unknown viewer role does not authorize invitation listing', () {
+    expect(TournamentDetailScreen.mayLoadInvitations(null), isFalse);
+    expect(TournamentDetailScreen.mayLoadInvitations(false), isFalse);
+    expect(TournamentDetailScreen.mayLoadInvitations(true), isTrue);
+  });
+
   /// Opens the organizer's Cuadro tab with the given [schedule] loaded.
   /// [tournament] defaults to a SINGLE_ELIMINATION-less fixture (M11b's
   /// baseline); M11c's caption/gating tests override it to set
