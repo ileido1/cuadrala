@@ -71,35 +71,48 @@ void main() {
       expect(find.text('Sin pareja (3)'), findsOneWidget);
     });
 
-    //? El gesto es tocar dos: el primero queda marcado, el segundo cierra.
-    testWidgets('should pair two players after tapping both', (tester) async {
+    testWidgets('should submit a pair selected in the pairing sheet', (
+      tester,
+    ) async {
       await pump(tester, [regSV('a'), regSV('b')]);
 
-      await tester.tap(find.byKey(const Key('tournament.unpaired.a')));
-      await tester.pump();
-      expect(paired, isEmpty, reason: 'un solo toque no arma la dupla');
-      expect(find.text('Ahora tocá a su compañero.'), findsOneWidget);
+      await tester.tap(find.text('Armar dupla'));
+      await tester.pumpAndSettle();
+      expect(find.text('Elegí dos inscriptos sin pareja'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('tournament.unpaired.b')));
+      await tester.tap(find.byKey(const Key('tournament.pairing.select.b')));
       await tester.pump();
+      expect(paired, isEmpty, reason: 'seleccionar no envía la dupla');
+      await tester.tap(find.byKey(const Key('tournament.pairing.select.a')));
+      await tester.pump();
+      await tester.tap(find.text('Armar dupla').last);
+      await tester.pumpAndSettle();
 
       expect(paired, [
-        ['a', 'b'],
+        ['b', 'a'],
       ]);
     });
 
-    testWidgets('should let the same player be deselected', (tester) async {
+    testWidgets('should allow deselecting a player in the sheet', (
+      tester,
+    ) async {
       await pump(tester, [regSV('a'), regSV('b')]);
 
-      await tester.tap(find.byKey(const Key('tournament.unpaired.a')));
+      await tester.tap(find.text('Armar dupla'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('tournament.pairing.select.a')));
       await tester.pump();
-      await tester.tap(find.byKey(const Key('tournament.unpaired.a')));
+      expect(
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNull,
+      );
+      await tester.tap(find.byKey(const Key('tournament.pairing.select.a')));
       await tester.pump();
 
       expect(paired, isEmpty);
       expect(
-        find.text('Tocá dos jugadores para armar la dupla.'),
-        findsOneWidget,
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNull,
       );
     });
 

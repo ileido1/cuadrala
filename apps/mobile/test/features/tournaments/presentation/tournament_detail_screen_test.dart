@@ -378,7 +378,7 @@ void main() {
             ),
           ),
         );
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('tournament.detail')), findsOneWidget);
         expect(find.text('Calendario'), findsOneWidget);
@@ -526,14 +526,14 @@ void main() {
                 find.byKey(const Key('tournament.visibilityControl')),
               )
               .value,
-          isTrue,
+          isFalse,
         );
-        expect(find.text('Aparece en el listado de la app'), findsOneWidget);
+        expect(find.text('Sólo lo ven los que invitás'), findsOneWidget);
 
         request.completeError(
           const AppFailure(code: 'HTTP_500', message: 'No se pudo guardar.'),
         );
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(
           tester
@@ -894,7 +894,7 @@ void main() {
             of: find.byKey(const Key('tournament.registrationTile.reg-auth-1')),
             matching: find.text('Mixto'),
           ),
-          findsOneWidget,
+          findsNothing,
         );
 
         //? Orden: la sección "Pendientes" se dibuja antes que "Confirmados".
@@ -958,7 +958,7 @@ void main() {
             ),
             matching: find.text('Mixto'),
           ),
-          findsOneWidget,
+          findsNothing,
         );
         expect(find.text('Pendiente'), findsNothing);
         //? "38px" per spec: ambos botones de la fila PENDING miden 38x38.
@@ -1001,8 +1001,8 @@ void main() {
           ),
         );
 
-        expect(find.text('Mixto · en dupla'), findsOneWidget);
-        expect(find.text('Mixto · sin dupla'), findsOneWidget);
+        expect(find.text('En dupla'), findsOneWidget);
+        expect(find.text('Sin dupla'), findsNWidgets(2));
 
         // The individual roster still renders the category and never exposes
         // a pairing state, even when stale partner data is present.
@@ -1029,7 +1029,7 @@ void main() {
             ),
             matching: find.text('Mixto'),
           ),
-          findsOneWidget,
+          findsNothing,
         );
         expect(find.textContaining('dupla'), findsNothing);
       },
@@ -1103,7 +1103,7 @@ void main() {
         find.byKey(const Key('tournament.inviteGuestSheet.title')),
         findsOneWidget,
       );
-      expect(find.text('Alguien sin cuenta en la app'), findsOneWidget);
+      expect(find.text('Para alguien que no usa la app'), findsOneWidget);
       expect(
         find.byKey(const Key('tournament.inviteGuestSheet.submit')),
         findsOneWidget,

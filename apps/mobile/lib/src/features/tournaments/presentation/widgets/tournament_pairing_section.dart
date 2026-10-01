@@ -10,9 +10,6 @@ import '../tournament_roster_grouping.dart';
 /// quienes todavía no tienen compañero — que es lo que el organizador necesita
 /// ver antes de generar el cuadro, porque una inscripción sin dupla lo frena.
 ///
-/// El gesto de emparejar es tocar dos: el primero queda marcado y el segundo
-/// cierra la dupla. Sin buscador ni pantalla aparte, que para un roster de
-/// dieciséis personas sería ceremonia de más.
 class TournamentPairingSection extends StatefulWidget {
   const TournamentPairingSection({
     super.key,
@@ -39,20 +36,104 @@ class TournamentPairingSection extends StatefulWidget {
 }
 
 class _TournamentPairingSectionState extends State<TournamentPairingSection> {
-  String? _selectedId;
+  Future<void> _openPairingSheetSV() async {
+    final available = widget.roster.unpaired;
+    if (!widget.canManage || widget.busyRegistrationId != null) return;
 
-  void _tapSV(TournamentRegistrationDto registration) {
-    final selected = _selectedId;
-    if (selected == null) {
-      setState(() => _selectedId = registration.id);
-      return;
-    }
-    if (selected == registration.id) {
-      setState(() => _selectedId = null);
-      return;
-    }
-    widget.onPair(selected, registration.id);
-    setState(() => _selectedId = null);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final selected = <String>[];
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final scheme = Theme.of(context).colorScheme;
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: scheme.outlineVariant,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Armar dupla',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Elegí dos inscriptos sin pareja',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (available.isEmpty)
+                      Text(
+                        'No hay inscriptos sin pareja.',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      )
+                    else
+                      Flexible(
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: [
+                            for (final registration in available)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _UnpairedTile(
+                                  key: Key(
+                                    'tournament.pairing.select.${registration.id}',
+                                  ),
+                                  registration: registration,
+                                  categoryName: null,
+                                  selected: selected.contains(registration.id),
+                                  enabled: true,
+                                  onTap: () => setSheetState(() {
+                                    if (selected.contains(registration.id)) {
+                                      selected.remove(registration.id);
+                                    } else if (selected.length < 2) {
+                                      selected.add(registration.id);
+                                    }
+                                  }),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: selected.length == 2
+                            ? () {
+                                Navigator.of(sheetContext).pop();
+                                widget.onPair(selected[0], selected[1]);
+                              }
+                            : null,
+                        child: const Text('Armar dupla'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -79,7 +160,9 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
             if (widget.canManage)
               TextButton(
                 key: const Key('tournament.pairing.arm'),
-                onPressed: () => setState(() => _selectedId = null),
+                onPressed: widget.busyRegistrationId == null
+                    ? _openPairingSheetSV
+                    : null,
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   minimumSize: const Size(0, 36),
@@ -133,9 +216,7 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
                 const SizedBox(height: 2),
                 Text(
                   widget.canManage
-                      ? _selectedId == null
-                            ? 'Tocá dos jugadores para armar la dupla.'
-                            : 'Ahora tocá a su compañero.'
+                      ? 'Todavía no armaste duplas.'
                       : 'Todavía esperan compañero.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
@@ -149,10 +230,9 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
                       key: Key('tournament.unpaired.${reg.id}'),
                       registration: reg,
                       categoryName: widget.categoryName,
-                      selected: _selectedId == reg.id,
-                      enabled:
-                          widget.canManage && widget.busyRegistrationId == null,
-                      onTap: () => _tapSV(reg),
+                      selected: false,
+                      enabled: false,
+                      onTap: () {},
                     ),
                   ),
               ],
@@ -216,14 +296,6 @@ class _PairTile extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (pair.isConfirmed && categoryName?.trim().isNotEmpty == true)
-                Text(
-                  '${categoryName!.trim()} · en dupla',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 12.5,
-                  ),
-                ),
             ],
           ),
         ),
@@ -323,17 +395,6 @@ class _UnpairedTile extends StatelessWidget {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (!registration.isGuest &&
-                      categoryName?.trim().isNotEmpty == true)
-                    Text(
-                      registration.status == 'CONFIRMED'
-                          ? '${categoryName!.trim()} · sin dupla'
-                          : categoryName!.trim(),
-                      style: TextStyle(
-                        color: scheme.onSurfaceVariant,
-                        fontSize: 12.5,
-                      ),
-                    ),
                 ],
               ),
             ),

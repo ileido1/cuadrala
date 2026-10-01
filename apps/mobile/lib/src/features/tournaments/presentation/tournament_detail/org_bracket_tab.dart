@@ -7,6 +7,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
     required this.tournamentsRepository,
     required this.formatPresetName,
     required this.venueId,
+    this.tournamentStatus,
   });
 
   final String tournamentId;
@@ -14,6 +15,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
   final TournamentsRepository tournamentsRepository;
   final String? formatPresetName;
   final String? venueId;
+  final String? tournamentStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +43,14 @@ final class _OrganizerBracketTab extends StatelessWidget {
               .length;
           final registrationsCubit = context
               .read<TournamentRegistrationsCubit>();
+          final canConfirmPending =
+              tournamentStatus != 'IN_PROGRESS' &&
+              (scheduleState is TournamentScheduleInitial ||
+                  scheduleState is TournamentScheduleEmpty);
 
           return ListView(
             children: [
-              if (pending > 0) ...[
+              if (pending > 0 && canConfirmPending) ...[
                 _OrganizerWarningBanner(
                   title: '$pending sin confirmar quedan fuera',
                   body:

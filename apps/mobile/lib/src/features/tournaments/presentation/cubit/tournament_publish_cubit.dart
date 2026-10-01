@@ -42,32 +42,18 @@ class TournamentPublishCubit extends Cubit<TournamentPublishState> {
   Future<void> setVisibility(String visibility) async {
     if (visibility == state.visibility || state.submitting) return;
 
-    final previousVisibility = state.visibility;
-    emit(
-      state.copyWith(
-        visibility: visibility,
-        submitting: true,
-        clearError: true,
-      ),
-    );
+    emit(state.copyWith(submitting: true, clearError: true));
     try {
       await _tournamentsRepository.updateTournamentVisibility(
         tournamentId: _tournamentId,
         visibility: visibility,
       );
-      emit(state.copyWith(submitting: false));
+      emit(state.copyWith(visibility: visibility, submitting: false));
     } on AppFailure catch (error) {
-      emit(
-        state.copyWith(
-          visibility: previousVisibility,
-          submitting: false,
-          error: error.message,
-        ),
-      );
+      emit(state.copyWith(submitting: false, error: error.message));
     } catch (_) {
       emit(
         state.copyWith(
-          visibility: previousVisibility,
           submitting: false,
           error: 'No se pudo cambiar la visibilidad del torneo.',
         ),

@@ -5,8 +5,8 @@ final class _RegistrationsTab extends StatelessWidget {
     required this.tournamentId,
     required this.organizerUserId,
     required this.organizerName,
+    this.viewerIsOrganizer,
     required this.tournamentStatus,
-    required this.categoryName,
     required this.pairedRegistration,
     this.maxSlots,
   });
@@ -14,8 +14,8 @@ final class _RegistrationsTab extends StatelessWidget {
   final String tournamentId;
   final String? organizerUserId;
   final String? organizerName;
+  final bool? viewerIsOrganizer;
   final String? tournamentStatus;
-  final String? categoryName;
   final bool pairedRegistration;
   final int? maxSlots;
 
@@ -23,171 +23,187 @@ final class _RegistrationsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-      child:
-          BlocBuilder<
-            TournamentRegistrationsCubit,
-            TournamentRegistrationsState
-          >(
-            builder: (context, state) {
-              if (state is TournamentRegistrationsLoading ||
-                  state is TournamentRegistrationsInitial) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (state is TournamentRegistrationsFailure) {
-                return _ErrorBox(
-                  message: state.message,
-                  onRetry: () =>
-                      context.read<TournamentRegistrationsCubit>().load(),
-                );
-              }
+      child: BlocBuilder<TournamentRegistrationsCubit, TournamentRegistrationsState>(
+        builder: (context, state) {
+          if (state is TournamentRegistrationsLoading ||
+              state is TournamentRegistrationsInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state is TournamentRegistrationsFailure) {
+            return _ErrorBox(
+              message: state.message,
+              onRetry: () =>
+                  context.read<TournamentRegistrationsCubit>().load(),
+            );
+          }
 
-              final loaded = state as TournamentRegistrationsLoaded;
-              final activeItems = loaded.items
-                  .where((registration) => registration.status != 'WITHDRAWN')
-                  .toList();
-              final pendingItems = activeItems
-                  .where((registration) => registration.status == 'PENDING')
-                  .toList();
-              final confirmedItems = activeItems
-                  .where((registration) => registration.status == 'CONFIRMED')
-                  .toList();
-              final cubit = context.read<TournamentRegistrationsCubit>();
-              final currentUserId = cubit.currentUserId;
-              final myPendingInvite = currentUserId != null
-                  ? loaded.pendingInvitationFor(currentUserId)
-                  : null;
-              final isOrganizer = _isOrganizer(organizerUserId, currentUserId);
-              final guestActionsAllowed =
-                  tournamentStatus == null ||
-                  _kOrganizerManageableStatuses.contains(tournamentStatus);
-              final canManageGuests = isOrganizer && guestActionsAllowed;
-              final slotsFull = maxSlots != null && activeItems.length >= maxSlots!;
-              final canInvitePlayers =
-                  isOrganizer && loaded.canManageInvitations;
-
-              return ListView(
-                padding: const EdgeInsets.only(bottom: 24),
-                children: [
-                  if (canManageGuests) ...[
-                    _OrganizerRosterHeader(
-                      total: activeItems.length,
-                      confirmed: confirmedItems.length,
-                      pending: pendingItems.length,
-                      busy: loaded.busyRegistrationId != null,
-                      onConfirmAll: pendingItems.isEmpty
-                          ? null
-                          : () => cubit.confirmPendingRegistrations(),
+          final loaded = state as TournamentRegistrationsLoaded;
+          final activeItems = loaded.items
+              .where((registration) => registration.status != 'WITHDRAWN')
+              .toList();
+          final pendingItems = activeItems
+              .where((registration) => registration.status == 'PENDING')
+              .toList();
+          final confirmedItems = activeItems
+              .where((registration) => registration.status == 'CONFIRMED')
+              .toList();
+          final cubit = context.read<TournamentRegistrationsCubit>();
+          final currentUserId = cubit.currentUserId;
+          final myPendingInvite = currentUserId != null
+              ? loaded.pendingInvitationFor(currentUserId)
+              : null;
+          final isOrganizer =
+              viewerIsOrganizer ?? _isOrganizer(organizerUserId, currentUserId);
+          final guestActionsAllowed = _kOrganizerManageableStatuses.contains(
+            tournamentStatus,
+          );
+          final canManageGuests = isOrganizer && guestActionsAllowed;
+          final slotsFull = maxSlots != null && activeItems.length >= maxSlots!;
+          final canInvitePlayers =
+              canManageGuests && loaded.canManageInvitations;
+          final rosterLocked = tournamentStatus == 'IN_PROGRESS';
+          return ListView(
+            padding: const EdgeInsets.only(bottom: 24),
+            children: [
+              if (tournamentStatus == 'DRAFT') ...[
+                TournamentBanner(
+                  icon: AppIcons.eyeOff,
+                  title: 'Borrador: nadie se puede anotar solo',
+                  body:
+                      'Podés cargar huéspedes e invitar jugadores. Para abrir la inscripción, pasalo a Abierta.',
+                  action: 'Ir a Publicar',
+                  onAction: () => DefaultTabController.of(context).animateTo(2),
+                  tone: TournamentTone.muted,
+                ),
+                const SizedBox(height: 14),
+              ],
+              if (rosterLocked) ...[
+                const TournamentBanner(
+                  icon: AppIcons.lock,
+                  title: 'Roster bloqueado',
+                  body:
+                      'El torneo está en juego: ya no se confirman, eliminan ni agregan inscriptos.',
+                  tone: TournamentTone.muted,
+                ),
+                const SizedBox(height: 14),
+              ],
+              if (isOrganizer) ...[
+                _OrganizerRosterHeader(
+                  total: activeItems.length,
+                  confirmed: confirmedItems.length,
+                  pending: pendingItems.length,
+                  busy: loaded.busyRegistrationId != null,
+                  locked: !canManageGuests,
+                  onConfirmAll: pendingItems.isEmpty || !canManageGuests
+                      ? null
+                      : () => cubit.confirmPendingRegistrations(),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (loaded.registerError != null ||
+                  loaded.invitationError != null ||
+                  loaded.registrationActionError != null) ...[
+                _RosterError(
+                  message:
+                      loaded.registerError ??
+                      loaded.invitationError ??
+                      loaded.registrationActionError!,
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (myPendingInvite != null) ...[
+                _PendingInviteBanner(
+                  invitation: myPendingInvite,
+                  responding: loaded.responding,
+                  onAccept: () => cubit.acceptInvitation(myPendingInvite.id),
+                  onReject: () => cubit.rejectInvitation(myPendingInvite.id),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (organizerUserId != null &&
+                  !activeItems.any(
+                    (registration) => registration.userId == organizerUserId,
+                  )) ...[
+                _OrganizerRosterOwner(
+                  userId: organizerUserId!,
+                  name: organizerName,
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (activeItems.isEmpty && !pairedRegistration)
+                const _InfoBox(
+                  message:
+                      'Aún no hay participantes. ¡Compartí el torneo para que más jugadores se inscriban!',
+                )
+              else ...[
+                if (activeItems.isNotEmpty)
+                  _OrganizerRosterCard(
+                    pendingItems: pendingItems,
+                    confirmedItems: confirmedItems,
+                    pairedRegistration: pairedRegistration,
+                    canManage: canManageGuests,
+                    busyRegistrationId: loaded.busyRegistrationId,
+                  ),
+                if (pairedRegistration) ...[
+                  if (activeItems.isNotEmpty) const SizedBox(height: 20),
+                  TournamentPairingSection(
+                    roster: groupRosterIntoPairs(
+                      registrations: activeItems,
+                      paired: true,
                     ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (loaded.registerError != null ||
-                      loaded.invitationError != null ||
-                      loaded.registrationActionError != null) ...[
-                    _RosterError(
-                      message:
-                          loaded.registerError ??
-                          loaded.invitationError ??
-                          loaded.registrationActionError!,
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (myPendingInvite != null) ...[
-                    _PendingInviteBanner(
-                      invitation: myPendingInvite,
-                      responding: loaded.responding,
-                      onAccept: () =>
-                          cubit.acceptInvitation(myPendingInvite.id),
-                      onReject: () =>
-                          cubit.rejectInvitation(myPendingInvite.id),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (organizerUserId != null &&
-                      !activeItems.any(
-                        (registration) =>
-                            registration.userId == organizerUserId,
-                      )) ...[
-                    _OrganizerRosterOwner(
-                      userId: organizerUserId!,
-                      name: organizerName,
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (activeItems.isEmpty)
-                    const _InfoBox(
-                      message:
-                          'Aún no hay participantes. ¡Compartí el torneo para que más jugadores se inscriban!',
-                    )
-                  else if (pairedRegistration)
-                    TournamentPairingSection(
-                      roster: groupRosterIntoPairs(
-                        registrations: activeItems,
-                        paired: true,
-                      ),
-                      categoryName: categoryName,
-                      canManage: canManageGuests,
-                      busyRegistrationId: loaded.busyRegistrationId,
-                      onPair: (first, second) =>
-                          cubit.pairRegistrations(first, second),
-                      onUnpair: cubit.unpairRegistration,
-                    )
-                  else ...[
-                    _OrganizerRosterCard(
-                      pendingItems: pendingItems,
-                      confirmedItems: confirmedItems,
-                      categoryName: categoryName,
-                      pairedRegistration: pairedRegistration,
-                      canManage: canManageGuests,
-                      busyRegistrationId: loaded.busyRegistrationId,
-                    ),
-                  ],
-                  if (canManageGuests && !slotsFull) ...[
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            key: const Key('tournament.inviteGuestButton'),
-                            onPressed: () => showInviteGuestSheet(context),
-                            icon: const Icon(AppIcons.add, size: 18),
-                            label: const Text('Invitado'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        if (canInvitePlayers)
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              key: const Key('tournament.invitePlayerButton'),
-                              onPressed: () => showInvitePlayerSheet(context),
-                              icon: const Icon(AppIcons.mail, size: 18),
-                              label: const Text('Invitar'),
-                            ),
-                          )
-                        else
-                          const Spacer(),
-                      ],
-                    ),
-                  ],
-                  if (pairedRegistration &&
-                      activeItems.isNotEmpty &&
-                      canManageGuests)
-                    const SizedBox(height: 0),
-                  if (loaded.canManageInvitations) ...[
-                    const SizedBox(height: 22),
-                    _OrganizerInvitationsSection(
-                      invitations: loaded.invitations
-                          .where(
-                            (invitation) =>
-                                invitation.isPending || invitation.isRejected,
-                          )
-                          .toList(),
-                      busy: loaded.inviting,
-                    ),
-                  ],
+                    categoryName: null,
+                    canManage: canManageGuests,
+                    busyRegistrationId: loaded.busyRegistrationId,
+                    onPair: (first, second) =>
+                        cubit.pairRegistrations(first, second),
+                    onUnpair: cubit.unpairRegistration,
+                  ),
                 ],
-              );
-            },
-          ),
+              ],
+              if (canManageGuests && !slotsFull) ...[
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const Key('tournament.inviteGuestButton'),
+                        onPressed: () => showInviteGuestSheet(context),
+                        icon: const Icon(AppIcons.add, size: 18),
+                        label: const Text('Sin cuenta'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    if (canInvitePlayers)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const Key('tournament.invitePlayerButton'),
+                          onPressed: () => showInvitePlayerSheet(context),
+                          icon: const Icon(AppIcons.mail, size: 18),
+                          label: const Text('Invitar'),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                  ],
+                ),
+              ],
+              if (isOrganizer && loaded.canManageInvitations) ...[
+                const SizedBox(height: 22),
+                _OrganizerInvitationsSection(
+                  invitations: loaded.invitations
+                      .where(
+                        (invitation) =>
+                            invitation.isPending || invitation.isRejected,
+                      )
+                      .toList(),
+                  busy: loaded.inviting,
+                  canCancel: canManageGuests,
+                ),
+              ],
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -264,7 +280,6 @@ final class _OrganizerRosterCard extends StatelessWidget {
   const _OrganizerRosterCard({
     required this.pendingItems,
     required this.confirmedItems,
-    required this.categoryName,
     required this.pairedRegistration,
     required this.canManage,
     required this.busyRegistrationId,
@@ -272,7 +287,6 @@ final class _OrganizerRosterCard extends StatelessWidget {
 
   final List<TournamentRegistrationDto> pendingItems;
   final List<TournamentRegistrationDto> confirmedItems;
-  final String? categoryName;
   final bool pairedRegistration;
   final bool canManage;
   final String? busyRegistrationId;
@@ -294,12 +308,11 @@ final class _OrganizerRosterCard extends StatelessWidget {
           if (pendingItems.isNotEmpty) ...[
             _RegistrationsGroupHeader(
               key: const Key('tournament.registrationsGroup.pending'),
-              label: 'PENDIENTES',
+              label: 'Pendientes · ${pendingItems.length}',
             ),
             for (final registration in pendingItems)
               _RegistrationTile(
                 registration: registration,
-                categoryName: categoryName,
                 pairedRegistration: pairedRegistration,
                 canManage: canManage,
                 busy: busyRegistrationId == registration.id,
@@ -307,7 +320,7 @@ final class _OrganizerRosterCard extends StatelessWidget {
           ],
           _RegistrationsGroupHeader(
             key: const Key('tournament.registrationsGroup.confirmed'),
-            label: 'CONFIRMADOS',
+            label: 'Confirmados · ${confirmedItems.length}',
           ),
           if (confirmedItems.isEmpty)
             Padding(
@@ -324,7 +337,6 @@ final class _OrganizerRosterCard extends StatelessWidget {
             for (final registration in confirmedItems)
               _RegistrationTile(
                 registration: registration,
-                categoryName: categoryName,
                 pairedRegistration: pairedRegistration,
                 canManage: canManage,
                 busy: busyRegistrationId == registration.id,
@@ -363,6 +375,7 @@ final class _OrganizerRosterHeader extends StatelessWidget {
     required this.total,
     required this.confirmed,
     required this.pending,
+    this.locked = false,
     required this.busy,
     required this.onConfirmAll,
   });
@@ -370,6 +383,7 @@ final class _OrganizerRosterHeader extends StatelessWidget {
   final int total;
   final int confirmed;
   final int pending;
+  final bool locked;
   final bool busy;
   final VoidCallback? onConfirmAll;
 
@@ -402,13 +416,13 @@ final class _OrganizerRosterHeader extends StatelessWidget {
                 key: const Key('tournament.organizer.stats.pending'),
                 label: 'Pendientes',
                 value: pending,
-                accent: pending > 0 ? scheme.primary : null,
+                accent: pending > 0 && !locked ? scheme.primary : null,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        if (pending > 0)
+        if (pending > 0 && !locked)
           FilledButton.icon(
             key: const Key('tournament.confirmPendingButton'),
             onPressed: busy ? null : onConfirmAll,
@@ -416,16 +430,17 @@ final class _OrganizerRosterHeader extends StatelessWidget {
             label: Text('Confirmar $pending pendientes'),
           ),
         const SizedBox(height: 6),
-        Text(
-          pending > 0
-              ? 'Un toque confirma a todos y les llega el aviso solo. No hace falta mandar nada.'
-              : 'Todos confirmados. Cada uno ya recibió su aviso.',
-          style: TextStyle(
-            color: scheme.onSurfaceVariant,
-            fontSize: 12,
-            height: 1.45,
+        if (!locked)
+          Text(
+            pending > 0
+                ? 'Un toque confirma a todos y les llega el aviso solo. No hace falta mandar nada.'
+                : 'Todos confirmados. Cada uno ya recibió su aviso.',
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 12,
+              height: 1.45,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -478,14 +493,12 @@ final class _OrganizerCount extends StatelessWidget {
 final class _RegistrationTile extends StatelessWidget {
   const _RegistrationTile({
     required this.registration,
-    required this.categoryName,
     required this.pairedRegistration,
     required this.canManage,
     required this.busy,
   });
 
   final TournamentRegistrationDto registration;
-  final String? categoryName;
   final bool pairedRegistration;
   final bool canManage;
   final bool busy;
@@ -518,20 +531,18 @@ final class _RegistrationTile extends StatelessWidget {
     if (registration.isGuest) {
       return registration.guestPhone?.trim().isNotEmpty == true
           ? registration.guestPhone!
-          : 'Invitado sin teléfono';
+          : registration.guestEmail?.trim().isNotEmpty == true
+          ? registration.guestEmail!
+          : 'Sin teléfono ni email';
     }
-    return _categorySubtitle() ?? 'Jugador registrado';
+    return 'Jugador registrado';
   }
 
-  String? _categorySubtitle() {
-    final category = categoryName?.trim();
+  String? _pairSubtitle() {
     if (registration.status == 'CONFIRMED' && pairedRegistration) {
-      final pairingLabel = registration.hasPartner ? 'en dupla' : 'sin dupla';
-      return category?.isNotEmpty == true
-          ? '$category · $pairingLabel'
-          : pairingLabel;
+      return registration.hasPartner ? 'En dupla' : 'Sin dupla';
     }
-    return category?.isNotEmpty == true ? category : null;
+    return null;
   }
 
   @override
@@ -597,7 +608,7 @@ final class _RegistrationTile extends StatelessWidget {
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: const Text(
-                          'INVITADO',
+                          'SIN CUENTA',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -617,11 +628,9 @@ final class _RegistrationTile extends StatelessWidget {
                     fontSize: 12.5,
                   ),
                 ),
-                if (registration.isGuest &&
-                    registration.status == 'CONFIRMED' &&
-                    _categorySubtitle() != null)
+                if (_pairSubtitle() != null)
                   Text(
-                    _categorySubtitle()!,
+                    _pairSubtitle()!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -783,10 +792,12 @@ final class _OrganizerInvitationsSection extends StatelessWidget {
   const _OrganizerInvitationsSection({
     required this.invitations,
     required this.busy,
+    required this.canCancel,
   });
 
   final List<TournamentInvitationDto> invitations;
   final bool busy;
+  final bool canCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -830,6 +841,7 @@ final class _OrganizerInvitationsSection extends StatelessWidget {
                       _SentInvitationTile(
                         invitation: invitations[index],
                         busy: busy,
+                        canCancel: canCancel,
                         showDivider: index < invitations.length - 1,
                         onCancel: () =>
                             cubit.cancelInvitation(invitations[index].id),
@@ -847,12 +859,14 @@ final class _SentInvitationTile extends StatelessWidget {
     required this.invitation,
     required this.busy,
     required this.showDivider,
+    required this.canCancel,
     required this.onCancel,
   });
 
   final TournamentInvitationDto invitation;
   final bool busy;
   final bool showDivider;
+  final bool canCancel;
   final VoidCallback onCancel;
 
   @override
@@ -900,7 +914,7 @@ final class _SentInvitationTile extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          if (invitation.isPending)
+          if (invitation.isPending && canCancel)
             IconButton(
               tooltip: 'Cancelar',
               onPressed: busy ? null : onCancel,

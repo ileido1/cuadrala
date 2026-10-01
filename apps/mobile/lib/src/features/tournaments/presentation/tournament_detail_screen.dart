@@ -305,6 +305,7 @@ final class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
                     viewerIsOrganizer: _viewerIsOrganizer,
                     playerRatings: _playerRatings,
                     tournamentsRepository: _tournamentsRepository,
+                    onTournamentUpdated: _fetchTournament,
                   ),
           ),
     );
@@ -346,6 +347,7 @@ final class TournamentDetailBody extends StatelessWidget {
     this.viewerIsOrganizer,
     this.playerRatings,
     required this.tournamentsRepository,
+    this.onTournamentUpdated,
   });
 
   final String tournamentId;
@@ -353,6 +355,7 @@ final class TournamentDetailBody extends StatelessWidget {
   final bool? viewerIsOrganizer;
   final List<UserRatingDto>? playerRatings;
   final TournamentsRepository tournamentsRepository;
+  final VoidCallback? onTournamentUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -508,7 +511,7 @@ final class TournamentDetailBody extends StatelessWidget {
                         organizerUserId: tournament?.organizerUserId,
                         organizerName: tournament?.organizerName,
                         tournamentStatus: tournament?.status,
-                        categoryName: tournament?.categoryName,
+                        viewerIsOrganizer: isOrganizer,
                         pairedRegistration:
                             tournament?.pairedRegistration ?? false,
                         maxSlots: tournament?.maxSlots,
@@ -519,12 +522,14 @@ final class TournamentDetailBody extends StatelessWidget {
                         tournamentsRepository: tournamentsRepository,
                         formatPresetName: tournament?.formatPresetName,
                         venueId: tournament?.venueId,
+                        tournamentStatus: tournament?.status,
                       ),
                       _OrganizerPublishTab(
                         tournament: tournament,
                         tournamentId: tournamentId,
                         organizerUserId: tournament?.organizerUserId,
                         tournamentsRepository: tournamentsRepository,
+                        onTournamentUpdated: onTournamentUpdated,
                       ),
                     ] else ...[
                       _InfoTab(

@@ -35,7 +35,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
   void _submitSV(BuildContext context) {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    if (name.isEmpty || !email.contains('@')) return;
+    if (name.length < 2 || (email.isNotEmpty && !email.contains('@'))) return;
 
     setState(() => _submitted = true);
     context.read<TournamentRegistrationsCubit>().inviteGuest(
@@ -43,7 +43,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
       phone: _phoneController.text.trim().isEmpty
           ? null
           : _phoneController.text.trim(),
-      email: email,
+      email: email.isEmpty ? null : email,
     );
   }
 
@@ -104,7 +104,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                       ),
                     ),
                     Text(
-                      'Invitar invitado',
+                      'Agregar sin cuenta',
                       key: const Key('tournament.inviteGuestSheet.title'),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -112,7 +112,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Alguien sin cuenta en la app',
+                      'Para alguien que no usa la app',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -141,14 +141,14 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                       key: const Key('tournament.inviteGuestSheet.email'),
                       controller: _emailController,
                       decoration: const InputDecoration(
-                        hintText: 'Email *',
+                        hintText: 'Email (opcional)',
                       ),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.done,
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Entra como pendiente igual que el resto. Al confirmarlo, participa del cuadro de eliminación.',
+                      'Queda pendiente como el resto. No tiene cuenta: no ve el torneo en la app y lo gestionás vos.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.45,
@@ -175,7 +175,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(AppIcons.personAdd),
-                      label: const Text('Invitar'),
+                      label: const Text('Agregar'),
                     ),
                   ],
                 );
