@@ -21,7 +21,7 @@ RDD: disabled/unmanaged, global OFF verified; no native review.
 Delivery: feature-branch-chain, seven work-unit commits; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 8,981 (T1–T7 plus final commit evidence; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 9,077 (T1–T7 + T6b; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [ ] T1 Theme tokens and base widgets. Reuse status pill, card, chips, header; semantic theme extension if required. Add Banner/FactRow/CupoBar/viewer badge only where absent. Deterministic Plus Jakarta Sans and golden helper. Acceptance: exact v2 tokens both themes, header trailing content width, >=44 touch targets; base widget/theme tests and golden. Route: delegated.
@@ -30,6 +30,7 @@ Running authored count: 8,981 (T1–T7 plus final commit evidence; additions+del
 - [ ] T4 Received invitation. Full-screen view using existing pendingInvitationId and real response endpoint; no organizer-only invitation fetch required. Acceptance: player can accept/reject and reload real CONFIRMED result; loading/errors. Route: delegated.
 - [ ] T5 Organizer. Inscritos individual/bulk/paired confirm, removal, locked roster, guest/invite/duplas, schedule generate, separate status/visibility. Acceptance: no mutation actions when locked, no fake roster category, real contracts and toasts. Route: delegated.
 - [ ] T6 Create. Dynamic schemas bool/int/enum/reset, sport/category/gender/date/venue/capacity/price/visibility/publish, date validation and CTA. Acceptance: schema bounds only; nullable optional states are omitted from requests; publishOnCreate local second call cannot duplicate a successful create after publish failure; preserve only real preset defaults/fields and FX. Route: delegated.
+- [x] T6b Create golden follow-up. Added deterministic 402×874 configured-form and create-error goldens in dark/light, using the existing schema preset and mocked API error. Scrolling is driven by visible test targets; no production layout changed. All four fixtures replay in the create screen test. Route: delegated.
 - [ ] T7 Progress and results. Shared table/bracket/matches, guest identities, immutable results and format-aware ties. Fix Dart bracket decoder for existing nullable userId/registrationId payload. Acceptance: no correction, no false metrics or rank rules; refresh schedule+scoreboard after submit; zero/live/done goldens. Route: delegated.
 
 ## Known gaps / decisions
@@ -43,7 +44,7 @@ Running authored count: 8,981 (T1–T7 plus final commit evidence; additions+del
 
 ## Progress and verification
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
-Implementation T1–T7 is present. Formal visual acceptance remains pending: the prototype browser/Tweaks surface was unavailable, T6 has only initial-form dark/light goldens (configured/error goldens remain absent), and these generated golden references prove regression consistency—not parity with JSX. Final build/test verification is recorded under T7. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
+Implementation T1–T7 plus T6b create-state snapshots is present. Formal visual acceptance remains pending: the prototype browser/Tweaks surface was unavailable, and generated golden references prove regression consistency—not parity with JSX. Final build/test verification is recorded under T7/T6b. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 
 
 ### T1 evidence
@@ -122,6 +123,12 @@ T5 commit: 3cf5a6e91eb22c09113e7c1bf1408f6b6de463cd (`feat(tournaments): align o
 - Route: delegated direct. Rollback: create screen/form/cubits/state tests and initial goldens.
 
 T6 commit: 3097ba08cbea30e800f3a74527ae283452966f04 (`feat(tournaments): align create flow with v2`).
+
+### T6b evidence
+- Added four 402×874 configured-form/error regression snapshots: each state in dark and light mode. The configured capture selects the real fixture preset “Liga” and schema values; the error capture uses the repository's mocked `AppFailure` response.
+- Scroll position is stabilized by scrolling to the target fields at the actual 402×874 test viewport; production widgets/layout were not changed.
+- Writer observed RED (missing goldens); parent reran `flutter test test/features/tournaments/presentation/create_tournament_screen_test.dart --reporter compact`: all 28 tests passed. Focused `flutter analyze test/features/tournaments/presentation/create_tournament_screen_test.dart` and `git diff --check` clean.
+- Snapshots are local regression references, not visual parity proof. Browser/Tweaks remains unavailable. Route: delegated. Rollback: create-screen golden tests and their four generated fixtures only.
 
 ### T7 preparation findings
 - Bracket score DTO currently rejects guest `userId: null`; retain `tournamentRegistrationId`. Winner IDs are registration-first, so UI must compare canonical registration identity, not assume user ID.

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
+import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/models/category_dto.dart';
@@ -192,6 +193,15 @@ Future<void> _selectPreset(WidgetTester tester, String name) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _scrollToGoldenTarget(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(
+    target,
+    260,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+}
+
 FilledButton _submitButton(WidgetTester tester) =>
     tester.widget<FilledButton>(find.bySubtype<FilledButton>());
 
@@ -259,6 +269,81 @@ void main() {
       await expectLater(
         find.byKey(tournamentGoldenKey),
         matchesGoldenFile('goldens/create_initial_${brightness.name}.png'),
+      );
+    });
+
+    testWidgets('configured create form should match ${brightness.name}', (
+      tester,
+    ) async {
+      await pumpTournamentGolden(
+        tester,
+        brightness: brightness,
+        child: CreateTournamentScreen(now: DateTime(2026, 9, 1)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('create.tournament.name')),
+      );
+      await tester.enterText(
+        find.byKey(const Key('create.tournament.name')),
+        'Torneo de Otoño',
+      );
+      await _scrollToGoldenTarget(tester, find.text('Liga'));
+      await _selectPreset(tester, 'Liga');
+      await tester.tap(find.text('Dobles'));
+      await tester.pumpAndSettle();
+      await tester.tap(_inForm(find.byIcon(AppIcons.add)));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byType(DynamicFormatParametersForm));
+      await tester.pumpAndSettle();
+
+      await expectLater(
+        find.byKey(tournamentGoldenKey),
+        matchesGoldenFile('goldens/create_configured_${brightness.name}.png'),
+      );
+    });
+
+    testWidgets('create API error should match ${brightness.name}', (
+      tester,
+    ) async {
+      when(
+        () => tournamentsRepository.createTournament(
+          request: any(named: 'request'),
+        ),
+      ).thenThrow(
+        const AppFailure(
+          code: 'CREATE_FAILED',
+          message: 'No se pudo crear el torneo. Intentá de nuevo.',
+        ),
+      );
+
+      await pumpTournamentGolden(
+        tester,
+        brightness: brightness,
+        child: CreateTournamentScreen(now: DateTime(2026, 9, 1)),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('create.tournament.name')),
+      );
+      await tester.enterText(
+        find.byKey(const Key('create.tournament.name')),
+        'Torneo de Otoño',
+      );
+      await _scrollToGoldenTarget(tester, find.text('Llaves'));
+      await _selectPreset(tester, 'Llaves');
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySubtype<FilledButton>());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('No se pudo crear el torneo. Intentá de nuevo.'),
+        findsOneWidget,
+      );
+      await expectLater(
+        find.byKey(tournamentGoldenKey),
+        matchesGoldenFile('goldens/create_error_${brightness.name}.png'),
       );
     });
   }
