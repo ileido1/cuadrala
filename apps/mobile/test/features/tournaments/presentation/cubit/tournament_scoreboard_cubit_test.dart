@@ -8,7 +8,8 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_reposi
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_scoreboard_state.dart';
 
-class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockTournamentsRepository extends Mock
+    implements TournamentsRepository {}
 
 void main() {
   group('TournamentScoreboardCubit', () {
@@ -23,8 +24,11 @@ void main() {
     blocTest<TournamentScoreboardCubit, TournamentScoreboardState>(
       'load (vacío) emite loading→empty',
       build: () {
-        when(() => tournamentsRepository.getTournamentScoreboard(tournamentId: tournamentId))
-            .thenAnswer((_) async => const TournamentScoreboardDto(rows: []));
+        when(
+          () => tournamentsRepository.getTournamentScoreboard(
+            tournamentId: tournamentId,
+          ),
+        ).thenAnswer((_) async => const TournamentScoreboardDto(rows: []));
         return TournamentScoreboardCubit(
           tournamentsRepository: tournamentsRepository,
           tournamentId: tournamentId,
@@ -40,8 +44,11 @@ void main() {
     blocTest<TournamentScoreboardCubit, TournamentScoreboardState>(
       'load (ok) emite loading→success',
       build: () {
-        when(() => tournamentsRepository.getTournamentScoreboard(tournamentId: tournamentId))
-            .thenAnswer(
+        when(
+          () => tournamentsRepository.getTournamentScoreboard(
+            tournamentId: tournamentId,
+          ),
+        ).thenAnswer(
           (_) async => const TournamentScoreboardDto(
             rows: [
               TournamentScoreboardRowDto(
@@ -60,16 +67,42 @@ void main() {
       act: (cubit) => cubit.load(),
       expect: () => [
         const TournamentScoreboardLoading(),
-        isA<TournamentScoreboardSuccess>()
-            .having((s) => s.scoreboard.rows.length, 'rows.length', 1),
+        isA<TournamentScoreboardSuccess>().having(
+          (s) => s.scoreboard.rows.length,
+          'rows.length',
+          1,
+        ),
+      ],
+    );
+
+    blocTest<TournamentScoreboardCubit, TournamentScoreboardState>(
+      'load (unexpected error) emits a recoverable error state',
+      build: () {
+        when(
+          () => tournamentsRepository.getTournamentScoreboard(
+            tournamentId: tournamentId,
+          ),
+        ).thenThrow(StateError('decoder failure'));
+        return TournamentScoreboardCubit(
+          tournamentsRepository: tournamentsRepository,
+          tournamentId: tournamentId,
+        );
+      },
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        const TournamentScoreboardLoading(),
+        const TournamentScoreboardError(message: 'No se pudo cargar la tabla.'),
       ],
     );
 
     blocTest<TournamentScoreboardCubit, TournamentScoreboardState>(
       'load (error) emite loading→error',
       build: () {
-        when(() => tournamentsRepository.getTournamentScoreboard(tournamentId: tournamentId))
-            .thenThrow(
+        when(
+          () => tournamentsRepository.getTournamentScoreboard(
+            tournamentId: tournamentId,
+          ),
+        ).thenThrow(
           const AppFailure(code: 'HTTP_500', message: 'Error cargando tabla.'),
         );
         return TournamentScoreboardCubit(
@@ -80,10 +113,12 @@ void main() {
       act: (cubit) => cubit.load(),
       expect: () => [
         const TournamentScoreboardLoading(),
-        isA<TournamentScoreboardError>()
-            .having((s) => s.message, 'message', 'Error cargando tabla.'),
+        isA<TournamentScoreboardError>().having(
+          (s) => s.message,
+          'message',
+          'Error cargando tabla.',
+        ),
       ],
     );
   });
 }
-

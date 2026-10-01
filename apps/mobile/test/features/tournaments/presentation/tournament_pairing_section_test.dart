@@ -78,7 +78,7 @@ void main() {
 
       await tester.tap(find.text('Armar dupla'));
       await tester.pumpAndSettle();
-      expect(find.text('Elegí dos inscriptos sin pareja'), findsOneWidget);
+      expect(find.text('Elegí dos inscritos sin pareja'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('tournament.pairing.select.b')));
       await tester.pump();

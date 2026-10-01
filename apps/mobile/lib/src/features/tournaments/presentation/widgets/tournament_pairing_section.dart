@@ -74,7 +74,7 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Elegí dos inscriptos sin pareja',
+                      'Elegí dos inscritos sin pareja',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -82,7 +82,7 @@ class _TournamentPairingSectionState extends State<TournamentPairingSection> {
                     const SizedBox(height: 16),
                     if (available.isEmpty)
                       Text(
-                        'No hay inscriptos sin pareja.',
+                        'No hay inscritos sin pareja.',
                         style: TextStyle(color: scheme.onSurfaceVariant),
                       )
                     else

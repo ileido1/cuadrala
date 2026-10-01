@@ -1704,7 +1704,56 @@ void main() {
       expect(find.text('vs Marcos S.'), findsOneWidget);
       expect(find.text('Finalizado'), findsOneWidget);
       expect(find.text('6-3'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Cargar'), findsNothing);
     });
+
+    testWidgets(
+      'totals guest scores by registration instead of null user ids',
+      (tester) async {
+        const schedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Semifinal',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'sched-guest-score',
+                  label: 'Invitada A vs Invitado B',
+                  status: '',
+                  matchId: 'match-guest-score',
+                  matchStatus: 'FINISHED',
+                  sides: [
+                    TournamentScheduleMatchSideDto(
+                      sideKey: 'a',
+                      userIds: [null],
+                      registrationIds: ['reg-a'],
+                    ),
+                    TournamentScheduleMatchSideDto(
+                      sideKey: 'b',
+                      userIds: [null],
+                      registrationIds: ['reg-b'],
+                    ),
+                  ],
+                  scores: [
+                    TournamentScheduleMatchScoreDto(
+                      tournamentRegistrationId: 'reg-a',
+                      points: 6,
+                    ),
+                    TournamentScheduleMatchScoreDto(
+                      tournamentRegistrationId: 'reg-b',
+                      points: 3,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        );
+
+        await pumpAndOpenBracketTab(tester, schedule: schedule);
+
+        expect(find.text('6-3'), findsOneWidget);
+      },
+    );
 
     testWidgets('shows a Cargar action for a live match', (tester) async {
       final schedule = TournamentScheduleDto(
@@ -2039,7 +2088,11 @@ void main() {
                 courtName: 'Central',
                 sides: const [
                   TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1']),
-                  TournamentScheduleMatchSideDto(sideKey: 'b', userIds: [null]),
+                  TournamentScheduleMatchSideDto(
+                    sideKey: 'b',
+                    userIds: [null],
+                    registrationIds: ['reg-guest'],
+                  ),
                 ],
               ),
             ],
@@ -2142,6 +2195,7 @@ void main() {
             scores: any(named: 'scores'),
           ),
         ).thenAnswer((_) async {});
+        when(() => scoreboardCubit.load()).thenAnswer((_) async {});
 
         await pumpAndOpenBracketTab(tester, schedule: schedule);
 
@@ -2162,6 +2216,7 @@ void main() {
             ],
           ),
         ).called(1);
+        verify(() => scoreboardCubit.load()).called(1);
       },
     );
   });

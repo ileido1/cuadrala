@@ -81,6 +81,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
                         tournamentId: tournamentId,
                         tournamentsRepository: tournamentsRepository,
                         isSingleElimination: true,
+                        formatPresetName: formatPresetName,
                         venueId: venueId,
                       ),
                     TournamentFormatPresentation.standings =>
@@ -108,6 +109,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
                         tournamentId: tournamentId,
                         tournamentsRepository: tournamentsRepository,
                         isSingleElimination: false,
+                        formatPresetName: formatPresetName,
                         venueId: venueId,
                         showBracketButton: false,
                       ),
@@ -116,6 +118,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
                   tournamentId: tournamentId,
                   tournamentsRepository: tournamentsRepository,
                   isSingleElimination: isSingleElimination,
+                  formatPresetName: formatPresetName,
                   showBracketButton: isSingleElimination,
                 ),
                 TournamentScheduleInitial() ||
@@ -206,7 +209,11 @@ final class _OrganizerStandingsContent extends StatelessWidget {
           style: _sectionStyle(Theme.of(context).colorScheme),
         ),
         const SizedBox(height: 10),
-        _OrganizerScheduleList(schedule: schedule, venueId: venueId),
+        _OrganizerScheduleList(
+          schedule: schedule,
+          venueId: venueId,
+          formatPresetName: formatPresetName,
+        ),
       ],
     );
   }
@@ -464,12 +471,14 @@ final class _OrganizerGeneratedCard extends StatelessWidget {
     required this.tournamentId,
     required this.tournamentsRepository,
     required this.isSingleElimination,
+    required this.formatPresetName,
     required this.showBracketButton,
   });
 
   final String tournamentId;
   final TournamentsRepository tournamentsRepository;
   final bool isSingleElimination;
+  final String? formatPresetName;
   final bool showBracketButton;
 
   @override
@@ -479,6 +488,7 @@ final class _OrganizerGeneratedCard extends StatelessWidget {
       tournamentId: tournamentId,
       tournamentsRepository: tournamentsRepository,
       isSingleElimination: isSingleElimination,
+      formatPresetName: formatPresetName,
       venueId: null,
       showBracketButton: showBracketButton,
       generatedWithoutSchedule: true,
@@ -492,6 +502,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
     required this.tournamentId,
     required this.tournamentsRepository,
     required this.isSingleElimination,
+    required this.formatPresetName,
     required this.venueId,
     this.showBracketButton = true,
     this.generatedWithoutSchedule = false,
@@ -501,6 +512,7 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
   final String tournamentId;
   final TournamentsRepository tournamentsRepository;
   final bool isSingleElimination;
+  final String? formatPresetName;
   final String? venueId;
   final bool showBracketButton;
   final bool generatedWithoutSchedule;
@@ -556,7 +568,11 @@ final class _OrganizerGeneratedSchedule extends StatelessWidget {
             style: _sectionStyle(Theme.of(context).colorScheme),
           ),
           const SizedBox(height: 10),
-          _OrganizerScheduleList(schedule: schedule, venueId: venueId),
+          _OrganizerScheduleList(
+            schedule: schedule,
+            venueId: venueId,
+            formatPresetName: formatPresetName,
+          ),
         ] else ...[
           const SizedBox(height: 14),
           const _InfoBox(
@@ -644,12 +660,17 @@ final class _OrganizerWarningBanner extends StatelessWidget {
 
 /// Renders the organizer's grouped first-round schedule.
 final class _OrganizerScheduleList extends StatelessWidget {
-  const _OrganizerScheduleList({required this.schedule, required this.venueId});
+  const _OrganizerScheduleList({
+    required this.schedule,
+    required this.venueId,
+    required this.formatPresetName,
+  });
 
   static final _timeFormat = DateFormat('dd MMM HH:mm', 'es_ES');
 
   final TournamentScheduleDto schedule;
   final String? venueId;
+  final String? formatPresetName;
 
   @override
   Widget build(BuildContext context) {
@@ -711,6 +732,7 @@ final class _OrganizerScheduleList extends StatelessWidget {
                   match: round.matches[i],
                   timeFormat: _timeFormat,
                   venueId: venueId,
+                  formatPresetName: formatPresetName,
                 ),
                 if (i < round.matches.length - 1)
                   Divider(height: 1, color: scheme.outlineVariant),
@@ -744,12 +766,14 @@ final class _OrganizerMatchRow extends StatefulWidget {
     required this.match,
     required this.timeFormat,
     required this.venueId,
+    required this.formatPresetName,
   });
 
   final String roundName;
   final TournamentScheduleMatchDto match;
   final DateFormat timeFormat;
   final String? venueId;
+  final String? formatPresetName;
 
   @override
   State<_OrganizerMatchRow> createState() => _OrganizerMatchRowState();
@@ -765,6 +789,7 @@ final class _OrganizerMatchRowState extends State<_OrganizerMatchRow> {
     final match = widget.match;
     final timeFormat = widget.timeFormat;
     final venueId = widget.venueId;
+    final formatPresetName = widget.formatPresetName;
     final isRejected = match.decision == 'REJECTED';
     final isLive = match.matchStatus == 'IN_PROGRESS';
     final isDone = match.matchStatus == 'FINISHED' && match.scores.isNotEmpty;
@@ -833,26 +858,34 @@ final class _OrganizerMatchRowState extends State<_OrganizerMatchRow> {
             ),
           ),
           const SizedBox(width: 12),
-          if (isDone)
+          if (isDone && match.scoreLabel != null)
             Text(
-              _scoreLabel(match),
+              match.scoreLabel!,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             )
           else if (isLive)
             FilledButton(
               onPressed: match.matchId == null
                   ? null
-                  : () => showResultEntrySheet(
-                      context,
-                      match: match,
-                      roundName: roundName,
-                      onSubmit: (scores) => context
-                          .read<TournamentScheduleCubit>()
-                          .submitMatchResult(
+                  : () {
+                      final scheduleCubit = context
+                          .read<TournamentScheduleCubit>();
+                      final scoreboardCubit = context
+                          .read<TournamentScoreboardCubit>();
+                      showResultEntrySheet(
+                        context,
+                        match: match,
+                        roundName: roundName,
+                        formatPresetName: formatPresetName,
+                        onSubmit: (scores) async {
+                          await scheduleCubit.submitMatchResult(
                             matchId: match.matchId!,
                             scores: scores,
-                          ),
-                    ),
+                          );
+                          await scoreboardCubit.load();
+                        },
+                      );
+                    },
               style: FilledButton.styleFrom(
                 minimumSize: const Size(0, 34),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -965,24 +998,6 @@ String _rejectedSubtitle(
       : '';
   final who = match.rejectedByName ?? 'Un jugador';
   return '$who no puede$time';
-}
-
-/// Sums each side's recorded points and joins them with "-" (e.g. "6-3"),
-/// mirroring the winner rule (D4/D13): total points per side, not sets.
-String _scoreLabel(TournamentScheduleMatchDto match) {
-  return match.sides
-      .map(
-        (side) => match.scores
-            .where(
-              (score) =>
-                  side.registrationIds.contains(
-                    score.tournamentRegistrationId,
-                  ) ||
-                  side.userIds.contains(score.userId),
-            )
-            .fold<int>(0, (sum, score) => sum + score.points),
-      )
-      .join('-');
 }
 
 final class _OrganizerSuccessBanner extends StatelessWidget {

@@ -82,7 +82,7 @@ final class _RegistrationsTab extends StatelessWidget {
                   icon: AppIcons.lock,
                   title: 'Roster bloqueado',
                   body:
-                      'El torneo está en juego: ya no se confirman, eliminan ni agregan inscriptos.',
+                      'El torneo está en juego: ya no se confirman, eliminan ni agregan inscritos.',
                   tone: TournamentTone.muted,
                 ),
                 const SizedBox(height: 14),

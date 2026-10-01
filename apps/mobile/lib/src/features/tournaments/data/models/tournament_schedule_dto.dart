@@ -5,33 +5,31 @@ final class TournamentScheduleDto extends Equatable {
 
   final List<TournamentScheduleRoundDto> rounds;
 
-  factory TournamentScheduleDto.empty() => const TournamentScheduleDto(rounds: []);
+  factory TournamentScheduleDto.empty() =>
+      const TournamentScheduleDto(rounds: []);
 
   factory TournamentScheduleDto.fromJson(Map<String, Object?> json) {
     final raw = json['rounds'];
     final rounds = raw is List
         ? raw
-            .whereType<Map>()
-            .map((e) => Map<String, Object?>.from(e))
-            .map(TournamentScheduleRoundDto.fromJson)
-            .toList()
+              .whereType<Map>()
+              .map((e) => Map<String, Object?>.from(e))
+              .map(TournamentScheduleRoundDto.fromJson)
+              .toList()
         : <TournamentScheduleRoundDto>[];
     return TournamentScheduleDto(rounds: rounds);
   }
 
   Map<String, Object?> toJson() => {
-        'rounds': rounds.map((r) => r.toJson()).toList(),
-      };
+    'rounds': rounds.map((r) => r.toJson()).toList(),
+  };
 
   @override
   List<Object?> get props => [rounds];
 }
 
 final class TournamentScheduleRoundDto extends Equatable {
-  const TournamentScheduleRoundDto({
-    required this.name,
-    required this.matches,
-  });
+  const TournamentScheduleRoundDto({required this.name, required this.matches});
 
   final String name;
   final List<TournamentScheduleMatchDto> matches;
@@ -40,10 +38,10 @@ final class TournamentScheduleRoundDto extends Equatable {
     final rawMatches = json['matches'];
     final matches = rawMatches is List
         ? rawMatches
-            .whereType<Map>()
-            .map((e) => Map<String, Object?>.from(e))
-            .map(TournamentScheduleMatchDto.fromJson)
-            .toList()
+              .whereType<Map>()
+              .map((e) => Map<String, Object?>.from(e))
+              .map(TournamentScheduleMatchDto.fromJson)
+              .toList()
         : <TournamentScheduleMatchDto>[];
     return TournamentScheduleRoundDto(
       name: (json['name'] ?? '').toString(),
@@ -52,9 +50,9 @@ final class TournamentScheduleRoundDto extends Equatable {
   }
 
   Map<String, Object?> toJson() => {
-        'name': name,
-        'matches': matches.map((m) => m.toJson()).toList(),
-      };
+    'name': name,
+    'matches': matches.map((m) => m.toJson()).toList(),
+  };
 
   @override
   List<Object?> get props => [name, matches];
@@ -122,7 +120,9 @@ final class TournamentScheduleMatchDto extends Equatable {
       matchId: json['matchId'] as String?,
       roundNumber: (json['roundNumber'] as num?)?.toInt(),
       matchNumber: (json['matchNumber'] as num?)?.toInt(),
-      scheduledAt: scheduledAtRaw is String ? DateTime.tryParse(scheduledAtRaw) : null,
+      scheduledAt: scheduledAtRaw is String
+          ? DateTime.tryParse(scheduledAtRaw)
+          : null,
       courtId: json['courtId'] as String?,
       courtName: json['courtName'] as String?,
       matchStatus: json['matchStatus'] as String?,
@@ -130,55 +130,92 @@ final class TournamentScheduleMatchDto extends Equatable {
       rejectedByName: json['rejectedByName'] as String?,
       sides: rawSides is List
           ? rawSides
-              .whereType<Map>()
-              .map((e) => Map<String, Object?>.from(e))
-              .map(TournamentScheduleMatchSideDto.fromJson)
-              .toList()
+                .whereType<Map>()
+                .map((e) => Map<String, Object?>.from(e))
+                .map(TournamentScheduleMatchSideDto.fromJson)
+                .toList()
           : const [],
       scores: rawScores is List
           ? rawScores
-              .whereType<Map>()
-              .map((e) => Map<String, Object?>.from(e))
-              .map(TournamentScheduleMatchScoreDto.fromJson)
-              .toList()
+                .whereType<Map>()
+                .map((e) => Map<String, Object?>.from(e))
+                .map(TournamentScheduleMatchScoreDto.fromJson)
+                .toList()
           : const [],
     );
   }
 
+  int pointsForSide(TournamentScheduleMatchSideDto side) {
+    return scores
+        .where((score) {
+          final registrationId = score.tournamentRegistrationId;
+          if (registrationId != null) {
+            return side.registrationIds.contains(registrationId);
+          }
+          final userId = score.userId;
+          return userId != null && side.userIds.contains(userId);
+        })
+        .fold<int>(0, (total, score) => total + score.points);
+  }
+
+  /// Returns a display score only when every side has complete, identifiable
+  /// score rows. Missing guest identities must not turn into a fabricated 0.
+  String? get scoreLabel {
+    if (sides.isEmpty || sides.any((side) => !_hasCompleteSideScore(side))) {
+      return null;
+    }
+    return sides.map(pointsForSide).join('-');
+  }
+
+  bool _hasCompleteSideScore(TournamentScheduleMatchSideDto side) {
+    if (side.registrationIds.isNotEmpty) {
+      return side.registrationIds.every(
+        (registrationId) => scores.any(
+          (score) => score.tournamentRegistrationId == registrationId,
+        ),
+      );
+    }
+    final userIds = side.userIds.whereType<String>().toList();
+    if (userIds.isEmpty || userIds.length != side.userIds.length) return false;
+    return userIds.every(
+      (userId) => scores.any((score) => score.userId == userId),
+    );
+  }
+
   Map<String, Object?> toJson() => {
-        'id': id,
-        'label': label,
-        'status': status,
-        'matchId': matchId,
-        'roundNumber': roundNumber,
-        'matchNumber': matchNumber,
-        'scheduledAt': scheduledAt?.toIso8601String(),
-        'courtId': courtId,
-        'courtName': courtName,
-        'matchStatus': matchStatus,
-        'decision': decision,
-        'rejectedByName': rejectedByName,
-        'sides': sides.map((s) => s.toJson()).toList(),
-        'scores': scores.map((s) => s.toJson()).toList(),
-      };
+    'id': id,
+    'label': label,
+    'status': status,
+    'matchId': matchId,
+    'roundNumber': roundNumber,
+    'matchNumber': matchNumber,
+    'scheduledAt': scheduledAt?.toIso8601String(),
+    'courtId': courtId,
+    'courtName': courtName,
+    'matchStatus': matchStatus,
+    'decision': decision,
+    'rejectedByName': rejectedByName,
+    'sides': sides.map((s) => s.toJson()).toList(),
+    'scores': scores.map((s) => s.toJson()).toList(),
+  };
 
   @override
   List<Object?> get props => [
-        id,
-        label,
-        status,
-        matchId,
-        roundNumber,
-        matchNumber,
-        scheduledAt,
-        courtId,
-        courtName,
-        matchStatus,
-        decision,
-        rejectedByName,
-        sides,
-        scores,
-      ];
+    id,
+    label,
+    status,
+    matchId,
+    roundNumber,
+    matchNumber,
+    scheduledAt,
+    courtId,
+    courtName,
+    matchStatus,
+    decision,
+    rejectedByName,
+    sides,
+    scores,
+  ];
 }
 
 final class TournamentScheduleMatchSideDto extends Equatable {
@@ -211,10 +248,10 @@ final class TournamentScheduleMatchSideDto extends Equatable {
   }
 
   Map<String, Object?> toJson() => {
-        'sideKey': sideKey,
-        'userIds': userIds,
-        'registrationIds': registrationIds,
-      };
+    'sideKey': sideKey,
+    'userIds': userIds,
+    'registrationIds': registrationIds,
+  };
 
   @override
   List<Object?> get props => [sideKey, userIds, registrationIds];
@@ -241,11 +278,11 @@ final class TournamentScheduleMatchScoreDto extends Equatable {
   }
 
   Map<String, Object?> toJson() => {
-        if (userId != null) 'userId': userId,
-        if (tournamentRegistrationId != null)
-          'tournamentRegistrationId': tournamentRegistrationId,
-        'points': points,
-      };
+    if (userId != null) 'userId': userId,
+    if (tournamentRegistrationId != null)
+      'tournamentRegistrationId': tournamentRegistrationId,
+    'points': points,
+  };
 
   @override
   List<Object?> get props => [userId, tournamentRegistrationId, points];

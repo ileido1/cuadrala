@@ -21,7 +21,7 @@ RDD: disabled/unmanaged, global OFF verified; no native review.
 Delivery: feature-branch-chain, seven work-unit commits; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 7,649 (T1+T2+T3+T4+T5+T6; excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 8,977 (T1–T7; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [ ] T1 Theme tokens and base widgets. Reuse status pill, card, chips, header; semantic theme extension if required. Add Banner/FactRow/CupoBar/viewer badge only where absent. Deterministic Plus Jakarta Sans and golden helper. Acceptance: exact v2 tokens both themes, header trailing content width, >=44 touch targets; base widget/theme tests and golden. Route: delegated.
@@ -30,7 +30,7 @@ Running authored count: 7,649 (T1+T2+T3+T4+T5+T6; excludes generated binary font
 - [ ] T4 Received invitation. Full-screen view using existing pendingInvitationId and real response endpoint; no organizer-only invitation fetch required. Acceptance: player can accept/reject and reload real CONFIRMED result; loading/errors. Route: delegated.
 - [ ] T5 Organizer. Inscritos individual/bulk/paired confirm, removal, locked roster, guest/invite/duplas, schedule generate, separate status/visibility. Acceptance: no mutation actions when locked, no fake roster category, real contracts and toasts. Route: delegated.
 - [ ] T6 Create. Dynamic schemas bool/int/enum/reset, sport/category/gender/date/venue/capacity/price/visibility/publish, date validation and CTA. Acceptance: schema bounds only; nullable optional states are omitted from requests; publishOnCreate local second call cannot duplicate a successful create after publish failure; preserve only real preset defaults/fields and FX. Route: delegated.
-- [ ] T7 Progress and results. Shared table/bracket/matches, guest identities, immutable results and format-aware ties. Fix Dart bracket decoder for existing nullable userId/registrationId payload. Acceptance: no correction, no false metrics or rank rules; zero/live/done goldens. Route: delegated.
+- [ ] T7 Progress and results. Shared table/bracket/matches, guest identities, immutable results and format-aware ties. Fix Dart bracket decoder for existing nullable userId/registrationId payload. Acceptance: no correction, no false metrics or rank rules; refresh schedule+scoreboard after submit; zero/live/done goldens. Route: delegated.
 
 ## Known gaps / decisions
 - Backend ACCEPT -> CONFIRMED differs from prototype PENDING; show real result.
@@ -43,7 +43,7 @@ Running authored count: 7,649 (T1+T2+T3+T4+T5+T6; excludes generated binary font
 
 ## Progress and verification
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
-Next: T7 tournament progress/results. T6 create implementation received. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
+Implementation T1–T7 is present. Formal visual acceptance remains pending: the prototype browser/Tweaks surface was unavailable, T6 has only initial-form dark/light goldens (configured/error goldens remain absent), and these generated golden references prove regression consistency—not parity with JSX. Final build/test verification is recorded under T7. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 
 
 ### T1 evidence
@@ -121,4 +121,20 @@ T5 commit: 3cf5a6e91eb22c09113e7c1bf1408f6b6de463cd (`feat(tournaments): align o
 - Two 402×874 initial-form goldens cover dark/light. Configured-form and error goldens were not added because the nested/lazy scroll capture was unstable; record this as a coverage gap, not completion. No browser/Tweaks comparison available.
 - Route: delegated direct. Rollback: create screen/form/cubits/state tests and initial goldens.
 
-T6 commit: pending.
+T6 commit: 3097ba08cbea30e800f3a74527ae283452966f04 (`feat(tournaments): align create flow with v2`).
+
+### T7 preparation findings
+- Bracket score DTO currently rejects guest `userId: null`; retain `tournamentRegistrationId`. Winner IDs are registration-first, so UI must compare canonical registration identity, not assume user ID.
+- Organizer score aggregation currently lets null user IDs match every guest side, contaminating guest totals; match only concrete identities and prefer registration IDs.
+- Result endpoint/repository already exists. API rejects ties only for `SINGLE_ELIMINATION`; do not claim or simulate `GROUPS_PLUS_KNOCKOUT` knockout tie validation/advancement because those backend paths do not implement it.
+- Current server rank is dense by points only. Extra metrics may only derive from complete, identifiable scored schedule and should be cross-checked against scoreboard; never fabricate zero for missing data or replace server rank with prototype tie-break.
+- Keep finished scores immutable; successful result submission must refresh both schedule and scoreboard. Existing group-to-knockout action remains an explicit real endpoint.
+
+### T7 evidence
+- Bracket DTO accepts real guest result rows with nullable `userId` plus `tournamentRegistrationId`; winner/score rendering matches by registration first and never treats two null users as the same participant. Organizer schedule aggregation also prefers registration identity; incomplete identity/score rows omit the score rather than render fabricated `0` values.
+- Successful result submission reloads the schedule and scoreboard. Finished matches do not expose a correction action. Existing result endpoint only supplies tie validation for `SINGLE_ELIMINATION`; ties are disabled in that format, while round-robin/Americano remain submittable. GPK/unknown formats have no fabricated client tie rule and the remaining backend contract limitation is explicit.
+- Corrected full-suite regressions found during integration: OPEN pill test now checks the tournament-specific theme token; organizer labels and paired roster copy assertions align with rendered casing/spelling; roster copy uses “inscritos” and locked dark/light goldens were regenerated.
+- RED/GREEN observed. Focused tournament progress/result and regression tests passed. Full `flutter test --reporter compact` passed (879 tests); `flutter analyze` clean; `flutter build web --debug` succeeded (35.4s); `git diff --check` clean.
+- Six 402×874 progress snapshots cover zero/live/finished in dark/light. These are local regression references only; browser prototype comparison remains unavailable. Existing T6 configured/error create golden gap remains.
+- No backend edits, new dependencies, or invented endpoints/fields. Route: delegated direct. Rollback: T7 progress/result changes and the integration-only tournament copy/test corrections.
+- Manual prototype/Tweaks comparison and formal pixel-parity acceptance remain pending.

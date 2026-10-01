@@ -10,9 +10,9 @@ class TournamentScoreboardCubit extends Cubit<TournamentScoreboardState> {
   TournamentScoreboardCubit({
     required TournamentsRepository tournamentsRepository,
     required String tournamentId,
-  })  : _tournamentsRepository = tournamentsRepository,
-        _tournamentId = tournamentId,
-        super(const TournamentScoreboardInitial());
+  }) : _tournamentsRepository = tournamentsRepository,
+       _tournamentId = tournamentId,
+       super(const TournamentScoreboardInitial());
 
   final TournamentsRepository _tournamentsRepository;
   final String _tournamentId;
@@ -30,10 +30,10 @@ class TournamentScoreboardCubit extends Cubit<TournamentScoreboardState> {
       emit(TournamentScoreboardSuccess(scoreboard: scoreboard));
     } on AppFailure catch (e) {
       emit(TournamentScoreboardError(message: e.message));
-    } catch (e) {
-      //? Re-throw programming errors (null pointer, assertions) para logs/debugging
-      rethrow;
+    } catch (_) {
+      emit(
+        const TournamentScoreboardError(message: 'No se pudo cargar la tabla.'),
+      );
     }
   }
 }
-

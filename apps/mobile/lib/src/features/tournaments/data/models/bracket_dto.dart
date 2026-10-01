@@ -15,6 +15,8 @@ final class BracketPlayerDto {
   final String displayName;
   final int seedPosition;
 
+  String? get participantId => registrationId ?? userId;
+
   static BracketPlayerDto? fromJson(Map<String, Object?>? json) {
     if (json == null) return null;
     return BracketPlayerDto(
@@ -35,14 +37,22 @@ final class BracketPlayerDto {
 /// `playerAScore`/`playerBScore` — esas claves nunca existieron en la
 /// respuesta real.
 final class BracketScoreEntryDto {
-  const BracketScoreEntryDto({required this.userId, required this.points});
+  const BracketScoreEntryDto({
+    this.userId,
+    this.tournamentRegistrationId,
+    required this.points,
+  });
 
-  final String userId;
+  final String? userId;
+  final String? tournamentRegistrationId;
   final int points;
+
+  String? get participantId => tournamentRegistrationId ?? userId;
 
   static BracketScoreEntryDto fromJson(Map<String, Object?> json) {
     return BracketScoreEntryDto(
-      userId: json['userId'] as String,
+      userId: json['userId'] as String?,
+      tournamentRegistrationId: json['tournamentRegistrationId'] as String?,
       points: (json['points'] as num).toInt(),
     );
   }

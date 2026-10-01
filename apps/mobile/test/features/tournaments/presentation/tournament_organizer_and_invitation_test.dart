@@ -264,8 +264,8 @@ void main() {
         find.byKey(const Key('tournament.confirmPendingButton')),
         findsOneWidget,
       );
-      expect(find.text('PENDIENTES'), findsOneWidget);
-      expect(find.text('CONFIRMADOS'), findsOneWidget);
+      expect(find.text('Pendientes'), findsOneWidget);
+      expect(find.text('Confirmados'), findsOneWidget);
     },
   );
 
