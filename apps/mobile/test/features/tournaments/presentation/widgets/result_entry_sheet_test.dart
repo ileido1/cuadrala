@@ -51,7 +51,35 @@ void main() {
     expect(find.byType(CountStepper), findsNWidgets(2));
   });
 
-  testWidgets('blocks tied score only for single elimination', (tester) async {
+  testWidgets('blocks tied scores for known and unknown formats', (
+    tester,
+  ) async {
+    for (final format in [
+      'SINGLE_ELIMINATION',
+      'ROUND_ROBIN',
+      'AMERICANO',
+      'GROUPS_PLUS_KNOCKOUT',
+      'UNKNOWN',
+      null,
+    ]) {
+      await pumpSheet(
+        tester,
+        match: singlesMatch,
+        formatPresetName: format,
+        onSubmit: (_) async {},
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('tournament.resultEntrySheet.submit')),
+            )
+            .onPressed,
+        isNull,
+        reason: 'equal scores must be blocked for $format',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+
     var submitCount = 0;
     await pumpSheet(
       tester,
@@ -86,44 +114,77 @@ void main() {
     expect(submitCount, 1);
   });
 
-  testWidgets(
-    'allows tied score for round robin and does not claim GPK tie support',
-    (tester) async {
-      for (final format in ['ROUND_ROBIN', 'AMERICANO']) {
-        await pumpSheet(
-          tester,
-          match: singlesMatch,
-          formatPresetName: format,
-          onSubmit: (_) async {},
-        );
-        expect(
-          tester
-              .widget<FilledButton>(
-                find.byKey(const Key('tournament.resultEntrySheet.submit')),
-              )
-              .onPressed,
-          isNotNull,
-        );
-        await tester.pumpWidget(const SizedBox.shrink());
-      }
-
+  testWidgets('shows generic guidance instead of format-specific tie rules', (
+    tester,
+  ) async {
+    for (final format in ['SINGLE_ELIMINATION', 'AMERICANO', 'UNKNOWN', null]) {
       await pumpSheet(
         tester,
         match: singlesMatch,
-        formatPresetName: 'GROUPS_PLUS_KNOCKOUT',
+        formatPresetName: format,
         onSubmit: (_) async {},
       );
-      expect(find.textContaining('empate'), findsNothing);
       expect(
-        tester
-            .widget<FilledButton>(
-              find.byKey(const Key('tournament.resultEntrySheet.submit')),
-            )
-            .onPressed,
-        isNotNull,
+        find.text('El resultado debe definir un ganador.'),
+        findsOneWidget,
       );
-    },
-  );
+      expect(find.textContaining('En americano'), findsNothing);
+      expect(find.textContaining('eliminación'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
+  testWidgets('allows submission once side totals are unequal', (tester) async {
+    await pumpSheet(
+      tester,
+      match: singlesMatch,
+      formatPresetName: 'ROUND_ROBIN',
+      onSubmit: (_) async {},
+    );
+    final plusButtons = find.descendant(
+      of: find.byType(CountStepper).first,
+      matching: find.byType(GestureDetector),
+    );
+    await tester.tap(plusButtons.last);
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('tournament.resultEntrySheet.submit')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('blocks equal doubles side totals regardless of format', (
+    tester,
+  ) async {
+    const doublesMatch = TournamentScheduleMatchDto(
+      id: 'sched-doubles',
+      label: 'Pareja A vs Pareja B',
+      status: '',
+      matchId: 'match-doubles',
+      sides: [
+        TournamentScheduleMatchSideDto(sideKey: 'a', userIds: ['u1', 'u2']),
+        TournamentScheduleMatchSideDto(sideKey: 'b', userIds: ['u3', 'u4']),
+      ],
+    );
+    await pumpSheet(
+      tester,
+      match: doublesMatch,
+      formatPresetName: 'AMERICANO',
+      onSubmit: (_) async {},
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('tournament.resultEntrySheet.submit')),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
 
   testWidgets('submits one score per side reflecting the stepper values', (
     tester,
@@ -190,6 +251,13 @@ void main() {
       onSubmit: (scores) async => submitted = scores,
     );
 
+    final plusButtons = find.descendant(
+      of: find.byType(CountStepper).first,
+      matching: find.byType(GestureDetector),
+    );
+    await tester.tap(plusButtons.last);
+    await tester.pump();
+
     await tester.tap(
       find.byKey(const Key('tournament.resultEntrySheet.submit')),
     );
@@ -198,7 +266,7 @@ void main() {
     expect(submitted, const [
       TournamentScheduleMatchScoreDto(
         tournamentRegistrationId: 'reg-user',
-        points: 0,
+        points: 1,
       ),
       TournamentScheduleMatchScoreDto(
         tournamentRegistrationId: 'reg-guest',
@@ -209,26 +277,31 @@ void main() {
     expect(submitted!.last.userId, isNull);
   });
 
-  testWidgets('shows the backend tie rejection without local rule copy', (
-    tester,
-  ) async {
+  testWidgets('shows backend errors and keeps the sheet open', (tester) async {
     await pumpSheet(
       tester,
       match: singlesMatch,
       onSubmit: (_) async {
         throw const AppFailure(
-          code: 'EMPATE_NO_PERMITIDO',
-          message: 'El resultado no permite un empate.',
+          code: 'RESULTADO_INVALIDO',
+          message: 'No se pudo guardar el resultado.',
         );
       },
     );
+
+    final plusButtons = find.descendant(
+      of: find.byType(CountStepper).first,
+      matching: find.byType(GestureDetector),
+    );
+    await tester.tap(plusButtons.last);
+    await tester.pump();
 
     await tester.tap(
       find.byKey(const Key('tournament.resultEntrySheet.submit')),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('El resultado no permite un empate.'), findsOneWidget);
+    expect(find.text('No se pudo guardar el resultado.'), findsOneWidget);
   });
 
   testWidgets(
@@ -244,6 +317,13 @@ void main() {
           );
         },
       );
+
+      final plusButtons = find.descendant(
+        of: find.byType(CountStepper).first,
+        matching: find.byType(GestureDetector),
+      );
+      await tester.tap(plusButtons.last);
+      await tester.pump();
 
       await tester.tap(
         find.byKey(const Key('tournament.resultEntrySheet.submit')),

@@ -39,23 +39,14 @@ class _ResultEntrySheetState extends State<ResultEntrySheet> {
   bool _submitting = false;
   String? _error;
 
-  bool get _singleEliminationTie {
-    if (widget.formatPresetName != 'SINGLE_ELIMINATION' ||
-        widget.match.sides.length != 2) {
+  bool get _tiedSideTotals {
+    if (widget.match.sides.length != 2) {
       return false;
     }
     final first = _pointsBySideKey[widget.match.sides[0].sideKey] ?? 0;
     final second = _pointsBySideKey[widget.match.sides[1].sideKey] ?? 0;
     return first == second;
   }
-
-  String? get _formatGuidance => switch (widget.formatPresetName) {
-    'SINGLE_ELIMINATION' =>
-      'En eliminación no puede quedar empate: tiene que pasar uno.',
-    'AMERICANO' =>
-      'Los games van a la tabla de cada jugador. En americano no hay eliminados: el empate es válido.',
-    _ => null,
-  };
 
   /// "{name} vs {name}" splits cleanly onto one label per side for the
   /// common singles case; any mismatch (doubles, missing label) falls back
@@ -179,10 +170,10 @@ class _ResultEntrySheetState extends State<ResultEntrySheet> {
               ],
             ),
           ],
-          if (_formatGuidance case final guidance?) ...[
+          if (_tiedSideTotals) ...[
             const SizedBox(height: 12),
             Text(
-              guidance,
+              'El resultado debe definir un ganador.',
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
@@ -193,7 +184,7 @@ class _ResultEntrySheetState extends State<ResultEntrySheet> {
           const SizedBox(height: 18),
           FilledButton.icon(
             key: const Key('tournament.resultEntrySheet.submit'),
-            onPressed: _submitting || _singleEliminationTie ? null : _submitSV,
+            onPressed: _submitting || _tiedSideTotals ? null : _submitSV,
             icon: _submitting
                 ? const SizedBox(
                     width: 16,

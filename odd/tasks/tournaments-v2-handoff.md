@@ -24,6 +24,7 @@ Rollback: each work-unit commit isolates its behavior/tests; revert in reverse d
 Running authored count: 9,088 (T1–T7 + T6b and final evidence; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
+- [x] T7a Reject tied match results in every format. Keep the existing score DTO and endpoint, but prevent equal side totals from submission regardless of preset. Acceptance: equal scores blocked for singles/doubles and known/unknown formats; unequal scores submit; generic validation copy. Route: delegated direct (UI + regression tests). TDD ON; `flutter test` from `apps/mobile`; RED then GREEN observed. No backend change.
 - [ ] T1 Theme tokens and base widgets. Reuse status pill, card, chips, header; semantic theme extension if required. Add Banner/FactRow/CupoBar/viewer badge only where absent. Deterministic Plus Jakarta Sans and golden helper. Acceptance: exact v2 tokens both themes, header trailing content width, >=44 touch targets; base widget/theme tests and golden. Route: delegated.
 - [ ] T2 Explore / My tournaments. Wire six real filters/pagination, viewer badges/invitation, distinguish empty/load/error. Acceptance: public non-draft explore and correct organizer pending counts. Route: delegated.
 - [ ] T3 Player detail. Info/footer states, conditional Calendar/Table, own matches schedule response without score, no public roster. Acceptance: tab/state matrix, missing-time/opponent/court handling, eligibility not fabricated. Route: delegated.
@@ -150,3 +151,9 @@ T6b commit: b90e0c94256bd8ba679773cea1e2bbbf72782cbc (`test(tournaments): cover 
 - Manual prototype/Tweaks comparison and formal pixel-parity acceptance remain pending.
 
 T7 commit: ba24cd73e539512bb12e1751ff69739317fc836f (`feat(tournaments): add guest-safe progress and results`).
+
+### T7a evidence
+- User clarified racket match outcomes cannot be ties. Result entry now blocks equal side totals for every format (including absent/unknown preset), and permits submit once totals differ. Replaced the incorrect Americano tie-valid copy with generic “El resultado debe definir un ganador.” Covers singles, doubles, guest result submission, and API failure handling.
+- Existing API rejects ties only in SINGLE_ELIMINATION. Per the current scope boundary, no backend or DTO changed; direct API calls for other formats remain a contract gap.
+- RED observed before UI change; GREEN after. Parent reran focused `result_entry_sheet_test.dart`: 9 tests passed; `flutter analyze` for widget/test clean; `git diff --check` clean. No full suite/build rerun for this narrow task.
+- Browser/Tweaks comparison remains unavailable. Route: delegated. Commit identity to be recorded in follow-up evidence update.
