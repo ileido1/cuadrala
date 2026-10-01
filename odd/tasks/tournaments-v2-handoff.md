@@ -21,7 +21,7 @@ RDD: disabled/unmanaged, global OFF verified; no native review.
 Delivery: feature-branch-chain, seven work-unit commits; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 9,077 (T1–T7 + T6b; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 9,083 (T1–T7 + T6b and final evidence; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [ ] T1 Theme tokens and base widgets. Reuse status pill, card, chips, header; semantic theme extension if required. Add Banner/FactRow/CupoBar/viewer badge only where absent. Deterministic Plus Jakarta Sans and golden helper. Acceptance: exact v2 tokens both themes, header trailing content width, >=44 touch targets; base widget/theme tests and golden. Route: delegated.
@@ -119,7 +119,7 @@ T5 commit: 3cf5a6e91eb22c09113e7c1bf1408f6b6de463cd (`feat(tournaments): align o
 - Create now supports unset gender, optional end date, no capacity, no fee distinct from free (0), public/private visibility, and input schema validation. Only API-declared schema bounds/defaults/fields are used; preset description removed. Existing FX conversion remains authoritative; time anchor is injectable for deterministic tests.
 - Preset requests ignore stale responses after sport changes. Successful create ID is retained when publish-on-create fails; retry calls PATCH only, preventing duplicate POST.
 - RED/GREEN observed, including two stale Boolean-field widget assertions updated to the v2 accessible Sí/No control. Parent focused create screen/form/cubit/presets suite passed 44 tests; `flutter analyze` clean; `flutter build web --debug` succeeded (35.1s); `git diff --check` clean.
-- Two 402×874 initial-form goldens cover dark/light. Configured-form and error goldens were not added because the nested/lazy scroll capture was unstable; record this as a coverage gap, not completion. No browser/Tweaks comparison available.
+- Two 402×874 initial-form goldens cover dark/light. At the T6 commit, configured/error goldens were absent because nested/lazy scroll capture was unstable; T6b later resolved that coverage gap. No browser/Tweaks comparison available.
 - Route: delegated direct. Rollback: create screen/form/cubits/state tests and initial goldens.
 
 T6 commit: 3097ba08cbea30e800f3a74527ae283452966f04 (`feat(tournaments): align create flow with v2`).
@@ -129,6 +129,8 @@ T6 commit: 3097ba08cbea30e800f3a74527ae283452966f04 (`feat(tournaments): align c
 - Scroll position is stabilized by scrolling to the target fields at the actual 402×874 test viewport; production widgets/layout were not changed.
 - Writer observed RED (missing goldens); parent reran `flutter test test/features/tournaments/presentation/create_tournament_screen_test.dart --reporter compact`: all 28 tests passed. Focused `flutter analyze test/features/tournaments/presentation/create_tournament_screen_test.dart` and `git diff --check` clean.
 - Snapshots are local regression references, not visual parity proof. Browser/Tweaks remains unavailable. Route: delegated. Rollback: create-screen golden tests and their four generated fixtures only.
+
+T6b commit: b90e0c94256bd8ba679773cea1e2bbbf72782cbc (`test(tournaments): cover configured create states`).
 
 ### T7 preparation findings
 - Bracket score DTO currently rejects guest `userId: null`; retain `tournamentRegistrationId`. Winner IDs are registration-first, so UI must compare canonical registration identity, not assume user ID.
