@@ -21,7 +21,7 @@ RDD: disabled/unmanaged, global OFF verified; no native review.
 Delivery: feature-branch-chain, seven work-unit commits; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 8,977 (T1–T7; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 8,981 (T1–T7 plus final commit evidence; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [ ] T1 Theme tokens and base widgets. Reuse status pill, card, chips, header; semantic theme extension if required. Add Banner/FactRow/CupoBar/viewer badge only where absent. Deterministic Plus Jakarta Sans and golden helper. Acceptance: exact v2 tokens both themes, header trailing content width, >=44 touch targets; base widget/theme tests and golden. Route: delegated.
@@ -138,3 +138,5 @@ T6 commit: 3097ba08cbea30e800f3a74527ae283452966f04 (`feat(tournaments): align c
 - Six 402×874 progress snapshots cover zero/live/finished in dark/light. These are local regression references only; browser prototype comparison remains unavailable. Existing T6 configured/error create golden gap remains.
 - No backend edits, new dependencies, or invented endpoints/fields. Route: delegated direct. Rollback: T7 progress/result changes and the integration-only tournament copy/test corrections.
 - Manual prototype/Tweaks comparison and formal pixel-parity acceptance remain pending.
+
+T7 commit: ba24cd73e539512bb12e1751ff69739317fc836f (`feat(tournaments): add guest-safe progress and results`).
