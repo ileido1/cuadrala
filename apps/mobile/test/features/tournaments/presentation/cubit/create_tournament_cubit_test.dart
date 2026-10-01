@@ -28,6 +28,73 @@ void main() {
     });
 
     blocTest<CreateTournamentCubit, CreateTournamentState>(
+      'preserves the created id and retries publish without creating again',
+      build: () {
+        when(
+          () => tournamentsRepository.createTournament(
+            request: any(named: 'request'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const CreateTournamentResponse(tournamentId: 'created-id'),
+        );
+        var attempts = 0;
+        when(
+          () => tournamentsRepository.updateTournamentStatus(
+            tournamentId: 'created-id',
+            status: 'OPEN',
+          ),
+        ).thenAnswer((_) async {
+          attempts++;
+          if (attempts == 1) {
+            throw const AppFailure(
+              code: 'HTTP_500',
+              message: 'No se pudo publicar.',
+            );
+          }
+        });
+        return CreateTournamentCubit(
+          tournamentsRepository: tournamentsRepository,
+        );
+      },
+      act: (cubit) async {
+        await cubit.submit(
+          const CreateTournamentRequest(
+            sportId: 'padel',
+            categoryId: 'cat-1',
+            name: 'Torneo Apertura',
+            formatPresetId: 'preset-1',
+            publishOnCreate: true,
+          ),
+        );
+        await cubit.retryPublish();
+      },
+      expect: () => [
+        const CreateTournamentSubmitting(),
+        isA<CreateTournamentPublishError>().having(
+          (s) => s.tournamentId,
+          'created id',
+          'created-id',
+        ),
+        const CreateTournamentSubmitting(),
+        const CreateTournamentSuccess(tournamentId: 'created-id'),
+      ],
+      verify: (_) {
+        verify(
+          () => tournamentsRepository.createTournament(
+            request: any(named: 'request'),
+          ),
+        ).called(1);
+        verify(
+          () => tournamentsRepository.updateTournamentStatus(
+            tournamentId: 'created-id',
+            status: 'OPEN',
+          ),
+        ).called(2);
+      },
+    );
+
+    blocTest<CreateTournamentCubit, CreateTournamentState>(
       'submit (inválido) emite error de validación sin llamar repo',
       build: () =>
           CreateTournamentCubit(tournamentsRepository: tournamentsRepository),

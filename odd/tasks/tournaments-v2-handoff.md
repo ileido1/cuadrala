@@ -21,7 +21,7 @@ RDD: disabled/unmanaged, global OFF verified; no native review.
 Delivery: feature-branch-chain, seven work-unit commits; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 6,187 (T1+T2+T3+T4+T5; excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 7,649 (T1+T2+T3+T4+T5+T6; excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [ ] T1 Theme tokens and base widgets. Reuse status pill, card, chips, header; semantic theme extension if required. Add Banner/FactRow/CupoBar/viewer badge only where absent. Deterministic Plus Jakarta Sans and golden helper. Acceptance: exact v2 tokens both themes, header trailing content width, >=44 touch targets; base widget/theme tests and golden. Route: delegated.
@@ -29,7 +29,7 @@ Running authored count: 6,187 (T1+T2+T3+T4+T5; excludes generated binary fonts/g
 - [ ] T3 Player detail. Info/footer states, conditional Calendar/Table, own matches schedule response without score, no public roster. Acceptance: tab/state matrix, missing-time/opponent/court handling, eligibility not fabricated. Route: delegated.
 - [ ] T4 Received invitation. Full-screen view using existing pendingInvitationId and real response endpoint; no organizer-only invitation fetch required. Acceptance: player can accept/reject and reload real CONFIRMED result; loading/errors. Route: delegated.
 - [ ] T5 Organizer. Inscritos individual/bulk/paired confirm, removal, locked roster, guest/invite/duplas, schedule generate, separate status/visibility. Acceptance: no mutation actions when locked, no fake roster category, real contracts and toasts. Route: delegated.
-- [ ] T6 Create. Dynamic schemas bool/int/enum/reset, sport/category/gender/date/venue/capacity/price/visibility/publish, date validation and CTA. Acceptance: schema bounds only; publishOnCreate local second call; real FX, no fake description. Route: delegated.
+- [ ] T6 Create. Dynamic schemas bool/int/enum/reset, sport/category/gender/date/venue/capacity/price/visibility/publish, date validation and CTA. Acceptance: schema bounds only; nullable optional states are omitted from requests; publishOnCreate local second call cannot duplicate a successful create after publish failure; preserve only real preset defaults/fields and FX. Route: delegated.
 - [ ] T7 Progress and results. Shared table/bracket/matches, guest identities, immutable results and format-aware ties. Fix Dart bracket decoder for existing nullable userId/registrationId payload. Acceptance: no correction, no false metrics or rank rules; zero/live/done goldens. Route: delegated.
 
 ## Known gaps / decisions
@@ -43,7 +43,7 @@ Running authored count: 6,187 (T1+T2+T3+T4+T5; excludes generated binary fonts/g
 
 ## Progress and verification
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
-Next: T6 dynamic tournament creation. T5 organizer implementation received. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
+Next: T7 tournament progress/results. T6 create implementation received. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 
 
 ### T1 evidence
@@ -105,4 +105,20 @@ T4 commit: 5e6dbf7055260a78504800d9562e59f6aac62d7c (`feat(tournaments): impleme
 - Browser/Tweaks visual comparison unavailable; goldens are regression baselines only. Full organizer state matrix remains pending.
 - Route: delegated direct. Rollback: organizer detail tabs/pairing/guest sheet/publish cubit plus related tests and goldens.
 
-T5 commit: pending.
+T5 commit: 3cf5a6e91eb22c09113e7c1bf1408f6b6de463cd (`feat(tournaments): align organizer controls with v2`).
+
+### T6 preparation findings
+- Existing create path uses catalog/venue repositories, `TournamentPresetsCubit` → existing presets endpoint/DTO, `CreateTournamentCubit` → POST create then optional PATCH OPEN; no new endpoint needed.
+- Preset DTO has `parametersSchema`/`defaultParameters` but no description. Only boolean/int/enum are supported; use server bounds and defaults, never hardcoded fallback bounds or mocked preset copy.
+- Gender/capacity/price/endsAt can be omitted; represent unset gender, no capacity and no price distinctly (price 0 is explicitly free). Existing request supports visibility. Venue DTO has address/image, not zone.
+- Preserve created tournament ID if POST succeeds and PATCH OPEN fails; retrying must not repeat POST and create a duplicate. Protect preset loads from stale sport-switch responses.
+- Validation requirements include date order, schema type/bounds/enum membership, and prototype name minimum. Existing FX source remains authoritative; no Bs without a rate. Freeze current-time input in deterministic tests.
+
+### T6 evidence
+- Create now supports unset gender, optional end date, no capacity, no fee distinct from free (0), public/private visibility, and input schema validation. Only API-declared schema bounds/defaults/fields are used; preset description removed. Existing FX conversion remains authoritative; time anchor is injectable for deterministic tests.
+- Preset requests ignore stale responses after sport changes. Successful create ID is retained when publish-on-create fails; retry calls PATCH only, preventing duplicate POST.
+- RED/GREEN observed, including two stale Boolean-field widget assertions updated to the v2 accessible Sí/No control. Parent focused create screen/form/cubit/presets suite passed 44 tests; `flutter analyze` clean; `flutter build web --debug` succeeded (35.1s); `git diff --check` clean.
+- Two 402×874 initial-form goldens cover dark/light. Configured-form and error goldens were not added because the nested/lazy scroll capture was unstable; record this as a coverage gap, not completion. No browser/Tweaks comparison available.
+- Route: delegated direct. Rollback: create screen/form/cubits/state tests and initial goldens.
+
+T6 commit: pending.

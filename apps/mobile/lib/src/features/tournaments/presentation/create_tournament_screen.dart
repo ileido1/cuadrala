@@ -17,6 +17,7 @@ import '../../venues/data/models/venue_dto.dart';
 import '../../venues/data/venues_repository.dart';
 import '../../venues/presentation/widgets/venue_explorer_sheet.dart';
 import '../data/models/create_tournament_request.dart';
+import '../data/models/format_parameter_field_def.dart';
 import '../data/models/tournament_preset_dto.dart';
 import 'cubit/create_tournament_cubit.dart';
 import 'cubit/create_tournament_state.dart';
@@ -29,25 +30,9 @@ import '../../../shared/widgets/pill_toggle.dart';
 import '../../../shared/widgets/selectable_chip.dart';
 import '../../../shared/widgets/segmented_control.dart';
 
-/// Descripción amigable de un preset de formato (para el usuario final).
-String _presetDescription(String code) {
-  switch (code) {
-    case 'ROUND_ROBIN':
-      return 'Todos contra todos';
-    case 'AMERICANO':
-      return 'Rotación por rondas en varias canchas';
-    case 'SINGLE_ELIMINATION':
-      return 'Eliminación directa por llaves';
-    case 'GROUPS_PLUS_KNOCKOUT':
-      return 'Fase de grupos y luego eliminación';
-    default:
-      return 'Formato de torneo';
-  }
-}
-
-/// Values the parameters form starts with: the preset default when the API
-/// declares one, otherwise the field fallback. Seeding them keeps what the user
-/// sees equal to what gets validated and sent.
+/// Values the parameters form starts with. Use explicit API defaults first,
+/// otherwise the schema's supported control default (boolean false, integer
+/// minimum or 1, enum unset), matching the create-form contract.
 Map<String, Object?> _initialParameterValues(TournamentPresetDto? preset) {
   final defaults = preset?.defaultParameters;
   final presetDefaults = defaults is Map ? defaults : const {};
@@ -58,7 +43,10 @@ Map<String, Object?> _initialParameterValues(TournamentPresetDto? preset) {
 }
 
 final class CreateTournamentScreen extends StatefulWidget {
-  const CreateTournamentScreen({super.key});
+  const CreateTournamentScreen({super.key, this.now});
+
+  @visibleForTesting
+  final DateTime? now;
 
   @override
   State<CreateTournamentScreen> createState() => _CreateTournamentScreenState();
@@ -66,7 +54,7 @@ final class CreateTournamentScreen extends StatefulWidget {
 
 class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   final _nameController = TextEditingController();
-  final _registrationPriceController = TextEditingController(text: '15');
+  final _registrationPriceController = TextEditingController();
 
   late final CreateTournamentCubit _createTournamentCubit;
   late final TournamentPresetsCubit _tournamentPresetsCubit;
@@ -81,10 +69,14 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   TournamentPresetDto? _selectedPreset;
   Map<String, Object?> _formatParameterValues = {};
   bool _publishOnCreate = false;
-  int _maxSlots = 16;
-  int _registrationPrice = 15;
+  String _visibility = 'PUBLIC';
+  int? _maxSlots = 16;
+  bool _hasCapacity = true;
+  bool _hasEndDate = false;
+  bool _chargeRegistration = true;
   bool _pairedRegistration = false;
-  String _gender = 'MALE';
+  String? _gender;
+  late final DateTime _now;
   late final List<DateStripDay> _days;
   late String _selectedDateKey;
   String? _selectedEndDateKey;
@@ -145,17 +137,20 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
           ?.name ??
       'categoría pendiente';
 
-  String get _genderLabel => switch (_gender) {
+  String? get _genderLabel => switch (_gender) {
     'FEMALE' => 'Femenino',
     'MIXED' => 'Mixto',
-    _ => 'Masculino',
+    'MALE' => 'Masculino',
+    _ => null,
   };
 
   @override
   void initState() {
     super.initState();
-    _days = buildDateStripDays(21);
-    _selectedDateKey = _days.first.key;
+    _now = widget.now ?? DateTime.now();
+    _registrationPriceController.text = '15';
+    _days = buildDateStripDays(28, from: _now);
+    _selectedDateKey = _days[5].key;
     _createTournamentCubit = getIt<CreateTournamentCubit>();
     _tournamentPresetsCubit = getIt<TournamentPresetsCubit>();
     _loadSports();
@@ -217,12 +212,13 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   }
 
   String? get _registrationPriceBs {
-    if (_registrationPrice <= 0 || _exchangeRates.isEmpty) return null;
+    final price = _parsedRegistrationPrice;
+    if (price == null || price <= 0 || _exchangeRates.isEmpty) return null;
     return secondaryBsLabelSV(
-      primaryMinor: _registrationPrice * 100,
+      primaryMinor: price * 100,
       primaryCurrency: CurrencyCode.usd,
       rates: _exchangeRates,
-      effectiveDateIso: localCalendarDateIsoSV(DateTime.now()),
+      effectiveDateIso: localCalendarDateIsoSV(_now),
     );
   }
 
@@ -249,8 +245,11 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   ({CreateTournamentRequest? request, String? error}) _buildCreateRequest() {
     //? 1. Validar nombre
     final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      return (request: null, error: 'Ingresá un nombre para el torneo.');
+    if (name.length < 3) {
+      return (
+        request: null,
+        error: 'El nombre debe tener al menos 3 caracteres.',
+      );
     }
 
     //? 2. Validar deporte, categoría, preset
@@ -267,25 +266,23 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     if (preset == null || preset.id.isEmpty) {
       return (request: null, error: 'Selecciona un formato de torneo.');
     }
-    final endDateKey = _selectedEndDateKey ?? _selectedDateKey;
-    if (endDateKey.compareTo(_selectedDateKey) < 0) {
+    final endDateKey = _hasEndDate ? _selectedEndDateKey : null;
+    if (endDateKey != null && endDateKey.compareTo(_selectedDateKey) < 0) {
       return (
         request: null,
         error: 'La fecha de fin no puede ser anterior al inicio.',
       );
     }
 
-    //? 3. Validar campos requeridos del schema
-    if (preset.parametersSchema != null) {
-      for (final field in preset.parametersSchema!) {
-        if (field.required == true &&
-            (_formatParameterValues[field.key] == null)) {
-          return (
-            request: null,
-            error: 'El campo "${field.label}" es requerido.',
-          );
-        }
-      }
+    final schemaError = _formatSchemaError(preset);
+    if (schemaError != null) {
+      return (request: null, error: schemaError);
+    }
+    final priceText = _registrationPriceController.text.trim();
+    final price = _parsedRegistrationPrice;
+    if (_chargeRegistration &&
+        (priceText.isEmpty || price == null || price < 0)) {
+      return (request: null, error: 'Ingresá un precio válido o dejalo vacío.');
     }
 
     //? 4. Retornar request válido (parámetros ya listos en _formatParameterValues)
@@ -296,19 +293,53 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         name: name,
         formatPresetId: preset.id,
         formatParameters: _formatParameterValues.isNotEmpty
-            ? _formatParameterValues
+            ? {
+                for (final field in preset.parametersSchema ?? const [])
+                  if (_formatParameterValues.containsKey(field.key))
+                    field.key: _formatParameterValues[field.key],
+              }
             : null,
         startsAt: DateTime.parse(_selectedDateKey),
-        endsAt: DateTime.parse(endDateKey),
+        endsAt: endDateKey == null ? null : DateTime.parse(endDateKey),
         venueId: _selectedVenueId,
         gender: _gender,
         pairedRegistration: _pairedRegistration,
-        inscriptionPrice: _parsedRegistrationPrice,
+        inscriptionPrice: _chargeRegistration ? price : null,
         maxSlots: _maxSlots,
         publishOnCreate: _publishOnCreate,
+        visibility: _visibility,
       ),
       error: null,
     );
+  }
+
+  String? _formatSchemaError(TournamentPresetDto preset) {
+    final fields = preset.parametersSchema ?? const [];
+    for (final field in fields) {
+      final value = _formatParameterValues[field.key];
+      if (value == null) {
+        if (field.required == true) {
+          return 'El campo "${field.label}" es requerido.';
+        }
+        continue;
+      }
+      if (field is BooleanFieldDef && value is! bool) {
+        return 'El campo "${field.label}" debe ser sí o no.';
+      }
+      if (field is IntFieldDef) {
+        if (value is! int ||
+            (field.min != null && value < field.min!) ||
+            (field.max != null && value > field.max!)) {
+          return 'Revisá el valor de "${field.label}".';
+        }
+      }
+      if (field is EnumFieldDef &&
+          (value is! String ||
+              !field.options.any((option) => option.value == value))) {
+        return 'Elegí una opción válida para "${field.label}".';
+      }
+    }
+    return null;
   }
 
   void _onSubmit() {
@@ -329,17 +360,22 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         _selectedPreset == null) {
       return false;
     }
-
-    //? Validar campos requeridos del schema
-    final preset = _selectedPreset;
-    if (preset?.parametersSchema != null) {
-      for (final field in preset!.parametersSchema!) {
-        if (field.required == true &&
-            _formatParameterValues[field.key] == null) {
-          return false;
-        }
-      }
+    if (_nameController.text.trim().length < 3 ||
+        _formatSchemaError(_selectedPreset!) != null) {
+      return false;
     }
+    if (_hasEndDate &&
+        _selectedEndDateKey != null &&
+        _selectedEndDateKey!.compareTo(_selectedDateKey) < 0) {
+      return false;
+    }
+    final priceText = _registrationPriceController.text.trim();
+    if (_chargeRegistration &&
+        priceText.isNotEmpty &&
+        (_parsedRegistrationPrice == null || _parsedRegistrationPrice! < 0)) {
+      return false;
+    }
+    if (_chargeRegistration && priceText.isEmpty) return false;
 
     return true;
   }
@@ -361,12 +397,14 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         child: Scaffold(
           key: const Key('tournaments.create'),
           appBar: AppBar(
-            title: const Column(
+            title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Crear torneo'),
+                const Text('Crear torneo'),
                 Text(
-                  'Lo creás en borrador: nadie lo ve todavía',
+                  _publishOnCreate
+                      ? 'Se crea y se abre la inscripción'
+                      : 'Se crea en borrador: nadie lo ve todavía',
                   style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
                 ),
               ],
@@ -433,16 +471,47 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
-              DateRangeStrip(
+              DateStrip(
+                key: const Key('create.tournament.startDateStrip'),
                 days: _days,
-                startValue: _selectedDateKey,
-                endValue: _selectedEndDateKey,
+                value: _selectedDateKey,
                 horizontalPadding: 0,
-                onChanged: (selection) => setState(() {
-                  _selectedDateKey = selection.startValue;
-                  _selectedEndDateKey = selection.endValue;
+                onChanged: (value) => setState(() => _selectedDateKey = value),
+              ),
+              SwitchListTile.adaptive(
+                key: const Key('create.tournament.includeEndDate'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Dura más de un día'),
+                subtitle: Text(
+                  _hasEndDate ? 'Elegí cuándo termina' : 'Termina el mismo día',
+                ),
+                value: _hasEndDate,
+                onChanged: (value) => setState(() {
+                  _hasEndDate = value;
+                  _selectedEndDateKey = value
+                      ? (_selectedEndDateKey ?? _days[4].key)
+                      : null;
                 }),
               ),
+              if (_hasEndDate) ...[
+                DateStrip(
+                  key: const Key('create.tournament.endDateStrip'),
+                  days: _days,
+                  value: _selectedEndDateKey,
+                  horizontalPadding: 0,
+                  onChanged: (value) =>
+                      setState(() => _selectedEndDateKey = value),
+                ),
+                if (_selectedEndDateKey != null &&
+                    _selectedEndDateKey!.compareTo(_selectedDateKey) < 0)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'El fin no puede ser antes del inicio.',
+                      key: Key('create.tournament.endDateError'),
+                    ),
+                  ),
+              ],
               const SizedBox(height: 14),
               Text(
                 'Deporte',
@@ -510,15 +579,16 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 ),
               const SizedBox(height: 14),
               Text(
-                'Género',
+                'Género (opcional)',
                 style: Theme.of(
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
-              SegmentedControl<String>(
+              SegmentedControl<String?>(
                 value: _gender,
-                onChanged: (value) => setState(() => _gender = value),
+                onChanged: (value) =>
+                    setState(() => _gender = _gender == value ? null : value),
                 options: const [
                   SegmentedOption(value: 'MALE', label: 'Masculino'),
                   SegmentedOption(value: 'FEMALE', label: 'Femenino'),
@@ -533,26 +603,47 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Cupos',
+                          'Limitar cupos',
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Tamaño del cuadro',
+                          _hasCapacity
+                              ? 'Hasta ${_maxSlots ?? 16} inscripciones'
+                              : 'Sin tope',
                           style: TextStyle(color: scheme.onSurfaceVariant),
                         ),
                       ],
                     ),
                   ),
-                  CountStepper(
-                    value: _maxSlots,
-                    min: 4,
-                    max: 32,
-                    onChanged: (value) => setState(() => _maxSlots = value),
+                  Switch.adaptive(
+                    key: const Key('create.tournament.hasCapacity'),
+                    value: _hasCapacity,
+                    onChanged: (value) => setState(() {
+                      _hasCapacity = value;
+                      _maxSlots = value ? (_maxSlots ?? 16) : null;
+                    }),
                   ),
                 ],
               ),
+              if (_hasCapacity) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: CountStepper(
+                    value: _maxSlots ?? 16,
+                    min: 2,
+                    max: 64,
+                    onChanged: (value) => setState(() => _maxSlots = value),
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  'Sin cupo máximo',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ],
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -561,16 +652,23 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Inscripción',
+                          'Precio de inscripción',
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 4),
                         DualPrice(
-                          primaryLabel: _registrationPrice == 0
+                          primaryLabel: !_chargeRegistration
+                              ? 'Sin precio'
+                              : _parsedRegistrationPrice == null
+                              ? 'Sin definir'
+                              : _parsedRegistrationPrice == 0
                               ? 'Gratis'
-                              : 'US\$$_registrationPrice',
-                          secondaryLabel: _registrationPrice == 0
+                              : 'US\$$_parsedRegistrationPrice',
+                          secondaryLabel:
+                              !_chargeRegistration ||
+                                  _parsedRegistrationPrice == null ||
+                                  _parsedRegistrationPrice == 0
                               ? null
                               : _registrationPriceBs,
                           alignEnd: false,
@@ -578,7 +676,18 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       ],
                     ),
                   ),
-                  SizedBox(
+                  Switch.adaptive(
+                    key: const Key('create.tournament.chargeRegistration'),
+                    value: _chargeRegistration,
+                    onChanged: (value) =>
+                        setState(() => _chargeRegistration = value),
+                  ),
+                ],
+              ),
+              if (_chargeRegistration)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
                     width: 128,
                     child: TextField(
                       key: const Key('create.tournament.inscriptionPrice'),
@@ -591,11 +700,25 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                         prefixText: 'US\$ ',
                         hintText: '0',
                       ),
-                      onChanged: (value) => setState(() {
-                        _registrationPrice = int.tryParse(value) ?? 0;
-                      }),
+                      onChanged: (_) => setState(() {}),
                     ),
                   ),
+                ),
+              const SizedBox(height: 14),
+              Text(
+                'Visibilidad y estado',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              SegmentedControl<String>(
+                key: const Key('create.tournament.visibility'),
+                value: _visibility,
+                onChanged: (value) => setState(() => _visibility = value),
+                options: const [
+                  SegmentedOption(value: 'PUBLIC', label: 'Público'),
+                  SegmentedOption(value: 'PRIVATE', label: 'Sólo invitados'),
                 ],
               ),
               const SizedBox(height: 14),
@@ -701,17 +824,6 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             ],
                           ),
                         ),
-                        if (_selectedPreset case final preset?)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              _presetDescription(preset.code),
-                              style: TextStyle(
-                                color: scheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
                         //? Los parámetros los define el schema del preset.
                         if (_selectedPreset?.parametersSchema?.isNotEmpty ??
                             false) ...[
@@ -753,8 +865,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             const SizedBox(height: 2),
                             Text(
                               _publishOnCreate
-                                  ? 'Aparece en el listado y se abre la inscripción'
-                                  : 'Queda en borrador: cargás gente vos y publicás después',
+                                  ? 'Queda Abierta: los jugadores se pueden anotar'
+                                  : 'Queda en Borrador: la abrís después',
                               style: TextStyle(color: scheme.onSurfaceVariant),
                             ),
                           ],
@@ -775,7 +887,10 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
               BlocBuilder<CreateTournamentCubit, CreateTournamentState>(
                 builder: (context, state) {
                   final isSubmitting = state is CreateTournamentSubmitting;
-                  final ready = _canSubmit && !isSubmitting;
+                  final publishNeedsRetry =
+                      state is CreateTournamentPublishError;
+                  final ready =
+                      _canSubmit && !isSubmitting && !publishNeedsRetry;
                   return Container(
                     decoration: BoxDecoration(
                       color: scheme.surfaceContainerLow,
@@ -795,7 +910,13 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  '$_selectedVenueName · $_selectedCategoryName $_genderLabel · $_maxSlots cupos',
+                                  [
+                                    '${_sports.firstWhere(
+                                      (sport) => sport.id == _selectedSportId,
+                                      orElse: () => const SportDto(id: '', code: '', name: ''),
+                                    ).name} $_selectedCategoryName${_genderLabel == null ? '' : ' $_genderLabel'}',
+                                    _selectedPreset?.name ?? 'sin formato',
+                                  ].join(' · '),
                                   style: TextStyle(
                                     color: scheme.onSurfaceVariant,
                                     fontSize: 12.5,
@@ -804,9 +925,13 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                                 ),
                               ),
                               Text(
-                                _registrationPrice == 0
+                                !_chargeRegistration
+                                    ? 'Sin precio'
+                                    : _parsedRegistrationPrice == null
+                                    ? 'Sin definir'
+                                    : _parsedRegistrationPrice == 0
                                     ? 'Gratis'
-                                    : 'US\$$_registrationPrice',
+                                    : 'US\$$_parsedRegistrationPrice',
                                 style: TextStyle(
                                   color: scheme.onSurface,
                                   fontWeight: FontWeight.w800,
@@ -830,25 +955,50 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             label: Text(
                               isSubmitting
                                   ? 'Creando...'
-                                  : !_canSubmit &&
-                                        _nameController.text.trim().isEmpty
+                                  : _nameController.text.trim().length < 3
                                   ? 'Ponele nombre al torneo'
+                                  : _selectedPreset == null
+                                  ? 'Elegí un formato'
+                                  : _formatSchemaError(_selectedPreset!) != null
+                                  ? 'Completá el formato'
+                                  : _hasEndDate &&
+                                        _selectedEndDateKey != null &&
+                                        _selectedEndDateKey!.compareTo(
+                                              _selectedDateKey,
+                                            ) <
+                                            0
+                                  ? 'Revisá las fechas'
                                   : _publishOnCreate
-                                  ? 'Crear y publicar'
+                                  ? 'Crear y abrir inscripción'
                                   : 'Crear borrador',
                             ),
                           ),
-                          if (state is CreateTournamentError)
+                          if (state is CreateTournamentError ||
+                              state is CreateTournamentPublishError)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
-                                state.message,
+                                state is CreateTournamentError
+                                    ? state.message
+                                    : (state as CreateTournamentPublishError)
+                                          .message,
                                 style: TextStyle(
                                   color: scheme.error,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
+                          if (publishNeedsRetry) ...[
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              key: const Key('create.tournament.retryPublish'),
+                              onPressed: () => context
+                                  .read<CreateTournamentCubit>()
+                                  .retryPublish(),
+                              icon: const Icon(AppIcons.refresh),
+                              label: const Text('Reintentar publicación'),
+                            ),
+                          ],
                         ],
                       ),
                     ),

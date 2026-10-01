@@ -24,10 +24,13 @@ import 'package:cuadrala_mobile/src/shared/widgets/dual_price.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/pill_toggle.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/selectable_chip.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
+import '../goldens/tournament_golden.dart';
 
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
 
-class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockTournamentsRepository extends Mock
+    implements TournamentsRepository {}
+
 class _MockVenuesRepository extends Mock implements VenuesRepository {}
 
 const _sports = [
@@ -55,8 +58,20 @@ const _categories = [
 ];
 
 const _venues = [
-  VenueDto(id: 'venue-1', name: 'Club Norte', address: 'Av. Norte 123', latitude: null, longitude: null),
-  VenueDto(id: 'venue-2', name: 'Pádel Centro', address: 'Calle Centro 456', latitude: null, longitude: null),
+  VenueDto(
+    id: 'venue-1',
+    name: 'Club Norte',
+    address: 'Av. Norte 123',
+    latitude: null,
+    longitude: null,
+  ),
+  VenueDto(
+    id: 'venue-2',
+    name: 'Pádel Centro',
+    address: 'Calle Centro 456',
+    latitude: null,
+    longitude: null,
+  ),
 ];
 
 const _presetWithSchema = TournamentPresetDto(
@@ -92,8 +107,18 @@ const _presetWithDefaults = TournamentPresetDto(
   schemaVersion: 1,
   defaultParameters: {'rounds': 3},
   parametersSchema: [
-    IntFieldDef(key: 'rounds', label: 'Rondas', required: true, min: 1, max: 50),
-    BooleanFieldDef(key: 'thirdPlaceMatch', label: 'Tercer lugar', required: true),
+    IntFieldDef(
+      key: 'rounds',
+      label: 'Rondas',
+      required: true,
+      min: 1,
+      max: 50,
+    ),
+    BooleanFieldDef(
+      key: 'thirdPlaceMatch',
+      label: 'Tercer lugar',
+      required: true,
+    ),
   ],
 );
 
@@ -141,12 +166,17 @@ Future<void> _pumpScreen(WidgetTester tester) async {
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  await tester.pumpWidget(const MaterialApp(home: CreateTournamentScreen()));
+  await tester.pumpWidget(
+    MaterialApp(home: CreateTournamentScreen(now: DateTime(2026, 9, 1))),
+  );
   await tester.pumpAndSettle();
 }
 
 Future<void> _enterName(WidgetTester tester) async {
-  await tester.enterText(find.byKey(const Key('create.tournament.name')), 'Torneo de Otoño');
+  await tester.enterText(
+    find.byKey(const Key('create.tournament.name')),
+    'Torneo de Otoño',
+  );
   await tester.pumpAndSettle();
 }
 
@@ -181,9 +211,13 @@ void main() {
     venuesRepository = _MockVenuesRepository();
 
     when(() => catalogRepository.listSports()).thenAnswer((_) async => _sports);
-    when(() => catalogRepository.listCategories()).thenAnswer((_) async => _categories);
     when(
-      () => tournamentsRepository.getPresetsBySportId(sportId: any(named: 'sportId')),
+      () => catalogRepository.listCategories(),
+    ).thenAnswer((_) async => _categories);
+    when(
+      () => tournamentsRepository.getPresetsBySportId(
+        sportId: any(named: 'sportId'),
+      ),
     ).thenAnswer(
       (_) async => [
         _presetWithSchema,
@@ -195,14 +229,39 @@ void main() {
     //? Empty id makes the cubit emit an error, so the screen never navigates
     //? (there is no GoRouter in these tests).
     when(
-      () => tournamentsRepository.createTournament(request: any(named: 'request')),
+      () => tournamentsRepository.createTournament(
+        request: any(named: 'request'),
+      ),
     ).thenAnswer((_) async => const CreateTournamentResponse(tournamentId: ''));
     when(() => venuesRepository.listVenues()).thenAnswer((_) async => _venues);
 
-    await _setupGetIt(catalogRepository, tournamentsRepository, venuesRepository);
+    await _setupGetIt(
+      catalogRepository,
+      tournamentsRepository,
+      venuesRepository,
+    );
   });
 
   tearDown(() async => getIt.reset());
+
+  setUpAll(loadTournamentGoldenFonts);
+
+  for (final brightness in Brightness.values) {
+    testWidgets('create screen should match initial ${brightness.name}', (
+      tester,
+    ) async {
+      await pumpTournamentGolden(
+        tester,
+        brightness: brightness,
+        child: CreateTournamentScreen(now: DateTime(2026, 9, 1)),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byKey(tournamentGoldenKey),
+        matchesGoldenFile('goldens/create_initial_${brightness.name}.png'),
+      );
+    });
+  }
 
   group('format parameters', () {
     testWidgets(
@@ -213,7 +272,7 @@ void main() {
         expect(find.text('Grupos + eliminación'), findsOneWidget);
         await _selectPreset(tester, 'Grupos + eliminación');
 
-        expect(find.text('Fase de grupos y luego eliminación'), findsOneWidget);
+        expect(find.text('Fase de grupos y luego eliminación'), findsNothing);
         expect(
           tester
               .widget<SelectableChip>(
@@ -229,17 +288,18 @@ void main() {
       },
     );
 
-    testWidgets('should render schema fields when the preset has parametersSchema', (
-      tester,
-    ) async {
-      await _pumpScreen(tester);
+    testWidgets(
+      'should render schema fields when the preset has parametersSchema',
+      (tester) async {
+        await _pumpScreen(tester);
 
-      await _selectPreset(tester, 'Liga');
+        await _selectPreset(tester, 'Liga');
 
-      expect(find.byType(DynamicFormatParametersForm), findsOneWidget);
-      expect(_inForm(find.text('Modalidad')), findsOneWidget);
-      expect(_inForm(find.text('Rondas')), findsOneWidget);
-    });
+        expect(find.byType(DynamicFormatParametersForm), findsOneWidget);
+        expect(_inForm(find.text('Modalidad')), findsOneWidget);
+        expect(_inForm(find.text('Rondas')), findsOneWidget);
+      },
+    );
 
     testWidgets('should not render the form when the preset has no schema', (
       tester,
@@ -253,16 +313,17 @@ void main() {
   });
 
   group('submit button', () {
-    testWidgets('should be disabled while a required schema field has no value', (
-      tester,
-    ) async {
-      await _pumpScreen(tester);
-      await _enterName(tester);
+    testWidgets(
+      'should be disabled while a required schema field has no value',
+      (tester) async {
+        await _pumpScreen(tester);
+        await _enterName(tester);
 
-      await _selectPreset(tester, 'Liga');
+        await _selectPreset(tester, 'Liga');
 
-      expect(_submitButton(tester).onPressed, isNull);
-    });
+        expect(_submitButton(tester).onPressed, isNull);
+      },
+    );
 
     testWidgets('should be enabled once the required schema field is set', (
       tester,
@@ -279,30 +340,31 @@ void main() {
   });
 
   group('submit request', () {
-    testWidgets('should send formatParameters with the values set in the form', (
-      tester,
-    ) async {
-      await _pumpScreen(tester);
-      await _enterName(tester);
-      await _selectPreset(tester, 'Liga');
-      await tester.tap(find.text('Dobles'));
-      await tester.pumpAndSettle();
-      await tester.tap(_inForm(find.byIcon(AppIcons.add)));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'should send formatParameters with the values set in the form',
+      (tester) async {
+        await _pumpScreen(tester);
+        await _enterName(tester);
+        await _selectPreset(tester, 'Liga');
+        await tester.tap(find.text('Dobles'));
+        await tester.pumpAndSettle();
+        await tester.tap(_inForm(find.byIcon(AppIcons.add)));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.bySubtype<FilledButton>());
-      await tester.pumpAndSettle();
+        await tester.tap(find.bySubtype<FilledButton>());
+        await tester.pumpAndSettle();
 
-      final request =
-          verify(
-                () => tournamentsRepository.createTournament(
-                  request: captureAny(named: 'request'),
-                ),
-              ).captured.single
-              as CreateTournamentRequest;
-      expect(request.formatPresetId, 'preset-rr');
-      expect(request.formatParameters, {'modality': 'DOUBLES', 'rounds': 2});
-    });
+        final request =
+            verify(
+                  () => tournamentsRepository.createTournament(
+                    request: captureAny(named: 'request'),
+                  ),
+                ).captured.single
+                as CreateTournamentRequest;
+        expect(request.formatPresetId, 'preset-rr');
+        expect(request.formatParameters, {'modality': 'DOUBLES', 'rounds': 2});
+      },
+    );
 
     testWidgets('should send null formatParameters when nothing was set', (
       tester,
@@ -324,37 +386,263 @@ void main() {
       expect(request.formatPresetId, 'preset-se');
       expect(request.formatParameters, isNull);
     });
+
+    testWidgets('should reset parameters when a preset is reselected', (
+      tester,
+    ) async {
+      await _pumpScreen(tester);
+      await _selectPreset(tester, 'Liga');
+      await tester.tap(find.text('Dobles'));
+      await tester.tap(_inForm(find.byIcon(AppIcons.add)));
+      await tester.pumpAndSettle();
+      expect(_inForm(find.text('2')), findsOneWidget);
+
+      await _selectPreset(tester, 'Llaves');
+      await _selectPreset(tester, 'Liga');
+
+      expect(
+        tester
+            .widget<SegmentedControl<String>>(
+              _inForm(find.byType(SegmentedControl<String>)),
+            )
+            .value,
+        isNull,
+      );
+      expect(_inForm(find.text('2')), findsNothing);
+      expect(_inForm(find.text('1')), findsOneWidget);
+    });
+
+    testWidgets('should clamp integer parameters to schema maximum', (
+      tester,
+    ) async {
+      await _pumpScreen(tester);
+      await _selectPreset(tester, 'Liga');
+      for (var i = 0; i < 8; i++) {
+        await tester.tap(_inForm(find.byIcon(AppIcons.add)));
+        await tester.pumpAndSettle();
+      }
+      expect(_inForm(find.text('5')), findsOneWidget);
+    });
   });
 
   group('default values', () {
-    testWidgets('should display the preset default instead of the field minimum', (
-      tester,
-    ) async {
-      await _pumpScreen(tester);
+    testWidgets(
+      'should display the preset default instead of the field minimum',
+      (tester) async {
+        await _pumpScreen(tester);
 
-      await _selectPreset(tester, 'Americano');
+        await _selectPreset(tester, 'Americano');
 
-      expect(_inForm(find.text('3')), findsOneWidget);
-    });
+        expect(_inForm(find.text('3')), findsOneWidget);
+      },
+    );
 
-    testWidgets('should enable submit when required fields are untouched but have defaults', (
-      tester,
-    ) async {
+    testWidgets(
+      'should seed boolean schema fields to false when the preset omits defaults',
+      (tester) async {
+        await _pumpScreen(tester);
+        await _enterName(tester);
+
+        await _selectPreset(tester, 'Americano');
+
+        expect(_submitButton(tester).onPressed, isNotNull);
+      },
+    );
+
+    testWidgets(
+      'should send the displayed defaults when fields are untouched',
+      (tester) async {
+        await _pumpScreen(tester);
+        await _enterName(tester);
+        await _selectPreset(tester, 'Americano');
+        await tester.pumpAndSettle();
+        expect(_submitButton(tester).onPressed, isNotNull);
+
+        await tester.tap(find.bySubtype<FilledButton>());
+        await tester.pumpAndSettle();
+
+        final request =
+            verify(
+                  () => tournamentsRepository.createTournament(
+                    request: captureAny(named: 'request'),
+                  ),
+                ).captured.single
+                as CreateTournamentRequest;
+        expect(request.formatParameters, {
+          'rounds': 3,
+          'thirdPlaceMatch': false,
+        });
+      },
+    );
+  });
+
+  testWidgets(
+    'should clear the selected preset and parameter values when sport changes',
+    (tester) async {
       await _pumpScreen(tester);
       await _enterName(tester);
-
-      await _selectPreset(tester, 'Americano');
-
+      await _selectPreset(tester, 'Liga');
+      await tester.tap(find.text('Dobles'));
+      await tester.pumpAndSettle();
       expect(_submitButton(tester).onPressed, isNotNull);
-    });
 
-    testWidgets('should send the displayed defaults when fields are untouched', (
+      await tester.tap(find.widgetWithText(SelectableChip, 'Tenis'));
+      await tester.pumpAndSettle();
+
+      //? Preset cleared: no form, submit disabled.
+      expect(find.byType(DynamicFormatParametersForm), findsNothing);
+      expect(_submitButton(tester).onPressed, isNull);
+
+      //? Re-selecting the same preset shows no previous value: the enum chip is
+      //? unselected and the required field blocks submit again.
+      await _selectPreset(tester, 'Liga');
+      expect(
+        tester
+            .widget<SegmentedControl<String>>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is SegmentedControl<String> &&
+                    widget.options.any((option) => option.label == 'Dobles'),
+              ),
+            )
+            .value,
+        isNull,
+      );
+      expect(_submitButton(tester).onPressed, isNull);
+    },
+  );
+
+  group('create handoff fields', () {
+    testWidgets(
+      'should use shared sport selectors and preserve the handoff footer',
+      (tester) async {
+        await _pumpScreen(tester);
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is SelectableChip &&
+                (widget.label == 'Pádel' || widget.label == 'Tenis'),
+          ),
+          findsNWidgets(2),
+        );
+        expect(find.byType(RadioListTile), findsNothing);
+        await tester.tap(find.widgetWithText(SelectableChip, 'Tenis'));
+        await _selectVenue(tester, 'Pádel Centro');
+
+        expect(find.text('Tenis Tenis Libre · sin formato'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(SafeArea),
+            matching: find.text(r'US$15'),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('should render DateStrip and a sport-filtered venue input', (
       tester,
     ) async {
       await _pumpScreen(tester);
-      await _enterName(tester);
-      await _selectPreset(tester, 'Americano');
 
+      expect(find.byType(DateStrip), findsOneWidget);
+      expect(find.byKey(const Key('create.tournament.venue')), findsOneWidget);
+      expect(
+        find.text(
+          'La sede se asigna después de crear el torneo. El API todavía no expone este campo.',
+        ),
+        findsNothing,
+      );
+
+      final start = tester.widget<DateStrip>(find.byType(DateStrip).first);
+      expect(start.days.first.date, DateTime(2026, 9, 1));
+      expect(start.days.length, 28);
+      await tester.tap(
+        find.byKey(const Key('create.tournament.includeEndDate')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('create.tournament.endDateError')),
+        findsOneWidget,
+      );
+      final endStrip = tester.widget<DateStrip>(
+        find.byKey(const Key('create.tournament.endDateStrip')),
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('create.tournament.endDateStrip')),
+          matching: find.text('${endStrip.days[6].date.day}'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('create.tournament.endDateError')),
+        findsNothing,
+      );
+
+      await _selectVenue(tester, 'Pádel Centro');
+      expect(find.text('Pádel Centro'), findsOneWidget);
+      await _enterName(tester);
+      await _selectPreset(tester, 'Llaves');
+      await tester.tap(find.bySubtype<FilledButton>());
+      await tester.pumpAndSettle();
+      final request =
+          verify(
+                () => tournamentsRepository.createTournament(
+                  request: captureAny(named: 'request'),
+                ),
+              ).captured.single
+              as CreateTournamentRequest;
+      expect(request.startsAt, DateTime(2026, 9, 6));
+      expect(request.endsAt, DateTime(2026, 9, 7));
+    });
+
+    testWidgets(
+      'should leave gender unset until selected and send the selected API value',
+      (tester) async {
+        await _pumpScreen(tester);
+        expect(
+          tester
+              .widget<SegmentedControl<String?>>(
+                find.byWidgetPredicate(
+                  (widget) =>
+                      widget is SegmentedControl<String?> &&
+                      widget.options.any(
+                        (option) => option.label == 'Masculino',
+                      ),
+                ),
+              )
+              .value,
+          isNull,
+        );
+
+        await tester.tap(find.text('Femenino'));
+        await _selectVenue(tester, 'Pádel Centro');
+        await _enterName(tester);
+        await _selectPreset(tester, 'Llaves');
+        await tester.tap(find.bySubtype<FilledButton>());
+        await tester.pumpAndSettle();
+
+        final request =
+            verify(
+                  () => tournamentsRepository.createTournament(
+                    request: captureAny(named: 'request'),
+                  ),
+                ).captured.single
+                as CreateTournamentRequest;
+        expect(request.toJson().containsKey('gender'), isTrue);
+        expect(request.toJson()['gender'], 'FEMALE');
+        expect(request.toJson()['venueId'], 'venue-2');
+        expect(request.toJson()['startsAt'], endsWith('Z'));
+      },
+    );
+
+    testWidgets('should map Mixto to MIXED when submitted', (tester) async {
+      await _pumpScreen(tester);
+      await tester.tap(find.text('Mixto'));
+      await _enterName(tester);
+      await _selectPreset(tester, 'Llaves');
       await tester.tap(find.bySubtype<FilledButton>());
       await tester.pumpAndSettle();
 
@@ -365,153 +653,166 @@ void main() {
                 ),
               ).captured.single
               as CreateTournamentRequest;
-      expect(request.formatParameters, {'rounds': 3, 'thirdPlaceMatch': false});
-    });
-  });
-
-  testWidgets('should clear the selected preset and parameter values when sport changes', (
-    tester,
-  ) async {
-    await _pumpScreen(tester);
-    await _enterName(tester);
-    await _selectPreset(tester, 'Liga');
-    await tester.tap(find.text('Dobles'));
-    await tester.pumpAndSettle();
-    expect(_submitButton(tester).onPressed, isNotNull);
-
-    await tester.tap(find.widgetWithText(SelectableChip, 'Tenis'));
-    await tester.pumpAndSettle();
-
-    //? Preset cleared: no form, submit disabled.
-    expect(find.byType(DynamicFormatParametersForm), findsNothing);
-    expect(_submitButton(tester).onPressed, isNull);
-
-    //? Re-selecting the same preset shows no previous value: the enum chip is
-    //? unselected and the required field blocks submit again.
-    await _selectPreset(tester, 'Liga');
-    expect(tester.widget<SegmentedControl<String>>(find.byWidgetPredicate((widget) => widget is SegmentedControl<String> && widget.options.any((option) => option.label == 'Dobles'))).value, isNull);
-    expect(_submitButton(tester).onPressed, isNull);
-  });
-
-  group('create handoff fields', () {
-    testWidgets('should use shared sport selectors and preserve the handoff footer', (tester) async {
-      await _pumpScreen(tester);
-
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SelectableChip &&
-              (widget.label == 'Pádel' || widget.label == 'Tenis'),
-        ),
-        findsNWidgets(2),
-      );
-      expect(find.byType(RadioListTile), findsNothing);
-      await tester.tap(find.widgetWithText(SelectableChip, 'Tenis'));
-      await _selectVenue(tester, 'Pádel Centro');
-
-      expect(find.text('Pádel Centro · Tenis Libre Masculino · 16 cupos'), findsOneWidget);
-      expect(find.descendant(of: find.byType(SafeArea), matching: find.text(r'US$15')), findsOneWidget);
-    });
-
-    testWidgets('should render DateStrip and a sport-filtered venue input', (tester) async {
-      await _pumpScreen(tester);
-
-      expect(find.byType(DateRangeStrip), findsOneWidget);
-      expect(find.byKey(const Key('create.tournament.venue')), findsOneWidget);
-      expect(find.text('La sede se asigna después de crear el torneo. El API todavía no expone este campo.'), findsNothing);
-
-      final rangeStrip = tester.widget<DateRangeStrip>(find.byType(DateRangeStrip));
-      await tester.tap(find.descendant(
-        of: find.byType(DateRangeStrip),
-        matching: find.text('${rangeStrip.days[1].date.day}'),
-      ));
-      await tester.pumpAndSettle();
-      final firstSelection = tester.widget<DateRangeStrip>(find.byType(DateRangeStrip));
-      expect(firstSelection.startValue, rangeStrip.days.first.key);
-      expect(firstSelection.endValue, rangeStrip.days[1].key);
-
-      await _selectVenue(tester, 'Pádel Centro');
-      expect(find.text('Pádel Centro'), findsOneWidget);
-    });
-
-    testWidgets('should default gender to Masculino and send the selected API value', (tester) async {
-      await _pumpScreen(tester);
-      expect(tester.widget<SegmentedControl<String>>(find.byWidgetPredicate((widget) => widget is SegmentedControl<String> && widget.options.any((option) => option.label == 'Masculino'))).value, 'MALE');
-
-      await tester.tap(find.text('Femenino'));
-      await _selectVenue(tester, 'Pádel Centro');
-      await _enterName(tester);
-      await _selectPreset(tester, 'Llaves');
-      await tester.tap(find.bySubtype<FilledButton>());
-      await tester.pumpAndSettle();
-
-      final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
-      expect(request.toJson()['gender'], 'FEMALE');
-      expect(request.toJson()['venueId'], 'venue-2');
-      expect(request.toJson()['startsAt'], endsWith('Z'));
-    });
-
-    testWidgets('should map Mixto to MIXED when submitted', (tester) async {
-      await _pumpScreen(tester);
-      await tester.tap(find.text('Mixto'));
-      await _enterName(tester);
-      await _selectPreset(tester, 'Llaves');
-      await tester.tap(find.bySubtype<FilledButton>());
-      await tester.pumpAndSettle();
-
-      final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
       expect(request.toJson()['gender'], 'MIXED');
     });
 
-    testWidgets('should send the selected singles or doubles registration mode', (tester) async {
+    testWidgets(
+      'should send the selected singles or doubles registration mode',
+      (tester) async {
+        await _pumpScreen(tester);
+        await tester.tap(find.text('Duplas'));
+        await _enterName(tester);
+        await _selectPreset(tester, 'Llaves');
+        await tester.tap(find.bySubtype<FilledButton>());
+        await tester.pumpAndSettle();
+
+        final request =
+            verify(
+                  () => tournamentsRepository.createTournament(
+                    request: captureAny(named: 'request'),
+                  ),
+                ).captured.single
+                as CreateTournamentRequest;
+        expect(request.toJson()['pairedRegistration'], isTrue);
+      },
+    );
+
+    testWidgets(
+      'should omit unset gender, capacity and price and send private visibility',
+      (tester) async {
+        await _pumpScreen(tester);
+        await _enterName(tester);
+        await _selectPreset(tester, 'Llaves');
+        await tester.tap(
+          find.byKey(const Key('create.tournament.hasCapacity')),
+        );
+        await tester.tap(
+          find.byKey(const Key('create.tournament.chargeRegistration')),
+        );
+        await tester.tap(find.text('Masculino'));
+        await tester.tap(find.text('Masculino'));
+        await tester.tap(find.text('Sólo invitados'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySubtype<FilledButton>());
+        await tester.pumpAndSettle();
+
+        final request =
+            verify(
+                  () => tournamentsRepository.createTournament(
+                    request: captureAny(named: 'request'),
+                  ),
+                ).captured.single
+                as CreateTournamentRequest;
+        expect(request.toJson().containsKey('gender'), isFalse);
+        expect(request.toJson().containsKey('maxSlots'), isFalse);
+        expect(request.toJson().containsKey('inscriptionPrice'), isFalse);
+        expect(request.visibility, 'PRIVATE');
+        expect(request.endsAt, isNull);
+      },
+    );
+
+    testWidgets('should preserve zero as an explicitly free price', (
+      tester,
+    ) async {
       await _pumpScreen(tester);
-      await tester.tap(find.text('Duplas'));
       await _enterName(tester);
       await _selectPreset(tester, 'Llaves');
+      await tester.enterText(
+        find.byKey(const Key('create.tournament.inscriptionPrice')),
+        '0',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Gratis'), findsNWidgets(2));
       await tester.tap(find.bySubtype<FilledButton>());
       await tester.pumpAndSettle();
 
-      final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
-      expect(request.toJson()['pairedRegistration'], isTrue);
+      final request =
+          verify(
+                () => tournamentsRepository.createTournament(
+                  request: captureAny(named: 'request'),
+                ),
+              ).captured.single
+              as CreateTournamentRequest;
+      expect(request.toJson()['inscriptionPrice'], 0);
     });
 
+    testWidgets(
+      'should render interactive cupos and inscription input with dual price',
+      (tester) async {
+        await _pumpScreen(tester);
 
-    testWidgets('should render interactive cupos and inscription input with dual price', (tester) async {
-      await _pumpScreen(tester);
+        expect(find.byType(CountStepper), findsOneWidget);
+        expect(
+          tester.widget<CountStepper>(find.byType(CountStepper).first).value,
+          16,
+        );
+        expect(
+          find.byKey(const Key('create.tournament.inscriptionPrice')),
+          findsOneWidget,
+        );
+        expect(find.byType(DualPrice), findsOneWidget);
 
-      expect(find.byType(CountStepper), findsOneWidget);
-      expect(tester.widget<CountStepper>(find.byType(CountStepper).first).value, 16);
-      expect(find.byKey(const Key('create.tournament.inscriptionPrice')), findsOneWidget);
-      expect(find.byType(DualPrice), findsOneWidget);
+        await tester.tap(
+          find.descendant(
+            of: find.byType(CountStepper).first,
+            matching: find.byIcon(AppIcons.add),
+          ),
+        );
+        await tester.enterText(
+          find.byKey(const Key('create.tournament.inscriptionPrice')),
+          '14',
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.descendant(of: find.byType(CountStepper).first, matching: find.byIcon(AppIcons.add)));
-      await tester.enterText(find.byKey(const Key('create.tournament.inscriptionPrice')), '14');
-      await tester.pumpAndSettle();
+        expect(
+          tester.widget<CountStepper>(find.byType(CountStepper).first).value,
+          17,
+        );
+        expect(find.text('US\$14'), findsNWidgets(2));
+      },
+    );
 
-      expect(tester.widget<CountStepper>(find.byType(CountStepper).first).value, 17);
-      expect(find.text('US\$14'), findsNWidgets(2));
-    });
+    testWidgets(
+      'should default Publicar al crear to draft and describe both states',
+      (tester) async {
+        await _pumpScreen(tester);
 
-    testWidgets('should default Publicar al crear to draft and describe both states', (tester) async {
-      await _pumpScreen(tester);
+        expect(find.byType(PillToggle), findsOneWidget);
+        expect(
+          tester.widget<PillToggle>(find.byType(PillToggle)).value,
+          isFalse,
+        );
+        expect(
+          find.text('Queda en Borrador: la abrís después'),
+          findsOneWidget,
+        );
 
-      expect(find.byType(PillToggle), findsOneWidget);
-      expect(tester.widget<PillToggle>(find.byType(PillToggle)).value, isFalse);
-      expect(find.text('Queda en borrador: cargás gente vos y publicás después'), findsOneWidget);
+        await tester.tap(find.byType(PillToggle));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(PillToggle));
-      await tester.pumpAndSettle();
+        expect(
+          tester.widget<PillToggle>(find.byType(PillToggle)).value,
+          isTrue,
+        );
+        expect(
+          find.text('Queda Abierta: los jugadores se pueden anotar'),
+          findsOneWidget,
+        );
 
-      expect(tester.widget<PillToggle>(find.byType(PillToggle)).value, isTrue);
-      expect(find.text('Aparece en el listado y se abre la inscripción'), findsOneWidget);
+        await _enterName(tester);
+        await _selectPreset(tester, 'Llaves');
+        await tester.tap(find.bySubtype<FilledButton>());
+        await tester.pumpAndSettle();
 
-      await _enterName(tester);
-      await _selectPreset(tester, 'Llaves');
-      await tester.tap(find.bySubtype<FilledButton>());
-      await tester.pumpAndSettle();
-
-      final request = verify(() => tournamentsRepository.createTournament(request: captureAny(named: 'request'))).captured.single as CreateTournamentRequest;
-      expect(request.publishOnCreate, isTrue);
-    });
+        final request =
+            verify(
+                  () => tournamentsRepository.createTournament(
+                    request: captureAny(named: 'request'),
+                  ),
+                ).captured.single
+                as CreateTournamentRequest;
+        expect(request.publishOnCreate, isTrue);
+      },
+    );
   });
 }
