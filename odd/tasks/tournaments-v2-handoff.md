@@ -21,7 +21,7 @@ RDD: disabled/unmanaged, global OFF verified; no native review.
 Delivery: feature-branch-chain, seven core work-unit commits plus the T6b golden-coverage follow-up; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 9,088 (T1–T7 + T6b and final evidence; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 9,272 (T1–T7 + T6b + T7a and final evidence; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [x] T7a Reject tied match results in every format. Keep the existing score DTO and endpoint, but prevent equal side totals from submission regardless of preset. Acceptance: equal scores blocked for singles/doubles and known/unknown formats; unequal scores submit; generic validation copy. Route: delegated direct (UI + regression tests). TDD ON; `flutter test` from `apps/mobile`; RED then GREEN observed. No backend change.
@@ -143,10 +143,10 @@ T6b commit: b90e0c94256bd8ba679773cea1e2bbbf72782cbc (`test(tournaments): cover 
 
 ### T7 evidence
 - Bracket DTO accepts real guest result rows with nullable `userId` plus `tournamentRegistrationId`; winner/score rendering matches by registration first and never treats two null users as the same participant. Organizer schedule aggregation also prefers registration identity; incomplete identity/score rows omit the score rather than render fabricated `0` values.
-- Successful result submission reloads the schedule and scoreboard. Finished matches do not expose a correction action. Existing result endpoint only supplies tie validation for `SINGLE_ELIMINATION`; ties are disabled in that format, while round-robin/Americano remain submittable. GPK/unknown formats have no fabricated client tie rule and the remaining backend contract limitation is explicit.
+- At the T7 commit, successful result submission reloaded the schedule and scoreboard and finished matches did not expose correction. The mobile UI then only blocked ties for `SINGLE_ELIMINATION`; T7a below supersedes that mobile rule. The API contract gap for other formats remains.
 - Corrected full-suite regressions found during integration: OPEN pill test now checks the tournament-specific theme token; organizer labels and paired roster copy assertions align with rendered casing/spelling; roster copy uses “inscritos” and locked dark/light goldens were regenerated.
 - RED/GREEN observed. Focused tournament progress/result and regression tests passed. Full `flutter test --reporter compact` passed (879 tests); `flutter analyze` clean; `flutter build web --debug` succeeded (35.4s); `git diff --check` clean.
-- Six 402×874 progress snapshots cover zero/live/finished in dark/light. These are local regression references only; browser prototype comparison remains unavailable. Existing T6 configured/error create golden gap remains.
+- Six 402×874 progress snapshots cover zero/live/finished in dark/light. These are local regression references only; browser prototype comparison remains unavailable. T6b later closed the configured/error create golden gap.
 - No backend edits, new dependencies, or invented endpoints/fields. Route: delegated direct. Rollback: T7 progress/result changes and the integration-only tournament copy/test corrections.
 - Manual prototype/Tweaks comparison and formal pixel-parity acceptance remain pending.
 
@@ -156,4 +156,6 @@ T7 commit: ba24cd73e539512bb12e1751ff69739317fc836f (`feat(tournaments): add gue
 - User clarified racket match outcomes cannot be ties. Result entry now blocks equal side totals for every format (including absent/unknown preset), and permits submit once totals differ. Replaced the incorrect Americano tie-valid copy with generic “El resultado debe definir un ganador.” Covers singles, doubles, guest result submission, and API failure handling.
 - Existing API rejects ties only in SINGLE_ELIMINATION. Per the current scope boundary, no backend or DTO changed; direct API calls for other formats remain a contract gap.
 - RED observed before UI change; GREEN after. Parent reran focused `result_entry_sheet_test.dart`: 9 tests passed; `flutter analyze` for widget/test clean; `git diff --check` clean. No full suite/build rerun for this narrow task.
-- Browser/Tweaks comparison remains unavailable. Route: delegated. Commit identity to be recorded in follow-up evidence update.
+- Browser/Tweaks comparison remains unavailable. Route: delegated.
+
+T7a commit: 70476a598a0a0553a7f7325662b6ae16c9fe2c3d (`fix(tournaments): reject tied match results`).
