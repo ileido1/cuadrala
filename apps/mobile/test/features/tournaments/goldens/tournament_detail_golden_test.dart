@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_registration_dto.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_invitation_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_registrations_cubit.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tournament_registrations_state.dart';
@@ -122,6 +123,8 @@ final class _PlayerCase {
     this.identity, {
     this.status = 'OPEN',
     this.registration,
+    this.invitation = false,
+    this.registerError,
     this.optionalMissing = false,
     this.full = false,
     this.registering = false,
@@ -143,6 +146,8 @@ final class _PlayerCase {
   final String identity;
   final String status;
   final String? registration;
+  final bool invitation;
+  final String? registerError;
   final bool optionalMissing;
   final bool full;
   final bool registering;
@@ -161,10 +166,22 @@ final class _PlayerCase {
 }
 
 void _playerMatrix() {
-  // Pending production fixes: INVITED banner Row overflows by 12 px,
-  // PENDING footer Row overflows by 33 px at 402 x 874. registerError has
-  // no visible branch in the screen or body. Do not baseline those defects.
   const cases = [
+    _PlayerCase(
+      'invited',
+      'Tenés una invitación pendiente para este torneo.',
+      invitation: true,
+    ),
+    _PlayerCase(
+      'registration_pending',
+      'Esperando confirmación',
+      registration: 'PENDING',
+    ),
+    _PlayerCase(
+      'registration_error',
+      'No se pudo completar la inscripción.',
+      registerError: 'No se pudo completar la inscripción.',
+    ),
     _PlayerCase(
       'draft_none',
       'Todavía no abrió la inscripción',
@@ -444,6 +461,19 @@ void _playerMatrix() {
             ],
             total: scenario.registration == null ? 0 : 1,
             registering: scenario.registering,
+            registerError: scenario.registerError,
+            invitations: scenario.invitation
+                ? [
+                    TournamentInvitationDto(
+                      id: 'invite-me',
+                      tournamentId: 't1',
+                      invitedUserId: 'me',
+                      createdByUserId: 'organizer',
+                      status: 'PENDING',
+                      createdAt: DateTime(2026, 9, 1),
+                    ),
+                  ]
+                : const [],
           ),
         );
         when(() => schedule.state).thenReturn(scenario.schedule);
@@ -512,6 +542,9 @@ void _playerMatrix() {
         // Fixed frame: pending registration and request spinners never settle.
         await tester.pump(const Duration(milliseconds: 100));
         expect(tester.takeException(), isNull);
+        if (scenario.registerError != null) {
+          expect(find.text(scenario.registerError!), findsOneWidget);
+        }
         if (scenario.identity.isEmpty) {
           expect(find.byType(CircularProgressIndicator), findsWidgets);
         } else {

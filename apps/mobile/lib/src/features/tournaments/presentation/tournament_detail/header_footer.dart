@@ -50,6 +50,10 @@ final class _TournamentFooter extends StatelessWidget {
         final open = tournament!.status == 'OPEN';
         final footer = <Widget>[];
 
+        if (state.registerError != null) {
+          footer.add(_RosterError(message: state.registerError!));
+        }
+
         if (invitation != null) {
           footer.add(
             Row(
@@ -100,7 +104,13 @@ final class _TournamentFooter extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text('Esperando confirmación'),
+                        const Flexible(
+                          child: Text(
+                            'Esperando confirmación',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                   ),

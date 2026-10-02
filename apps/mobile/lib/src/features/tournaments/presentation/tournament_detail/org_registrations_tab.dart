@@ -757,18 +757,24 @@ final class _PendingInviteBanner extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              FilledButton(
-                //? Ancho acotado (dentro de un Row).
-                style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
-                onPressed: responding ? null : onAccept,
-                child: const Text('Aceptar'),
+              Expanded(
+                child: FilledButton(
+                  //? Ancho acotado (dentro de un Row).
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                  onPressed: responding ? null : onAccept,
+                  child: const Text('Aceptar'),
+                ),
               ),
               const SizedBox(width: 8),
-              OutlinedButton(
-                //? Ancho acotado (dentro de un Row).
-                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
-                onPressed: responding ? null : onReject,
-                child: const Text('Rechazar'),
+              Expanded(
+                child: OutlinedButton(
+                  //? Ancho acotado (dentro de un Row).
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                  ),
+                  onPressed: responding ? null : onReject,
+                  child: const Text('Rechazar'),
+                ),
               ),
               if (responding) ...[
                 const SizedBox(width: 12),

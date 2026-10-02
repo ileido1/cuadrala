@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_theme.dart';
 import 'brand_colors.dart';
 
 /// Tournament v2 tokens, scoped so the rest of the app retains its brand.
@@ -49,10 +50,24 @@ class TournamentTheme extends ThemeExtension<TournamentTheme> {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: base.filledButtonTheme.style?.copyWith(
+          textStyle: WidgetStateProperty.resolveWith(
+            (states) => base.filledButtonTheme.style?.textStyle
+                ?.resolve(states)
+                ?.copyWith(fontFamily: AppTheme.plusJakartaFontFamily),
+          ),
           backgroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.disabled)
                 ? scheme.surfaceContainerHighest
                 : tokens.green,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: base.outlinedButtonTheme.style?.copyWith(
+          textStyle: WidgetStateProperty.resolveWith(
+            (states) => base.outlinedButtonTheme.style?.textStyle
+                ?.resolve(states)
+                ?.copyWith(fontFamily: AppTheme.plusJakartaFontFamily),
           ),
         ),
       ),
