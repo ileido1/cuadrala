@@ -9,6 +9,37 @@ class _MockTournamentsApi extends Mock implements TournamentsApi {}
 
 void main() {
   group('TournamentsRepository', () {
+    test('searchInvitationCandidates returns only id and name DTOs', () async {
+      final api = _MockTournamentsApi();
+      final repo = TournamentsRepository(tournamentsApi: api);
+      when(
+        () => api.searchTournamentInvitationCandidatesEnvelope(
+          tournamentId: 't-1',
+          query: 'Ada',
+        ),
+      ).thenAnswer(
+        (_) async => {
+          'data': [
+            {'id': 'u-1', 'name': 'Ada Player'},
+          ],
+        },
+      );
+
+      final result = await repo.searchInvitationCandidates(
+        tournamentId: 't-1',
+        query: 'Ada',
+      );
+
+      expect(result.single.id, 'u-1');
+      expect(result.single.name, 'Ada Player');
+      verify(
+        () => api.searchTournamentInvitationCandidatesEnvelope(
+          tournamentId: 't-1',
+          query: 'Ada',
+        ),
+      ).called(1);
+    });
+
     test('getTournamentById unwraps the tournament detail envelope', () async {
       final api = _MockTournamentsApi();
       final repo = TournamentsRepository(tournamentsApi: api);
@@ -101,18 +132,13 @@ void main() {
           },
         );
 
-        final result = await repo.registerParticipant(
-          tournamentId: 't-1',
-        );
+        final result = await repo.registerParticipant(tournamentId: 't-1');
 
         expect(result.id, 'reg-1');
         expect(result.userId, 'user-1');
         expect(result.status, 'PENDING');
         verify(
-          () => api.createRegistrationEnvelope(
-            tournamentId: 't-1',
-            body: {},
-          ),
+          () => api.createRegistrationEnvelope(tournamentId: 't-1', body: {}),
         ).called(1);
       },
     );

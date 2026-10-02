@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_invitation_dto.dart';
+import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_invitation_candidate_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_registration_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
@@ -270,12 +271,18 @@ void main() {
   );
 
   testWidgets(
-    'player invite sheet keeps the real user id and exposes the visual CTA',
+    'player invite sheet selects a searched account and keeps its user id',
     (tester) async {
       final registrationsCubit = _MockRegistrationsCubit();
-      when(
-        () => registrationsCubit.state,
-      ).thenReturn(const TournamentRegistrationsLoaded(items: [], total: 0));
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitationCandidates: [
+            TournamentInvitationCandidateDto(id: 'user-42', name: 'Ada Player'),
+          ],
+        ),
+      );
       when(() => registrationsCubit.invite(any())).thenAnswer((_) async {});
 
       await tester.pumpWidget(
@@ -300,19 +307,24 @@ void main() {
 
       await tester.enterText(
         find.byKey(const Key('tournament.invitePlayerSheet.search')),
-        'user-42',
+        'Ada',
       );
       await tester.pump();
       expect(
-        find.descendant(
-          of: find.byKey(const Key('tournament.invitePlayerSheet.result')),
-          matching: find.text('user-42'),
-        ),
+        find.byKey(const Key('tournament.invitePlayerSheet.candidate.user-42')),
         findsOneWidget,
       );
-      await tester.tap(
-        find.byKey(const Key('tournament.invitePlayerSheet.submit')),
+      final candidate = find.byKey(
+        const Key('tournament.invitePlayerSheet.candidate.user-42'),
       );
+      await tester.ensureVisible(candidate);
+      await tester.tap(candidate);
+      await tester.pump();
+      final submit = find.byKey(
+        const Key('tournament.invitePlayerSheet.submit'),
+      );
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
 
       verify(() => registrationsCubit.invite('user-42')).called(1);
     },

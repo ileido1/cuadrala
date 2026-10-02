@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../data/models/tournament_invitation_dto.dart';
+import '../../data/models/tournament_invitation_candidate_dto.dart';
 import '../../data/models/tournament_registration_dto.dart';
 
 sealed class TournamentRegistrationsState extends Equatable {
@@ -36,6 +37,9 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
     this.responding = false,
     this.inviting = false,
     this.invitationError,
+    this.invitationCandidates = const [],
+    this.searchingInvitationCandidates = false,
+    this.invitationCandidateSearchError,
     this.canManageInvitations = false,
     this.invitingGuest = false,
     this.guestInviteError,
@@ -61,6 +65,9 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
   /// True while an invite/cancel call is in flight.
   final bool inviting;
   final String? invitationError;
+  final List<TournamentInvitationCandidateDto> invitationCandidates;
+  final bool searchingInvitationCandidates;
+  final String? invitationCandidateSearchError;
 
   /// True when the invitations list was fetched with organizer privileges
   /// (i.e. the read succeeded rather than being denied with 403).
@@ -115,6 +122,10 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
     bool? inviting,
     String? invitationError,
     bool clearInvitationError = false,
+    List<TournamentInvitationCandidateDto>? invitationCandidates,
+    bool? searchingInvitationCandidates,
+    String? invitationCandidateSearchError,
+    bool clearInvitationCandidateSearchError = false,
     bool? canManageInvitations,
     bool? invitingGuest,
     String? guestInviteError,
@@ -133,6 +144,11 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
       responding: responding ?? this.responding,
       inviting: inviting ?? this.inviting,
       invitationError: clearInvitationError ? null : (invitationError ?? this.invitationError),
+      invitationCandidates: invitationCandidates ?? this.invitationCandidates,
+      searchingInvitationCandidates: searchingInvitationCandidates ?? this.searchingInvitationCandidates,
+      invitationCandidateSearchError: clearInvitationCandidateSearchError
+          ? null
+          : (invitationCandidateSearchError ?? this.invitationCandidateSearchError),
       canManageInvitations: canManageInvitations ?? this.canManageInvitations,
       invitingGuest: invitingGuest ?? this.invitingGuest,
       guestInviteError:
@@ -155,6 +171,9 @@ final class TournamentRegistrationsLoaded extends TournamentRegistrationsState {
         responding,
         inviting,
         invitationError,
+        invitationCandidates,
+        searchingInvitationCandidates,
+        invitationCandidateSearchError,
         canManageInvitations,
         invitingGuest,
         guestInviteError,

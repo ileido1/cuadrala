@@ -6,6 +6,10 @@ export const TOURNAMENT_INVITATION_PARAMS_SCHEMA = z
   })
   .strict();
 
+export const SEARCH_TOURNAMENT_INVITATION_CANDIDATES_QUERY_SCHEMA = z
+  .object({ q: z.string().trim().min(2).max(80) })
+  .strict();
+
 export const CREATE_TOURNAMENT_INVITATION_BODY_SCHEMA = z
   .object({
     userId: z.string().uuid('userId debe ser un UUID valido.'),

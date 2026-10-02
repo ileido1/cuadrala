@@ -300,6 +300,25 @@ const OPENAPI_CONST = {
         },
       },
     },
+    '/api/v1/tournaments/{tournamentId}/invitations/candidates': {
+      get: {
+        tags: ['Tournaments'],
+        summary: 'Buscar jugadores disponibles para invitar a un torneo',
+        description:
+          'Solo organizador o staff de la sede. Busca por nombre parcial sin distinguir mayúsculas, requiere 2–80 caracteres y devuelve hasta 20 resultados con id y nombre; excluye usuarios ya inscritos o invitados.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 2, maxLength: 80 } },
+        ],
+        responses: {
+          '200': { description: 'Jugadores disponibles' },
+          '400': { description: 'Búsqueda inválida' },
+          '403': { description: 'No es el organizador ni staff de la sede' },
+          '404': { description: 'Torneo no encontrado' },
+        },
+      },
+    },
     '/api/v1/tournaments/{tournamentId}/registrations/confirm-pending': {
       post: {
         tags: ['Tournaments'],

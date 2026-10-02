@@ -5,6 +5,7 @@ import {
   getTournamentInvitationsCON,
   postInviteTournamentParticipantCON,
   postRespondTournamentInvitationCON,
+  searchTournamentInvitationCandidatesCON,
 } from '../controllers/tournament_invitation.controller.js';
 import { asyncHandler } from '../middleware/async_handler.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
@@ -15,6 +16,12 @@ TOURNAMENT_INVITATION_ROUTER.post(
   '/tournaments/:tournamentId/invitations',
   requireAuth,
   asyncHandler(postInviteTournamentParticipantCON),
+);
+
+TOURNAMENT_INVITATION_ROUTER.get(
+  '/tournaments/:tournamentId/invitations/candidates',
+  requireAuth,
+  asyncHandler(searchTournamentInvitationCandidatesCON),
 );
 
 TOURNAMENT_INVITATION_ROUTER.get(

@@ -4,6 +4,7 @@ import 'models/create_tournament_request.dart';
 import 'models/create_tournament_response.dart';
 import 'models/bracket_dto.dart';
 import 'models/tournament_invitation_dto.dart';
+import 'models/tournament_invitation_candidate_dto.dart';
 import 'models/tournament_list_item_dto.dart';
 import 'models/tournament_list_page.dart';
 import 'models/tournament_preset_dto.dart';
@@ -263,6 +264,28 @@ class TournamentsRepository {
       body: {'userId': userId},
     );
     return TournamentInvitationDto.fromJson(decodeEnvelopeDataMap(data));
+  }
+
+  Future<List<TournamentInvitationCandidateDto>> searchInvitationCandidates({
+    required String tournamentId,
+    required String query,
+  }) async {
+    final data = await _tournamentsApi
+        .searchTournamentInvitationCandidatesEnvelope(
+          tournamentId: tournamentId,
+          query: query,
+        );
+    final raw = data['data'];
+    if (raw is! List) {
+      throw const AppFailure(
+        code: 'INVALID_RESPONSE',
+        message: 'Respuesta inválida del servidor.',
+      );
+    }
+    return raw
+        .whereType<Map<String, Object?>>()
+        .map(TournamentInvitationCandidateDto.fromJson)
+        .toList();
   }
 
   Future<TournamentInvitationDto> respondToInvitation({

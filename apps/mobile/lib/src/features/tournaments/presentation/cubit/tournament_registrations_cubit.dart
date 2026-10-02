@@ -23,6 +23,7 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
   final ProfileRepository _profileRepository;
   final String _tournamentId;
   String? _currentUserId;
+  int _candidateSearchRevision = 0;
 
   /// Id of the authenticated user, once resolved by [load]. Used by the UI
   /// to gate organizer-only controls and to find "my" pending invitation.
@@ -131,6 +132,58 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
   }
 
   /// Organizer action: invite a player to the tournament.
+  Future<void> searchInvitationCandidates(String query) async {
+    final revision = ++_candidateSearchRevision;
+    final current = state;
+    if (current is! TournamentRegistrationsLoaded) return;
+    final normalized = query.trim();
+    if (normalized.length < 2) {
+      emit(current.copyWith(
+        invitationCandidates: const [],
+        searchingInvitationCandidates: false,
+        clearInvitationCandidateSearchError: true,
+      ));
+      return;
+    }
+    emit(current.copyWith(
+      invitationCandidates: const [],
+      searchingInvitationCandidates: true,
+      clearInvitationCandidateSearchError: true,
+    ));
+    try {
+      final candidates = await _repo.searchInvitationCandidates(
+        tournamentId: _tournamentId,
+        query: normalized,
+      );
+      if (revision != _candidateSearchRevision) return;
+      final latest = state;
+      if (latest is TournamentRegistrationsLoaded) {
+        emit(latest.copyWith(
+          invitationCandidates: candidates,
+          searchingInvitationCandidates: false,
+        ));
+      }
+    } on AppFailure catch (e) {
+      if (revision != _candidateSearchRevision) return;
+      final latest = state;
+      if (latest is TournamentRegistrationsLoaded) {
+        emit(latest.copyWith(
+          searchingInvitationCandidates: false,
+          invitationCandidateSearchError: e.message,
+        ));
+      }
+    } catch (_) {
+      if (revision != _candidateSearchRevision) return;
+      final latest = state;
+      if (latest is TournamentRegistrationsLoaded) {
+        emit(latest.copyWith(
+          searchingInvitationCandidates: false,
+          invitationCandidateSearchError: 'No se pudo buscar jugadores.',
+        ));
+      }
+    }
+  }
+
   Future<void> invite(String userId) async {
     final current = state;
     if (current is! TournamentRegistrationsLoaded) return;

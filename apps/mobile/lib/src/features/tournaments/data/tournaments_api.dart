@@ -141,6 +141,11 @@ abstract interface class TournamentsApi {
     required String tournamentId,
   });
 
+  Future<Map<String, Object?>> searchTournamentInvitationCandidatesEnvelope({
+    required String tournamentId,
+    required String query,
+  });
+
   Future<Map<String, Object?>> createTournamentInvitationEnvelope({
     required String tournamentId,
     required Map<String, Object?> body,
@@ -406,6 +411,16 @@ final class DioTournamentsApi implements TournamentsApi {
     required String tournamentId,
   }) {
     return _apiClient.getJson('/api/v1/tournaments/$tournamentId/invitations');
+  }
+
+  @override
+  Future<Map<String, Object?>> searchTournamentInvitationCandidatesEnvelope({
+    required String tournamentId,
+    required String query,
+  }) {
+    return _apiClient.getJson(
+      '/api/v1/tournaments/$tournamentId/invitations/candidates?q=${Uri.encodeQueryComponent(query)}',
+    );
   }
 
   @override
