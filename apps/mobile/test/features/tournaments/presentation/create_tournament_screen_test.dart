@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -257,6 +258,228 @@ void main() {
   setUpAll(loadTournamentGoldenFonts);
 
   for (final brightness in Brightness.values) {
+    for (final scenario in [
+      'catalog_loading',
+      'catalog_error',
+      'preset_loading',
+      'preset_error',
+      'preset_empty',
+      'required_enum',
+      'invalid_date',
+      'optional_off',
+      'optional_on',
+      'submitting',
+      'publish_error',
+    ]) {
+      testWidgets('create matrix $scenario ${brightness.name}', (tester) async {
+        if (scenario == 'catalog_loading') {
+          when(
+            () => catalogRepository.listSports(),
+          ).thenAnswer((_) => Completer<List<SportDto>>().future);
+        } else if (scenario == 'catalog_error') {
+          when(() => catalogRepository.listSports()).thenThrow(
+            const AppFailure(
+              code: 'OFFLINE',
+              message: 'No se pudo cargar el catálogo.',
+            ),
+          );
+        }
+        if (scenario.startsWith('preset_')) {
+          when(
+            () => tournamentsRepository.getPresetsBySportId(
+              sportId: any(named: 'sportId'),
+            ),
+          ).thenAnswer((_) {
+            if (scenario == 'preset_loading') {
+              return Completer<List<TournamentPresetDto>>().future;
+            }
+            if (scenario == 'preset_error') {
+              throw const AppFailure(
+                code: 'OFFLINE',
+                message: 'No se pudieron cargar los formatos.',
+              );
+            }
+            return Future.value(<TournamentPresetDto>[]);
+          });
+        }
+        if (scenario == 'submitting') {
+          when(
+            () => tournamentsRepository.createTournament(
+              request: any(named: 'request'),
+            ),
+          ).thenAnswer((_) => Completer<CreateTournamentResponse>().future);
+        } else if (scenario == 'publish_error') {
+          when(
+            () => tournamentsRepository.createTournament(
+              request: any(named: 'request'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                const CreateTournamentResponse(tournamentId: 'created-1'),
+          );
+          when(
+            () => tournamentsRepository.updateTournamentStatus(
+              tournamentId: 'created-1',
+              status: 'OPEN',
+            ),
+          ).thenThrow(
+            const AppFailure(
+              code: 'OFFLINE',
+              message: 'El torneo se creó, pero no se pudo publicar.',
+            ),
+          );
+        }
+        await pumpTournamentGolden(
+          tester,
+          brightness: brightness,
+          child: CreateTournamentScreen(now: DateTime(2026, 9, 1)),
+        );
+        if (scenario == 'catalog_loading') {
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(find.byType(CircularProgressIndicator), findsWidgets);
+        } else {
+          if (scenario == 'preset_loading') {
+            await tester.pump(const Duration(milliseconds: 300));
+            await tester.scrollUntilVisible(
+              find.text('Formato del torneo'),
+              260,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.pump(const Duration(milliseconds: 300));
+            expect(find.byType(CircularProgressIndicator), findsOneWidget);
+          } else {
+            await tester.pumpAndSettle();
+            if (scenario == 'catalog_error') {
+              expect(
+                find.text('No se pudo cargar el catálogo.'),
+                findsOneWidget,
+              );
+            } else if (scenario.startsWith('preset_')) {
+              await _scrollToGoldenTarget(
+                tester,
+                find.text('Formato del torneo'),
+              );
+              expect(
+                find.text(
+                  scenario == 'preset_error'
+                      ? 'No se pudieron cargar los formatos.'
+                      : 'No hay formatos disponibles para este deporte.',
+                ),
+                findsOneWidget,
+              );
+            } else if (scenario == 'invalid_date') {
+              await _scrollToGoldenTarget(
+                tester,
+                find.byKey(const Key('create.tournament.includeEndDate')),
+              );
+              await tester.tap(
+                find.byKey(const Key('create.tournament.includeEndDate')),
+              );
+              await tester.pumpAndSettle();
+              await tester.ensureVisible(
+                find.byKey(const Key('create.tournament.endDateError')),
+              );
+              await tester.pumpAndSettle();
+              expect(
+                find.byKey(const Key('create.tournament.endDateError')),
+                findsOneWidget,
+              );
+              expect(_submitButton(tester).onPressed, isNull);
+            } else {
+              await tester.enterText(
+                find.byKey(const Key('create.tournament.name')),
+                'Torneo de Otoño',
+              );
+              await _scrollToGoldenTarget(tester, find.text('Liga'));
+              await _selectPreset(
+                tester,
+                scenario == 'required_enum' ? 'Liga' : 'Llaves',
+              );
+              if (scenario == 'required_enum') {
+                await tester.ensureVisible(
+                  find.byType(DynamicFormatParametersForm),
+                );
+                await tester.pumpAndSettle();
+                expect(_submitButton(tester).onPressed, isNull);
+                expect(_inForm(find.text('Modalidad')), findsOneWidget);
+              } else if (scenario == 'optional_off' ||
+                  scenario == 'optional_on') {
+                await tester.ensureVisible(
+                  find.byKey(const Key('create.tournament.hasCapacity')),
+                );
+                await tester.pumpAndSettle();
+                if (scenario == 'optional_off') {
+                  await tester.tap(
+                    find.byKey(const Key('create.tournament.hasCapacity')),
+                  );
+                  await tester.ensureVisible(
+                    find.byKey(
+                      const Key('create.tournament.chargeRegistration'),
+                    ),
+                  );
+                  await tester.pumpAndSettle();
+                  await tester.tap(
+                    find.byKey(
+                      const Key('create.tournament.chargeRegistration'),
+                    ),
+                  );
+                  await tester.pumpAndSettle();
+                }
+                await _scrollToGoldenTarget(tester, find.text('Duplas'));
+                await tester.tap(find.text('Duplas'));
+                await tester.tap(find.text('Sólo invitados'));
+                await tester.pumpAndSettle();
+                await _scrollToGoldenTarget(tester, find.byType(PillToggle));
+                await tester.tap(find.byType(PillToggle));
+                await tester.pumpAndSettle();
+                // Capture the lower optional section, including publication.
+                await tester.ensureVisible(
+                  find.byKey(const Key('create.tournament.visibility')),
+                );
+                await tester.pumpAndSettle();
+                expect(
+                  tester.widget<PillToggle>(find.byType(PillToggle)).value,
+                  isTrue,
+                );
+                expect(find.text('Sólo invitados'), findsOneWidget);
+              } else {
+                if (scenario == 'publish_error') {
+                  await _scrollToGoldenTarget(tester, find.byType(PillToggle));
+                  await tester.tap(find.byType(PillToggle));
+                  await tester.pumpAndSettle();
+                }
+                await tester.tap(find.bySubtype<FilledButton>());
+                await tester.pump(const Duration(milliseconds: 300));
+                if (scenario == 'submitting') {
+                  expect(
+                    find.byType(CircularProgressIndicator),
+                    findsOneWidget,
+                  );
+                  expect(_submitButton(tester).onPressed, isNull);
+                } else {
+                  expect(
+                    find.text('El torneo se creó, pero no se pudo publicar.'),
+                    findsOneWidget,
+                  );
+                  verify(
+                    () => tournamentsRepository.createTournament(
+                      request: any(named: 'request'),
+                    ),
+                  ).called(1);
+                }
+              }
+            }
+          }
+        }
+        expect(tester.takeException(), isNull);
+        await expectLater(
+          find.byKey(tournamentGoldenKey),
+          matchesGoldenFile(
+            'goldens/create_${scenario}_${brightness.name}.png',
+          ),
+        );
+      });
+    }
     testWidgets('create screen should match initial ${brightness.name}', (
       tester,
     ) async {

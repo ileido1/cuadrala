@@ -64,6 +64,13 @@ void main() {
       'loading',
       'error',
       'mine_error',
+      'mine_empty',
+      'mine_loading',
+      'invitation',
+      'mine_badges',
+      'mine_draft',
+      'full',
+      'missing_optionals',
     ]) {
       testWidgets('should render $scenario ${brightness.name} at 402x874', (
         tester,
@@ -105,13 +112,56 @@ void main() {
           isOrganizer: true,
           pendingRegistrationsCount: 4,
         );
-        if (scenario == 'mine_error') {
+        final invited = ViewerTournamentDto(
+          tournament: _open,
+          registrationStatus: 'INVITED',
+          pendingInvitationId: 'inv-1',
+          isOrganizer: false,
+          pendingRegistrationsCount: null,
+        );
+        if (scenario == 'mine_loading') {
+          when(
+            () => tournaments.listMyTournaments(),
+          ).thenAnswer((_) => Completer<List<ViewerTournamentDto>>().future);
+        } else if (scenario == 'mine_error') {
           when(
             () => tournaments.listMyTournaments(),
           ).thenThrow(Exception('offline'));
         } else {
           when(() => tournaments.listMyTournaments()).thenAnswer(
-            (_) async => scenario == 'mine'
+            (_) async => scenario == 'invitation'
+                ? [invited]
+                : scenario == 'mine_badges'
+                ? [
+                    invited,
+                    ViewerTournamentDto(
+                      tournament: _live,
+                      registrationStatus: 'PENDING',
+                      pendingInvitationId: null,
+                      isOrganizer: false,
+                      pendingRegistrationsCount: null,
+                    ),
+                  ]
+                : scenario == 'mine_draft'
+                ? [
+                    const ViewerTournamentDto(
+                      tournament: TournamentListItemDto(
+                        id: 'draft',
+                        name: 'Copa borrador',
+                        sportName: 'Pádel',
+                        categoryName: '7ma',
+                        categoryId: 'cat',
+                        status: 'DRAFT',
+                        startsAt: null,
+                        registrationCount: 0,
+                      ),
+                      registrationStatus: null,
+                      pendingInvitationId: null,
+                      isOrganizer: true,
+                      pendingRegistrationsCount: 0,
+                    ),
+                  ]
+                : scenario == 'mine'
                 ? [
                     viewer,
                     const ViewerTournamentDto(
@@ -130,14 +180,32 @@ void main() {
           limit: any(named: 'limit'),
           filters: any(named: 'filters'),
         );
-        if (scenario == 'loading') {
+        if (scenario == 'loading' || scenario == 'mine_loading') {
           when(call).thenAnswer((_) => Completer<TournamentListPage>().future);
         } else if (scenario == 'error') {
           when(call).thenThrow(Exception('offline'));
         } else {
           when(call).thenAnswer(
             (_) async => TournamentListPage(
-              items: scenario == 'empty' ? [] : [_open, _live],
+              items: scenario == 'empty'
+                  ? []
+                  : scenario == 'full'
+                  ? [
+                      const TournamentListItemDto(
+                        id: 'full',
+                        name: 'Copa completa',
+                        sportName: 'Pádel',
+                        categoryName: '7ma',
+                        categoryId: 'cat',
+                        status: 'OPEN',
+                        startsAt: null,
+                        registrationCount: 16,
+                        maxSlots: 16,
+                      ),
+                    ]
+                  : scenario == 'missing_optionals'
+                  ? [_live]
+                  : [_open, _live],
               page: 1,
               limit: 20,
               total: scenario == 'empty' ? 0 : 2,
@@ -153,6 +221,30 @@ void main() {
         if (scenario.startsWith('mine')) {
           await tester.tap(find.text('Mis torneos'));
           await tester.pump(const Duration(milliseconds: 300));
+        }
+        if (scenario == 'mine_empty') {
+          expect(
+            find.text(
+              'Acá aparecen los torneos donde participás, te invitaron u organizás.',
+            ),
+            findsOneWidget,
+          );
+          expect(find.text('Copa Cuádrala'), findsNothing);
+        } else if (scenario.endsWith('loading')) {
+          expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        } else if (scenario == 'invitation' || scenario == 'mine_badges') {
+          expect(find.text('Ver invitación →'), findsOneWidget);
+          if (scenario == 'mine_badges') {
+            expect(find.text('Invitación'), findsOneWidget);
+            expect(find.text('Pendiente'), findsOneWidget);
+          }
+        } else if (scenario == 'mine_draft') {
+          expect(find.text('Copa borrador'), findsOneWidget);
+        } else if (scenario == 'full') {
+          expect(find.text('Copa completa'), findsOneWidget);
+        } else if (scenario == 'missing_optionals') {
+          expect(find.text('Liga Base Aérea'), findsOneWidget);
+          expect(find.text('Club Cuádrala'), findsNothing);
         }
         expect(tester.takeException(), isNull);
         await expectLater(

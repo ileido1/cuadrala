@@ -25,6 +25,7 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_detail_screen.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/tournament_primitives.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/count_stepper.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/pill_toggle.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
@@ -2202,16 +2203,31 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, 'Cargar'));
         await tester.pumpAndSettle();
 
-        await tester.tap(
-          find.byKey(const Key('tournament.resultEntrySheet.submit')),
+        final submit = find.byKey(
+          const Key('tournament.resultEntrySheet.submit'),
         );
+        expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+        final firstSide = find
+            .descendant(
+              of: find.byKey(const Key('tournament.resultEntrySheet')),
+              matching: find.byType(CountStepper),
+            )
+            .first;
+        await tester.tap(
+          find
+              .descendant(of: firstSide, matching: find.byType(GestureDetector))
+              .last,
+        );
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilledButton>(submit).onPressed, isNotNull);
+        await tester.tap(submit);
         await tester.pumpAndSettle();
 
         verify(
           () => scheduleCubit.submitMatchResult(
             matchId: 'match-7',
             scores: const [
-              TournamentScheduleMatchScoreDto(userId: 'u1', points: 0),
+              TournamentScheduleMatchScoreDto(userId: 'u1', points: 1),
               TournamentScheduleMatchScoreDto(userId: 'u2', points: 0),
             ],
           ),
