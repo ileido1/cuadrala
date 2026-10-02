@@ -73,7 +73,7 @@ T9b commit: 3031c05 (`fix(tournaments): reject tied API results`). API result su
 T9c commit: f5551d1 (`fix(tournaments): keep accepted invites pending`).
 T9d commit: 5b9a0b8 (`feat(tournaments): persist preset descriptions`). Integration DB remains pending until the dedicated test database applies this migration.
 T9e commit: 3c9de37 (`feat(tournaments): show player sport categories`).
-T9f commit: pending.
+T9f commit: bbe97b0 (`feat(tournaments): search invitation candidates`).
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
 Implementation T1–T7 plus T6b create-state snapshots is present. Formal visual acceptance remains pending: the prototype browser/Tweaks surface was unavailable, and generated golden references prove regression consistency—not parity with JSX. Final build/test verification is recorded under T7/T6b. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 
