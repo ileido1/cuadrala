@@ -12,6 +12,7 @@ final class TournamentRegistrationDto {
     this.guestEmail,
     this.registeredByUserId,
     this.partnerRegistrationId,
+    this.sportCategoryName,
   });
 
   final String id;
@@ -43,6 +44,9 @@ final class TournamentRegistrationDto {
   /// individuales y en quien todavía no tiene compañero.
   final String? partnerRegistrationId;
 
+  /// Current category for the tournament sport. The API returns it only to organizers.
+  final String? sportCategoryName;
+
   bool get hasPartner => partnerRegistrationId != null;
 
   bool get isGuest => registrationType == 'GUEST';
@@ -65,6 +69,7 @@ final class TournamentRegistrationDto {
       guestEmail: json['guestEmail'] as String?,
       registeredByUserId: json['registeredByUserId'] as String?,
       partnerRegistrationId: json['partnerRegistrationId'] as String?,
+      sportCategoryName: json['sportCategoryName'] as String?,
     );
   }
 }

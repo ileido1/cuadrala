@@ -1,6 +1,7 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import type { TournamentRegistrationDTO, TournamentRegistrationRepository } from '../../domain/ports/tournament_registration_repository.js';
 import type { TournamentRepository } from '../../domain/ports/tournament_repository.js';
+import type { UserCategoryRepository } from '../../domain/ports/user_category_repository.js';
 import type { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
 
 export class ListTournamentRegistrationsUseCase {
@@ -8,6 +9,7 @@ export class ListTournamentRegistrationsUseCase {
     private readonly _tournamentRepository: TournamentRepository,
     private readonly _registrationRepository: TournamentRegistrationRepository,
     private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
+    private readonly _userCategoryRepository: UserCategoryRepository,
   ) {}
 
   async executeSV(_input: {
@@ -30,10 +32,35 @@ export class ListTournamentRegistrationsUseCase {
       organizerUserId: TOURNAMENT.organizerUserId,
       venueId: TOURNAMENT.venueId,
     });
-    const REDACTED_ITEMS = HAS_ORGANIZER_ACCESS
-      ? ITEMS
-      : ITEMS.map((_item) => ({ ..._item, guestPhone: null, guestEmail: null }));
+    if (!HAS_ORGANIZER_ACCESS) {
+      return {
+        items: ITEMS.map((_item) => ({
+          ..._item,
+          guestPhone: null,
+          guestEmail: null,
+        })),
+        total: TOTAL,
+      };
+    }
 
-    return { items: REDACTED_ITEMS, total: TOTAL };
+    const USER_IDS = [...new Set(ITEMS.flatMap((_item) => (_item.userId ? [_item.userId] : [])))];
+    const CATEGORIES = await Promise.all(
+      USER_IDS.map(async (_userId) => ({
+        userId: _userId,
+        categories: await this._userCategoryRepository.listByUserIdSV(_userId),
+      })),
+    );
+    const CATEGORY_BY_USER = new Map(
+      CATEGORIES.map(({ userId, categories }) => [
+        userId,
+        categories.find((_category) => _category.sportId === TOURNAMENT.sportId)?.categoryName ?? null,
+      ]),
+    );
+    const ORGANIZER_ITEMS = ITEMS.map((_item) => ({
+      ..._item,
+      sportCategoryName: _item.userId ? CATEGORY_BY_USER.get(_item.userId) ?? null : null,
+    }));
+
+    return { items: ORGANIZER_ITEMS, total: TOTAL };
   }
 }

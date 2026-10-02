@@ -55,5 +55,18 @@ void main() {
       expect(dto.registrationType, 'AUTHENTICATED');
       expect(dto.isGuest, isFalse);
     });
+
+    test('parses the organizer-only sport category when the API provides it', () {
+      final dto = TournamentRegistrationDto.fromJson({
+        'id': 'reg-4',
+        'tournamentId': 't-1',
+        'userId': 'user-4',
+        'status': 'CONFIRMED',
+        'createdAt': '2024-01-01T00:00:00.000Z',
+        'sportCategoryName': 'Avanzado',
+      });
+
+      expect(dto.sportCategoryName, 'Avanzado');
+    });
   });
 }

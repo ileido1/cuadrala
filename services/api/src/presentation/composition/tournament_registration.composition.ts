@@ -1,6 +1,7 @@
 import { PrismaTournamentRegistrationRepository } from '../../infrastructure/adapters/prisma_tournament_registration_repository.js';
 import { PrismaTournamentRepository } from '../../infrastructure/adapters/prisma_tournament_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+import { PrismaUserCategoryRepository } from '../../infrastructure/adapters/prisma_user_category_repository.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { AssertTournamentOrganizerAccessUseCase } from '../../application/use_cases/assert_tournament_organizer_access.use_case.js';
 import { InviteGuestTournamentParticipantUseCase } from '../../application/use_cases/invite_guest_tournament_participant.use_case.js';
@@ -16,6 +17,7 @@ import { ResendEmailSender } from '../../infrastructure/adapters/resend_email_se
 
 const TOURNAMENT_REPO = new PrismaTournamentRepository();
 const REGISTRATION_REPO = new PrismaTournamentRegistrationRepository();
+const USER_CATEGORY_REPO = new PrismaUserCategoryRepository();
 const VENUE_STAFF_REPO = new PrismaVenueStaffRepository(PRISMA);
 const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAccessUseCase(VENUE_STAFF_REPO);
 
@@ -45,6 +47,7 @@ export const LIST_TOURNAMENT_REGISTRATIONS_UC = new ListTournamentRegistrationsU
   TOURNAMENT_REPO,
   REGISTRATION_REPO,
   ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+  USER_CATEGORY_REPO,
 );
 
 export const WITHDRAW_TOURNAMENT_REGISTRATION_UC = new WithdrawTournamentRegistrationUseCase(

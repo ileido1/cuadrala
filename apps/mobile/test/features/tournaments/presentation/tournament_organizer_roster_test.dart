@@ -33,6 +33,7 @@ TournamentRegistrationDto _registration({
   required String name,
   required String status,
   String? partnerId,
+  String? sportCategoryName,
 }) => TournamentRegistrationDto(
   id: id,
   tournamentId: 't-1',
@@ -41,6 +42,7 @@ TournamentRegistrationDto _registration({
   status: status,
   createdAt: DateTime(2026, 9, 1),
   partnerRegistrationId: partnerId,
+  sportCategoryName: sportCategoryName,
 );
 
 TournamentInvitationDto _invitation() => TournamentInvitationDto(
@@ -200,6 +202,26 @@ void main() {
       await tester.drag(find.byType(ListView).last, const Offset(0, -700));
       await tester.pumpAndSettle();
       expect(find.text('Cancelar invitación'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'organizer roster displays the current player sport category',
+    (tester) async {
+      await _pumpOrganizer(
+        tester,
+        status: 'OPEN',
+        registrations: [
+          _registration(
+            id: 'categorized',
+            name: 'Ana Uno',
+            status: 'CONFIRMED',
+            sportCategoryName: 'Avanzado',
+          ),
+        ],
+      );
+
+      expect(find.text('Categoría: Avanzado'), findsOneWidget);
     },
   );
 

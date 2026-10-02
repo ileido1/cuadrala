@@ -628,6 +628,16 @@ final class _RegistrationTile extends StatelessWidget {
                     fontSize: 12.5,
                   ),
                 ),
+                if (registration.sportCategoryName?.trim().isNotEmpty == true)
+                  Text(
+                    'Categoría: ${registration.sportCategoryName}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 12.5,
+                    ),
+                  ),
                 if (_pairSubtitle() != null)
                   Text(
                     _pairSubtitle()!,
