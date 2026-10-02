@@ -1,7 +1,7 @@
 # Tournament v2 handoff
 
 ## Objective, problem and authorization
-Implement the seven-step tournament flow from the supplied v2 prototype using existing Flutter architecture and real API contracts. Existing v1 visuals/semantics diverge. User authorized all seven steps and a dedicated local feature branch with seven commits, prepared for review in parts; no push/PR/merge.
+Implement the seven-step tournament flow from the supplied v2 prototype using existing Flutter architecture and real API contracts. Existing v1 visuals/semantics diverge. User authorized all seven steps and a dedicated local feature branch with seven commits, prepared for review in parts. User later requested pushing to `main` and validating `https://www.cuadrala.app/`; remote execution is still waiting for the exact repository/remote and credential/session authorization.
 Reference: external Downloads/Cuadrala (8)/design_handoff_torneos_v2/{README.md,CAMBIOS vs v1.md,prototipo/*.jsx}.
 
 ## Constraints
@@ -18,7 +18,7 @@ Branch: codex/tournaments-v2-handoff. Base: bbb980ae0547ba3b6ca401f84441c726c682
 Route: delegated direct for every task (mapping requires 4+ files; writing prepares multiple non-trivial files).
 TDD: ON, source AGENTS.md and .cursor/rules/tdd-guidelines.mdc. Runner: flutter test from apps/mobile; observed RED -> GREEN -> refactor.
 RDD: disabled/unmanaged, global OFF verified; no native review.
-Delivery: feature-branch-chain, seven core work-unit commits plus authorized golden/API follow-ups; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
+Delivery: feature-branch-chain, seven core work-unit commits plus authorized golden/API follow-ups; local branch currently, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. User requested direct push to `main` (not PR/merge); remote operation awaits explicit repo/remote and credential/session.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
 Running authored count: 11,473 (T1–T7 + T6b + T7a + T8 safe slices + T8f + T9a–T9i; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
@@ -78,6 +78,7 @@ T9f commit: bbe97b0 (`feat(tournaments): search invitation candidates`).
 T9f OpenAPI debt correction commit: d07f600 (`fix(tournaments): clear documented invitation route debt`).
 T9g commit: c1402e2 (`feat(tournaments): expose scoreboard metrics`).
 T9h/T9i work-unit commit: f8cab3a (`docs(tournaments): finalize API contract coverage`). Includes the verified README/OpenAPI contract updates and the invitation-sheet golden fixture repair uncovered during final full-suite verification.
+T9h migration verification record: 1136c02 (`docs(tournaments): record migration verification`). All migrations now applied to local postgres and `cuadrala_test`; API suite passed 1,045/1,045. Production browser validation remains pending until user-authorized push to the exact remote.
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
 Implementation T1–T7 plus T6b create-state snapshots is present. Formal visual acceptance remains pending: the prototype browser/Tweaks surface was unavailable, and generated golden references prove regression consistency—not parity with JSX. Final build/test verification is recorded under T7/T6b. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 
