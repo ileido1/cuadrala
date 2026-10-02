@@ -176,3 +176,11 @@ T7a commit: 70476a598a0a0553a7f7325662b6ae16c9fe2c3d (`fix(tournaments): reject 
 - Remaining required cases: INVITED Info has 12px Row overflow (`_PendingInviteBanner`); PENDING Info has 33px footer Row overflow; enrollment error has no visible rendering. These states were not baselined or suppressed. T8p remains unchecked until resolved.
 - Typography blocker shared by old/new snapshots: FilledButton/OutlinedButton theme uses TextStyle without fontFamily, so test labels render Ahem rectangles despite bundled font loading. No helper substitution or production change masks the defect. Full visual acceptance remains pending.
 - Route delegated; test-only. Rollback: detail golden test additions plus `player_detail_*.png`. Browser parity unavailable; runtime harness is the actual Flutter widget render.
+
+T8p safe-slice commit: e05f834702ee9f02e8694415287e717df10d7a05 (`test(tournaments): expand player state goldens`).
+
+### T8o supported-state coverage evidence (partial acceptance)
+- Added 90 organizer PNGs (96 references total), both themes at 402×874. Covers Inscritos draft/empty/confirmed/guest/contact/paired/load/error/busy, invitations and lower Duplas; Cuadro eligibility/pending warning/generation/failure/conflict/standings/live/guest/unsupported/real GPK transition; independent Publicar status/visibility busy/error; actual guest/invite/pair modal overlays.
+- Missing-reference RED observed, generate and replay GREEN: 94 tests passed. Focused analyze and diff check clean. Parent verified PNG dimensions/theme pairs and inspected Publicar visibility-error screenshot.
+- Pair sheet closes before mutation, so busy/API-error are not in-sheet visual states; guest validation rejects submission silently. These behaviors are documented, not simulated. Locked roster controls asserted absent. Pending publish futures resolve while Cubit stays mounted, preventing teardown emit-after-close.
+- Shared missing button-font blocker prevents final visual acceptance. T8o stays unchecked pending typography correction; no production change. Rollback: organizer golden test additions and new organizer PNGs. Browser parity remains pending.
