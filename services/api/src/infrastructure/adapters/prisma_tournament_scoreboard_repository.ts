@@ -56,7 +56,16 @@ export class PrismaTournamentScoreboardRepository implements TournamentScoreboar
 
     const BY_USER = new Map<
       string,
-      { points: number; matchIds: Set<string>; name: string; gamesWon: number }
+      {
+        points: number;
+        matchIds: Set<string>;
+        name: string;
+        gamesWon: number;
+        gamesDrawn: number;
+        pointsFor: number;
+        pointsAgainst: number;
+        headToHeadWins: Record<string, number>;
+      }
     >();
     const REGISTRATION_ID_BY_USER_ID = new Map(
       REGISTRATIONS.flatMap((_registration) =>
@@ -83,6 +92,10 @@ export class PrismaTournamentScoreboardRepository implements TournamentScoreboar
         name:
           _registration.user?.name ?? _registration.guestName ?? 'Invitado',
         gamesWon: 0,
+        gamesDrawn: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        headToHeadWins: {},
       });
     }
 
@@ -91,13 +104,18 @@ export class PrismaTournamentScoreboardRepository implements TournamentScoreboar
       const SCORES = _r.scores.filter(
         (_s) => _s.userId !== null || _s.tournamentRegistrationId !== null,
       );
-      const WINNING_USER_IDS = resolveMatchWinningUserIdsSV(
-        SCORES.map((_s) => ({
+      const SIDE_SCORES = SCORES.map((_s) => ({
           userId: PARTICIPANT_KEY(_s)!,
           teamLabel: TEAM_LABEL_BY_USER_ID.get(PARTICIPANT_KEY(_s)!) ?? null,
           points: _s.points,
-        })),
-      );
+        }));
+      const WINNING_USER_IDS = resolveMatchWinningUserIdsSV(SIDE_SCORES);
+      const SIDE_TOTALS = new Map<string, number>();
+      for (const _score of SIDE_SCORES) {
+        const SIDE_KEY = _score.teamLabel ?? _score.userId;
+        SIDE_TOTALS.set(SIDE_KEY, (SIDE_TOTALS.get(SIDE_KEY) ?? 0) + _score.points);
+      }
+      const HAS_DRAW = SIDE_TOTALS.size > 1 && WINNING_USER_IDS.length === 0;
 
       for (const _s of SCORES) {
         const PARTICIPANT_ID = PARTICIPANT_KEY(_s)!;
@@ -106,10 +124,28 @@ export class PrismaTournamentScoreboardRepository implements TournamentScoreboar
           matchIds: new Set<string>(),
           name: _s.user?.name ?? _s.tournamentRegistration?.guestName ?? 'Invitado',
           gamesWon: 0,
+          gamesDrawn: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+          headToHeadWins: {},
         };
         CUR.points += _s.points;
         CUR.matchIds.add(_r.matchId);
-        if (WINNING_USER_IDS.includes(PARTICIPANT_ID)) CUR.gamesWon += 1;
+        const SIDE_KEY = TEAM_LABEL_BY_USER_ID.get(PARTICIPANT_ID) ?? PARTICIPANT_ID;
+        CUR.pointsFor += SIDE_TOTALS.get(SIDE_KEY) ?? _s.points;
+        CUR.pointsAgainst += [...SIDE_TOTALS.entries()]
+          .filter(([_sideKey]) => _sideKey !== SIDE_KEY)
+          .reduce((TOTAL, [, _points]) => TOTAL + _points, 0);
+        if (HAS_DRAW) CUR.gamesDrawn += 1;
+        if (WINNING_USER_IDS.includes(PARTICIPANT_ID)) {
+          CUR.gamesWon += 1;
+          for (const _opponent of SIDE_SCORES) {
+            const OPPONENT_SIDE = _opponent.teamLabel ?? _opponent.userId;
+            if (OPPONENT_SIDE === SIDE_KEY) continue;
+            CUR.headToHeadWins[_opponent.userId] =
+              (CUR.headToHeadWins[_opponent.userId] ?? 0) + 1;
+          }
+        }
         BY_USER.set(PARTICIPANT_ID, CUR);
       }
     }
@@ -135,6 +171,12 @@ export class PrismaTournamentScoreboardRepository implements TournamentScoreboar
         points: _v.points,
         gamesPlayed: _v.matchIds.size,
         gamesWon: _v.gamesWon,
+        gamesLost: Math.max(0, _v.matchIds.size - _v.gamesWon - _v.gamesDrawn),
+        gamesDrawn: _v.gamesDrawn,
+        pointsFor: _v.pointsFor,
+        pointsAgainst: _v.pointsAgainst,
+        difference: _v.pointsFor - _v.pointsAgainst,
+        headToHeadWins: _v.headToHeadWins,
       };
     });
   }

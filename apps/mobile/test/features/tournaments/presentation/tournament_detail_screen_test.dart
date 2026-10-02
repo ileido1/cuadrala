@@ -1411,6 +1411,11 @@ void main() {
           points: 20,
           gamesPlayed: 7,
           gamesWon: 6,
+          gamesLost: 8,
+          gamesDrawn: 9,
+          pointsFor: 42,
+          pointsAgainst: 30,
+          difference: 12,
           rank: 1,
         ),
         TournamentScoreboardRowDto(
@@ -1419,6 +1424,11 @@ void main() {
           points: 15,
           gamesPlayed: 7,
           gamesWon: 5,
+          gamesLost: 10,
+          gamesDrawn: 11,
+          pointsFor: 38,
+          pointsAgainst: 31,
+          difference: 7,
           rank: 2,
         ),
         TournamentScoreboardRowDto(
@@ -1427,6 +1437,11 @@ void main() {
           points: 10,
           gamesPlayed: 7,
           gamesWon: 4,
+          gamesLost: 12,
+          gamesDrawn: 13,
+          pointsFor: 35,
+          pointsAgainst: 39,
+          difference: -4,
           rank: 3,
         ),
       ],
@@ -1468,6 +1483,16 @@ void main() {
         find.text('Se actualiza sola al cargarse cada resultado'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('shows all tournament standings metrics', (tester) async {
+      await pumpTabla(tester);
+
+      for (final label in ['PJ', 'PG', 'PP', 'PE', 'PF', 'PC', 'DIF', 'Pts']) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.text('42'), findsOneWidget);
+      expect(find.text('30'), findsOneWidget);
     });
 
     testWidgets(

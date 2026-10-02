@@ -512,6 +512,11 @@ final class _ScoreboardTable extends StatelessWidget {
               DataColumn(label: Text('Jugador')),
               DataColumn(label: Text('PJ')),
               DataColumn(label: Text('PG')),
+              DataColumn(label: Text('PP')),
+              DataColumn(label: Text('PE')),
+              DataColumn(label: Text('PF')),
+              DataColumn(label: Text('PC')),
+              DataColumn(label: Text('DIF')),
               DataColumn(label: Text('Pts')),
             ],
             rows: rows.map((r) {
@@ -567,6 +572,11 @@ final class _ScoreboardTable extends StatelessWidget {
                   ),
                   DataCell(Text('${r.gamesPlayed}')),
                   DataCell(Text('${r.gamesWon}')),
+                  DataCell(Text('${r.gamesLost}')),
+                  DataCell(Text('${r.gamesDrawn}')),
+                  DataCell(Text('${r.pointsFor}')),
+                  DataCell(Text('${r.pointsAgainst}')),
+                  DataCell(Text('${r.difference}')),
                   DataCell(
                     Text(
                       '${r.points}',
