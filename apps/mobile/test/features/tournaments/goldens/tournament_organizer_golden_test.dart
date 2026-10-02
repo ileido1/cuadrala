@@ -54,6 +54,58 @@ void main() {
   _organizerMatrix();
 
   for (final brightness in Brightness.values) {
+    testWidgets('should render empty organizer Inscritos ${brightness.name}', (
+      tester,
+    ) async {
+      final registrations = _Registrations();
+      final schedule = _Schedule();
+      final scoreboard = _Scoreboard();
+      when(() => registrations.currentUserId).thenReturn('org');
+      when(
+        () => registrations.state,
+      ).thenReturn(const TournamentRegistrationsLoaded(items: [], total: 0));
+      when(() => schedule.state).thenReturn(const TournamentScheduleEmpty());
+      when(
+        () => scoreboard.state,
+      ).thenReturn(const TournamentScoreboardEmpty());
+      await pumpTournamentGolden(
+        tester,
+        brightness: brightness,
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<TournamentRegistrationsCubit>.value(
+              value: registrations,
+            ),
+            BlocProvider<TournamentScheduleCubit>.value(value: schedule),
+            BlocProvider<TournamentScoreboardCubit>.value(value: scoreboard),
+          ],
+          child: TournamentDetailBody(
+            tournamentId: 't1',
+            viewerIsOrganizer: true,
+            tournament: TournamentListItemDto(
+              id: 't1',
+              name: 'Copa Cuádrala',
+              status: 'OPEN',
+              sportName: 'Pádel',
+              categoryId: 'cat',
+              categoryName: 'Mixto 7ma',
+              startsAt: null,
+              registrationCount: 0,
+            ),
+            tournamentsRepository: _Repository(),
+          ),
+        ),
+      );
+      expect(
+        find.text('Todos confirmados. Cada uno ya recibió su aviso.'),
+        findsNothing,
+      );
+      await expectLater(
+        find.byKey(tournamentGoldenKey),
+        matchesGoldenFile('organizer_inscritos_empty_${brightness.name}.png'),
+      );
+    });
+
     for (final locked in [false, true]) {
       testWidgets(
         'should render organizer Inscritos locked=$locked ${brightness.name}',
@@ -422,6 +474,46 @@ Future<void> _capture(
 
 void _organizerMatrix() {
   for (final brightness in Brightness.values) {
+    testWidgets(
+      'should expose first-result action for a live match ${brightness.name}',
+      (tester) async {
+        const schedule = TournamentScheduleSuccess(
+          schedule: TournamentScheduleDto(
+            rounds: [
+              TournamentScheduleRoundDto(
+                name: 'Ronda 1',
+                matches: [
+                  TournamentScheduleMatchDto(
+                    id: 'live',
+                    label: 'Ana Uno vs Beto Dos',
+                    status: 'SCHEDULED',
+                    matchStatus: 'IN_PROGRESS',
+                    matchId: 'match-live',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        await _pumpOrganizer(
+          tester,
+          brightness,
+          registrationsState: _loaded(),
+          scheduleState: schedule,
+          format: 'ROUND_ROBIN',
+          status: 'IN_PROGRESS',
+        );
+        await tester.tap(find.text('Cuadro'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(
+          find.byKey(const Key('tournament.scoreboard.firstResult')),
+          findsOneWidget,
+        );
+        expect(find.text('Cargar primer resultado'), findsOneWidget);
+      },
+    );
+
     final rosterCases =
         <
           String,

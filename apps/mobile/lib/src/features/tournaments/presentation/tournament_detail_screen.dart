@@ -492,6 +492,12 @@ final class TournamentDetailBody extends StatelessWidget {
                                   is TournamentScoreboardInitial) {
                             context.read<TournamentScoreboardCubit>().load();
                           }
+                          if (!organizer &&
+                              index == 2 &&
+                              context.read<TournamentScheduleCubit>().state
+                                  is TournamentScheduleInitial) {
+                            context.read<TournamentScheduleCubit>().load();
+                          }
                         },
                       ),
                     );
@@ -570,6 +576,7 @@ final class TournamentDetailBody extends StatelessWidget {
                       if (showPlayerTabs)
                         _ScoreboardTab(
                           tournamentId: tournamentId,
+                          tournament: tournament,
                           tournamentsRepository: tournamentsRepository,
                         ),
                     ],

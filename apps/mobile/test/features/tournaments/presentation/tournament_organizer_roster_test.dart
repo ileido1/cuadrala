@@ -145,6 +145,19 @@ void main() {
     );
   });
 
+  testWidgets('does not claim everyone was notified when the roster is empty', (
+    tester,
+  ) async {
+    await _pumpOrganizer(tester, status: 'OPEN', registrations: []);
+
+    expect(
+      find.text('Todos confirmados. Cada uno ya recibió su aviso.'),
+      findsNothing,
+    );
+    expect(find.text('Inscritos'), findsNWidgets(2));
+    expect(find.text('0'), findsNWidgets(3));
+  });
+
   testWidgets(
     'locked roster keeps read-only counts and rows but hides mutations',
     (tester) async {

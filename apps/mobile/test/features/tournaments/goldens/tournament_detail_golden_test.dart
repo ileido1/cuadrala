@@ -23,6 +23,35 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_
 
 import 'tournament_golden.dart';
 
+const _viewerScoreMatch = TournamentScheduleMatchDto(
+  id: 'r1',
+  label: 'Ana vs. Lucía',
+  status: 'SCHEDULED',
+  sides: [
+    TournamentScheduleMatchSideDto(
+      sideKey: 'A',
+      userIds: ['me'],
+      registrationIds: ['reg-me'],
+    ),
+    TournamentScheduleMatchSideDto(
+      sideKey: 'B',
+      userIds: [null],
+      registrationIds: ['guest'],
+    ),
+  ],
+  scores: [
+    TournamentScheduleMatchScoreDto(
+      userId: 'me',
+      tournamentRegistrationId: 'reg-me',
+      points: 6,
+    ),
+    TournamentScheduleMatchScoreDto(
+      tournamentRegistrationId: 'guest',
+      points: 4,
+    ),
+  ],
+);
+
 class _Registrations extends MockCubit<TournamentRegistrationsState>
     implements TournamentRegistrationsCubit {}
 
@@ -349,9 +378,31 @@ void _playerMatrix() {
     ),
     _PlayerCase(
       'table_own_highlight_guest',
-      'Ana · vos',
+      'Ana',
       registration: 'CONFIRMED',
       tab: 'Tabla',
+      schedule: TournamentScheduleSuccess(
+        schedule: TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Ronda 1',
+              matches: [_viewerScoreMatch],
+            ),
+            TournamentScheduleRoundDto(
+              name: 'Ronda 2',
+              matches: [_viewerScoreMatch],
+            ),
+            TournamentScheduleRoundDto(
+              name: 'Ronda 3',
+              matches: [_viewerScoreMatch],
+            ),
+            TournamentScheduleRoundDto(
+              name: 'Ronda 4',
+              matches: [_viewerScoreMatch],
+            ),
+          ],
+        ),
+      ),
       scoreboard: TournamentScoreboardSuccess(
         scoreboard: TournamentScoreboardDto(
           rows: [
@@ -361,6 +412,9 @@ void _playerMatrix() {
               points: 12,
               gamesPlayed: 3,
               gamesWon: 2,
+              pointsFor: 18,
+              pointsAgainst: 14,
+              difference: 4,
               rank: 1,
             ),
             TournamentScoreboardRowDto(
@@ -369,6 +423,9 @@ void _playerMatrix() {
               points: 8,
               gamesPlayed: 3,
               gamesWon: 1,
+              pointsFor: 14,
+              pointsAgainst: 18,
+              difference: -4,
               rank: 2,
             ),
           ],
@@ -389,6 +446,48 @@ void _playerMatrix() {
               gamesPlayed: 2,
               gamesWon: 1,
               rank: 1,
+            ),
+          ],
+        ),
+      ),
+    ),
+    _PlayerCase(
+      'table_zero_results',
+      'La tabla aparece con el primer resultado cargado. Con todos en cero no ordena nada.',
+      status: 'IN_PROGRESS',
+      registration: 'CONFIRMED',
+      tab: 'Tabla',
+      schedule: TournamentScheduleSuccess(
+        schedule: TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(
+              name: 'Ronda 1',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'm1',
+                  label: 'Ana vs. Lucía',
+                  status: 'SCHEDULED',
+                  courtName: 'Cancha 1',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      scoreboard: TournamentScoreboardSuccess(
+        scoreboard: TournamentScoreboardDto(
+          rows: [
+            TournamentScoreboardRowDto(
+              userId: 'me',
+              name: 'Ana',
+              points: 0,
+              rank: 1,
+            ),
+            TournamentScoreboardRowDto(
+              tournamentRegistrationId: 'guest',
+              name: 'Lucía',
+              points: 0,
+              rank: 2,
             ),
           ],
         ),

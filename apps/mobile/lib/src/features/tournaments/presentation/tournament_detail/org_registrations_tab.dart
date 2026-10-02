@@ -430,7 +430,7 @@ final class _OrganizerRosterHeader extends StatelessWidget {
             label: Text('Confirmar $pending pendientes'),
           ),
         const SizedBox(height: 6),
-        if (!locked)
+        if (!locked && (pending > 0 || total > 0))
           Text(
             pending > 0
                 ? 'Un toque confirma a todos y les llega el aviso solo. No hace falta mandar nada.'

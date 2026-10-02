@@ -306,7 +306,7 @@ void main() {
       );
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
       when(() => scheduleCubit.state).thenReturn(
-        const TournamentScheduleSuccess(
+        TournamentScheduleSuccess(
           schedule: TournamentScheduleDto(
             rounds: [
               TournamentScheduleRoundDto(
@@ -1447,7 +1447,11 @@ void main() {
       ],
     );
 
-    Future<void> pumpTabla(WidgetTester tester) async {
+    Future<void> pumpTabla(
+      WidgetTester tester, {
+      TournamentScoreboardDto? data,
+      bool withScheduleScores = true,
+    }) async {
       when(() => registrationsCubit.state).thenReturn(
         TournamentRegistrationsLoaded(
           items: [_authRegistration(userId: 'user-1')],
@@ -1456,12 +1460,55 @@ void main() {
         ),
       );
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
-      when(
-        () => scheduleCubit.state,
-      ).thenReturn(const TournamentScheduleEmpty());
-      when(
-        () => scoreboardCubit.state,
-      ).thenReturn(TournamentScoreboardSuccess(scoreboard: scoreboard()));
+      when(() => scheduleCubit.state).thenReturn(
+        TournamentScheduleSuccess(
+          schedule: TournamentScheduleDto(
+            rounds: [
+              TournamentScheduleRoundDto(
+                name: 'Ronda 1',
+                matches: [
+                  TournamentScheduleMatchDto(
+                    id: 'schedule-1',
+                    label: 'Partido 1',
+                    status: 'FINISHED',
+                    matchStatus: 'FINISHED',
+                    courtName: 'Cancha 1',
+                    sides: [
+                      TournamentScheduleMatchSideDto(
+                        sideKey: 'A',
+                        userIds: ['user-1', 'user-2'],
+                      ),
+                      TournamentScheduleMatchSideDto(
+                        sideKey: 'B',
+                        userIds: ['user-3'],
+                      ),
+                    ],
+                    scores: withScheduleScores
+                        ? const [
+                            TournamentScheduleMatchScoreDto(
+                              userId: 'user-1',
+                              points: 4,
+                            ),
+                            TournamentScheduleMatchScoreDto(
+                              userId: 'user-2',
+                              points: 4,
+                            ),
+                            TournamentScheduleMatchScoreDto(
+                              userId: 'user-3',
+                              points: 2,
+                            ),
+                          ]
+                        : const [],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      when(() => scoreboardCubit.state).thenReturn(
+        TournamentScoreboardSuccess(scoreboard: data ?? scoreboard()),
+      );
 
       await tester.pumpWidget(
         _buildTestApp(
@@ -1485,14 +1532,21 @@ void main() {
       );
     });
 
-    testWidgets('shows all tournament standings metrics', (tester) async {
+    testWidgets('shows compact standings instead of a clipped spreadsheet', (
+      tester,
+    ) async {
       await pumpTabla(tester);
 
-      for (final label in ['PJ', 'PG', 'PP', 'PE', 'PF', 'PC', 'DIF', 'Pts']) {
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.textContaining('Yo Jugador'), findsOneWidget);
+      expect(find.textContaining('Rival Uno'), findsWidgets);
+      for (final label in ['PJ', 'G-P', 'Games', 'Dif']) {
         expect(find.text(label), findsOneWidget);
       }
-      expect(find.text('42'), findsOneWidget);
-      expect(find.text('30'), findsOneWidget);
+      expect(find.text('42:30'), findsOneWidget);
+      expect(find.text('R1'), findsOneWidget);
+      expect(find.text('4-2'), findsOneWidget);
+      expect(find.text('Rival Uno'), findsWidgets);
     });
 
     testWidgets(
@@ -1500,25 +1554,10 @@ void main() {
       (tester) async {
         await pumpTabla(tester);
 
-        final scheme = Theme.of(
-          tester.element(find.byType(DataTable)),
-        ).colorScheme;
-
-        //? El nombre propio se pinta con Text.rich para poder anexar el
-        //? sufijo "· vos" con un estilo distinto dentro del mismo texto.
-        final nameCell = tester.widget<Text>(find.textContaining('Yo Jugador'));
-        expect(nameCell.textSpan?.toPlainText(), contains('· vos'));
-
-        //? `DataRow` no es un Widget de árbol: viene de la lista
-        //? `DataTable.rows`, se inspecciona ahí en vez de con `find`.
-        final table = tester.widget<DataTable>(find.byType(DataTable));
-        final highlighted = table.rows.where(
-          (row) => row.color?.resolve(<WidgetState>{}) != null,
-        );
-        expect(highlighted.length, 1);
+        expect(find.text('VOS'), findsOneWidget);
         expect(
-          highlighted.single.color?.resolve(<WidgetState>{}),
-          scheme.primaryContainer.withValues(alpha: 0.35),
+          find.byKey(const Key('tournament.scoreboard.row.user-1')),
+          findsOneWidget,
         );
       },
     );
@@ -1526,17 +1565,53 @@ void main() {
     testWidgets('colors rank 1 and 2 green, rank 3 muted', (tester) async {
       await pumpTabla(tester);
 
-      final scheme = Theme.of(
-        tester.element(find.byType(DataTable)),
-      ).colorScheme;
-
       final rankOne = tester.widget<Text>(find.text('1'));
       final rankTwo = tester.widget<Text>(find.text('2'));
       final rankThree = tester.widget<Text>(find.text('3'));
 
-      expect(rankOne.style?.color, scheme.primary);
-      expect(rankTwo.style?.color, scheme.primary);
-      expect(rankThree.style?.color, scheme.onSurfaceVariant);
+      expect(rankOne.style?.fontWeight, FontWeight.w800);
+      expect(rankTwo.style?.fontWeight, FontWeight.w800);
+      expect(rankThree.style?.fontWeight, FontWeight.w800);
+    });
+
+    testWidgets('zero metrics show the no-results state, not a zero table', (
+      tester,
+    ) async {
+      await pumpTabla(
+        tester,
+        withScheduleScores: false,
+        data: const TournamentScoreboardDto(
+          rows: [
+            TournamentScoreboardRowDto(
+              userId: 'user-1',
+              name: 'Yo Jugador',
+              points: 0,
+              rank: 1,
+            ),
+            TournamentScoreboardRowDto(
+              userId: 'user-2',
+              name: 'Rival Uno',
+              points: 0,
+              rank: 2,
+            ),
+          ],
+        ),
+      );
+
+      expect(
+        find.textContaining(
+          'La tabla aparece con el primer resultado cargado.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Primeras rondas'), findsOneWidget);
+      expect(find.text('1 rondas · 1 partidos · 1 canchas'), findsOneWidget);
+      expect(find.text('Ronda 1'), findsOneWidget);
+      expect(find.text('Cómo se ordena la tabla'), findsOneWidget);
+      expect(find.textContaining('Puntos (games ganados)'), findsOneWidget);
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.text('Ver el cuadro completo'), findsNothing);
+      expect(find.text('Yo Jugador'), findsNothing);
     });
   });
 

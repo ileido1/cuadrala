@@ -66,6 +66,7 @@ final class _OrganizerBracketTab extends StatelessWidget {
                   const Center(child: CircularProgressIndicator()),
                 TournamentScheduleUnsupported() => _ScoreboardTab(
                   tournamentId: tournamentId,
+                  tournament: null,
                   tournamentsRepository: tournamentsRepository,
                   showBracketButton: false,
                 ),
@@ -164,6 +165,15 @@ final class _OrganizerStandingsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final firstResultCandidate = schedule.rounds
+        .expand((round) => round.matches.map((match) => (round.name, match)))
+        .where(
+          (item) =>
+              item.$2.matchStatus == 'IN_PROGRESS' &&
+              item.$2.matchId != null &&
+              item.$2.scores.isEmpty,
+        )
+        .firstOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -182,10 +192,45 @@ final class _OrganizerStandingsContent extends StatelessWidget {
               .toSet()
               .length,
         ),
+        if (firstResultCandidate != null) ...[
+          const SizedBox(height: 12),
+          BlocBuilder<TournamentScoreboardCubit, TournamentScoreboardState>(
+            builder: (context, state) {
+              final hasResults =
+                  (state is TournamentScoreboardSuccess &&
+                      _scoreboardHasResults(state.scoreboard)) ||
+                  _scheduleHasResults(schedule);
+              if (hasResults) return const SizedBox.shrink();
+              return FilledButton.icon(
+                key: const Key('tournament.scoreboard.firstResult'),
+                onPressed: () {
+                  final scheduleCubit = context.read<TournamentScheduleCubit>();
+                  final scoreboardCubit = context
+                      .read<TournamentScoreboardCubit>();
+                  showResultEntrySheet(
+                    context,
+                    match: firstResultCandidate.$2,
+                    roundName: firstResultCandidate.$1,
+                    formatPresetName: formatPresetName,
+                    onSubmit: (scores) async {
+                      await scheduleCubit.submitMatchResult(
+                        matchId: firstResultCandidate.$2.matchId!,
+                        scores: scores,
+                      );
+                      await scoreboardCubit.load();
+                    },
+                  );
+                },
+                icon: const Icon(AppIcons.check),
+                label: const Text('Cargar primer resultado'),
+              );
+            },
+          ),
+        ],
         BlocBuilder<TournamentScoreboardCubit, TournamentScoreboardState>(
           builder: (context, state) => switch (state) {
             TournamentScoreboardSuccess(:final scoreboard)
-                when scoreboard.rows.isNotEmpty =>
+                when _scoreboardHasResults(scoreboard) =>
               Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: _ScoreboardTable(

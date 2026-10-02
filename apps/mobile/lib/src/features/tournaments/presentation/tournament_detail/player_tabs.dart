@@ -282,11 +282,13 @@ final class _ScheduleTab extends StatelessWidget {
 final class _ScoreboardTab extends StatelessWidget {
   const _ScoreboardTab({
     required this.tournamentId,
+    required this.tournament,
     required this.tournamentsRepository,
     this.showBracketButton = true,
   });
 
   final String tournamentId;
+  final TournamentListItemDto? tournament;
   final TournamentsRepository tournamentsRepository;
   final bool showBracketButton;
 
@@ -294,69 +296,90 @@ final class _ScoreboardTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-      child: BlocBuilder<TournamentScoreboardCubit, TournamentScoreboardState>(
-        builder: (context, state) {
-          return switch (state) {
-            TournamentScoreboardInitial() => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            TournamentScoreboardLoading() => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            TournamentScoreboardEmpty() => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const _InfoBox(
-                  message:
-                      'La clasificación estará disponible cuando comience el torneo.',
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  '💡 Para registrar resultados, ve a la pestaña "Calendario" y toca el partido.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
+      child: SingleChildScrollView(
+        child: BlocBuilder<TournamentScoreboardCubit, TournamentScoreboardState>(
+          builder: (context, state) {
+            return switch (state) {
+              TournamentScoreboardInitial() => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              TournamentScoreboardLoading() => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              TournamentScoreboardEmpty() => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _InfoBox(
+                    message:
+                        'La clasificación estará disponible cuando comience el torneo.',
                   ),
-                ),
-              ],
-            ),
-            TournamentScoreboardError(:final message) => _ErrorBox(
-              message: message,
-              onRetry: () => context.read<TournamentScoreboardCubit>().load(),
-            ),
-            TournamentScoreboardSuccess(:final scoreboard) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _ScoreboardTable(
-                  scoreboard: scoreboard,
-                  currentUserId: context
-                      .read<TournamentRegistrationsCubit>()
-                      .currentUserId,
-                ),
-                if (showBracketButton) ...[
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () {
-                      showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => SizedBox(
-                          height: MediaQuery.sizeOf(context).height * 0.9,
-                          child: BracketScreen(
-                            tournamentId: tournamentId,
-                            tournamentsRepository: tournamentsRepository,
-                          ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '💡 Para registrar resultados, ve a la pestaña "Calendario" y toca el partido.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              TournamentScoreboardError(:final message) => _ErrorBox(
+                message: message,
+                onRetry: () => context.read<TournamentScoreboardCubit>().load(),
+              ),
+              TournamentScoreboardSuccess(:final scoreboard) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  BlocBuilder<TournamentScheduleCubit, TournamentScheduleState>(
+                    builder: (context, scheduleState) => _ScoreboardTable(
+                      scoreboard: scoreboard,
+                      tournament: tournament,
+                      schedule: scheduleState is TournamentScheduleSuccess
+                          ? scheduleState.schedule
+                          : null,
+                      currentUserId: context
+                          .read<TournamentRegistrationsCubit>()
+                          .currentUserId,
+                    ),
+                  ),
+                  BlocBuilder<TournamentScheduleCubit, TournamentScheduleState>(
+                    builder: (context, scheduleState) {
+                      final schedule =
+                          scheduleState is TournamentScheduleSuccess
+                          ? scheduleState.schedule
+                          : null;
+                      if (!showBracketButton ||
+                          (!_scoreboardHasResults(scoreboard) &&
+                              !_scheduleHasResults(schedule))) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (_) => SizedBox(
+                                height: MediaQuery.sizeOf(context).height * 0.9,
+                                child: BracketScreen(
+                                  tournamentId: tournamentId,
+                                  tournamentsRepository: tournamentsRepository,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(AppIcons.scoreboard),
+                          label: const Text('Ver el cuadro completo'),
                         ),
                       );
                     },
-                    icon: const Icon(AppIcons.scoreboard),
-                    label: const Text('Ver el cuadro completo'),
                   ),
                 ],
-              ],
-            ),
-          };
-        },
+              ),
+            };
+          },
+        ),
       ),
     );
   }
@@ -470,10 +493,36 @@ final class _MatchTile extends StatelessWidget {
   }
 }
 
+bool _scoreboardHasResults(TournamentScoreboardDto scoreboard) =>
+    scoreboard.rows.any(
+      (row) =>
+          row.gamesPlayed > 0 ||
+          row.gamesWon > 0 ||
+          row.gamesLost > 0 ||
+          row.gamesDrawn > 0 ||
+          row.pointsFor != 0 ||
+          row.pointsAgainst != 0 ||
+          row.difference != 0 ||
+          row.points != 0,
+    );
+
+bool _scheduleHasResults(TournamentScheduleDto? schedule) =>
+    schedule?.rounds.any(
+      (round) => round.matches.any((match) => match.scores.isNotEmpty),
+    ) ??
+    false;
+
 final class _ScoreboardTable extends StatelessWidget {
-  const _ScoreboardTable({required this.scoreboard, this.currentUserId});
+  const _ScoreboardTable({
+    required this.scoreboard,
+    this.schedule,
+    this.tournament,
+    this.currentUserId,
+  });
 
   final TournamentScoreboardDto scoreboard;
+  final TournamentScheduleDto? schedule;
+  final TournamentListItemDto? tournament;
   final String? currentUserId;
 
   @override
@@ -483,6 +532,152 @@ final class _ScoreboardTable extends StatelessWidget {
     if (rows.isEmpty) {
       return const _InfoBox(message: 'Aún no hay tabla para este torneo.');
     }
+    final hasScoreboardMetrics = _scoreboardHasResults(scoreboard);
+    final hasScheduleResults = _scheduleHasResults(schedule);
+    if (!hasScoreboardMetrics) {
+      final matches =
+          schedule?.rounds.expand((round) => round.matches).toList() ??
+          const <TournamentScheduleMatchDto>[];
+      final courts = matches
+          .map((match) => match.courtName)
+          .whereType<String>()
+          .toSet()
+          .length;
+      final rounds = schedule?.rounds.take(2).toList() ?? const [];
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(AppIcons.scoreboard, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${tournament?.formatPresetName == null ? 'Torneo' : tournamentFormatLabel(tournament!.formatPresetName)} · ${tournament?.registrationCount ?? rows.length} jugadores',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${schedule?.rounds.length ?? 0} rondas · ${matches.length} partidos · $courts canchas',
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  hasScheduleResults
+                      ? 'Hay resultados cargados; la clasificación espera las métricas oficiales.'
+                      : 'La tabla aparece con el primer resultado cargado. Con todos en cero no ordena nada.',
+                ),
+              ],
+            ),
+          ),
+          if (rounds.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Primeras rondas',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            for (var index = 0; index < rounds.length; index++)
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            rounds[index].name.isEmpty
+                                ? 'Ronda ${index + 1}'
+                                : rounds[index].name,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          if (rounds[index].matches.isNotEmpty &&
+                              rounds[index].matches.every(
+                                (match) =>
+                                    match.scheduledAt ==
+                                    rounds[index].matches.first.scheduledAt,
+                              ) &&
+                              rounds[index].matches.first.scheduledAt != null)
+                            Text(
+                              DateFormat('HH:mm').format(
+                                rounds[index].matches.first.scheduledAt!,
+                              ),
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                        ],
+                      ),
+                      for (final match in rounds[index].matches)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 58,
+                                child: Text(
+                                  match.courtName ?? '',
+                                  style: Theme.of(context).textTheme.labelSmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  match.label.isEmpty ? 'Partido' : match.label,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              border: Border.all(color: scheme.outlineVariant),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cómo se ordena la tabla',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  '1 · Puntos (games ganados) → 2 · Diferencia de games → 3 · Enfrentamiento directo',
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -504,86 +699,139 @@ final class _ScoreboardTable extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('#')),
-              DataColumn(label: Text('Jugador')),
-              DataColumn(label: Text('PJ')),
-              DataColumn(label: Text('PG')),
-              DataColumn(label: Text('PP')),
-              DataColumn(label: Text('PE')),
-              DataColumn(label: Text('PF')),
-              DataColumn(label: Text('PC')),
-              DataColumn(label: Text('DIF')),
-              DataColumn(label: Text('Pts')),
-            ],
-            rows: rows.map((r) {
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: rows.map<Widget>((row) {
               final isViewerRow =
-                  currentUserId != null && r.userId == currentUserId;
-              final isTopTwo = r.rank <= 2;
-              return DataRow(
+                  currentUserId != null && row.userId == currentUserId;
+              final isGuest =
+                  row.userId == null && row.tournamentRegistrationId != null;
+              final name = row.name.isEmpty
+                  ? (row.userId ?? row.tournamentRegistrationId ?? 'Invitado')
+                  : row.name;
+              return Container(
+                key: Key(
+                  'tournament.scoreboard.row.${row.userId ?? row.tournamentRegistrationId ?? name}',
+                ),
                 color: isViewerRow
-                    ? WidgetStatePropertyAll(
-                        scheme.primaryContainer.withValues(alpha: 0.35),
-                      )
+                    ? scheme.primaryContainer.withValues(alpha: .35)
                     : null,
-                cells: [
-                  DataCell(
-                    Text(
-                      '${r.rank}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: isTopTwo
-                            ? scheme.primary
-                            : scheme.onSurfaceVariant,
-                      ),
-                    ),
+                child: ExpansionTile(
+                  key: PageStorageKey(
+                    'scoreboard-${row.userId ?? row.tournamentRegistrationId ?? name}',
                   ),
-                  DataCell(
-                    Text.rich(
-                      TextSpan(
+                  initiallyExpanded: isViewerRow,
+                  leading: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        child: Text(
+                          '${row.rank}',
+                          style: TextStyle(
+                            color: row.rank <= 3
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      CircleAvatar(
+                        radius: 16,
+                        child: Text(
+                          _scoreboardInitials(name),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: isViewerRow
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (isViewerRow)
+                        _ScoreTag(label: 'VOS', color: scheme.primary),
+                      if (isGuest)
+                        _ScoreTag(
+                          label: 'HUÉSPED',
+                          color: scheme.onSurfaceVariant,
+                        ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    '${row.gamesPlayed} PJ · ${row.gamesWon}G-${row.gamesLost}P · dif ${row.difference >= 0 ? '+' : ''}${row.difference}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          TextSpan(
-                            text: r.name.isEmpty
-                                ? (r.userId ??
-                                      r.tournamentRegistrationId ??
-                                      'Invitado')
-                                : r.name,
-                            style: TextStyle(
-                              fontWeight: isViewerRow
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
+                          Text(
+                            '${row.points}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                          if (isViewerRow)
-                            TextSpan(
-                              text: ' · vos',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: scheme.primary,
-                              ),
+                          const Text(
+                            'PTS',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(AppIcons.chevronRight, size: 18),
+                    ],
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                      child: Row(
+                        children: [
+                          _ScoreMetric(
+                            label: 'PJ',
+                            value: '${row.gamesPlayed}',
+                          ),
+                          _ScoreMetric(
+                            label: 'G-P',
+                            value: '${row.gamesWon}-${row.gamesLost}',
+                          ),
+                          _ScoreMetric(
+                            label: 'Games',
+                            value: '${row.pointsFor}:${row.pointsAgainst}',
+                          ),
+                          _ScoreMetric(
+                            label: 'Dif',
+                            value:
+                                '${row.difference >= 0 ? '+' : ''}${row.difference}',
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                  DataCell(Text('${r.gamesPlayed}')),
-                  DataCell(Text('${r.gamesWon}')),
-                  DataCell(Text('${r.gamesLost}')),
-                  DataCell(Text('${r.gamesDrawn}')),
-                  DataCell(Text('${r.pointsFor}')),
-                  DataCell(Text('${r.pointsAgainst}')),
-                  DataCell(Text('${r.difference}')),
-                  DataCell(
-                    Text(
-                      '${r.points}',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ],
+                    if (schedule != null)
+                      _ScoreRounds(row: row, schedule: schedule!, rows: rows),
+                  ],
+                ),
               );
             }).toList(),
           ),
@@ -591,4 +839,198 @@ final class _ScoreboardTable extends StatelessWidget {
       ],
     );
   }
+}
+
+String _scoreboardInitials(String name) => name
+    .trim()
+    .split(RegExp(r'\s+'))
+    .where((part) => part.isNotEmpty)
+    .take(2)
+    .map((part) => part.substring(0, 1).toUpperCase())
+    .join();
+
+final class _ScoreTag extends StatelessWidget {
+  const _ScoreTag({required this.label, required this.color});
+  final String label;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(left: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .13),
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 8.5,
+        fontWeight: FontWeight.w800,
+        color: color,
+      ),
+    ),
+  );
+}
+
+final class _ScoreRounds extends StatelessWidget {
+  const _ScoreRounds({
+    required this.row,
+    required this.schedule,
+    required this.rows,
+  });
+  final TournamentScoreboardRowDto row;
+  final TournamentScheduleDto schedule;
+  final List<TournamentScoreboardRowDto> rows;
+  @override
+  Widget build(BuildContext context) {
+    final identity = _scoreIdentity(row);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Column(
+        children: [
+          for (var i = 0; i < schedule.rounds.length; i++)
+            _ScoreRoundCard(
+              roundLabel: 'R${i + 1}',
+              matches: schedule.rounds[i].matches,
+              identity: identity,
+              rows: rows,
+            ),
+          const SizedBox(height: 6),
+          Text(
+            'Abajo de cada ronda, con quién jugó. Los puntos son del jugador, no de la dupla.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _ScoreRoundCard extends StatelessWidget {
+  const _ScoreRoundCard({
+    required this.roundLabel,
+    required this.matches,
+    required this.identity,
+    required this.rows,
+  });
+  final String roundLabel;
+  final List<TournamentScheduleMatchDto> matches;
+  final Set<String> identity;
+  final List<TournamentScoreboardRowDto> rows;
+  @override
+  Widget build(BuildContext context) {
+    final match = matches
+        .where(
+          (item) => item.sides.any(
+            (side) => _sideIdentity(side).intersection(identity).isNotEmpty,
+          ),
+        )
+        .firstOrNull;
+    final ownSide = match?.sides
+        .where((side) => _sideIdentity(side).intersection(identity).isNotEmpty)
+        .firstOrNull;
+    final opponentSide = match?.sides
+        .where((side) => !identical(side, ownSide))
+        .firstOrNull;
+    final result = match == null || ownSide == null || opponentSide == null
+        ? null
+        : '${_pointsForSide(match, ownSide) ?? '—'}-${_pointsForSide(match, opponentSide) ?? '—'}';
+    final partners = ownSide == null
+        ? const <String>[]
+        : _sideIdentity(ownSide)
+              .difference(identity)
+              .map((key) => _nameForIdentity(rows, key))
+              .whereType<String>()
+              .toList();
+    return Container(
+      margin: const EdgeInsets.only(top: 7),
+      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              roundLabel,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              result ?? '—',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              partners.isEmpty ? '—' : partners.join(' · '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Set<String> _scoreIdentity(TournamentScoreboardRowDto row) => {
+  if (row.userId != null) 'user:${row.userId}',
+  if (row.tournamentRegistrationId != null)
+    'registration:${row.tournamentRegistrationId}',
+};
+Set<String> _sideIdentity(TournamentScheduleMatchSideDto side) => {
+  ...side.userIds.whereType<String>().map((id) => 'user:$id'),
+  ...side.registrationIds.map((id) => 'registration:$id'),
+};
+String? _nameForIdentity(
+  List<TournamentScoreboardRowDto> rows,
+  String identity,
+) {
+  for (final row in rows) {
+    if (_scoreIdentity(row).contains(identity) && row.name.isNotEmpty) {
+      return row.name;
+    }
+  }
+  return null;
+}
+
+String? _pointsForSide(
+  TournamentScheduleMatchDto match,
+  TournamentScheduleMatchSideDto side,
+) {
+  final sideIdentities = _sideIdentity(side);
+  final values = match.scores
+      .where((score) {
+        final identity = score.userId != null
+            ? 'user:${score.userId}'
+            : score.tournamentRegistrationId == null
+            ? null
+            : 'registration:${score.tournamentRegistrationId}';
+        return identity != null && sideIdentities.contains(identity);
+      })
+      .map((score) => score.points)
+      .toSet();
+  return values.length == 1 ? '${values.single}' : null;
+}
+
+final class _ScoreMetric extends StatelessWidget {
+  const _ScoreMetric({required this.label, required this.value});
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Column(
+      children: [
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
+      ],
+    ),
+  );
 }
