@@ -185,11 +185,10 @@ class TournamentsRepository {
 
   Future<TournamentRegistrationDto> registerParticipant({
     required String tournamentId,
-    required String userId,
   }) async {
     final data = await _tournamentsApi.createRegistrationEnvelope(
       tournamentId: tournamentId,
-      body: {'userId': userId},
+      body: const {},
     );
     return TournamentRegistrationDto.fromJson(data);
   }

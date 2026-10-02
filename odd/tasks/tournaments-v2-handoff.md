@@ -8,7 +8,7 @@ Reference: external Downloads/Cuadrala (8)/design_handoff_torneos_v2/{README.md,
 - Always use “Inscritos”; otherwise exact Spanish prototype copy.
 - No PROPUESTA features: anonymous spectator, guest web links, tournament finish/cancel actions, score correction or result push.
 - No invented fields/endpoints or simulated runtime data. Missing required data blocks the affected subsection, not unrelated work.
-- ACCEPT actually returns CONFIRMED; retain backend behavior and document visual/semantic deviation. No backend modifications.
+- The original mobile handoff preserved current backend contracts. On 2026-10-02 the user explicitly expanded scope to fix the named API gaps below; no unrelated product/API changes are authorized.
 - Reuse router/Cubits/repositories/DTOs/theme; no new dependencies without justification.
 - Dark/light, DRAFT/OPEN/IN_PROGRESS, viewer none/invited/pending/confirmed/organizer, optional-data empties, loading/error.
 - Golden checks 402×874 with deterministic fonts/locale/date, and browser Tweaks comparisons before closing each step.
@@ -39,15 +39,35 @@ Running authored count: 11,341 (T1–T7 + T6b + T7a + T8 safe slices + T8f; addi
 - [ ] T7 Progress and results. Shared table/bracket/matches, guest identities, immutable results and format-aware ties. Fix Dart bracket decoder for existing nullable userId/registrationId payload. Acceptance: no correction, no false metrics or rank rules; refresh schedule+scoreboard after submit; zero/live/done goldens. Route: delegated.
 
 ## Known gaps / decisions
-- Backend ACCEPT -> CONFIRMED differs from prototype PENDING; show real result.
-- Roster DTO lacks individual category, preset DTO lacks description; do not fabricate.
-- Scoreboard lacks losses/draws/difference; verify derivation from complete schedule before displaying those metrics. If not safely derivable, blocked and report.
-- Existing bracket score decoder rejects guest null userId; client correction T7.
+- Invitation ACCEPT currently confirms registration instead of leaving it PENDING for organizer confirmation; implement the prototype contract.
+- Roster responses lack a participant's current sport category and preset responses omit a persisted nullable description; only expose real values (category to organizers; no fabricated fallbacks).
+- Scoreboard lacks losses/draws/points against/difference; derive from completed scores. Preserve previously recorded tied match results as historical draws and count them separately; reject new tied results for all formats.
+- Bracket guest-null-user decoding was fixed by T7; earlier preparation note is stale.
 - Existing invitations list read is organizer-only; respond via ViewerTournamentDto.pendingInvitationId T4.
 - Real exchange-rate repository exists; omit Bs when unavailable instead of mock rate.
 - No existing golden harness / bundled font; T1 establishes deterministic typography.
 
+## Authorized follow-up: tournament API and contract gaps (2026-10-02)
+- User approved backend/API changes to close the handoff gaps and separately approved binding direct self-registration to the authenticated actor.
+- Preserve old tied results; add a separate draw count to scoreboard metrics. Do not rewrite or delete historical scores. Reject equal side totals on all new result submissions, independent of format.
+- Direct player registration must identify the enrolling player from the authenticated actor, never a caller-supplied `userId`. Invitation acceptance remains its own endpoint and must continue checking the invitee identity. Guest registration remains organizer-managed.
+- Invitation search: partial, case-insensitive name query, minimum two characters, bounded result count (20), organizer/venue-staff authorized, return only user ID and display name, exclude already registered/invited tournament users; no contact data.
+- Per-player category: derive the user's current category for the tournament's sport, display only to authorized organizers, and do not reject enrollment for category mismatch. Preset description is pass-through from persisted `FormatPresetVersion.description`; nullable stays absent/null, never invent copy.
+- Scoreboard metrics: games played/won/lost/drawn, points for/against and difference, with existing points semantics retained. Rank by points, difference, direct head-to-head, then deterministic name/identity fallback as the prototype states.
+- Scope is substantial: forecast 900–1,500 authored additions+deletions excluding generated assets. Retain `feature-branch-chain`, one Conventional Commit per coherent unit; local branch only, no push/PR/merge. TDD ON. API runner order: `npm run typecheck` → `npm run lint` → `npm test`; mobile runner: `flutter test` from `apps/mobile`.
+
+### T9 implementation tasks
+- [x] T9a Bind direct registration to actor identity. API takes the registration user from the authenticated actor and rejects body `userId`; Flutter sends an empty body. Invitation acceptance and organizer guest registration remain separate. Route: delegated direct. RED observed for API schema and Flutter request expectations; API focused contract+HTTP/DB tests passed (6/6), `npm run typecheck`, `npm run lint`, focused Flutter repository tests, `flutter analyze`, and `git diff --check` passed. Full API suite was attempted and failed in 17 files / 48 tests (977 passed, 7 skipped); unrelated failures remain to triage at final verification.
+- [ ] T9b Reject new tied results for every format. Enforce the racket-sport winner-required rule in API result use case, update contract/unit tests; preserve old records (scoreboard historical draw count lands in T9g). Mobile already blocks ties. No data rewrite. Route: delegated direct.
+- [ ] T9c Invitation ACCEPT creates/retains a PENDING registration while marking the invitation ACCEPTED; existing organizer individual/bulk confirmation promotes it to CONFIRMED. Cover API integration, registration/schedule eligibility, and mobile response tests. Route: delegated direct.
+- [ ] T9d Expose persisted preset description through API and mobile DTO/UI, preserving null when absent. Route: delegated direct.
+- [ ] T9e Include each authenticated registrant's current category for the tournament sport in organizer-only Inscritos data; keep participant category informational and do not block enrollment. Cover privacy redaction and mobile rendering. Route: delegated direct.
+- [ ] T9f Add the authorized tournament-scoped name search and wire the organizer invitation sheet to real results, retaining organizer permissions and excluding existing roster/invites. Route: delegated direct.
+- [ ] T9g Extend scoreboard contract and mobile table with played/won/lost/drawn, for/against/difference, prototype rank tie-breaks, and tests including historical tied records. Route: delegated direct.
+- [ ] T9h Update authoritative tournament handoff/OpenAPI/spec docs and full verification after the above commits. Browser prototype/Tweaks comparison remains pending until a browser is available. Route: inline documentation after implementation.
+
 ## Progress and verification
+T9a commit: 273a4f7 (`fix(tournaments): bind self-registration to actor`). No changes to withdrawal, invitations, or guest registration. Direct enrollment now uses bearer actor identity, so one authenticated user cannot target another by body `userId`.
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
 Implementation T1–T7 plus T6b create-state snapshots is present. Formal visual acceptance remains pending: the prototype browser/Tweaks surface was unavailable, and generated golden references prove regression consistency—not parity with JSX. Final build/test verification is recorded under T7/T6b. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 

@@ -18,6 +18,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
     let sportId: string;
     let presetAmericanoId: string;
     let playerToken: string;
+    let authenticatedPlayerId: string;
 
     beforeAll(async () => {
       await resetDatabaseForTestsSV();
@@ -33,6 +34,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const PLAYER = await PRISMA.user.create({
         data: { email: `player-${TS}@test.local`, name: 'Player' },
       });
+      authenticatedPlayerId = PLAYER.id;
       playerToken = signAccessTokenSV(PLAYER.id, PLAYER.email);
     });
 
@@ -53,19 +55,15 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           status: 'OPEN',
         },
       });
-      const TS = Date.now();
-      const PLAYER = await PRISMA.user.create({
-        data: { email: `reg-guard-open-${TS}@test.local`, name: 'Reg Guard Open' },
-      });
-
       const RES = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`)
-        .send({ userId: PLAYER.id })
+        .send({})
         .set('Authorization', `Bearer ${playerToken}`)
         .set('Content-Type', 'application/json');
 
       expect(RES.status).toBe(201);
       expect(RES.body.data.status).toBe('PENDING');
+      expect(RES.body.data.userId).toBe(authenticatedPlayerId);
     });
 
     it('responds 409 when self-registering on a tournament already IN_PROGRESS', async () => {
@@ -78,14 +76,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           status: 'IN_PROGRESS',
         },
       });
-      const TS = Date.now();
-      const PLAYER = await PRISMA.user.create({
-        data: { email: `reg-guard-inprogress-${TS}@test.local`, name: 'Reg Guard In Progress' },
-      });
-
       const RES = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`)
-        .send({ userId: PLAYER.id })
+        .send({})
         .set('Authorization', `Bearer ${playerToken}`)
         .set('Content-Type', 'application/json');
 
@@ -103,21 +96,15 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           status: 'DRAFT',
         },
       });
-      const TS = Date.now();
-      const REG = await request(APP)
-        .post('/api/v1/auth/register')
-        .send({ email: `reg-guard-${TS}@test.local`, password: 'password123', name: 'Reg Guard User' })
-        .set('Content-Type', 'application/json');
-      expect(REG.status).toBe(201);
-
       const RES = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT.id}/registrations`)
-        .send({ userId: REG.body.data.user.id })
+        .send({})
         .set('Authorization', `Bearer ${playerToken}`)
         .set('Content-Type', 'application/json');
 
       expect(RES.status).toBe(201);
       expect(RES.body.data.status).toBe('PENDING');
+      expect(RES.body.data.userId).toBe(authenticatedPlayerId);
     });
 
     it('responds 409 when withdrawing a registration on a tournament that is IN_PROGRESS', async () => {

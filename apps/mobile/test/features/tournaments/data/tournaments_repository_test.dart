@@ -103,7 +103,6 @@ void main() {
 
         final result = await repo.registerParticipant(
           tournamentId: 't-1',
-          userId: 'user-1',
         );
 
         expect(result.id, 'reg-1');
@@ -112,7 +111,7 @@ void main() {
         verify(
           () => api.createRegistrationEnvelope(
             tournamentId: 't-1',
-            body: {'userId': 'user-1'},
+            body: {},
           ),
         ).called(1);
       },

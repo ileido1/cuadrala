@@ -91,7 +91,7 @@ class TournamentRegistrationsCubit extends Cubit<TournamentRegistrationsState> {
     emit(current.copyWith(registering: true, clearRegisterError: true));
 
     try {
-      await _repo.registerParticipant(tournamentId: _tournamentId, userId: currentUserId);
+      await _repo.registerParticipant(tournamentId: _tournamentId);
       final refreshed = await _repo.listRegistrations(tournamentId: _tournamentId);
       emit(current.copyWith(items: refreshed, total: refreshed.length, registering: false));
     } on AppFailure catch (e) {
