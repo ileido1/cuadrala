@@ -824,6 +824,14 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                             ],
                           ),
                         ),
+                        if (_selectedPreset?.description?.trim().isNotEmpty ??
+                            false) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            _selectedPreset!.description!,
+                            style: TextStyle(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
                         //? Los parámetros los define el schema del preset.
                         if (_selectedPreset?.parametersSchema?.isNotEmpty ??
                             false) ...[

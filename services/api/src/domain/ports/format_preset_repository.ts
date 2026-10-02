@@ -7,6 +7,7 @@ export type TournamentFormatPresetDTO = {
   code: string;
   version: number;
   name: string;
+  description: string | null;
   schemaVersion: number;
   defaultParameters: unknown;
   parametersSchema?: FormatParameterFieldSchema[] | null;
@@ -28,10 +29,10 @@ export interface FormatPresetRepository {
     sportId: string;
     code: string;
     name: string;
+    description?: string | null;
     schemaVersion: number;
     defaultParameters: unknown;
     parametersSchema?: FormatParameterFieldSchema[];
     effectiveFrom?: Date;
   }): Promise<TournamentFormatPresetDTO>;
 }
-

@@ -40,7 +40,7 @@ Running authored count: 11,341 (T1–T7 + T6b + T7a + T8 safe slices + T8f; addi
 
 ## Known gaps / decisions
 - Invitation ACCEPT currently confirms registration instead of leaving it PENDING for organizer confirmation; implement the prototype contract.
-- Roster responses lack a participant's current sport category and preset responses omit a persisted nullable description; only expose real values (category to organizers; no fabricated fallbacks).
+- Roster responses lack a participant's current sport category. CodeGraph verification found `TournamentFormatPreset` has no persisted description field or repository mapping, so T9d is blocked pending a user decision on adding nullable description persistence; do not invent/default description copy.
 - Scoreboard lacks losses/draws/points against/difference; derive from completed scores. Preserve previously recorded tied match results as historical draws and count them separately; reject new tied results for all formats.
 - Bracket guest-null-user decoding was fixed by T7; earlier preparation note is stale.
 - Existing invitations list read is organizer-only; respond via ViewerTournamentDto.pendingInvitationId T4.
@@ -49,6 +49,7 @@ Running authored count: 11,341 (T1–T7 + T6b + T7a + T8 safe slices + T8f; addi
 
 ## Authorized follow-up: tournament API and contract gaps (2026-10-02)
 - User approved backend/API changes to close the handoff gaps and separately approved binding direct self-registration to the authenticated actor.
+- On 2026-10-02 user explicitly approved adding nullable preset-description persistence and passing it through publish/catalog/mobile; existing presets stay null unless actual content is supplied.
 - Preserve old tied results; add a separate draw count to scoreboard metrics. Do not rewrite or delete historical scores. Reject equal side totals on all new result submissions, independent of format.
 - Direct player registration must identify the enrolling player from the authenticated actor, never a caller-supplied `userId`. Invitation acceptance remains its own endpoint and must continue checking the invitee identity. Guest registration remains organizer-managed.
 - Invitation search: partial, case-insensitive name query, minimum two characters, bounded result count (20), organizer/venue-staff authorized, return only user ID and display name, exclude already registered/invited tournament users; no contact data.
@@ -60,7 +61,7 @@ Running authored count: 11,341 (T1–T7 + T6b + T7a + T8 safe slices + T8f; addi
 - [x] T9a Bind direct registration to actor identity. API takes the registration user from the authenticated actor and rejects body `userId`; Flutter sends an empty body. Invitation acceptance and organizer guest registration remain separate. Route: delegated direct. RED observed for API schema and Flutter request expectations; API focused contract+HTTP/DB tests passed (6/6), `npm run typecheck`, `npm run lint`, focused Flutter repository tests, `flutter analyze`, and `git diff --check` passed. Full API suite was attempted and failed in 17 files / 48 tests (977 passed, 7 skipped); unrelated failures remain to triage at final verification.
 - [x] T9b Reject new tied results for every format. API now aggregates participant scores by side and rejects equal side totals regardless of preset; preserves all historical rows (no migration/rewrite). Route: delegated direct. RED observed for ROUND_ROBIN, AMERICANO, and unknown-format tied doubles; GREEN: `npm run typecheck`, `npm run lint`, focused use-case tests (20/20), `git diff --check`.
 - [x] T9c Invitation ACCEPT creates/retains a PENDING registration while marking the invitation ACCEPTED; organizer confirmation separately promotes it to CONFIRMED. Existing invitee identity check and rejection behavior remain. RED observed (was CONFIRMED); GREEN: `npm run typecheck`, `npm run lint`, focused API unit + HTTP/DB integration tests (8/8), `git diff --check`. Route: delegated direct.
-- [ ] T9d Expose persisted preset description through API and mobile DTO/UI, preserving null when absent. Route: delegated direct.
+- [x] T9d Added nullable `TournamentFormatPreset.description` persistence and pass-through in publish/catalog/OpenAPI and Flutter DTO/selected-preset UI; old records remain null, with no default text. RED observed in API and Flutter before implementation. GREEN: API focused unit (1/1), `typecheck`, `lint`, Prisma generate/validate; Flutter DTO + create screen (52 tests), `flutter analyze`, `git diff --check`. HTTP/DB integration attempted but failed because the configured test DB has not applied the new migration; no migration was run against a DB. Route: delegated direct.
 - [ ] T9e Include each authenticated registrant's current category for the tournament sport in organizer-only Inscritos data; keep participant category informational and do not block enrollment. Cover privacy redaction and mobile rendering. Route: delegated direct.
 - [ ] T9f Add the authorized tournament-scoped name search and wire the organizer invitation sheet to real results, retaining organizer permissions and excluding existing roster/invites. Route: delegated direct.
 - [ ] T9g Extend scoreboard contract and mobile table with played/won/lost/drawn, for/against/difference, prototype rank tie-breaks, and tests including historical tied records. Route: delegated direct.
@@ -69,7 +70,8 @@ Running authored count: 11,341 (T1–T7 + T6b + T7a + T8 safe slices + T8f; addi
 ## Progress and verification
 T9a commit: 28cc702 (`fix(tournaments): bind self-registration to actor`). No changes to withdrawal, invitations, or guest registration. Direct enrollment now uses bearer actor identity, so one authenticated user cannot target another by body `userId`.
 T9b commit: 3031c05 (`fix(tournaments): reject tied API results`). API result submission no longer permits ties, including side-total ties in doubles.
-T9c commit: c373d1d (`fix(tournaments): keep accepted invites pending`).
+T9c commit: f5551d1 (`fix(tournaments): keep accepted invites pending`).
+T9d commit: 41c0c7d (`feat(tournaments): persist preset descriptions`). Integration DB remains pending until the dedicated test database applies this migration.
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
 Implementation T1–T7 plus T6b create-state snapshots is present. Formal visual acceptance remains pending: the prototype browser/Tweaks surface was unavailable, and generated golden references prove regression consistency—not parity with JSX. Final build/test verification is recorded under T7/T6b. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 

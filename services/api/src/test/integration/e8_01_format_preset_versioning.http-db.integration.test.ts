@@ -48,6 +48,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 8 — E0-03: Publish preset v
       .set('x-admin-secret', ENV_CONST.ADMIN_DISPATCH_SECRET)
       .send({
         name: 'Todos contra todos (v2)',
+        description: 'Todos juegan contra todos.',
         schemaVersion: 2,
         defaultParameters: { doubleRound: true },
       })
@@ -57,6 +58,16 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 8 — E0-03: Publish preset v
     expect(PUB.body.success).toBe(true);
     expect(PUB.body.data.code).toBe('ROUND_ROBIN');
     expect(PUB.body.data.version).toBe(2);
+    expect(PUB.body.data.description).toBe('Todos juegan contra todos.');
+
+    const PRESETS = await request(APP).get(
+      `/api/v1/sports/${sportPadelId}/tournament-format-presets`,
+    );
+    expect(
+      PRESETS.body.data.presets.find(
+        (_preset: { code: string }) => _preset.code === 'ROUND_ROBIN',
+      ).description,
+    ).toBe('Todos juegan contra todos.');
 
     const T1_DB = await PRISMA.tournament.findUnique({ where: { id: T1_ID } });
     expect(T1_DB?.formatPresetId).toBe(presetRoundRobinV1Id);
@@ -76,4 +87,3 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Sprint 8 — E0-03: Publish preset v
     expect(T2.body.data.presetSchemaVersion).toBe(2);
   });
 });
-

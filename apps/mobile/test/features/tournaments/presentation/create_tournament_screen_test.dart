@@ -82,6 +82,7 @@ const _presetWithSchema = TournamentPresetDto(
   code: 'ROUND_ROBIN',
   version: 1,
   name: 'Liga',
+  description: 'Todos juegan contra todos.',
   schemaVersion: 1,
   defaultParameters: null,
   parametersSchema: [
@@ -595,6 +596,14 @@ void main() {
         );
       },
     );
+
+    testWidgets('should render the selected preset description', (tester) async {
+      await _pumpScreen(tester);
+
+      await _selectPreset(tester, 'Liga');
+
+      expect(find.text('Todos juegan contra todos.'), findsOneWidget);
+    });
 
     testWidgets(
       'should render schema fields when the preset has parametersSchema',

@@ -18,6 +18,7 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
         code: true,
         version: true,
         name: true,
+        description: true,
         schemaVersion: true,
         defaultParameters: true,
         parametersSchema: true,
@@ -35,6 +36,7 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
         code: true,
         version: true,
         name: true,
+        description: true,
         schemaVersion: true,
         defaultParameters: true,
         parametersSchema: true,
@@ -58,6 +60,7 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
         code: true,
         version: true,
         name: true,
+        description: true,
         schemaVersion: true,
         defaultParameters: true,
         parametersSchema: true,
@@ -70,6 +73,7 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
     sportId: string;
     code: string;
     name: string;
+    description?: string | null;
     schemaVersion: number;
     defaultParameters: unknown;
     parametersSchema?: unknown;
@@ -98,6 +102,7 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
           code: _input.code,
           version: NEXT_VERSION,
           name: _input.name,
+          description: _input.description ?? null,
           schemaVersion: _input.schemaVersion,
           defaultParameters: _input.defaultParameters as never,
           parametersSchema: _input.parametersSchema ? (_input.parametersSchema as never) : (null as never),
@@ -111,6 +116,7 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
           code: true,
           version: true,
           name: true,
+          description: true,
           schemaVersion: true,
           defaultParameters: true,
           parametersSchema: true,
@@ -124,4 +130,3 @@ export class PrismaFormatPresetRepository implements FormatPresetRepository {
     });
   }
 }
-

@@ -319,6 +319,7 @@ model TournamentFormatPreset {
   /// Versión del preset (por sport+code). Incremental, inicia en 1.
   version           Int                      @default(1)
   name              String
+  description       String?
   /// Versión del esquema de `defaultParameters` / `formatParameters` en torneos existentes.
   schemaVersion     Int                      @default(1)
   defaultParameters Json

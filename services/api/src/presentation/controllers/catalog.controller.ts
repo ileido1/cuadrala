@@ -58,6 +58,7 @@ export async function postPublishFormatPresetVersionCON(_req: Request, _res: Res
     sportId: PARAMS_SPORT.sportId,
     code: PARAMS_CODE.code,
     name: BODY.name,
+    ...(BODY.description !== undefined ? { description: BODY.description } : {}),
     schemaVersion: BODY.schemaVersion,
     defaultParameters: BODY.defaultParameters,
     ...(BODY.effectiveFrom !== undefined ? { effectiveFrom: new Date(BODY.effectiveFrom) } : {}),

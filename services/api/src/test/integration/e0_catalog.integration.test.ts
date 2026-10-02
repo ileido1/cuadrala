@@ -45,6 +45,11 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('E0 — Catálogo multi-deporte y tor
     const CODES = (RES.body.data.presets as { code: string }[]).map((_p) => _p.code);
     expect(CODES).toContain('AMERICANO');
     expect(CODES).toContain('ROUND_ROBIN');
+    expect(
+      (RES.body.data.presets as { description?: string | null }[]).every(
+        (_preset) => Object.hasOwn(_preset, 'description'),
+      ),
+    ).toBe(true);
   });
 
   it('POST /api/v1/tournaments crea torneo con formato ROUND_ROBIN', async () => {

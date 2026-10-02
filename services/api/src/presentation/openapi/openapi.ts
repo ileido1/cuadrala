@@ -150,6 +150,7 @@ const OPENAPI_CONST = {
                 required: ['name', 'schemaVersion', 'defaultParameters'],
                 properties: {
                   name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
                   schemaVersion: { type: 'integer', minimum: 1 },
                   defaultParameters: { type: 'object', additionalProperties: true },
                   effectiveFrom: { type: 'string', format: 'date-time' },

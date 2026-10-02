@@ -6,6 +6,7 @@ export type PublishFormatPresetVersionInput = {
   sportId: string;
   code: string;
   name: string;
+  description?: string | null;
   schemaVersion: number;
   defaultParameters: unknown;
   effectiveFrom?: Date;
@@ -31,6 +32,7 @@ export class PublishFormatPresetVersionUseCase {
       sportId: _input.sportId,
       code: _input.code,
       name: _input.name,
+      ...(_input.description !== undefined ? { description: _input.description } : {}),
       schemaVersion: _input.schemaVersion,
       defaultParameters: _input.defaultParameters,
       ...(_input.effectiveFrom !== undefined ? { effectiveFrom: _input.effectiveFrom } : {}),
@@ -40,6 +42,7 @@ export class PublishFormatPresetVersionUseCase {
       presetId: CREATED.id,
       sportId: CREATED.sportId,
       code: CREATED.code,
+      description: CREATED.description,
       version: CREATED.version,
       schemaVersion: CREATED.schemaVersion,
       isActive: CREATED.isActive ?? true,
@@ -48,4 +51,3 @@ export class PublishFormatPresetVersionUseCase {
     };
   }
 }
-
