@@ -21,7 +21,7 @@ RDD: disabled/unmanaged, global OFF verified; no native review.
 Delivery: feature-branch-chain, seven core work-unit commits plus the T6b golden-coverage follow-up; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 11,230 (T1–T7 + T6b + T7a + T8 safe work-unit slices; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 11,341 (T1–T7 + T6b + T7a + T8 safe slices + T8f; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [x] T8f Fix three confirmed player-detail blockers (OPEN+INVITED and OPEN+PENDING overflow at 402px; missing tournament button font family; registration-error visibility) and add the excluded dark/light 402×874 detail goldens. User explicitly authorized these production repairs after T8 exposed them. Scope limited to tournament detail presentation/theme and regression tests/goldens; no backend, contracts, shared helper, or unrelated theme changes. Route: delegated direct. RED observed for invitation overflow; focused detail goldens GREEN.
@@ -212,3 +212,4 @@ T8r safe-slice commit: 50984caf96b372aa6d1deb87128b3ddd3c0351e4 (`test(tournamen
 - Updated all affected tournament golden references (list, detail, organizer, invitation, create, progress/results) because the scoped TournamentTheme controls each screen. Added six dark/light player snapshots for invitation, PENDING enrollment, and registration error. All 62 player-detail snapshots are 402×874.
 - Parent verification: `flutter test --no-pub --reporter compact` passed all 1,107 tests; `flutter analyze --no-pub` clean; `flutter build web --debug --no-pub` succeeded; `git diff --check` clean. Reviewed invited, pending, and registration-error snapshots. These references validate Flutter regression behavior, not JSX pixel parity.
 - No endpoints/DTOs/backend/dependencies changed. Manual browser/Tweaks comparison remains pending.
+- Work-unit commit: `56c3115` (`fix(tournaments): resolve player golden blockers`). RDD: disabled/unmanaged (global OFF); no native review.
