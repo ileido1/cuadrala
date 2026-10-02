@@ -23,7 +23,10 @@ import 'package:cuadrala_mobile/src/features/tournaments/presentation/cubit/tour
 import 'tournament_golden.dart';
 
 class _Registrations extends MockCubit<TournamentRegistrationsState>
-    implements TournamentRegistrationsCubit {}
+    implements TournamentRegistrationsCubit {
+  @override
+  Future<void> searchInvitationCandidates(String query) async {}
+}
 
 class _Schedule extends MockCubit<TournamentScheduleState>
     implements TournamentScheduleCubit {}

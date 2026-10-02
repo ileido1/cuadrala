@@ -131,6 +131,16 @@ Sin `TEST_DATABASE_URL`, las pruebas de integración se marcan como omitidas (`d
 - `GET /api/v1/sports/:sportId/tournament-format-presets` — formatos parametrizables por deporte (ej. AMERICANO, ROUND_ROBIN)
 - `POST /api/v1/tournaments` — crea torneo con `sportId` y **preset** por `formatPresetId` (versión específica) o `formatPresetCode` (servidor resuelve versión vigente), además de `formatParameters?`, `startsAt?`
 
+### Torneos: inscripción, invitaciones y resultados
+
+- `GET /api/v1/sports/:sportId/tournament-format-presets` devuelve presets activos; `description` es nullable y solo contiene texto persistido. Para publicar una versión: `POST /api/v1/sports/:sportId/tournament-format-presets/:code/versions`, con `x-admin-secret` y `{ name, description?, schemaVersion, defaultParameters, effectiveFrom? }`.
+- `POST /api/v1/tournaments/:tournamentId/registrations` requiere Bearer y objeto JSON vacío. El jugador inscrito es el usuario autenticado; no se acepta `userId` en el body.
+- `GET /api/v1/tournaments/:tournamentId/invitations/candidates?q=...` requiere Bearer y acceso de organizador o staff de sede. Busca nombres parciales sin distinguir mayúsculas; `q` debe tener entre 2 y 80 caracteres. Devuelve hasta 20 candidatos con solo `id` y `name`, excluyendo usuarios ya inscritos o invitados.
+- `POST /api/v1/tournaments/:tournamentId/invitations/:invitationId/respond` recibe `{ action: "ACCEPT" | "REJECT" }`. Solo responde el usuario invitado. Aceptar deja la inscripción en `PENDING` y la invitación en `ACCEPTED`; el organizador confirma aparte con `PATCH /api/v1/tournaments/:tournamentId/registrations/:registrationId` (`{ status: "CONFIRMED" }`) o confirma pendientes en lote con `POST /api/v1/tournaments/:tournamentId/registrations/confirm-pending`.
+- `GET /api/v1/tournaments/:tournamentId/registrations` requiere Bearer. `sportCategoryName` solo se agrega cuando quien consulta tiene acceso de organizador/staff; es informativo y no condiciona la inscripción. Invitados sin cuenta y categorías inexistentes devuelven `null`/sin valor.
+- `POST /api/v1/tournaments/:tournamentId/matches/:matchId/results` requiere Bearer y permisos de organizador/staff; cada score identifica al jugador con `userId` o `tournamentRegistrationId` y lleva `points` no negativo. Se rechaza el empate comparando el total de cada lado, también en dobles. Resultados históricos empatados se conservan y cuentan como partidos empatados.
+- `GET /api/v1/tournaments/:tournamentId/scoreboard` devuelve `rows` con `userId`, `tournamentRegistrationId?`, `name`, `points`, `gamesPlayed`, `gamesWon`, `gamesLost`, `gamesDrawn`, `pointsFor`, `pointsAgainst`, `difference` y `rank`. Los partidos empatados históricos cuentan en `gamesDrawn`; los nuevos empates no se aceptan. El ranking ordena por puntos, diferencia, victorias en la mini-tabla directa del grupo empatado y, finalmente, nombre e identidad. Los datos internos de enfrentamientos directos no forman parte de la respuesta.
+
 - `GET /api/v1/health` — estado del servicio
 - `GET /api/v1/ready` — readiness (DB)
 - `POST /api/v1/americanos` — crea partido (preset AMERICANO por deporte; body opcional `sportId`; hereda formato si hay `tournamentId`)

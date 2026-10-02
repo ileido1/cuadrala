@@ -699,7 +699,7 @@ const OPENAPI_CONST = {
         tags: ['Tournaments'],
         summary: 'Consultar scoreboard de un torneo',
         description:
-          '`data.rows` trae `userId/name/points/gamesPlayed/gamesWon/rank`. `gamesWon` suma 1 por partido donde el lado del usuario (agrupado por `MatchParticipant.teamLabel` en duplas, o el propio jugador en singles) sumó estrictamente más puntos que cualquier otro lado; un empate entre lados no le suma a nadie, aunque `gamesPlayed` sí cuenta ese partido para todos.',
+          '`data.rows` devuelve `userId`, `tournamentRegistrationId?`, `name`, `points`, `gamesPlayed`, `gamesWon`, `gamesLost`, `gamesDrawn`, `pointsFor`, `pointsAgainst`, `difference` y `rank`. `userId` es null para invitados sin cuenta. Las métricas cuentan partidos finalizados; resultados históricos empatados se cuentan en `gamesDrawn`, aunque nuevos resultados empatados son rechazados. `gamesWon` suma 1 por partido donde el lado del usuario (agrupado por `MatchParticipant.teamLabel` en duplas, o el propio jugador en singles) sumó estrictamente más puntos que cualquier otro lado. El ranking ordena por puntos, diferencia, head-to-head (victorias en la mini-tabla directa del grupo empatado) y, finalmente, nombre (`name`) e identidad. Los datos internos de enfrentamientos directos no se incluyen en la respuesta.',
         parameters: [
           {
             name: 'tournamentId',
@@ -709,7 +709,58 @@ const OPENAPI_CONST = {
           },
         ],
         responses: {
-          '200': { description: 'OK' },
+          '200': {
+            description: 'Scoreboard del torneo',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        rows: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            required: [
+                              'userId',
+                              'name',
+                              'points',
+                              'gamesPlayed',
+                              'gamesWon',
+                              'gamesLost',
+                              'gamesDrawn',
+                              'pointsFor',
+                              'pointsAgainst',
+                              'difference',
+                              'rank',
+                            ],
+                            properties: {
+                              userId: { type: 'string', nullable: true },
+                              tournamentRegistrationId: { type: 'string' },
+                              name: { type: 'string' },
+                              points: { type: 'number' },
+                              gamesPlayed: { type: 'integer' },
+                              gamesWon: { type: 'integer' },
+                              gamesLost: { type: 'integer' },
+                              gamesDrawn: { type: 'integer' },
+                              pointsFor: { type: 'number' },
+                              pointsAgainst: { type: 'number' },
+                              difference: { type: 'number' },
+                              rank: { type: 'integer' },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           '400': { description: 'Validación fallida' },
           '404': { description: 'Torneo no encontrado' },
         },
