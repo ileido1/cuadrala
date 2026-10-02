@@ -46,8 +46,7 @@ export const UNDOCUMENTED_ROUTES: readonly string[] = [
   'DELETE /venues/:venueId/reservations/:reservationId',
   'POST /venues/:venueId/reservations/:reservationId/ledger/compensatory-adjustments',
 
-  //? tournament_invitation — 5 de 5
-  'GET /tournaments/:tournamentId/invitations/candidates',
+  //? tournament_invitation — 4 de 4
   'GET /tournaments/:tournamentId/invitations',
   'POST /tournaments/:tournamentId/invitations',
   'DELETE /tournaments/:tournamentId/invitations/:invitationId',
