@@ -41,7 +41,7 @@ Running authored count: 11,473 (T1–T7 + T6b + T7a + T8 safe slices + T8f + T9a
 ## Known gaps / decisions
 - Invitation ACCEPT now leaves registration PENDING for organizer confirmation; the invitee identity check remains enforced.
 - Organizer roster responses include current sport category only for authorized organizers/staff. Nullable preset descriptions are persisted and passed through; do not invent/default description copy.
-- Scoreboard returns losses/draws/points against/difference. Preserve previously recorded tied match results as historical draws and count them separately; reject new tied results for all formats. The OpenAPI scoreboard description is stale and understates these fields and ranking.
+- Scoreboard returns losses/draws/points against/difference. Preserve previously recorded tied match results as historical draws and count them separately; reject new tied results for all formats. OpenAPI now documents the full response and ranking contract without exposing internal head-to-head inputs.
 - Bracket guest-null-user decoding was fixed by T7; earlier preparation note is stale.
 - Existing invitations list read is organizer-only; respond via ViewerTournamentDto.pendingInvitationId T4.
 - Real exchange-rate repository exists; omit Bs when unavailable instead of mock rate.
