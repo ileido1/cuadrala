@@ -18,10 +18,10 @@ Branch: codex/tournaments-v2-handoff. Base: bbb980ae0547ba3b6ca401f84441c726c682
 Route: delegated direct for every task (mapping requires 4+ files; writing prepares multiple non-trivial files).
 TDD: ON, source AGENTS.md and .cursor/rules/tdd-guidelines.mdc. Runner: flutter test from apps/mobile; observed RED -> GREEN -> refactor.
 RDD: disabled/unmanaged, global OFF verified; no native review.
-Delivery: feature-branch-chain, seven core work-unit commits plus the T6b golden-coverage follow-up; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
+Delivery: feature-branch-chain, seven core work-unit commits plus authorized golden/API follow-ups; local only, review slices by commit. Forecast 2,000–4,000 authored additions+deletions excluding generated goldens; ~400 is advisory task-planning size, never omit tests or compress code to meet it. No PR creation authorized.
 Checks: focused flutter test, flutter analyze, Flutter compile check, pixel goldens and browser comparison; full suite at final integration.
 Rollback: each work-unit commit isolates its behavior/tests; revert in reverse dependency order, preserving unrelated files.
-Running authored count: 11,341 (T1–T7 + T6b + T7a + T8 safe slices + T8f; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
+Running authored count: 11,473 (T1–T7 + T6b + T7a + T8 safe slices + T8f + T9a–T9i; additions+deletions, excludes generated binary fonts/goldens). Mirror: synced and read back (observation 1344; evolving mirror updated per task).
 
 ## Tasks (one commit per step)
 - [x] T8f Fix three confirmed player-detail blockers (OPEN+INVITED and OPEN+PENDING overflow at 402px; missing tournament button font family; registration-error visibility) and add the excluded dark/light 402×874 detail goldens. User explicitly authorized these production repairs after T8 exposed them. Scope limited to tournament detail presentation/theme and regression tests/goldens; no backend, contracts, shared helper, or unrelated theme changes. Route: delegated direct. RED observed for invitation overflow; focused detail goldens GREEN.
@@ -77,6 +77,7 @@ T9e commit: 3c9de37 (`feat(tournaments): show player sport categories`).
 T9f commit: bbe97b0 (`feat(tournaments): search invitation candidates`).
 T9f OpenAPI debt correction commit: d07f600 (`fix(tournaments): clear documented invitation route debt`).
 T9g commit: c1402e2 (`feat(tournaments): expose scoreboard metrics`).
+T9h/T9i work-unit commit: f8cab3a (`docs(tournaments): finalize API contract coverage`). Includes the verified README/OpenAPI contract updates and the invitation-sheet golden fixture repair uncovered during final full-suite verification.
 T1 implementation and automated checks observed; visual acceptance remains pending because no browser is connected. Source tree initially clean except untracked .codegraph/ (preserve).
 Implementation T1–T7 plus T6b create-state snapshots is present. Formal visual acceptance remains pending: the prototype browser/Tweaks surface was unavailable, and generated golden references prove regression consistency—not parity with JSX. Final build/test verification is recorded under T7/T6b. Prototype local server http://127.0.0.1:8765/Cuadrala%20App.html. Browser comparison unavailable: cua reports no enabled browsers/apps (IAB unavailable); source inspection and automated goldens remain available. Manual Tweaks comparison MUST stay pending, not claimed passed.
 
