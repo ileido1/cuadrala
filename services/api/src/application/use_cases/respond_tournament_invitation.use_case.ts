@@ -51,12 +51,12 @@ export class RespondTournamentInvitationUseCase {
       );
     }
 
-    //? 5. Aplicar la acción: aceptar confirma el registro; rechazar solo actualiza la invitación
+    //? 5. Aceptar crea el registro pendiente; el organizador confirma por separado.
     if (_input.action === 'ACCEPT') {
       await this._registrationRepository.upsertSV({
         tournamentId: INVITATION.tournamentId,
         userId: INVITATION.invitedUserId,
-        status: 'CONFIRMED',
+        status: 'PENDING',
       });
       const UPDATED = await this._invitationRepository.updateStatusSV(_input.invitationId, 'ACCEPTED');
       if (UPDATED === null) {
