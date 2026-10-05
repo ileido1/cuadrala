@@ -48,7 +48,7 @@ export DATABASE_URL="postgresql://usuario:clave@localhost:5432/cuadrala"
 npm run seed
 ```
 
-El seed es **idempotente**: crea/actualiza **deporte PADEL**, presets **AMERICANO** y **ROUND_ROBIN**, y la `FeeRule` MATCH si no existe.
+El seed es **idempotente**: crea los cuatro deportes de raqueta, cuatro presets por deporte, categorías ordinales y `FeeRule` MATCH. Incluye sedes de prueba, cuentas `@test.dev` (contraseña `password123`) y tres partidos con UUID estable: repetirlo no reinicia su progreso. Los métodos de pago se crean solo para sedes seed; no modifica usuarios ajenos a las cuentas de prueba.
 
 **Cambio de esquema (E0):** si tu base ya tenía filas en `Match`/`Tournament` antes de añadir `sportId` y torneos parametrizables, `prisma db push` puede pedir reset o migración manual. En **desarrollo**, suele bastar base vacía o `npx prisma db push` sobre una BD nueva; luego `npm run seed`.
 
@@ -97,7 +97,7 @@ Con `RESERVATION_PAYMENT_LEDGER=true` (junto a MCP), cada confirmación de reser
 | `npm run typecheck`       | `tsc --noEmit`           |
 | `npm run lint`            | ESLint                   |
 | `npm run prisma:validate` | Valida el esquema Prisma |
-| `npm run seed`            | `prisma db seed` — catálogo PADEL + presets + FeeRule (requiere `DATABASE_URL`) |
+| `npm run seed`            | `prisma db seed` — catálogo de deportes + presets + fixtures QA (requiere `DATABASE_URL`) |
 | `npm run backfill:multi-currency` | Backfill MCP Fase 1 (`*Minor`, tasas 90d) |
 | `npm run backfill:reservation-ledger` | Backfill asientos PAYMENT Fase 2 (idempotente) |
 | `npm run reconcile:reservation-ledger` | Conciliación ledger vs `paidAmountBsMinor` (exit 1 si hay excepciones) |

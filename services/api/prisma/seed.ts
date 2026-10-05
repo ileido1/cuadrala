@@ -121,7 +121,7 @@ async function seedCatalogSV(): Promise<void> {
   );
 
   //? Agregar Tennis v2 con campo format requerido
-  const TENNIS_SPORT = SEEDED_SPORTS.find((_s) => _s.code === 'TENIS');
+  const TENNIS_SPORT = SEEDED_SPORTS.find((_s) => _s.code === 'TENNIS');
   if (TENNIS_SPORT) {
     const TENNIS_V2_EXISTING = await PRISMA.tournamentFormatPreset.findUnique({
       where: {
@@ -196,7 +196,7 @@ async function seedVenuesSV(): Promise<void> {
     addressCountry: string;
     latitude: number;
     longitude: number;
-    courts: Array<{ name: string; indoor: boolean; surfaceType: string }>;
+    courts: Array<{ name: string; indoor: boolean; surfaceType: string; sportType?: 'PADEL' | 'TENNIS' }>;
     phone?: string;
     email?: string;
     description?: string;
@@ -269,7 +269,7 @@ async function seedVenuesSV(): Promise<void> {
       longitude: -66.9300,
       averageRating: 4.3,
       courts: [
-        { name: 'Cancha Sur 1', indoor: false, surfaceType: 'Tierra batida roja' },
+        { name: 'Cancha Sur 1', indoor: false, surfaceType: 'Tierra batida roja', sportType: 'TENNIS' },
         { name: 'Cancha Sur 2', indoor: false, surfaceType: 'Tierra batida roja' },
         { name: 'Cancha Sur 3', indoor: false, surfaceType: 'Cemento' },
       ],
@@ -352,17 +352,22 @@ async function seedVenuesSV(): Promise<void> {
             where: { venueId: _seeded.id, name: _courtDef.name },
             select: { id: true },
           });
-          if (EXISTING !== null) return;
+          if (EXISTING !== null) {
+            if (_courtDef.sportType === 'TENNIS') {
+              await PRISMA.court.update({ where: { id: EXISTING.id }, data: { sportType: 'TENNIS', capacity: '1v1' } });
+            }
+            return;
+          }
           await PRISMA.court.create({
             data: {
               venueId: _seeded.id,
               name: _courtDef.name,
-              sportType: 'PADEL',
+              sportType: _courtDef.sportType ?? 'PADEL',
               indoor: _courtDef.indoor,
               lighting: _courtDef.indoor || _courtDef.surfaceType.includes('iluminación') || _courtDef.surfaceType.includes('iluminado'),
               surfaceType: _courtDef.surfaceType,
               pricePerHourCents: 2000, // $20.00/hora en centavos
-              capacity: '2v2', // pádel: 4 jugadores, 2 por lado
+              capacity: _courtDef.sportType === 'TENNIS' ? '1v1' : '2v2',
               durationMinutes: 60,
               status: 'ACTIVE',
             },
@@ -422,13 +427,15 @@ async function seedTestUsersSV(): Promise<Array<{ id: string; email: string; nam
           dominantHand: _idx % 3 === 0 ? 'LEFT' : 'RIGHT',
           sidePreference: _idx % 2 === 0 ? 'RIGHT' : 'LEFT',
           birthDate: new Date(1990 + (_idx % 20), _idx % 12, 1 + (_idx % 28)),
-          documentNumber: `DOC${String(_idx + 1).padStart(8, '0')}`,
-          phone: `+58-412-${String(_idx * 111).padStart(7, '0')}`,
+          documentNumber: String(20000000 + _idx),
+          phone: `+58412${String(1000000 + _idx)}`,
           city: 'Caracas',
           avatarUrl: null,
           onboardingCompletedAt: NOW,
         },
         update: {
+          documentNumber: String(20000000 + _idx),
+          phone: `+58412${String(1000000 + _idx)}`,
           onboardingCompletedAt: NOW,
         },
       }),
@@ -458,13 +465,13 @@ async function seedVenueOwnerSV(_venueId: string, _userId: string): Promise<void
     update: { role: 'OWNER' },
   });
 
-  //? Nota: Payment methods se crean en seedPaymentMethodsForAllVenuesSV()
+  //? Nota: Payment methods se crean en seedPaymentMethodsForSeedVenuesSV()
   //? para evitar duplicados y garantizar que TODAS las venues tengan los mismos métodos
 }
 
-async function seedPaymentMethodsForAllVenuesSV(): Promise<void> {
+async function seedPaymentMethodsForSeedVenuesSV(): Promise<void> {
   //? 1. Obtener todas las venues
-  const ALL_VENUES = await PRISMA.venue.findMany({ select: { id: true, name: true } });
+  const ALL_VENUES = await PRISMA.venue.findMany({ where: { placeId: { in: ['seed:venue:club-cuadrala', 'seed:venue:padel-center', 'seed:venue:canchas-sur'] } }, select: { id: true, name: true } });
   if (ALL_VENUES.length === 0) return;
 
   //? 2. Crear payment methods para cada venue
@@ -473,7 +480,7 @@ async function seedPaymentMethodsForAllVenuesSV(): Promise<void> {
     { id: 'pm-cash-', type: 'CASH', name: 'Efectivo' },
     { id: 'pm-bank-banesco-', type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Banesco', accountNumber: '01234567890123456789', idType: 'V', idNumber: 'V12345678' } },
     { id: 'pm-bank-mercantil-', type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Mercantil', accountNumber: '98765432109876543210', idType: 'V', idNumber: 'V87654321' } },
-    { id: 'pm-pago-banesco-', type: 'PAGO_MOVIL', name: 'Pago Móvil', config: { bank: 'Banesco', phoneNumber: '+58-412-1234567', idType: 'V', idNumber: 'V12345678' } },
+    { id: 'pm-pago-banesco-', type: 'PAGO_MOVIL', name: 'Pago Móvil', config: { bank: 'Banesco', phoneNumber: '+584121234567', idType: 'V', idNumber: 'V12345678' } },
   ];
 
   for (const VENUE of ALL_VENUES) {
@@ -677,6 +684,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
   const PLAYERS_5TA = _users.slice(4, 8); // player3 a player6
 
   const MATCHES_DEF: Array<{
+    id: string;
     name: string;
     category: typeof CATEGORY_4TA;
     court: (typeof COURTS_CUADRALA)[0];
@@ -686,6 +694,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
     withResult: boolean;
   }> = [
     {
+      id: '10000000-0000-4000-8000-000000000001',
       name: 'Americano Futuro (Programado)', // dentro de 7 días
       category: CATEGORY_4TA,
       court: COURTS_CUADRALA[0]!,
@@ -695,6 +704,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
       withResult: false,
     },
     {
+      id: '10000000-0000-4000-8000-000000000002',
       name: 'Americano en Vivo', // arrancó hace 30 minutos
       category: CATEGORY_4TA,
       court: COURTS_CUADRALA[1]!,
@@ -704,6 +714,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
       withResult: false,
     },
     {
+      id: '10000000-0000-4000-8000-000000000003',
       name: 'Americano Completado Ayer', // ayer
       category: CATEGORY_5TA,
       court: COURTS_PADELCENTER[0]!,
@@ -717,30 +728,24 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
   //? 6. Crear matches con su ciclo de vida
   for (const MATCH_DEF of MATCHES_DEF) {
     //? 6.1. Verificar si ya existe el match
-    const EXISTING_MATCH = await PRISMA.match.findFirst({
-      where: {
-        organizerUserId: ORGANIZER.id,
-        courtId: MATCH_DEF.court.id,
-        categoryId: MATCH_DEF.category.id,
-        scheduledAt: MATCH_DEF.scheduledAt,
-      },
-      select: { id: true, status: true },
+    const EXISTING_MATCH = await PRISMA.match.findUnique({
+      where: { id: MATCH_DEF.id },
+      select: { id: true },
     });
-
-    if (EXISTING_MATCH !== null && EXISTING_MATCH.status === MATCH_DEF.status) {
-      continue; // Ya existe con el estado correcto
-    }
+    //? No reiniciar fechas, participantes o resultados ya usados en QA.
+    if (EXISTING_MATCH !== null) continue;
 
     //? 6.2. Crear o actualizar match
     const MATCH =
       EXISTING_MATCH ??
       (await PRISMA.match.create({
         data: {
+          id: MATCH_DEF.id,
           sportId: SPORT.id,
           categoryId: MATCH_DEF.category.id,
           organizerUserId: ORGANIZER.id,
           formatPresetId: PRESET_AMERICANO.id,
-          formatParameters: { mode: 'seed' } satisfies Prisma.InputJsonValue,
+          formatParameters: { rounds: 3, courts: 1 } satisfies Prisma.InputJsonValue,
           courtId: MATCH_DEF.court.id,
           type: 'AMERICANO',
           status: 'SCHEDULED',
@@ -868,7 +873,7 @@ async function mainSV(): Promise<void> {
   await seedVenuesSV();
 
   //? 2.5. Crear payment methods para todas las venues
-  await seedPaymentMethodsForAllVenuesSV();
+  await seedPaymentMethodsForSeedVenuesSV();
 
   //? 3. Crear usuarios de prueba
   const TEST_USERS = await seedTestUsersSV();
