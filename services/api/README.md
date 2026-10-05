@@ -50,6 +50,26 @@ npm run seed
 
 El seed es **idempotente**: crea los cuatro deportes de raqueta, cuatro presets por deporte, categorías ordinales y `FeeRule` MATCH. Incluye sedes de prueba, cuentas `@test.dev` (contraseña `password123`) y tres partidos con UUID estable: repetirlo no reinicia su progreso. Los métodos de pago se crean solo para sedes seed; no modifica usuarios ajenos a las cuentas de prueba.
 
+#### Escenarios QA de torneos
+
+Usar solo una base de desarrollo/QA autorizada, nunca producción. El seed agrega **7 torneos PUBLIC/OPEN**, separados por una semana, desde 14 días después de la primera corrida. No genera cuadros ni partidos de torneo: el organizador recorre el flujo real.
+
+Todas las cuentas usan `password123`: `organizer@test.dev` organiza los siete torneos; `player1@test.dev` a `player8@test.dev` son jugadores. `owner@test.dev` administra **solo Club Cuádrala** (no Canchas del Sur).
+
+| Formato | Modalidad | Sede | Inscripciones iniciales |
+|---|---|---|---|
+| Americano | Pádel, parejas rotativas | Club Cuádrala | player1–4 confirmados |
+| Todos contra todos | Tenis individual | Canchas del Sur | player1–4 confirmados; player5 pendiente |
+| Eliminación simple | Tenis individual | Canchas del Sur | player1–4 confirmados; invitación a player6 |
+| Grupos + eliminación | Tenis individual | Canchas del Sur | player1–4 confirmados; invitado QA pendiente |
+| Todos contra todos | Pádel, parejas fijas | Club Cuádrala | player1–8, duplas 1/2, 3/4, 5/6, 7/8 |
+| Eliminación simple | Pádel, parejas fijas | Club Cuádrala | mismas cuatro duplas |
+| Grupos + eliminación | Pádel, parejas fijas | Club Cuádrala | mismas cuatro duplas |
+
+Como jugador: `player7` puede autoinscribirse gratis en tenis; `player5` ve su registro pendiente y `player6` responde la invitación. Como organizador: confirmar pendientes/gestionar invitado, generar cuadro, asignar **Cancha Sur 1** para tenis o canchas de Club Cuádrala para pádel, recibir respuestas de horarios, iniciar y cargar resultados. Generar primero sobre los cuatro competidores confirmados permite probar el cuadro base; agregar jugadores cambia ese cuadro. Americano mantiene cupo de 4; los otros torneos tienen 16 plazas.
+
+Repetir el seed conserva fechas, estados, inscripciones, parejas e invitaciones de torneos existentes; cada escenario nuevo se crea en una transacción. Las tasas reales ya existentes para el día no se reemplazan por valores de ejemplo. No recrea torneos terminados para reiniciar QA. La cobertura de datos y generadores **no demuestra** que todos los pasos de UI hayan sido recorridos.
+
 **Cambio de esquema (E0):** si tu base ya tenía filas en `Match`/`Tournament` antes de añadir `sportId` y torneos parametrizables, `prisma db push` puede pedir reset o migración manual. En **desarrollo**, suele bastar base vacía o `npx prisma db push` sobre una BD nueva; luego `npm run seed`.
 
 Si **no** tienes PostgreSQL en marcha, no ejecutes `migrate dev` aquí; puedes validar el esquema con:

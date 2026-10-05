@@ -1,7 +1,7 @@
 /**
  * Seed idempotente. Catálogo de deportes de raqueta o pala (pádel, tenis,
  * pickleball, beach tennis) con sus presets de formato y categorías ordinales,
- * más venues, usuarios de prueba y partidos de ejemplo.
+ * más venues, usuarios de prueba, partidos y siete escenarios de torneo.
  *
  * Ejecutar: `npx prisma db seed` (requiere DATABASE_URL).
 
@@ -396,6 +396,8 @@ async function seedTestUsersSV(): Promise<Array<{ id: string; email: string; nam
     { email: 'player4@test.dev', name: 'Jugador Intermedio 2' },
     { email: 'player5@test.dev', name: 'Jugador Básico 1' },
     { email: 'player6@test.dev', name: 'Jugador Básico 2' },
+    { email: 'player7@test.dev', name: 'Jugador de Prueba 7' },
+    { email: 'player8@test.dev', name: 'Jugador de Prueba 8' },
   ];
 
   //? 3. Crear/actualizar usuarios
@@ -466,11 +468,11 @@ async function seedVenueOwnerSV(_venueId: string, _userId: string): Promise<void
   });
 
   //? Nota: Payment methods se crean en seedPaymentMethodsForSeedVenuesSV()
-  //? para evitar duplicados y garantizar que TODAS las venues tengan los mismos métodos
+  //? para evitar duplicados en las sedes de prueba
 }
 
 async function seedPaymentMethodsForSeedVenuesSV(): Promise<void> {
-  //? 1. Obtener todas las venues
+  //? 1. Obtener solo las sedes propiedad del seed
   const ALL_VENUES = await PRISMA.venue.findMany({ where: { placeId: { in: ['seed:venue:club-cuadrala', 'seed:venue:padel-center', 'seed:venue:canchas-sur'] } }, select: { id: true, name: true } });
   if (ALL_VENUES.length === 0) return;
 
@@ -552,10 +554,8 @@ async function seedExchangeRatesSV(): Promise<void> {
           source: _rate.source,
           effectiveDate: EFFECTIVE_DATE,
         },
-        update: {
-          rateToBs: new Prisma.Decimal(_rate.rateToBs.toString()),
-          source: _rate.source,
-        },
+        //? Conservar cotizaciones reales ya obtenidas para la fecha.
+        update: {},
       }),
     ),
   );
@@ -863,6 +863,73 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
   );
 }
 
+async function seedTestTournamentsSV(_users: Array<{ id: string; email: string; name: string }>): Promise<void> {
+  const ORGANIZER = _users.find((_u) => _u.email === 'organizer@test.dev')!;
+  const PLAYERS = Array.from({ length: 8 }, (_, _i) => _users.find((_u) => _u.email === `player${_i + 1}@test.dev`)!);
+  const FORMATS = ['AMERICANO', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'GROUPS_PLUS_KNOCKOUT'] as const;
+  const MODALITIES = [
+    { code: FORMATS[0], sport: 'PADEL', paired: false },
+    ...FORMATS.slice(1).map((_code) => ({ code: _code, sport: 'TENNIS', paired: false })),
+    ...FORMATS.slice(1).map((_code) => ({ code: _code, sport: 'PADEL', paired: true })),
+  ];
+  for (const [INDEX, MODALITY] of MODALITIES.entries()) {
+    const ID = `20000000-0000-4000-8000-${String(INDEX + 1).padStart(12, '0')}`;
+    //? No reiniciar estados, fechas, parejas ni inscripciones luego de una prueba manual.
+    if (await PRISMA.tournament.findUnique({ where: { id: ID }, select: { id: true } })) continue;
+    const SPORT = await PRISMA.sport.findUniqueOrThrow({ where: { code: MODALITY.sport } });
+    const CATEGORY = await PRISMA.category.findUniqueOrThrow({ where: { sportId_slug: { sportId: SPORT.id, slug: '4ta' } } });
+    if (MODALITY.sport === 'TENNIS' && INDEX === 1) {
+      for (const PLAYER of PLAYERS) {
+        await PRISMA.userCategory.upsert({ where: { userId_categoryId: { userId: PLAYER.id, categoryId: CATEGORY.id } }, create: { userId: PLAYER.id, categoryId: CATEGORY.id }, update: {} });
+        await PRISMA.userSportCategory.upsert({ where: { userId_sportId: { userId: PLAYER.id, sportId: SPORT.id } }, create: { userId: PLAYER.id, sportId: SPORT.id, categoryId: CATEGORY.id }, update: {} });
+      }
+    }
+    const VENUE = await PRISMA.venue.findUniqueOrThrow({ where: { placeId: MODALITY.sport === 'TENNIS' ? 'seed:venue:canchas-sur' : 'seed:venue:club-cuadrala' } });
+    const PRESET = await PRISMA.tournamentFormatPreset.findUniqueOrThrow({ where: { sportId_code_version: { sportId: SPORT.id, code: MODALITY.code, version: MODALITY.sport === 'TENNIS' && MODALITY.code === 'ROUND_ROBIN' ? 2 : 1 } } });
+    const STARTS_AT = new Date();
+    STARTS_AT.setUTCDate(STARTS_AT.getUTCDate() + 14 + INDEX * 7);
+    STARTS_AT.setUTCHours(16, 0, 0, 0);
+    //? Transacción por escenario: una falla no deja un torneo a medio poblar.
+    await PRISMA.$transaction(async (_tx) => {
+      await _tx.tournament.create({ data: {
+        id: ID,
+        name: `QA ${PRESET.name} — ${MODALITY.sport === 'TENNIS' ? 'Tenis individual' : MODALITY.paired ? 'Pádel parejas' : 'Pádel rotativo'}`,
+        sportId: SPORT.id, categoryId: CATEGORY.id, formatPresetId: PRESET.id,
+        formatParameters: PRESET.defaultParameters as Prisma.InputJsonValue,
+        presetSchemaVersion: PRESET.schemaVersion, organizerUserId: ORGANIZER.id, venueId: VENUE.id,
+        status: 'OPEN', visibility: 'PUBLIC', pairedRegistration: MODALITY.paired,
+        isCompetitive: false, inscriptionPrice: null, maxSlots: MODALITY.code === 'AMERICANO' ? 4 : 16,
+        startsAt: STARTS_AT, endsAt: new Date(STARTS_AT.getTime() + 8 * 60 * 60 * 1000),
+        registrationClosesAt: new Date(STARTS_AT.getTime() - 24 * 60 * 60 * 1000),
+      } });
+      const REGISTRATIONS = [];
+      for (const PLAYER of PLAYERS.slice(0, MODALITY.paired ? 8 : 4)) {
+        REGISTRATIONS.push(await _tx.tournamentRegistration.create({ data: {
+          tournamentId: ID, userId: PLAYER.id, status: 'CONFIRMED', registrationType: 'AUTHENTICATED', partnerRegistrationId: null,
+        } }));
+      }
+      if (MODALITY.paired) {
+        for (let i = 0; i < REGISTRATIONS.length; i += 2) {
+          const FIRST = REGISTRATIONS[i]!;
+          const SECOND = REGISTRATIONS[i + 1]!;
+          await _tx.tournamentRegistration.update({ where: { id: FIRST.id }, data: { partnerRegistrationId: SECOND.id } });
+          await _tx.tournamentRegistration.update({ where: { id: SECOND.id }, data: { partnerRegistrationId: FIRST.id } });
+        }
+      }
+      if (INDEX === 1) {
+        await _tx.tournamentRegistration.create({ data: { tournamentId: ID, userId: PLAYERS[4]!.id, registrationType: 'AUTHENTICATED', status: 'PENDING' } });
+      }
+      if (INDEX === 2) {
+        await _tx.tournamentInvitation.create({ data: { tournamentId: ID, invitedUserId: PLAYERS[5]!.id, createdByUserId: ORGANIZER.id, status: 'PENDING' } });
+      }
+      if (INDEX === 3) {
+        await _tx.tournamentRegistration.create({ data: { tournamentId: ID, userId: null, registrationType: 'GUEST', guestName: 'Invitado QA', guestPhone: '+584121000099', registeredByUserId: ORGANIZER.id, status: 'PENDING' } });
+      }
+    });
+  }
+  console.log('[seed] Siete torneos QA públicos y abiertos, listos para generar cuadros desde la API.');
+}
+
 async function mainSV(): Promise<void> {
   //? 1. Crear catálogo base (deportes, presets, categorías, reglas de comisión)
   await seedCatalogSV();
@@ -872,7 +939,7 @@ async function mainSV(): Promise<void> {
   //? 2. Crear venues con canchas
   await seedVenuesSV();
 
-  //? 2.5. Crear payment methods para todas las venues
+  //? 2.5. Crear métodos de pago solo para sedes seed
   await seedPaymentMethodsForSeedVenuesSV();
 
   //? 3. Crear usuarios de prueba
@@ -894,6 +961,7 @@ async function mainSV(): Promise<void> {
 
   //? 6. Crear matches de prueba en diferentes estados
   await seedTestMatchesSV(TEST_USERS);
+  await seedTestTournamentsSV(TEST_USERS);
 
   console.log('[seed] ✅ Seed completado exitosamente — base de datos lista para desarrollo.');
 }
