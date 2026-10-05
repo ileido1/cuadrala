@@ -24,3 +24,9 @@ T2 implementation is complete locally, but the task remains unchecked until remo
 Remote checks attempted 2026-10-05: Prisma MCP requires reauthentication; previously authorized direct QA connection failed with read ECONNRESET before connection confirmation or seed execution. No remote seed writes occurred. Live HTTP health check failed: curl timed out after 20 seconds (HTTP 000); interactive UI journey unverified. No push or deployment.
 T2 local work-unit commit: 7863a8c. Remote runtime evidence: unavailable (authentication/network); no claim of QA population or rerun proof.
 Next step: reconnect Prisma MCP, then execute seed twice on the authorized QA database and verify counts, symmetric pair links, preservation of unrelated users and tournament/match progress. T2 stays open until observed remote results.
+
+## Follow-up authorization and delivery — 2026-10-05
+User explicitly authorized retrying the existing Prisma QA seed through the connected Prisma account and pushing local work. This supersedes the earlier no-push constraint for the current feature branch only; no deployment or unrelated-branch push was performed.
+Fresh Prisma database-list retry returned UNAUTHORIZED / Reauthentication required / TRIGGER_REAUTHENTICATION despite the connected-account screenshot. No QA seed executed; T2 remains open.
+Pushed codex/qa-tournament-seed to origin (github.com/ileido1/cuadrala) with upstream tracking. Remote refs/heads/codex/qa-tournament-seed verified at 60df233f28279dd9b50df3baf0d43aacf5e3d0f3, matching local HEAD and including 7863a8c, 689668d and ancestor local commits. Untracked .codegraph/ and mobile golden-failure artifacts intentionally excluded.
+No source changes or new test run in this follow-up; preceding 819 passed/228 skipped evidence is unchanged, not a fresh run. Pending: effective Prisma authentication, seed twice and SQL invariant/rerun checks, live health/API and player/organizer UI journey, dedicated-DB integration tests.
