@@ -186,6 +186,125 @@ void main() {
     expect(TournamentDetailScreen.mayLoadInvitations(true), isTrue);
   });
 
+  group('Player registration capacity', () {
+    Future<void> pumpPlayerDetail(
+      WidgetTester tester, {
+      required TournamentListItemDto tournament,
+      required List<TournamentRegistrationDto> registrations,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: registrations,
+          total: registrations.length,
+          invitations: const [],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: tournament,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows full capacity instead of registration action', (
+      tester,
+    ) async {
+      await pumpPlayerDetail(
+        tester,
+        tournament: _tournament(
+          organizerUserId: null,
+          maxSlots: 2,
+          registrationCount: 2,
+        ),
+        registrations: [
+          _authRegistration(id: 'reg-2', userId: 'user-2'),
+          _authRegistration(id: 'reg-3', userId: 'user-3', status: 'PENDING'),
+        ],
+      );
+
+      expect(find.byKey(const Key('tournament.detail.register')), findsNothing);
+      expect(
+        find.byKey(const Key('tournament.detail.fullRegistration')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('tournament.detail.fullRegistration')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('Cupo completo · 2/2 inscriptos'), findsOneWidget);
+    });
+
+    testWidgets('keeps registration action when capacity remains', (
+      tester,
+    ) async {
+      await pumpPlayerDetail(
+        tester,
+        tournament: _tournament(organizerUserId: null, maxSlots: 2),
+        registrations: [_authRegistration(id: 'reg-2', userId: 'user-2')],
+      );
+
+      expect(
+        find.byKey(const Key('tournament.detail.register')),
+        findsOneWidget,
+      );
+      expect(find.text('Inscribirme'), findsOneWidget);
+    });
+
+    testWidgets('keeps registration action for unlimited tournaments', (
+      tester,
+    ) async {
+      await pumpPlayerDetail(
+        tester,
+        tournament: _tournament(organizerUserId: null),
+        registrations: [_authRegistration(id: 'reg-2', userId: 'user-2')],
+      );
+
+      expect(
+        find.byKey(const Key('tournament.detail.register')),
+        findsOneWidget,
+      );
+      expect(find.text('Inscribirme'), findsOneWidget);
+    });
+
+    testWidgets('does not count withdrawn registrations toward capacity', (
+      tester,
+    ) async {
+      await pumpPlayerDetail(
+        tester,
+        tournament: _tournament(organizerUserId: null, maxSlots: 1),
+        registrations: [
+          _authRegistration(
+            id: 'reg-withdrawn',
+            userId: 'user-2',
+            status: 'WITHDRAWN',
+          ),
+        ],
+      );
+
+      expect(
+        find.byKey(const Key('tournament.detail.register')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('tournament.detail.fullRegistration')),
+        findsNothing,
+      );
+    });
+  });
+
   /// Opens the organizer's Cuadro tab with the given [schedule] loaded.
   /// [tournament] defaults to a SINGLE_ELIMINATION-less fixture (M11b's
   /// baseline); M11c's caption/gating tests override it to set

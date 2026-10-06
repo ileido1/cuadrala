@@ -48,6 +48,9 @@ final class _TournamentFooter extends StatelessWidget {
         final invitation = state.pendingInvitationFor(userId);
         final scheme = Theme.of(context).colorScheme;
         final open = tournament!.status == 'OPEN';
+        final activeRegistrationCount = state.items
+            .where((item) => item.status != 'WITHDRAWN')
+            .length;
         final footer = <Widget>[];
 
         if (state.registerError != null) {
@@ -153,6 +156,18 @@ final class _TournamentFooter extends StatelessWidget {
                 tournament!.status == 'DRAFT'
                     ? 'Todavía no abrió la inscripción'
                     : 'Inscripción cerrada',
+              ),
+            ),
+          );
+        } else if (tournament!.maxSlots != null &&
+            activeRegistrationCount >= tournament!.maxSlots!) {
+          footer.add(
+            OutlinedButton.icon(
+              key: const Key('tournament.detail.fullRegistration'),
+              onPressed: null,
+              icon: const Icon(AppIcons.eventBusy),
+              label: Text(
+                'Cupo completo · $activeRegistrationCount/${tournament!.maxSlots} inscriptos',
               ),
             ),
           );
