@@ -4,10 +4,7 @@
  */
 import 'dotenv/config';
 
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-
-import { PrismaClient } from '../src/generated/prisma/client.js';
+import { createPrismaPgAdapterSV } from '../src/infrastructure/prisma_pg_adapter.js';
 import { caracasCalendarDateSV } from '../src/infrastructure/prisma_money_fields.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -15,8 +12,7 @@ if (DATABASE_URL === undefined || DATABASE_URL === '') {
   throw new Error('DATABASE_URL es obligatoria.');
 }
 
-const POOL = new Pool({ connectionString: DATABASE_URL });
-const PRISMA = new PrismaClient({ adapter: new PrismaPg(POOL) });
+const { prisma: PRISMA, pool: POOL } = createPrismaPgAdapterSV(DATABASE_URL);
 
 function majorToMinorSV(_major: { toString(): string }): bigint {
   return BigInt(Math.round(Number(_major.toString()) * 100));

@@ -8,9 +8,6 @@
  */
 import 'dotenv/config';
 
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-
 import {
   RACKET_CATEGORY_DEFS,
   RACKET_SPORT_CODES,
@@ -18,16 +15,15 @@ import {
 } from '../src/domain/services/category/sport_classification_catalog.js';
 import { FORMAT_PRESET_V1_PARAMETERS_SCHEMAS } from '../src/domain/services/tournament/format_preset_parameters_catalog.js';
 import { GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS } from '../src/domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
-import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
+import { Prisma } from '../src/generated/prisma/client.js';
+import { createPrismaPgAdapterSV } from '../src/infrastructure/prisma_pg_adapter.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (DATABASE_URL === undefined || DATABASE_URL === '') {
   throw new Error('DATABASE_URL es obligatoria para ejecutar el seed.');
 }
 
-const POOL = new Pool({ connectionString: DATABASE_URL });
-const ADAPTER = new PrismaPg(POOL);
-const PRISMA = new PrismaClient({ adapter: ADAPTER });
+const { prisma: PRISMA, pool: POOL } = createPrismaPgAdapterSV(DATABASE_URL);
 
 async function seedCatalogSV(): Promise<void> {
   //? La lista sale de RACKET_SPORT_CODES, no de una copia local: si se agrega un

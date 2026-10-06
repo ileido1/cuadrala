@@ -7,12 +7,9 @@
  */
 import 'dotenv/config';
 
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-
 import { ReconcileReservationLedgerUseCase } from '../src/application/use_cases/reconcile_reservation_ledger.use_case.js';
 import { PrismaReservationLedgerRepository } from '../src/infrastructure/adapters/prisma_reservation_ledger_repository.js';
-import { PrismaClient } from '../src/generated/prisma/client.js';
+import { createPrismaPgAdapterSV } from '../src/infrastructure/prisma_pg_adapter.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (DATABASE_URL === undefined || DATABASE_URL === '') {
@@ -22,8 +19,7 @@ if (DATABASE_URL === undefined || DATABASE_URL === '') {
 const TOLERANCE_RAW = process.env.RECONCILE_LEDGER_TOLERANCE_BS_MINOR ?? '1';
 const TOLERANCE_BS_MINOR = BigInt(TOLERANCE_RAW);
 
-const POOL = new Pool({ connectionString: DATABASE_URL });
-const PRISMA = new PrismaClient({ adapter: new PrismaPg(POOL) });
+const { prisma: PRISMA, pool: POOL } = createPrismaPgAdapterSV(DATABASE_URL);
 
 async function mainSV(): Promise<void> {
   const UC = new ReconcileReservationLedgerUseCase(
