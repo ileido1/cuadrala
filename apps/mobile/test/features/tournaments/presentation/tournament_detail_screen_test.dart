@@ -244,7 +244,7 @@ void main() {
             .onPressed,
         isNull,
       );
-      expect(find.text('Cupo completo · 2/2 inscriptos'), findsOneWidget);
+      expect(find.text('Cupo completo · 2/2 inscritos'), findsOneWidget);
     });
 
     testWidgets('keeps registration action when capacity remains', (

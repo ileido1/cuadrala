@@ -167,7 +167,7 @@ final class _TournamentFooter extends StatelessWidget {
               onPressed: null,
               icon: const Icon(AppIcons.eventBusy),
               label: Text(
-                'Cupo completo · $activeRegistrationCount/${tournament!.maxSlots} inscriptos',
+                'Cupo completo · $activeRegistrationCount/${tournament!.maxSlots} inscritos',
               ),
             ),
           );
