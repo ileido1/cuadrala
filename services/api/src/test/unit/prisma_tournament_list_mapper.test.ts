@@ -7,7 +7,7 @@ const ROW = {
   organizerUserId: null, sportId: 's', sport: { name: 'Padel' }, categoryId: 'c',
   category: { name: 'Masculino' }, startsAt: null, endsAt: null, venueId: null, venue: null,
   inscriptionPrice: null, maxSlots: null, registrationClosesAt: null,
-  gender: null, organizer: null,
+  gender: null, organizer: null, pairedRegistration: false,
   _count: { registrations: 0 },
 };
 
@@ -40,5 +40,19 @@ describe('toListItemDTO — organizerName', () => {
     expect(
       toListItemDTO({ ...ROW, organizer: { name: 'Carlos Hernández' } }).organizerName,
     ).toBe('Carlos Hernández');
+  });
+});
+
+describe('toListItemDTO — pairedRegistration', () => {
+  it('preserves true for tournaments registered by pairs', () => {
+    const DOUBLES_ROW = { ...ROW, pairedRegistration: true };
+
+    expect(toListItemDTO(DOUBLES_ROW)).toMatchObject({ pairedRegistration: true });
+  });
+
+  it('preserves false for tournaments registered individually', () => {
+    const SINGLES_ROW = { ...ROW, pairedRegistration: false };
+
+    expect(toListItemDTO(SINGLES_ROW)).toMatchObject({ pairedRegistration: false });
   });
 });

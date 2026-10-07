@@ -24,6 +24,7 @@ function tournamentSV(_id: string): TournamentListItemDTO {
     maxSlots: null,
     registrationClosesAt: null,
     gender: null,
+    pairedRegistration: false,
   };
 }
 
