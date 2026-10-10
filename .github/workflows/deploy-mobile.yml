@@ -64,10 +64,42 @@ jobs:
           API_BASE_URL: ${{ vars.API_BASE_URL || 'https://cuadrala-api.onrender.com' }}
           # Opcional: sin esto la app funciona, pero el login con Google no.
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          # Firebase Web/VAPID are public browser configuration, never service-account credentials.
+          FIREBASE_WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
+          FIREBASE_WEB_APP_ID: ${{ vars.FIREBASE_WEB_APP_ID }}
+          FIREBASE_WEB_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_WEB_MESSAGING_SENDER_ID }}
+          FIREBASE_WEB_PROJECT_ID: ${{ vars.FIREBASE_WEB_PROJECT_ID }}
+          FIREBASE_WEB_AUTH_DOMAIN: ${{ vars.FIREBASE_WEB_AUTH_DOMAIN }}
+          FIREBASE_WEB_STORAGE_BUCKET: ${{ vars.FIREBASE_WEB_STORAGE_BUCKET }}
+          FIREBASE_WEB_VAPID_KEY: ${{ vars.FIREBASE_WEB_VAPID_KEY }}
         run: |
           flutter build web --release \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
-            --dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
+            --dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID" \
+            --dart-define=FIREBASE_WEB_API_KEY="$FIREBASE_WEB_API_KEY" \
+            --dart-define=FIREBASE_WEB_APP_ID="$FIREBASE_WEB_APP_ID" \
+            --dart-define=FIREBASE_WEB_MESSAGING_SENDER_ID="$FIREBASE_WEB_MESSAGING_SENDER_ID" \
+            --dart-define=FIREBASE_WEB_PROJECT_ID="$FIREBASE_WEB_PROJECT_ID" \
+            --dart-define=FIREBASE_WEB_AUTH_DOMAIN="$FIREBASE_WEB_AUTH_DOMAIN" \
+            --dart-define=FIREBASE_WEB_STORAGE_BUCKET="$FIREBASE_WEB_STORAGE_BUCKET" \
+            --dart-define=FIREBASE_WEB_VAPID_KEY="$FIREBASE_WEB_VAPID_KEY"
+          node <<'NODE'
+          const fs = require('fs');
+          const config = {
+            apiKey: process.env.FIREBASE_WEB_API_KEY,
+            appId: process.env.FIREBASE_WEB_APP_ID,
+            messagingSenderId: process.env.FIREBASE_WEB_MESSAGING_SENDER_ID,
+            projectId: process.env.FIREBASE_WEB_PROJECT_ID,
+            authDomain: process.env.FIREBASE_WEB_AUTH_DOMAIN,
+            storageBucket: process.env.FIREBASE_WEB_STORAGE_BUCKET,
+          };
+          const required = ['apiKey', 'appId', 'messagingSenderId', 'projectId'];
+          const worker = fs.readFileSync('web/firebase-messaging-sw.js', 'utf8');
+          const prefix = required.every((key) => config[key])
+            ? `self.__FIREBASE_WEB_CONFIG__ = ${JSON.stringify(config)};\n`
+            : '';
+          fs.writeFileSync('build/web/firebase-messaging-sw.js', `${prefix}${worker}`);
+          NODE
 
       - name: Armar la salida para Vercel
         # Build Output API v3: Vercel publica `.vercel/output` tal cual, sin
