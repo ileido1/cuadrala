@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 
@@ -12,7 +11,6 @@ import '../network/api_client.dart';
 import '../network/auth_token_interceptor.dart';
 import '../network/inject_dio_extra_interceptor.dart';
 import '../push/fcm_push_token_sync_service.dart';
-import '../push/noop_push_token_sync_service.dart';
 import '../push/push_token_sync_service.dart';
 import '../storage/flutter_secure_token_storage.dart';
 import '../storage/saved_clubs_repository.dart';
@@ -224,13 +222,12 @@ Future<void> setupDependencies() async {
   );
 
   getIt.registerLazySingleton<PushTokenSyncService>(
-    () => kIsWeb
-        ? NoopPushTokenSyncService()
-        : FcmPushTokenSyncService(
-            notificationsRepository: getIt<NotificationsRepository>(),
-            secureTokenStorage: getIt<SecureTokenStorage>(),
-            authRepository: getIt<AuthRepository>(),
-          ),
+    () => FcmPushTokenSyncService(
+      notificationsRepository: getIt<NotificationsRepository>(),
+      secureTokenStorage: getIt<SecureTokenStorage>(),
+      authRepository: getIt<AuthRepository>(),
+      profileRepository: getIt<ProfileRepository>(),
+    ),
   );
   getIt.registerFactory<NotificationsCubit>(
     () => NotificationsCubit(repository: getIt<NotificationsRepository>()),
