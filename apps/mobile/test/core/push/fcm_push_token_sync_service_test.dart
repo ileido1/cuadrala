@@ -416,6 +416,27 @@ void main() {
       ).called(1);
     });
 
+    test('fails closed when web opt-in storage cannot be read', () async {
+      final dynamic webService = createWebService(appEnv: createWebEnv());
+      await webService.initialize();
+      when(
+        () => secureTokenStorage.hasWebPushOptIn('user-a'),
+      ).thenThrow(StateError('storage unavailable'));
+
+      await expectLater(webService.syncTokenIfAuthenticated(), completes);
+
+      expect(await webService.isWebPushEnabled(), isFalse);
+      verifyNever(
+        () => messagingPlatform.getToken(vapidKey: any(named: 'vapidKey')),
+      );
+      verifyNever(
+        () => notificationsRepository.registerPushToken(
+          token: any(named: 'token'),
+          platform: any(named: 'platform'),
+        ),
+      );
+    });
+
     test(
       'does not resync when the current account cannot be identified',
       () async {

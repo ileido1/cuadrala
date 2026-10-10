@@ -151,8 +151,19 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
     final userId = await _currentUserId();
     if (userId == null) return false;
     _webPushUserId = userId;
-    _webPushEnabled = await _secureTokenStorage.hasWebPushOptIn(userId);
-    return _webPushEnabled;
+    try {
+      _webPushEnabled = await _secureTokenStorage.hasWebPushOptIn(userId);
+      return _webPushEnabled;
+    } catch (e, st) {
+      _webPushEnabled = false;
+      developer.log(
+        'No se pudo leer el consentimiento push web',
+        name: 'FcmPushTokenSyncService',
+        error: e,
+        stackTrace: st,
+      );
+      return false;
+    }
   }
 
   Future<String?> _currentUserId() async {
