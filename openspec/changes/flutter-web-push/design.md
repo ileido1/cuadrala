@@ -111,11 +111,15 @@ N/A — no routing/shell/subprocess, VCS/PR automation, executable-file classifi
 
 ## Migration / Rollout
 
-No database/API migration. Configure the public repository variables before deployment. Although public values are configured and deployment succeeds, until the deployed HTTPS test succeeds, the UI must report web push as unavailable/unverified; existing in-app notifications and native push remain available.
+No database/API migration. Configure the public repository variables before deployment. Public Firebase options and VAPID are configured and deployed. The UI reports configured support and the explicit enrollment/registration result; real browser delivery remains unverified until T9 exercises the deployed HTTPS origin with an account.
+
+## Account consent safety
+
+A verified consent-storage read failure is fail-closed (`bd5382d`), so it cannot escape into authentication bootstrap and end a valid session. Logout consent cleanup remains best-effort: a storage-deletion failure does not block logout and may leave the marker until later cleanup.
 
 ## Open Questions
 
 - [ ] Confirm the production deployment serves Flutter at the origin root and serves `firebase-messaging-sw.js` with the required root path; Firebase's default worker registration expects that file at the origin root.
-- [ ] Obtain the actual Firebase Web options and VAPID public key from the Firebase project; the approved public values are configured as repository variables; do not record their values here.
+- [x] Approved public Firebase Web options and VAPID key are configured as repository variables; do not record their values here.
 - [ ] Real FCM delivery and supported-browser behavior remain unverified until the deployed HTTPS origin is tested with a browser and test account.
 - [ ] No `sdd/flutter-web-push/proposal` artifact was found; this design uses the existing `spec.md` and the Explorer/Proposer handoff observations as its intent source.

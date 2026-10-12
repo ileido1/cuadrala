@@ -41,4 +41,8 @@ Chain strategy: stacked-to-main
 
 - Tasks 1.1 → 1.2 and 1.3 → 1.4 are strict RED-before-GREEN pairs; 1.1 and 1.3 may be authored independently.
 - Phase 2 depends on the service and settings enrollment contract from Phase 1. Tasks 2.2 and 2.3 can be implemented in parallel after the Firebase public define names are fixed by 1.2; 2.4 is last.
-- No backend/API or database changes are planned. Live push verification cannot complete without Firebase Web values, VAPID, deployment access/configuration, and the deployed HTTPS origin.
+- No backend/API or database changes are planned. Public values and deployment are resolved; live push verification still requires a browser and test account on the deployed HTTPS origin.
+
+## Publication record
+
+Actual delivery used four stacked slices: core PR #63, settings PR #64, worker/deployment PR #65, and this documentation slice.

@@ -104,7 +104,7 @@ The app MUST detect when the required Firebase Web configuration or public VAPID
 
 #### Scenario: External deployment verification is incomplete
 
-- GIVEN source changes are implemented but the deployed HTTPS origin has been deployed but has not been tested with a browser and account
+- GIVEN source changes are implemented but the deployed HTTPS origin has not been tested with a browser and account
 - WHEN the feature's status is reported
 - THEN implementation status is distinguished from verified live delivery
 - AND no claim is made that real users can already receive browser push
