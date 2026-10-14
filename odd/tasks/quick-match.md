@@ -53,6 +53,7 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Checks: focused HTTP+DB integration test, then API typecheck, lint, and focused Quick Match/payment tests.
   - Implementation in `codex/quick-match-player-replacement`: repository now supports an individual departure from an open group and preserves the other three; the controller avoids immediately rematching the departing player. Added focused unit and HTTP+DB integration coverage.
   - Verification status: `npm run typecheck`, `npm run lint`, and the focused dismissal unit test passed. The authorized integration command ran exactly once, but Vitest skipped its only test (`1 skipped`) and emitted no reason; end-to-end DB behavior is therefore unverified. `git diff --check` passed. The independent verifier returned HTTP 403 before running.
+  - Work-unit commit: `41f6427 fix(quick-match): preserve groups after player departure`.
 
 ## Acceptance criteria
 - A player can configure and persist a Quick Match search from Home.
