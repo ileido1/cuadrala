@@ -43,6 +43,7 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Estimated authored delta: 450 lines; delivery strategy remains single feature branch / single PR on `codex/quick-match-full-feature`, selected previously by the user.
   - Completed 2026-10-13: reused `groupKey` for incremental groups, auto-confirmed compatible active searches, created pending onboarding-availability invitations, sent invite-only notifications, and released single seats on expiry/dismissal. Existing groups are serialized by sport/category/date, slot overlap is enforced, and historical proposal rows do not count toward the four active seats.
   - Verification: API typecheck, lint, focused Quick Match tests, Flutter Quick Match widget test, Flutter analyze, and `git diff --check` passed. Full `npm test` had 795 passed, 228 skipped, and one unrelated DB-dependent booking contract failure (`booking.endpoints.contract.test.ts`: expected 200|403, got 500; no test DB available).
+  - Work-unit commit: `7bbf1d8 feat(quick-match): invite compatible players to groups`; RDD is globally disabled, so delivery remains disabled/unmanaged.
 
 ## Acceptance criteria
 - A player can configure and persist a Quick Match search from Home.
@@ -57,7 +58,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 
 ## Progress
 - 2026-09-22: QM-1 merged to main in PR #61.
-- 2026-10-13: QM-5b implemented and verified on `codex/quick-match-full-feature`; API full-suite result includes one DB-dependent booking contract failure noted above. Work-unit commit pending.
+- 2026-10-13: QM-5b implemented, verified, and committed as `7bbf1d8` on `codex/quick-match-full-feature`; API full-suite result includes one DB-dependent booking contract failure noted above.
 - 2026-09-22: re-read the updated handoff. It adds explicit queue holds, notifications to already-confirmed players, opt-in availability alerts for non-queued players, invitation/race handling, and a dedicated notification preference surface.
 
 ## Verification evidence
