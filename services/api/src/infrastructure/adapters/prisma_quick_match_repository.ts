@@ -243,13 +243,16 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
   async dismissProposalForUserSV(_userId: string): Promise<QuickMatchSearchDTO> {
     const SEARCH = await PRISMA.$transaction(async (_tx) => {
       const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, include: SEARCH_INCLUDE });
-      if (CURRENT?.proposal === null || CURRENT === null || CURRENT.proposal.status !== 'PENDING') throw new AppError('PROPUESTA_NO_DISPONIBLE', 'No hay una propuesta activa para descartar.', 409);
+      if (CURRENT?.proposal === null || CURRENT === null || !['PENDING', 'CONFIRMED'].includes(CURRENT.proposal.status)) throw new AppError('PROPUESTA_NO_DISPONIBLE', 'No hay una propuesta activa para descartar.', 409);
       if (CURRENT.proposal.groupKey !== null) {
         await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${CURRENT.proposal.groupKey}))`;
-        const GROUP = await _tx.quickMatchProposal.findMany({ where: { groupKey: CURRENT.proposal.groupKey }, select: { id: true, searchId: true, playerIds: true } });
+        const GROUP = await _tx.quickMatchProposal.findMany({ where: { groupKey: CURRENT.proposal.groupKey, status: { in: ['PENDING', 'CONFIRMED'] } }, select: { id: true, searchId: true, playerIds: true } });
         const PLAYER_IDS = GROUP[0]?.playerIds.filter((_id) => _id !== _userId) ?? [];
-        await _tx.quickMatchProposal.updateMany({ where: { groupKey: CURRENT.proposal.groupKey }, data: { playerIds: PLAYER_IDS } });
+        if (PLAYER_IDS.length !== 3) throw new AppError('PROPUESTA_INVALIDA', 'La propuesta grupal no tiene cuatro jugadores válidos.', 409);
+        const REMAINING_SEARCH_IDS = GROUP.filter((_proposal) => _proposal.id !== CURRENT.proposal!.id).map((_proposal) => _proposal.searchId);
+        await _tx.quickMatchProposal.updateMany({ where: { groupKey: CURRENT.proposal.groupKey, id: { not: CURRENT.proposal.id }, status: { in: ['PENDING', 'CONFIRMED'] } }, data: { playerIds: PLAYER_IDS, status: 'PENDING' } });
         await _tx.quickMatchProposal.update({ where: { id: CURRENT.proposal.id }, data: { status: 'DISMISSED' } });
+        await _tx.quickMatchSearch.updateMany({ where: { id: { in: REMAINING_SEARCH_IDS } }, data: { status: 'PROPOSAL', noMatchYet: false } });
       } else {
         await _tx.quickMatchProposal.update({ where: { id: CURRENT.proposal.id }, data: { status: 'DISMISSED' } });
       }

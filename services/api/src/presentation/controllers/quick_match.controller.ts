@@ -48,7 +48,9 @@ export async function deleteMyQuickMatchCON(_req: Request, _res: Response): Prom
 export async function postDismissMyQuickMatchProposalCON(_req: Request, _res: Response): Promise<void> {
   const USER_ID = actorUserIdSV(_req);
   const SEARCH = await DISMISS_MY_QUICK_MATCH_PROPOSAL_UC.executeSV(USER_ID);
-  const MATCHED = await MATCH_QUICK_MATCH_UC.executeSV(SEARCH, USER_ID);
+  const MATCHED = SEARCH.proposal?.type === 'NEW_GROUP'
+    ? SEARCH
+    : await MATCH_QUICK_MATCH_UC.executeSV(SEARCH, USER_ID);
   _res.status(200).json({ success: true, message: 'Propuesta descartada; seguimos buscando.', data: MATCHED });
 }
 

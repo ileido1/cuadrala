@@ -1,0 +1,5 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { QuickMatchRepository, QuickMatchSearchDTO } from '../../domain/ports/quick_match_repository.js';
+import { DismissMyQuickMatchProposalUseCase } from './dismiss_my_quick_match_proposal.use_case.js';
+const SEARCH = { id: 's', sportId: 'sport', categoryId: 'category', targetDate: new Date(), slots: ['EVENING'], widenLevel: false, zoneKm: 10, includeOpenMatches: false, status: 'SEARCHING', noMatchYet: true, dismissedMatchIds: [], proposal: { id: 'p', type: 'NEW_GROUP', status: 'DISMISSED', matchId: null, playerIds: ['b', 'c', 'd'], venueOptions: [], expiresAt: new Date() } } as QuickMatchSearchDTO;
+describe('DismissMyQuickMatchProposalUseCase', () => { it('should return a departed confirmed member to search', async () => { const dismissProposalForUserSV = vi.fn().mockResolvedValue(SEARCH); const repository = { dismissProposalForUserSV } as unknown as QuickMatchRepository; const result = await new DismissMyQuickMatchProposalUseCase(repository).executeSV('a'); expect(dismissProposalForUserSV).toHaveBeenCalledWith('a'); expect(result.proposal?.playerIds).toEqual(['b', 'c', 'd']); }); });

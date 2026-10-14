@@ -44,6 +44,15 @@ The app currently lists open matches and supports manual creation, but has no pe
   - Completed 2026-10-13: reused `groupKey` for incremental groups, auto-confirmed compatible active searches, created pending onboarding-availability invitations, sent invite-only notifications, and released single seats on expiry/dismissal. Existing groups are serialized by sport/category/date, slot overlap is enforced, and historical proposal rows do not count toward the four active seats.
   - Verification: API typecheck, lint, focused Quick Match tests, Flutter Quick Match widget test, Flutter analyze, and `git diff --check` passed. Full `npm test` had 795 passed, 228 skipped, and one unrelated DB-dependent booking contract failure (`booking.endpoints.contract.test.ts`: expected 200|403, got 500; no test DB available).
   - Work-unit commit: `7bbf1d8 feat(quick-match): invite compatible players to groups`; RDD is globally disabled, so delivery remains disabled/unmanaged.
+- [ ] QM-7 Implement individual Quick Match group departure and add a backend HTTP+database integration test for the complete lifecycle.
+  - Route: delegated direct; this adds a backend group-seat lifecycle behavior plus tests spanning matching, persisted notification deliveries, capacity, replacement, court reservation, and payment obligations.
+  - Acceptance: one initiating search selects its exact date/time-block/sport/category; only users whose onboarding availability and sport/category match that request are invited/eligible, and opt-in notification deliveries are persisted for invitees.
+  - Four seats are total including the initiator; confirm three invitees, prove a fifth compatible user cannot join, let one joined player leave so that player exits the active group while the remaining group stays open/pending with three players, then let the next eligible queued user fill exactly that seat before confirming the court and asserting the four-player Match/Reservation plus payment-obligation flow.
+  - Do not invoke an external payment processor. Use the existing payment-obligation endpoint after Quick Match finalization.
+  - TDD: add failing API coverage for individual leave/replacement before implementation; API integration runner requires `TEST_DATABASE_URL` with migrations applied.
+  - Checks: focused HTTP+DB integration test, then API typecheck, lint, and focused Quick Match/payment tests.
+  - Implementation in `codex/quick-match-player-replacement`: repository now supports an individual departure from an open group and preserves the other three; the controller avoids immediately rematching the departing player. Added focused unit and HTTP+DB integration coverage.
+  - Verification status: `npm run typecheck`, `npm run lint`, and the focused dismissal unit test passed. The authorized integration command ran exactly once, but Vitest skipped its only test (`1 skipped`) and emitted no reason; end-to-end DB behavior is therefore unverified. `git diff --check` passed. The independent verifier returned HTTP 403 before running.
 
 ## Acceptance criteria
 - A player can configure and persist a Quick Match search from Home.
@@ -55,6 +64,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 - A single active Quick Match group can begin with fewer than four players, invite users matching onboarding weekday/slot and sport/category, and accept later compatible searchers into the same `groupKey` until four are confirmed.
 - Active searchers are enrolled in the shared group without another RSVP; availability-only recipients have a pending invitation and receive an opt-in-filtered push/in-app notification with the current confirmation window.
 - Expiring or declining one invitation releases only that invitation's seat; it does not discard already joined players or the shared group.
+- Backend integration tests exercise exact requested-preference eligibility, notification persistence, the four-player cap, replacement after dismissal, and court/payment continuation.
 
 ## Progress
 - 2026-09-22: QM-1 merged to main in PR #61.
