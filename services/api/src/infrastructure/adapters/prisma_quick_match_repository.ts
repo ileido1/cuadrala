@@ -135,31 +135,101 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
   }
 
   async findCompatibleGroupSV(_search: QuickMatchSearchDTO): Promise<QuickMatchGroupCandidateDTO | null> {
-    const SEARCHES = await PRISMA.quickMatchSearch.findMany({
+    const OWNER = await PRISMA.quickMatchSearch.findUnique({ where: { id: _search.id }, select: { userId: true } });
+    if (OWNER === null) return null;
+    const DAY_OF_WEEK = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][_search.targetDate.getUTCDay()]!;
+    const PREVIOUS_PROPOSAL = await PRISMA.quickMatchProposal.findUnique({ where: { searchId: _search.id }, select: { groupKey: true, status: true } });
+    const EXCLUDED_GROUP_KEYS = PREVIOUS_PROPOSAL?.status === 'DISMISSED' && PREVIOUS_PROPOSAL.groupKey !== null ? [PREVIOUS_PROPOSAL.groupKey] : [];
+    const ACTIVE_GROUP = await PRISMA.quickMatchProposal.findFirst({
       where: {
-        id: { not: _search.id }, sportId: _search.sportId, categoryId: _search.categoryId,
-        targetDate: _search.targetDate, status: 'SEARCHING', slots: { hasSome: _search.slots },
-      },
-      orderBy: { updatedAt: 'asc' }, take: 3, select: { id: true, userId: true },
+        groupKey: { not: null }, status: { in: ['PENDING', 'CONFIRMED'] },
+        search: { sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: { hasSome: _search.slots } },
+        playerIds: { has: OWNER.userId },
+      }, select: { groupKey: true, playerIds: true },
     });
-    if (SEARCHES.length !== 3) return null;
-    return { searchIds: [_search.id, ...SEARCHES.map((_candidate) => _candidate.id)], userIds: [...SEARCHES.map((_candidate) => _candidate.userId)] };
+    const GROUPS = ACTIVE_GROUP === null ? await PRISMA.quickMatchProposal.findMany({
+      where: {
+        groupKey: { not: null, notIn: EXCLUDED_GROUP_KEYS }, status: { in: ['PENDING', 'CONFIRMED'] },
+        search: { sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: { hasSome: _search.slots } },
+      }, orderBy: { createdAt: 'asc' }, take: 10, select: { groupKey: true, playerIds: true },
+    }) : [ACTIVE_GROUP];
+    const GROUP = GROUPS.find((_candidate) => _candidate.playerIds.length < 4);
+    const EXISTING_PLAYER_IDS = GROUP?.playerIds ?? [];
+    const ACTIVE_SEARCHES = await PRISMA.quickMatchSearch.findMany({
+      where: { id: { not: _search.id }, sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, status: 'SEARCHING', slots: { hasSome: _search.slots } },
+      orderBy: { updatedAt: 'asc' }, take: 4 - EXISTING_PLAYER_IDS.length - 1, select: { id: true, userId: true },
+    });
+    const ACTIVE_USER_IDS = ACTIVE_SEARCHES.map((_candidate) => _candidate.userId);
+    const SLOTS_LEFT = 4 - EXISTING_PLAYER_IDS.length - 1 - ACTIVE_USER_IDS.length;
+    const INVITATION_USER_IDS = SLOTS_LEFT <= 0 ? [] : (await PRISMA.userAvailability.findMany({
+      where: {
+        dayOfWeek: DAY_OF_WEEK as never, slot: { in: _search.slots },
+        user: {
+          id: { notIn: [OWNER.userId, ...EXISTING_PLAYER_IDS, ...ACTIVE_USER_IDS] },
+          userSportCategories: { some: { sportId: _search.sportId, categoryId: _search.categoryId } },
+          OR: [{ quickMatchSearch: { is: null } }, { quickMatchSearch: { is: { status: { notIn: ['SEARCHING', 'PROPOSAL', 'CONFIRMED'] } } } }],
+        },
+      }, distinct: ['userId'], take: SLOTS_LEFT, select: { userId: true },
+    })).map((_availability) => _availability.userId);
+    return {
+      ...(GROUP?.groupKey === undefined || GROUP.groupKey === null ? {} : { groupKey: GROUP.groupKey }),
+      searchIds: [...ACTIVE_SEARCHES.map((_candidate) => _candidate.id), _search.id],
+      userIds: [...EXISTING_PLAYER_IDS, OWNER.userId, ...ACTIVE_USER_IDS, ...INVITATION_USER_IDS],
+      confirmedUserIds: [...EXISTING_PLAYER_IDS, OWNER.userId, ...ACTIVE_USER_IDS],
+      invitationUserIds: INVITATION_USER_IDS,
+      ...(EXCLUDED_GROUP_KEYS.length === 0 ? {} : { excludedGroupKeys: EXCLUDED_GROUP_KEYS }),
+    };
   }
 
   async createGroupProposalsSV(_search: QuickMatchSearchDTO, _group: QuickMatchGroupCandidateDTO, _expiresAt: Date): Promise<QuickMatchSearchDTO | null> {
-    const GROUP_KEY = randomUUID();
     const VENUE_OPTIONS = await this.listVenueOptionsSV(_search);
+    const SCOPE_KEY = `${_search.sportId}:${_search.categoryId}:${_search.targetDate.toISOString()}`;
     const SEARCH = await PRISMA.$transaction(async (_tx) => {
-      await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${_search.sportId}:${_search.categoryId}:${_search.targetDate.toISOString()}`}))`;
-      const CANDIDATES = await _tx.quickMatchSearch.findMany({ where: { id: { in: _group.searchIds }, status: 'SEARCHING' }, select: { id: true, userId: true } });
-      if (CANDIDATES.length !== 4) return null;
-      const PLAYER_IDS = CANDIDATES.map((_candidate) => _candidate.userId);
-      await Promise.all(CANDIDATES.map((_candidate) => _tx.quickMatchProposal.upsert({
-        where: { searchId: _candidate.id },
-        create: { searchId: _candidate.id, type: 'NEW_GROUP', groupKey: GROUP_KEY, playerIds: PLAYER_IDS, venueOptions: VENUE_OPTIONS, expiresAt: _expiresAt },
-        update: { type: 'NEW_GROUP', status: 'PENDING', matchId: null, groupKey: GROUP_KEY, playerIds: PLAYER_IDS, venueOptions: VENUE_OPTIONS, expiresAt: _expiresAt },
-      })));
-      await _tx.quickMatchSearch.updateMany({ where: { id: { in: _group.searchIds } }, data: { status: 'PROPOSAL', noMatchYet: false } });
+      await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${SCOPE_KEY}))`;
+      const SERIALIZED_GROUPS = _group.groupKey === undefined ? await _tx.quickMatchProposal.findMany({
+        where: { groupKey: { not: null, notIn: _group.excludedGroupKeys ?? [] }, status: { in: ['PENDING', 'CONFIRMED'] }, search: { sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: { hasSome: _search.slots } } },
+        orderBy: { createdAt: 'asc' }, take: 10, select: { groupKey: true, playerIds: true },
+      }) : [];
+      const SERIALIZED_GROUP = SERIALIZED_GROUPS.find((_candidate) => _candidate.playerIds.length < 4);
+      const GROUP_KEY = _group.groupKey ?? SERIALIZED_GROUP?.groupKey ?? randomUUID();
+      await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${GROUP_KEY}))`;
+      const ACTIVE_SEARCHES = await _tx.quickMatchSearch.findMany({ where: { id: { in: _group.searchIds }, status: 'SEARCHING' }, select: { id: true, userId: true } });
+      if (!ACTIVE_SEARCHES.some((_candidate) => _candidate.id === _search.id)) return null;
+      const EXISTING = await _tx.quickMatchProposal.findMany({ where: { groupKey: GROUP_KEY }, select: { id: true, searchId: true, status: true, playerIds: true, search: { select: { userId: true } } } });
+      const EXISTING_PLAYER_IDS = EXISTING[0]?.playerIds ?? [];
+      if (EXISTING_PLAYER_IDS.length >= 4) return null;
+      const INVITED_SEARCHES: Array<{ id: string; userId: string }> = [];
+      for (const USER_ID of _group.invitationUserIds ?? []) {
+        const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { userId: USER_ID }, select: { id: true, status: true } });
+        if (CURRENT !== null && ['SEARCHING', 'PROPOSAL', 'CONFIRMED'].includes(CURRENT.status)) continue;
+        const INVITED = await _tx.quickMatchSearch.upsert({
+          where: { userId: USER_ID },
+          create: { userId: USER_ID, sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: _search.slots, widenLevel: _search.widenLevel, zoneKm: _search.zoneKm, includeOpenMatches: _search.includeOpenMatches, dismissedMatchIds: [] },
+          update: { sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: _search.slots, widenLevel: _search.widenLevel, zoneKm: _search.zoneKm, includeOpenMatches: _search.includeOpenMatches, status: 'SEARCHING', noMatchYet: false, dismissedMatchIds: [] },
+          select: { id: true, userId: true },
+        });
+        INVITED_SEARCHES.push(INVITED);
+      }
+      const MEMBERS = [...ACTIVE_SEARCHES, ...INVITED_SEARCHES];
+      const PLAYER_IDS = [...new Set([...EXISTING_PLAYER_IDS, ...MEMBERS.map((_member) => _member.userId)])];
+      if (PLAYER_IDS.length === 0 || PLAYER_IDS.length > 4) return null;
+      const CONFIRMED_IDS = new Set([...EXISTING.filter((_proposal) => _proposal.status === 'CONFIRMED').map((_proposal) => _proposal.search.userId), ...ACTIVE_SEARCHES.map((_candidate) => _candidate.userId)]);
+      const ROWS = new Map(EXISTING.map((_proposal) => [_proposal.searchId, _proposal]));
+      for (const MEMBER of MEMBERS) {
+        const IS_CONFIRMED = CONFIRMED_IDS.has(MEMBER.userId);
+        const CURRENT = ROWS.get(MEMBER.id);
+        const RESET = CURRENT === undefined || !['PENDING', 'CONFIRMED'].includes(CURRENT.status);
+        await _tx.quickMatchProposal.upsert({
+          where: { searchId: MEMBER.id },
+          create: { searchId: MEMBER.id, type: 'NEW_GROUP', groupKey: GROUP_KEY, playerIds: PLAYER_IDS, venueOptions: VENUE_OPTIONS, expiresAt: _expiresAt, status: IS_CONFIRMED ? 'CONFIRMED' : 'PENDING' },
+          update: RESET ? { type: 'NEW_GROUP', groupKey: GROUP_KEY, playerIds: PLAYER_IDS, venueOptions: VENUE_OPTIONS, expiresAt: _expiresAt, status: IS_CONFIRMED ? 'CONFIRMED' : 'PENDING', matchId: null } : { playerIds: PLAYER_IDS, venueOptions: VENUE_OPTIONS },
+        });
+      }
+      await _tx.quickMatchProposal.updateMany({ where: { groupKey: GROUP_KEY, status: { in: ['PENDING', 'CONFIRMED'] } }, data: { playerIds: PLAYER_IDS, venueOptions: VENUE_OPTIONS } });
+      const PENDING_IDS = MEMBERS.filter((_member) => !CONFIRMED_IDS.has(_member.userId)).map((_member) => _member.id);
+      const CONFIRMED_SEARCH_IDS = MEMBERS.filter((_member) => CONFIRMED_IDS.has(_member.userId)).map((_member) => _member.id);
+      if (PENDING_IDS.length > 0) await _tx.quickMatchSearch.updateMany({ where: { id: { in: PENDING_IDS } }, data: { status: 'PROPOSAL', noMatchYet: false } });
+      if (CONFIRMED_SEARCH_IDS.length > 0) await _tx.quickMatchSearch.updateMany({ where: { id: { in: CONFIRMED_SEARCH_IDS } }, data: { status: 'CONFIRMED', noMatchYet: false } });
       return _tx.quickMatchSearch.findUnique({ where: { id: _search.id }, include: SEARCH_INCLUDE });
     });
     return SEARCH === null ? null : mapSearchSV(SEARCH);
@@ -175,9 +245,11 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
       const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, include: SEARCH_INCLUDE });
       if (CURRENT?.proposal === null || CURRENT === null || CURRENT.proposal.status !== 'PENDING') throw new AppError('PROPUESTA_NO_DISPONIBLE', 'No hay una propuesta activa para descartar.', 409);
       if (CURRENT.proposal.groupKey !== null) {
-        const GROUP_PROPOSALS = await _tx.quickMatchProposal.findMany({ where: { groupKey: CURRENT.proposal.groupKey, status: 'PENDING' }, select: { id: true, searchId: true } });
-        await _tx.quickMatchProposal.updateMany({ where: { id: { in: GROUP_PROPOSALS.map((_proposal) => _proposal.id) } }, data: { status: 'DISMISSED' } });
-        await _tx.quickMatchSearch.updateMany({ where: { id: { in: GROUP_PROPOSALS.map((_proposal) => _proposal.searchId) } }, data: { status: 'SEARCHING', noMatchYet: true } });
+        await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${CURRENT.proposal.groupKey}))`;
+        const GROUP = await _tx.quickMatchProposal.findMany({ where: { groupKey: CURRENT.proposal.groupKey }, select: { id: true, searchId: true, playerIds: true } });
+        const PLAYER_IDS = GROUP[0]?.playerIds.filter((_id) => _id !== _userId) ?? [];
+        await _tx.quickMatchProposal.updateMany({ where: { groupKey: CURRENT.proposal.groupKey }, data: { playerIds: PLAYER_IDS } });
+        await _tx.quickMatchProposal.update({ where: { id: CURRENT.proposal.id }, data: { status: 'DISMISSED' } });
       } else {
         await _tx.quickMatchProposal.update({ where: { id: CURRENT.proposal.id }, data: { status: 'DISMISSED' } });
       }
@@ -197,12 +269,13 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
 
       if (CURRENT.proposal.groupKey !== null) {
         const GROUP = await _tx.quickMatchProposal.findMany({
-          where: { groupKey: CURRENT.proposal.groupKey },
+          where: { groupKey: CURRENT.proposal.groupKey, status: { in: ['PENDING', 'CONFIRMED'] } },
           select: { id: true, searchId: true, status: true, matchId: true, playerIds: true },
         });
-        const ALL_CONFIRMED = GROUP.length === 4 && GROUP.every((_proposal) => _proposal.status === 'CONFIRMED');
+        const ACTIVE_PLAYER_IDS = [...new Set(GROUP.flatMap((_proposal) => _proposal.playerIds))];
+        const ALL_CONFIRMED = ACTIVE_PLAYER_IDS.length === 4 && GROUP.length === 4 && GROUP.every((_proposal) => _proposal.status === 'CONFIRMED');
         if (ALL_CONFIRMED && GROUP.every((_proposal) => _proposal.matchId === null)) {
-          const PLAYER_IDS = [...new Set(GROUP[0]!.playerIds)];
+          const PLAYER_IDS = ACTIVE_PLAYER_IDS;
           if (PLAYER_IDS.length !== 4) {
             throw new AppError('PROPUESTA_INVALIDA', 'La propuesta grupal no tiene cuatro jugadores válidos.', 409);
           }
@@ -290,20 +363,12 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
       const SEARCH = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, include: SEARCH_INCLUDE });
       if (SEARCH?.proposal === null || SEARCH === null || SEARCH.proposal.status !== 'PENDING' || SEARCH.proposal.expiresAt > new Date()) return;
       if (SEARCH.proposal.groupKey !== null) {
-        // Una propuesta grupal es atómica: si un jugador no confirma, se libera
-        // el hold completo y todos vuelven a la cola para evitar grupos huérfanos.
-        await _tx.quickMatchProposal.updateMany({
-          where: { groupKey: SEARCH.proposal.groupKey, status: { in: ['PENDING', 'CONFIRMED'] } },
-          data: { status: 'EXPIRED' },
-        });
-        const GROUP_SEARCHES = await _tx.quickMatchProposal.findMany({
-          where: { groupKey: SEARCH.proposal.groupKey },
-          select: { searchId: true },
-        });
-        await _tx.quickMatchSearch.updateMany({
-          where: { id: { in: GROUP_SEARCHES.map((_proposal) => _proposal.searchId) } },
-          data: { status: 'EXPIRED', noMatchYet: true },
-        });
+        await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${SEARCH.proposal.groupKey}))`;
+        const GROUP = await _tx.quickMatchProposal.findMany({ where: { groupKey: SEARCH.proposal.groupKey }, select: { playerIds: true } });
+        const PLAYER_IDS = GROUP[0]?.playerIds.filter((_id) => _id !== SEARCH.userId) ?? [];
+        await _tx.quickMatchProposal.updateMany({ where: { groupKey: SEARCH.proposal.groupKey }, data: { playerIds: PLAYER_IDS } });
+        await _tx.quickMatchProposal.update({ where: { id: SEARCH.proposal.id }, data: { status: 'EXPIRED' } });
+        await _tx.quickMatchSearch.update({ where: { id: SEARCH.id }, data: { status: 'EXPIRED', noMatchYet: true } });
         return;
       }
       await _tx.quickMatchProposal.update({ where: { id: SEARCH.proposal.id }, data: { status: 'EXPIRED' } });

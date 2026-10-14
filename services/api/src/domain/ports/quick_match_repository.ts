@@ -44,6 +44,10 @@ export type QuickMatchOpenCandidateDTO = {
 export type QuickMatchGroupCandidateDTO = {
   searchIds: string[];
   userIds: string[];
+  groupKey?: string;
+  confirmedUserIds?: string[];
+  invitationUserIds?: string[];
+  excludedGroupKeys?: string[];
 };
 
 export interface QuickMatchRepository {

@@ -103,6 +103,18 @@ Widget _wrap(QuickMatchCubit cubit) => MaterialApp(
   ),
 );
 
+
+QuickMatchSearchDto _waitingGroup() => QuickMatchSearchDto(
+  id: 'search-1', sportId: 'sport-1', categoryId: 'category-1',
+  status: 'CONFIRMED', noMatchYet: false, slots: const ['EVENING'],
+  targetDate: DateTime(2030, 6, 1), widenLevel: false, zoneKm: 5,
+  includeOpenMatches: true,
+  proposal: QuickMatchProposalDto(
+    id: 'group-1', type: 'NEW_GROUP', status: 'CONFIRMED', matchId: null,
+    playerIds: const ['player-1'], expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+  ),
+);
+
 void main() {
   late _MockQuickMatchRepository repository;
   late _MockCatalogRepository catalog;
@@ -135,6 +147,16 @@ void main() {
     expect(find.text('Revisando partidas abiertas'), findsOneWidget);
     expect(find.text('Editar preferencias'), findsOneWidget);
     expect(find.text('Salir de la cola'), findsOneWidget);
+  });
+
+  testWidgets('shows that an incremental group keeps filling after joining', (tester) async {
+    when(() => repository.current()).thenAnswer((_) async => _waitingGroup());
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Estamos formando el grupo'), findsOneWidget);
+    expect(find.textContaining('1 de 4 jugadores confirmados'), findsOneWidget);
   });
 
   testWidgets('renders an open-match proposal with its explicit cup action', (

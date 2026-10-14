@@ -11,7 +11,7 @@ The app currently lists open matches and supports manual creation, but has no pe
 - Preserve manual Create Match and the open-match listing; Quick Match uses the same open-match inventory first.
 - Never reserve or charge automatically; a queue hold is not a court reservation; only a fully confirmed new group reserves a court and enables payment.
 - Follow existing Clean Architecture and Flutter feature-first/Cubit conventions.
-- Route: delegated direct would normally be required: the implementation spans mobile UI, routing/DI, API persistence/endpoints, matching behavior, notification integration, and tests. No subagent runtime is available in this session, so implementation will be sequenced in bounded work units inline.
+- Route: earlier Quick Match slices were completed inline when delegation was unavailable. This new multi-file QM-5b slice uses one delegated writer after read-only mapping; the worktree isolates it from unrelated uncommitted changes in the original checkout.
 - TDD: enabled by repository instruction. Runners: API Vitest and Flutter widget/unit tests; observe RED before each behavior where testable.
 - Delivery strategy: single feature branch (user-selected 2026-09-22, supersedes stacked-to-main). Complete all remaining Quick Match work on `codex/quick-match-full-feature`; do not create interim PRs or pause between micro-slices.
 
@@ -34,17 +34,30 @@ The app currently lists open matches and supports manual creation, but has no pe
 - [x] QM-5 Update Explore framing/banner; add proposal and filled-match notifications/deep links, plus opt-in “Avisos en mi horario” preferences and invitation flow.
   - Completed: availability notifications (`MATCH_SLOT_OPENED`) now open the specific match instead of falling back to the inbox; tournament notifications already resolve by tournament subject and Quick Match proposals resolve to the queue. Existing notification preference toggles remain the source of opt-in behavior.
 - [ ] QM-6 Run API and Flutter verification, record work-unit commits, and perform a visual review against the supplied handoff.
+- [x] QM-5b Grow shared Quick Match groups from active searches and onboarding availability.
+  - Route: delegated direct; this changes matching persistence behavior, invitation delivery, shared proposal states, mobile waiting UI, and API/Flutter tests across multiple non-trivial files.
+  - User-approved behavior (2026-10-13): reuse the existing shared `QuickMatchProposal.groupKey` as the common room; do not add a separate chat/room model. Players already searching for the same sport/category/date/slot join that group immediately. Players eligible by onboarding availability are invited and must accept within the existing 2-minute window.
+  - The group is incremental: create/invite with fewer than four players and keep filling remaining places from later compatible searches or availability matches; only a full four-player group can finalize the match/reservation under the existing contract. A pending invite's expiry must not expire or discard other joined players' shared group.
+  - Preserve open-match priority, notification opt-in filtering, the `QUICK_MATCH_PROPOSAL` event/deep-link flow, and existing user search/cancel/decline semantics. Availability invite candidates must be eligible for the requested sport/category, match target weekday and selected time slot, and must not be duplicated or taken from an unrelated active search/group.
+  - TDD: add failing API matching/group-lifecycle tests and focused Flutter waiting-state coverage before implementation; API Vitest and Flutter test/analyze are the required runners.
+  - Estimated authored delta: 450 lines; delivery strategy remains single feature branch / single PR on `codex/quick-match-full-feature`, selected previously by the user.
+  - Completed 2026-10-13: reused `groupKey` for incremental groups, auto-confirmed compatible active searches, created pending onboarding-availability invitations, sent invite-only notifications, and released single seats on expiry/dismissal. Existing groups are serialized by sport/category/date, slot overlap is enforced, and historical proposal rows do not count toward the four active seats.
+  - Verification: API typecheck, lint, focused Quick Match tests, Flutter Quick Match widget test, Flutter analyze, and `git diff --check` passed. Full `npm test` had 795 passed, 228 skipped, and one unrelated DB-dependent booking contract failure (`booking.endpoints.contract.test.ts`: expected 200|403, got 500; no test DB available).
 
 ## Acceptance criteria
 - A player can configure and persist a Quick Match search from Home.
 - The service proposes a compatible open match before attempting a new group.
-- Queue proposals are explicitly confirmable, server-expiring, and never directly charge or reserve a court; a new group reserves only after all four confirm.
+- Queue proposals are explicitly confirmable for availability-only invitees, server-expiring per pending invite, and never directly charge or reserve a court; a new four-player group reserves only after every seat is confirmed (active searchers count as already confirmed).
 - Existing manual Create and Explore flows remain available.
 - Mobile reproduces the final copy, hierarchy, tokens, and states from the handoff.
 - Tests cover search lifecycle, priority matching, proposal expiry/dismissal/confirmation, and primary UI states.
+- A single active Quick Match group can begin with fewer than four players, invite users matching onboarding weekday/slot and sport/category, and accept later compatible searchers into the same `groupKey` until four are confirmed.
+- Active searchers are enrolled in the shared group without another RSVP; availability-only recipients have a pending invitation and receive an opt-in-filtered push/in-app notification with the current confirmation window.
+- Expiring or declining one invitation releases only that invitation's seat; it does not discard already joined players or the shared group.
 
 ## Progress
 - 2026-09-22: QM-1 merged to main in PR #61.
+- 2026-10-13: QM-5b implemented and verified on `codex/quick-match-full-feature`; API full-suite result includes one DB-dependent booking contract failure noted above. Work-unit commit pending.
 - 2026-09-22: re-read the updated handoff. It adds explicit queue holds, notifications to already-confirmed players, opt-in availability alerts for non-queued players, invitation/race handling, and a dedicated notification preference surface.
 
 ## Verification evidence

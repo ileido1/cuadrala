@@ -4,6 +4,7 @@ final class QuickMatchProposalDto {
     required this.type,
     required this.status,
     required this.matchId,
+    this.playerIds = const [],
     this.venueOptions = const [],
     required this.expiresAt,
   });
@@ -12,6 +13,7 @@ final class QuickMatchProposalDto {
   final String type;
   final String status;
   final String? matchId;
+  final List<String> playerIds;
   final List<QuickMatchVenueOptionDto> venueOptions;
   final DateTime expiresAt;
 
@@ -21,6 +23,7 @@ final class QuickMatchProposalDto {
         type: json['type'] as String,
         status: json['status'] as String,
         matchId: json['matchId'] as String?,
+        playerIds: (json['playerIds'] as List? ?? const []).whereType<String>().toList(),
         venueOptions: (json['venueOptions'] as List? ?? const [])
             .whereType<Map>()
             .map(

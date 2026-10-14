@@ -97,6 +97,7 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
             _Confirmed(
               isNewGroup: search.proposal?.type == 'NEW_GROUP',
               matchId: search.proposal?.matchId,
+              playerCount: search.proposal?.playerIds.length ?? 4,
             ),
           QuickMatchActive(:final search) when search.status == 'EXPIRED' =>
             const _Expired(),
@@ -1932,9 +1933,10 @@ final class _SurfaceMessage extends StatelessWidget {
 }
 
 final class _Confirmed extends StatelessWidget {
-  const _Confirmed({required this.isNewGroup, required this.matchId});
+  const _Confirmed({required this.isNewGroup, required this.matchId, this.playerCount = 4});
   final bool isNewGroup;
   final String? matchId;
+  final int playerCount;
 
   @override
   Widget build(BuildContext context) {
@@ -1969,7 +1971,7 @@ final class _Confirmed extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              isNewGroup ? '¡Participación confirmada!' : '¡Cupo confirmado!',
+              isNewGroup && !hasMatch ? 'Estamos formando el grupo' : (isNewGroup ? '¡Participación confirmada!' : '¡Cupo confirmado!'),
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -1979,7 +1981,7 @@ final class _Confirmed extends StatelessWidget {
               isNewGroup
                   ? hasMatch
                         ? 'La partida ya está lista. Consultá la sede y los próximos pasos.'
-                        : 'Te avisamos cuando los cuatro confirmen y la cancha quede reservada.'
+                        : '$playerCount de 4 jugadores confirmados. Te avisamos cuando el grupo esté completo y la cancha quede reservada.'
                   : 'Ya estás dentro. Consultá los detalles y pagá tu parte desde la partida.',
               textAlign: TextAlign.center,
             ),
