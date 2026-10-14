@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cuadrala_mobile/src/core/theme/brand_colors.dart';
+import 'package:cuadrala_mobile/src/core/theme/tournament_theme.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournament_status_view.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/tournament_status_pill.dart';
 
@@ -57,8 +58,9 @@ void main() {
     //? `cuadrala-torneos.jsx:21-27`, TSTATUS): antes sólo IN_PROGRESS tenía
     //? una aserción de color, y DRAFT/COMPLETED caían en el `default` sin
     //? ninguna rama explícita que probara que su gris es intencional.
-    testWidgets('should paint every status with its exact handoff colors',
-        (tester) async {
+    testWidgets('should paint every status with its exact handoff colors', (
+      tester,
+    ) async {
       await pump(tester, 'DRAFT');
       final scheme = Theme.of(
         tester.element(find.byType(TournamentStatusPill)),
@@ -81,8 +83,11 @@ void main() {
       expect(draft.$2, scheme.onSurfaceVariant);
 
       final open = await paint('OPEN');
-      expect(open.$1, scheme.primary.withValues(alpha: 0.15));
-      expect(open.$2, scheme.primary);
+      final tournamentTheme = TournamentTheme.of(
+        tester.element(find.byType(TournamentStatusPill)),
+      );
+      expect(open.$1, tournamentTheme.green.withValues(alpha: 0.15));
+      expect(open.$2, tournamentTheme.green);
 
       final inProgress = await paint('IN_PROGRESS');
       expect(inProgress.$1, BrandColors.limeAccent);
@@ -97,8 +102,9 @@ void main() {
       expect(cancelled.$2, BrandColors.dangerRed);
     });
 
-    testWidgets('should fall back to a readable label for an unknown status',
-        (tester) async {
+    testWidgets('should fall back to a readable label for an unknown status', (
+      tester,
+    ) async {
       await pump(tester, 'WAT');
 
       expect(find.text('Estado desconocido'), findsOneWidget);

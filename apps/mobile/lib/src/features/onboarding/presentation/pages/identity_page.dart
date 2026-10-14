@@ -23,7 +23,9 @@ class OnboardingIdentityPage extends StatefulWidget {
 
 class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
   final _nameController = TextEditingController();
-  final _phoneController = PhoneController();
+  final _phoneController = PhoneController(
+    initialValue: const PhoneNumber(isoCode: IsoCode.VE, nsn: ''),
+  );
   DateTime? _birthDate;
   final _documentController = TextEditingController();
   String? _nameError;
@@ -100,12 +102,16 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
     final initial = _birthDate ?? DateTime(now.year - 25, 1, 1);
+    final viewport = MediaQuery.of(context).copyWith(size: context.size);
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(1920, 1, 1),
       lastDate: DateTime(now.year - 12, 12, 31),
-      helpText: 'Selecciona tu fecha de nacimiento',
+      helpText: 'Fecha de nacimiento',
+      initialDatePickerMode: DatePickerMode.year,
+      confirmText: 'Guardar',
+      builder: (context, child) => MediaQuery(data: viewport, child: child!),
     );
     if (!mounted) return;
     if (picked != null) setState(() => _birthDate = picked);

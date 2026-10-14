@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/push/push_token_sync_service.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../shared/widgets/app_header.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -24,8 +25,37 @@ final class NotificationPrefsScreen extends StatelessWidget {
   }
 }
 
-final class _NotificationPrefsView extends StatelessWidget {
+final class _NotificationPrefsView extends StatefulWidget {
   const _NotificationPrefsView();
+
+  @override
+  State<_NotificationPrefsView> createState() => _NotificationPrefsViewState();
+}
+
+final class _NotificationPrefsViewState extends State<_NotificationPrefsView> {
+  PushEnrollmentResult? _webPushResult;
+  bool _webPushEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWebPushStatus();
+  }
+
+  Future<void> _loadWebPushStatus() async {
+    final enabled = await getIt<PushTokenSyncService>().isWebPushEnabled();
+    if (mounted) setState(() => _webPushEnabled = enabled);
+  }
+
+  Future<void> _enableWebPush() async {
+    final result = await getIt<PushTokenSyncService>().enableWebPush();
+    if (mounted) {
+      setState(() {
+        _webPushResult = result;
+        _webPushEnabled = result == PushEnrollmentResult.enabled;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +77,7 @@ final class _NotificationPrefsView extends StatelessWidget {
           final loaded = state as NotificationPrefsLoaded;
           return CustomScrollView(
             slivers: [
-              const AppHeader(title: 'Preferencias'),
+              const SliverToBoxAdapter(child: AppHeader(title: 'Preferencias')),
               if (loaded.saveError != null)
                 SliverToBoxAdapter(
                   child: Padding(
@@ -65,21 +95,14 @@ final class _NotificationPrefsView extends StatelessWidget {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     _SectionHeader(title: 'Notificaciones push'),
-                    if (kIsWeb)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: Text(
-                          'Las alertas en la bandeja del sistema solo '
-                          'funcionan en la app Android o iOS. En el '
-                          'navegador verás las notificaciones en Avisos.',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      ),
+                    _WebPushControl(
+                      visible:
+                          kIsWeb ||
+                          getIt<PushTokenSyncService>().isWebPushAvailable,
+                      result: _webPushResult,
+                      enabled: _webPushEnabled,
+                      onEnable: _enableWebPush,
+                    ),
                     _TypeToggleTile(
                       icon: AppIcons.bolt,
                       title: 'Encontrar partida',
@@ -189,6 +212,7 @@ final class _TypeToggleTile extends StatelessWidget {
             builder: (context, state) {
               final saving = state is NotificationPrefsLoaded && state.saving;
               return Switch(
+                key: Key('notification-type-$type'),
                 value: value,
                 onChanged: saving
                     ? null
@@ -198,6 +222,54 @@ final class _TypeToggleTile extends StatelessWidget {
                       ),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _WebPushControl extends StatelessWidget {
+  const _WebPushControl({
+    required this.visible,
+    required this.result,
+    required this.enabled,
+    required this.onEnable,
+  });
+
+  final bool visible;
+  final PushEnrollmentResult? result;
+  final bool enabled;
+  final Future<void> Function() onEnable;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!visible) return const SizedBox.shrink();
+    final unavailable = result == PushEnrollmentResult.unavailable;
+    final denied = result == PushEnrollmentResult.permissionDenied;
+    final failed = result == PushEnrollmentResult.failed;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            unavailable
+                ? 'Las notificaciones del navegador no están configuradas.'
+                : denied
+                ? 'Permití las notificaciones desde la configuración del navegador para activarlas.'
+                : failed
+                ? 'No se pudo activar el registro. Intentá de nuevo.'
+                : 'Activá las notificaciones del navegador para recibir avisos fuera de la app.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 4),
+          SwitchListTile.adaptive(
+            key: const Key('web-push-toggle'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Notificaciones del navegador'),
+            value: enabled,
+            onChanged: unavailable || enabled ? null : (_) => onEnable(),
           ),
         ],
       ),

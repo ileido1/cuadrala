@@ -18,24 +18,23 @@ TournamentListItemDto tournamentSV({
   double? distanceKm,
   String? organizerName,
   String? gender,
-}) =>
-    TournamentListItemDto(
-      id: 'tournament-1',
-      name: 'Copa Cuádrala',
-      status: status,
-      sportName: 'Padel',
-      categoryName: 'Masculino 7ma',
-      categoryId: categoryId,
-      startsAt: DateTime.utc(2026, 9, 12, 9),
-      registrationCount: registrationCount,
-      venueName: venueName,
-      inscriptionPrice: inscriptionPrice,
-      maxSlots: maxSlots,
-      registrationClosesAt: registrationClosesAt,
-      distanceKm: distanceKm,
-      organizerName: organizerName,
-      gender: gender,
-    );
+}) => TournamentListItemDto(
+  id: 'tournament-1',
+  name: 'Copa Cuádrala',
+  status: status,
+  sportName: 'Padel',
+  categoryName: 'Masculino 7ma',
+  categoryId: categoryId,
+  startsAt: DateTime.utc(2026, 9, 12, 9),
+  registrationCount: registrationCount,
+  venueName: venueName,
+  inscriptionPrice: inscriptionPrice,
+  maxSlots: maxSlots,
+  registrationClosesAt: registrationClosesAt,
+  distanceKm: distanceKm,
+  organizerName: organizerName,
+  gender: gender,
+);
 
 void main() {
   setUpAll(() async => initializeDateFormatting('es_ES'));
@@ -77,21 +76,25 @@ void main() {
       }
     });
 
-    testWidgets('should show the venue when the organizer declared one',
-        (tester) async {
+    testWidgets('should show the venue when the organizer declared one', (
+      tester,
+    ) async {
       await pump(tester, tournamentSV(venueName: 'Club Cuádrala'));
 
       expect(find.text('Club Cuádrala'), findsOneWidget);
     });
 
-    testWidgets('should show the venue placeholder when there is none', (tester) async {
+    testWidgets('should show the venue placeholder when there is none', (
+      tester,
+    ) async {
       await pump(tester, tournamentSV());
 
-      expect(find.text('Sede por confirmar'), findsOneWidget);
+      expect(find.text('Sede por definir'), findsOneWidget);
     });
 
-    testWidgets('should show occupancy against the declared slots',
-        (tester) async {
+    testWidgets('should show occupancy against the declared slots', (
+      tester,
+    ) async {
       await pump(tester, tournamentSV(maxSlots: 16));
 
       expect(find.text('11/16 inscritos'), findsOneWidget);
@@ -99,18 +102,21 @@ void main() {
 
     //? Sin cupo declarado hay numerador pero no denominador: se dice cuántos
     //? hay, no se inventa un total.
-    testWidgets('should count registrations when no slot cap was declared',
-        (tester) async {
+    testWidgets('should count registrations when no slot cap was declared', (
+      tester,
+    ) async {
       await pump(tester, tournamentSV());
 
-      expect(find.text('11 inscritos'), findsOneWidget);
-      expect(find.byKey(const Key('tournament.card.slots')), findsNothing);
+      expect(find.text('11 inscritos · sin tope'), findsOneWidget);
+      expect(find.byKey(const Key('tournament.card.slots')), findsOneWidget);
     });
 
-    testWidgets('should read a single registration in singular', (tester) async {
+    testWidgets('should read a single registration in singular', (
+      tester,
+    ) async {
       await pump(tester, tournamentSV(registrationCount: 1));
 
-      expect(find.text('1 inscrito'), findsOneWidget);
+      expect(find.text('1 inscritos · sin tope'), findsOneWidget);
     });
 
     testWidgets('should show the price when one was declared', (tester) async {
@@ -126,12 +132,13 @@ void main() {
       expect(find.text('Gratis'), findsOneWidget);
     });
 
-    testWidgets('should show a placeholder when the price was not declared',
-        (tester) async {
+    testWidgets('should show a placeholder when the price was not declared', (
+      tester,
+    ) async {
       await pump(tester, tournamentSV());
 
       expect(find.byKey(const Key('tournament.card.price')), findsNothing);
-      expect(find.text('Precio por confirmar'), findsOneWidget);
+      expect(find.text('Sin precio'), findsOneWidget);
       expect(find.text('Gratis'), findsNothing);
     });
 
@@ -146,78 +153,49 @@ void main() {
 
     //? "Cerca" (M3d): la tarjeta sólo muestra distancia cuando la API la
     //? mandó — eso implica que el listado se filtró con `near`.
-    testWidgets('should show the distance next to the venue when the API returned it',
-        (tester) async {
-      await pump(
-        tester,
-        tournamentSV(venueName: 'Club Cuádrala', distanceKm: 2.5),
-      );
+    testWidgets(
+      'should show the distance next to the venue when the API returned it',
+      (tester) async {
+        await pump(
+          tester,
+          tournamentSV(venueName: 'Club Cuádrala', distanceKm: 2.5),
+        );
 
-      expect(find.text('Club Cuádrala · 2.5 km'), findsOneWidget);
-    });
+        expect(find.text('Club Cuádrala · 2.5 km'), findsOneWidget);
+      },
+    );
 
-    testWidgets('should omit the distance when the API did not return it',
-        (tester) async {
+    testWidgets('should omit the distance when the API did not return it', (
+      tester,
+    ) async {
       await pump(tester, tournamentSV(venueName: 'Club Cuádrala'));
 
       expect(find.textContaining(' km'), findsNothing);
     });
 
-    //? {org} = venueName, cayendo al nombre del organizador sin sede
-    //? (spec "Listado — invitation banner and organizer row"; D7).
-    group('invitation banner', () {
+    group('participation badge', () {
+      testWidgets('should show invitation badge when invitation is pending', (
+        tester,
+      ) async {
+        await pump(tester, tournamentSV(), pendingInvitationId: 'invitation-1');
+        expect(find.text('Invitación'), findsOneWidget);
+      });
       testWidgets(
-          'should show "{venueName} te invitó" and the Ver invitación action '
-          'when there is a pending invitation and a venue', (tester) async {
-        await pump(
-          tester,
-          tournamentSV(venueName: 'Club Cuádrala'),
-          pendingInvitationId: 'invitation-1',
-        );
-
-        expect(
-          find.text(handoff_copy.invitationBannerTitle('Club Cuádrala')),
-          findsOneWidget,
-        );
-        expect(
-          find.text(handoff_copy.invitationBannerAction),
-          findsOneWidget,
-        );
-      });
-
-      testWidgets(
-          "should fall back to the organizer's display name when there is "
-          'no venue', (tester) async {
-        await pump(
-          tester,
-          tournamentSV(organizerName: 'Padel Country'),
-          pendingInvitationId: 'invitation-1',
-        );
-
-        expect(
-          find.text(handoff_copy.invitationBannerTitle('Padel Country')),
-          findsOneWidget,
-        );
-      });
-
-      testWidgets('should omit the banner without a pending invitation',
-          (tester) async {
-        await pump(tester, tournamentSV(venueName: 'Club Cuádrala'));
-
-        expect(find.textContaining('te invitó'), findsNothing);
-        expect(
-          find.text(handoff_copy.invitationBannerAction),
-          findsNothing,
-        );
-      });
+        'should omit invitation badge when no invitation is pending',
+        (tester) async {
+          await pump(tester, tournamentSV());
+          expect(find.text('Invitación'), findsNothing);
+        },
+      );
     });
 
     //? `gender` llegó al DTO en M4b-1 (S2) pero quedó sin renderizar a
     //? propósito ("todavía sin renderizar en la tarjeta (M4b-2)") — esta
     //? tarjeta es la última pieza de fidelidad pendiente en el listado.
     group('gender tag', () {
-      testWidgets('should show the Spanish gender label next to the category',
-          (tester) async {
+      testWidgets('should show the Spanish gender label next to the category', (
+        tester,
+      ) async {
         await pump(tester, tournamentSV(gender: 'MIXED'));
 
         expect(
@@ -230,12 +208,17 @@ void main() {
         for (final gender in ['MALE', 'FEMALE', 'MIXED']) {
           await pump(tester, tournamentSV(gender: gender));
 
-          expect(find.text(gender), findsNothing, reason: '$gender salió crudo');
+          expect(
+            find.text(gender),
+            findsNothing,
+            reason: '$gender salió crudo',
+          );
         }
       });
 
-      testWidgets('should omit the tag when no gender was declared',
-          (tester) async {
+      testWidgets('should omit the tag when no gender was declared', (
+        tester,
+      ) async {
         await pump(tester, tournamentSV());
 
         expect(find.text('Masculino'), findsNothing);
@@ -244,31 +227,21 @@ void main() {
       });
     });
 
-    group('organizer row', () {
+    group('organizer badge', () {
       testWidgets(
-          'should show the lime shield organizer row with a chevron when '
-          'the viewer organizes the tournament', (tester) async {
-        await pump(tester, tournamentSV(), isOrganizer: true);
-
-        expect(
-          find.text(handoff_copy.organizerRowTitle('Copa Cuádrala')),
-          findsOneWidget,
-        );
-        expect(
-          find.byKey(const Key('tournament.card.organizerRow')),
-          findsOneWidget,
-        );
-      });
-
-      testWidgets('should omit the organizer row when the viewer does not '
-          'organize the tournament', (tester) async {
-        await pump(tester, tournamentSV());
-
-        expect(
-          find.byKey(const Key('tournament.card.organizerRow')),
-          findsNothing,
-        );
-      });
+        'should show organizer badge when viewer organizes tournament',
+        (tester) async {
+          await pump(tester, tournamentSV(), isOrganizer: true);
+          expect(find.text('Organizás'), findsOneWidget);
+        },
+      );
+      testWidgets(
+        'should omit organizer badge when viewer does not organize tournament',
+        (tester) async {
+          await pump(tester, tournamentSV());
+          expect(find.text('Organizás'), findsNothing);
+        },
+      );
     });
   });
 }

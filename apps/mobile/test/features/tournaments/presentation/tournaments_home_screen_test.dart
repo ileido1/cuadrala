@@ -14,9 +14,8 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_reposi
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournaments_home_screen.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
 
-import '../handoff_copy.dart';
-
-class _MockTournamentsRepository extends Mock implements TournamentsRepository {}
+class _MockTournamentsRepository extends Mock
+    implements TournamentsRepository {}
 
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
 
@@ -44,7 +43,9 @@ Future<void> _setupGetIt(
   _MockProfileRepository profileRepository,
 ) async {
   await getIt.reset();
-  getIt.registerLazySingleton<TournamentsRepository>(() => tournamentsRepository);
+  getIt.registerLazySingleton<TournamentsRepository>(
+    () => tournamentsRepository,
+  );
   getIt.registerLazySingleton<CatalogRepository>(() => catalogRepository);
   getIt.registerLazySingleton<VenuesRepository>(() => venuesRepository);
   getIt.registerLazySingleton<ProfileRepository>(() => profileRepository);
@@ -69,14 +70,18 @@ void main() {
         filters: any(named: 'filters'),
       ),
     ).thenAnswer(
-      (_) async => const TournamentListPage(items: [], page: 1, limit: 20, total: 0),
+      (_) async =>
+          const TournamentListPage(items: [], page: 1, limit: 20, total: 0),
     );
     when(() => catalogRepository.listSports()).thenAnswer((_) async => []);
     when(
       () => catalogRepository.listCategories(sportId: any(named: 'sportId')),
     ).thenAnswer((_) async => []);
     when(
-      () => venuesRepository.listVenues(page: any(named: 'page'), limit: any(named: 'limit')),
+      () => venuesRepository.listVenues(
+        page: any(named: 'page'),
+        limit: any(named: 'limit'),
+      ),
     ).thenAnswer((_) async => []);
     when(() => profileRepository.getMe()).thenAnswer(
       (_) async => const UserMeDto(
@@ -86,10 +91,16 @@ void main() {
         subscriptionType: 'FREE',
       ),
     );
-    when(() => tournamentsRepository.listMyTournaments())
-        .thenAnswer((_) async => const []);
+    when(
+      () => tournamentsRepository.listMyTournaments(),
+    ).thenAnswer((_) async => const []);
 
-    await _setupGetIt(tournamentsRepository, catalogRepository, venuesRepository, profileRepository);
+    await _setupGetIt(
+      tournamentsRepository,
+      catalogRepository,
+      venuesRepository,
+      profileRepository,
+    );
   });
 
   tearDown(() async => getIt.reset());
@@ -101,36 +112,93 @@ void main() {
     expect(find.byTooltip('Más filtros'), findsNothing);
   });
 
+  testWidgets('should show public live tournaments and six filters', (
+    tester,
+  ) async {
+    when(
+      () => tournamentsRepository.listTournaments(
+        page: any(named: 'page'),
+        limit: any(named: 'limit'),
+        filters: any(named: 'filters'),
+      ),
+    ).thenAnswer(
+      (_) async => const TournamentListPage(
+        items: [
+          TournamentListItemDto(
+            id: 'live',
+            name: 'Liga en juego',
+            status: 'IN_PROGRESS',
+            sportName: 'Pádel',
+            categoryName: '7ma',
+            categoryId: 'cat',
+            startsAt: null,
+            registrationCount: 4,
+          ),
+        ],
+        page: 1,
+        limit: 20,
+        total: 1,
+      ),
+    );
+    await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Explorar'), findsOneWidget);
+    expect(find.text('Liga en juego'), findsOneWidget);
+    expect(find.text('Categoría'), findsOneWidget);
+    expect(find.text('Estado'), findsOneWidget);
+  });
+
+  testWidgets('should show my tournaments error instead of empty state', (
+    tester,
+  ) async {
+    when(
+      () => tournamentsRepository.listMyTournaments(),
+    ).thenThrow(Exception('offline'));
+    await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mis torneos'));
+    await tester.pumpAndSettle();
+    expect(find.text('No se pudieron cargar tus torneos.'), findsOneWidget);
+    expect(find.text('Todavía no te anotaste a ninguno'), findsNothing);
+  });
+
   group('Mi categoría chip (M3c-2)', () {
     testWidgets(
       'renders "Mi categoría {N}" selected by default when the viewer has a category',
       (tester) async {
-        when(() => profileRepository.getMe()).thenAnswer((_) async => _meWithCategory);
+        when(
+          () => profileRepository.getMe(),
+        ).thenAnswer((_) async => _meWithCategory);
 
-        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(home: TournamentsHomeScreen()),
+        );
         await tester.pumpAndSettle();
 
-        expect(find.text(miCategoriaLabel('Cuarta')), findsOneWidget);
+        expect(find.text('Categoría Cuarta'), findsOneWidget);
       },
     );
 
-    testWidgets(
-      'hides the chip when the viewer has no category',
-      (tester) async {
-        // setUp() ya deja profileRepository.getMe() sin primaryRating.
-        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
-        await tester.pumpAndSettle();
+    testWidgets('hides the chip when the viewer has no category', (
+      tester,
+    ) async {
+      // setUp() ya deja profileRepository.getMe() sin primaryRating.
+      await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+      await tester.pumpAndSettle();
 
-        expect(find.textContaining('Mi categoría'), findsNothing);
-      },
-    );
+      expect(find.textContaining('Mi categoría'), findsNothing);
+    });
 
     testWidgets(
       'toggling the chip clears and re-applies the category filter through applyFilters',
       (tester) async {
-        when(() => profileRepository.getMe()).thenAnswer((_) async => _meWithCategory);
+        when(
+          () => profileRepository.getMe(),
+        ).thenAnswer((_) async => _meWithCategory);
 
-        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(home: TournamentsHomeScreen()),
+        );
         await tester.pumpAndSettle();
 
         verify(
@@ -146,7 +214,7 @@ void main() {
           ),
         ).called(1);
 
-        await tester.tap(find.text(miCategoriaLabel('Cuarta')));
+        await tester.tap(find.text('Categoría Cuarta'));
         await tester.pumpAndSettle();
 
         verify(
@@ -162,7 +230,7 @@ void main() {
           ),
         ).called(1);
 
-        await tester.tap(find.text(miCategoriaLabel('Cuarta')));
+        await tester.tap(find.text('Categoría Cuarta'));
         await tester.pumpAndSettle();
 
         verify(
@@ -218,10 +286,13 @@ void main() {
     testWidgets(
       'renders both tournaments the viewer is registered in, with real data instead of a hardcoded empty list',
       (tester) async {
-        when(() => tournamentsRepository.listMyTournaments())
-            .thenAnswer((_) async => [viewerTournamentA, viewerTournamentB]);
+        when(
+          () => tournamentsRepository.listMyTournaments(),
+        ).thenAnswer((_) async => [viewerTournamentA, viewerTournamentB]);
 
-        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(home: TournamentsHomeScreen()),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Mis torneos'));
@@ -229,23 +300,27 @@ void main() {
 
         expect(find.text('Copa Cuádrala'), findsOneWidget);
         expect(find.text('Nocturno Chacao'), findsOneWidget);
-        expect(find.text(viewerRegistrationStatusLabel('CONFIRMED')), findsOneWidget);
-        expect(find.text(viewerRegistrationStatusLabel('PENDING')), findsOneWidget);
+        expect(find.text('Confirmado'), findsOneWidget);
+        expect(find.text('Pendiente'), findsOneWidget);
       },
     );
 
-    testWidgets(
-      'shows the "Mis torneos" empty state when the viewer has none',
-      (tester) async {
-        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
-        await tester.pumpAndSettle();
+    testWidgets('shows the "Mis torneos" empty state when the viewer has none', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Mis torneos'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Mis torneos'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Todavía no te anotaste a ninguno'), findsOneWidget);
-      },
-    );
+      expect(
+        find.text(
+          'Acá aparecen los torneos donde participás, te invitaron u organizás.',
+        ),
+        findsOneWidget,
+      );
+    });
   });
 
   //? M4b-1 agregó `pendingInvitationId`/`isOrganizer` a `TournamentListItemTile`
@@ -290,38 +365,38 @@ void main() {
     testWidgets(
       'renders the invitation banner on a "Mis torneos" card with a pending invitation',
       (tester) async {
-        when(() => tournamentsRepository.listMyTournaments())
-            .thenAnswer((_) async => [invitedTournament]);
+        when(
+          () => tournamentsRepository.listMyTournaments(),
+        ).thenAnswer((_) async => [invitedTournament]);
 
-        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(home: TournamentsHomeScreen()),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Mis torneos'));
         await tester.pumpAndSettle();
 
-        expect(
-          find.text(invitationBannerTitle('Base Aérea Padel')),
-          findsOneWidget,
-        );
+        expect(find.text('Te invitaron a Liga Base Aérea'), findsOneWidget);
       },
     );
 
     testWidgets(
       'renders the organizer row on a "Mis torneos" card the viewer organizes',
       (tester) async {
-        when(() => tournamentsRepository.listMyTournaments())
-            .thenAnswer((_) async => [organizedTournament]);
+        when(
+          () => tournamentsRepository.listMyTournaments(),
+        ).thenAnswer((_) async => [organizedTournament]);
 
-        await tester.pumpWidget(const MaterialApp(home: TournamentsHomeScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(home: TournamentsHomeScreen()),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Mis torneos'));
         await tester.pumpAndSettle();
 
-        expect(
-          find.text(organizerRowTitle('Interclubes Caracas')),
-          findsOneWidget,
-        );
+        expect(find.text('4 inscripciones por confirmar'), findsOneWidget);
       },
     );
   });

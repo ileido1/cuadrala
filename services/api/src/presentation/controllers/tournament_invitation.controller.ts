@@ -6,10 +6,12 @@ import {
   INVITE_TOURNAMENT_PARTICIPANT_UC,
   LIST_TOURNAMENT_INVITATIONS_UC,
   RESPOND_TOURNAMENT_INVITATION_UC,
+  SEARCH_TOURNAMENT_INVITATION_CANDIDATES_UC,
 } from '../composition/tournament_invitation.composition.js';
 import {
   CREATE_TOURNAMENT_INVITATION_BODY_SCHEMA,
   RESPOND_TOURNAMENT_INVITATION_BODY_SCHEMA,
+  SEARCH_TOURNAMENT_INVITATION_CANDIDATES_QUERY_SCHEMA,
   TOURNAMENT_INVITATION_ID_PARAMS_SCHEMA,
   TOURNAMENT_INVITATION_PARAMS_SCHEMA,
 } from '../validation/tournament_invitation.validation.js';
@@ -49,6 +51,21 @@ export async function getTournamentInvitationsCON(_req: Request, _res: Response)
     message: 'Invitaciones obtenidas correctamente.',
     data: RESULT,
   });
+}
+
+export async function searchTournamentInvitationCandidatesCON(
+  _req: Request,
+  _res: Response,
+): Promise<void> {
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
+  const PARAMS = TOURNAMENT_INVITATION_PARAMS_SCHEMA.parse(_req.params);
+  const QUERY = SEARCH_TOURNAMENT_INVITATION_CANDIDATES_QUERY_SCHEMA.parse(_req.query);
+  const RESULT = await SEARCH_TOURNAMENT_INVITATION_CANDIDATES_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    actorUserId: ACTOR_USER_ID,
+    query: QUERY.q,
+  });
+  _res.status(200).json({ success: true, message: 'Jugadores encontrados.', data: RESULT });
 }
 
 export async function postRespondTournamentInvitationCON(

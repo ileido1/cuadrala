@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/di/service_locator.dart';
 import '../core/push/foreground_notification_handler.dart';
@@ -27,6 +28,9 @@ final class App extends StatelessWidget {
             child: ForegroundNotificationHandler(
               child: MaterialApp.router(
                 title: 'Cuádrala',
+                locale: const Locale('es', 'VE'),
+                supportedLocales: const [Locale('es', 'VE')],
+                localizationsDelegates: GlobalMaterialLocalizations.delegates,
                 theme: AppTheme.light(),
                 darkTheme: AppTheme.dark(),
                 themeMode: kIsWeb ? ThemeMode.dark : ThemeMode.system,

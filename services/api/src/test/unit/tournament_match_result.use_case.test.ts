@@ -328,7 +328,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).not.toHaveBeenCalled();
     });
 
-    it('should not check for ties outside single elimination (round robin accepts a tie)', async () => {
+    it('should allow an unequal result outside single elimination', async () => {
       resetMocksSV();
       mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue({
         ...BASE_TOURNAMENT,
@@ -347,13 +347,15 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         roundNumber: 1,
         scores: [
           { userId: 'user-1', points: 6 },
-          { userId: 'user-2', points: 6 },
+          { userId: 'user-2', points: 5 },
         ],
         requestingUserId: 'organizer-uuid',
       });
 
       expect(RESULT.resultId).toBe('result-uuid');
-      expect(mockTournamentMatchResultRepository.listMatchParticipantSidesSV).not.toHaveBeenCalled();
+      expect(mockTournamentMatchResultRepository.listMatchParticipantSidesSV).toHaveBeenCalledWith(
+        'match-uuid',
+      );
     });
   });
 
@@ -412,7 +414,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       );
     });
 
-    it('applies to every format, not just single elimination', async () => {
+    it('notifies after a valid result in every format, not just single elimination', async () => {
       resetMocksSV();
       mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue({
         ...BASE_TOURNAMENT,
@@ -431,7 +433,7 @@ describe('RegisterTournamentMatchResultUseCase', () => {
         roundNumber: 1,
         scores: [
           { userId: 'user-1', points: 6 },
-          { userId: 'user-2', points: 6 },
+          { userId: 'user-2', points: 5 },
         ],
         requestingUserId: 'organizer-uuid',
       });
@@ -490,4 +492,38 @@ describe('RegisterTournamentMatchResultUseCase', () => {
       expect(mockCreateTournamentNotificationEvent.executeSV).not.toHaveBeenCalled();
     });
   });
+
+  it.each(['ROUND_ROBIN', 'AMERICANO', 'UNKNOWN_FORMAT'])(
+    'should reject tied side totals for %s without writing a result',
+    async (formatPresetName) => {
+      resetMocksSV();
+      mockTournamentQueryRepository.getTournamentByIdSV.mockResolvedValue({
+        ...BASE_TOURNAMENT,
+        formatPresetName,
+      });
+      mockTournamentMatchResultRepository.listMatchParticipantSidesSV.mockResolvedValue([
+        { userId: 'a1', teamLabel: 'team-a' },
+        { userId: 'a2', teamLabel: 'team-a' },
+        { userId: 'b1', teamLabel: 'team-b' },
+        { userId: 'b2', teamLabel: 'team-b' },
+      ]);
+
+      await expect(
+        useCase.executeSV({
+          tournamentId: 'tournament-uuid',
+          matchId: 'match-uuid',
+          matchNumber: 1,
+          roundNumber: 1,
+          scores: [
+            { userId: 'a1', points: 3 },
+            { userId: 'a2', points: 3 },
+            { userId: 'b1', points: 4 },
+            { userId: 'b2', points: 2 },
+          ],
+          requestingUserId: 'organizer-uuid',
+        }),
+      ).rejects.toMatchObject({ code: 'VALIDACION_FALLIDA', statusCode: 400 });
+      expect(mockTournamentMatchResultRepository.registerResultAndAdvanceSV).not.toHaveBeenCalled();
+    },
+  );
 });

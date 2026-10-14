@@ -11,6 +11,14 @@ export type TournamentScoreboardRow = {
    * `domain/tournament/match_side_aggregation.ts`.
    */
   gamesWon: number;
+  gamesLost: number;
+  /** Historical persisted tied results; new result submission rejects ties. */
+  gamesDrawn: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  difference: number;
+  /** Internal ranking input; stripped before the HTTP DTO is returned. */
+  headToHeadWins: Record<string, number>;
 };
 
 export interface TournamentScoreboardRepository {

@@ -7,18 +7,14 @@
  */
 import 'dotenv/config';
 
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-
-import { PrismaClient } from '../src/generated/prisma/client.js';
+import { createPrismaPgAdapterSV } from '../src/infrastructure/prisma_pg_adapter.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (DATABASE_URL === undefined || DATABASE_URL === '') {
   throw new Error('DATABASE_URL es obligatoria.');
 }
 
-const POOL = new Pool({ connectionString: DATABASE_URL });
-const PRISMA = new PrismaClient({ adapter: new PrismaPg(POOL) });
+const { prisma: PRISMA, pool: POOL } = createPrismaPgAdapterSV(DATABASE_URL);
 
 const BACKFILL_ACTOR_ID = '00000000-0000-4000-8000-000000000001';
 

@@ -12,18 +12,17 @@ MyTournamentMatchDto matchSV({
   String decision = 'PENDING',
   List<String> partners = const [],
   String? roundName,
-}) =>
-    MyTournamentMatchDto(
-      roundNumber: 1,
-      matchNumber: 2,
-      roundName: roundName,
-      scheduledAt: scheduledAt,
-      courtName: courtName,
-      partners: partners,
-      opponents: const ['Lucía', 'Diego'],
-      myResponse: myResponse,
-      decision: decision,
-    );
+}) => MyTournamentMatchDto(
+  roundNumber: 1,
+  matchNumber: 2,
+  roundName: roundName,
+  scheduledAt: scheduledAt,
+  courtName: courtName,
+  partners: partners,
+  opponents: const ['Lucía', 'Diego'],
+  myResponse: myResponse,
+  decision: decision,
+);
 
 void main() {
   late List<String> answers;
@@ -31,7 +30,11 @@ void main() {
   setUpAll(() async => initializeDateFormatting('es_ES'));
   setUp(() => answers = []);
 
-  Future<void> pump(WidgetTester tester, MyTournamentMatchDto m, {bool busy = false}) async {
+  Future<void> pump(
+    WidgetTester tester,
+    MyTournamentMatchDto m, {
+    bool busy = false,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -46,14 +49,15 @@ void main() {
   }
 
   group('MyTournamentMatchCard', () {
-
     testWidgets('should say who the player faces', (tester) async {
       await pump(tester, matchSV());
 
       expect(find.text('vs Lucía · Diego'), findsOneWidget);
     });
 
-    testWidgets('should name the partner in a pairs tournament', (tester) async {
+    testWidgets('should name the partner in a pairs tournament', (
+      tester,
+    ) async {
       await pump(tester, matchSV(partners: ['Marcos']));
 
       expect(find.text('Con Marcos'), findsOneWidget);
@@ -61,20 +65,20 @@ void main() {
 
     //? Inventar una fecha que después cambia es peor que decir que no hay.
     //? Sin cancha materializada el partido depende de resultados previos del
-    //? cuadro, así que el copy exacto del handoff es "Depende del cuadro"
-    //? (`README.md:84`), no un genérico "Sin cancha".
-    testWidgets('should say the time is not set instead of making one up',
-        (tester) async {
+    //? cuadro, así que se muestra el copy exacto "Horario por definir".
+    testWidgets('should say the time is not set instead of making one up', (
+      tester,
+    ) async {
       await pump(tester, matchSV());
 
-      expect(find.text('Horario a confirmar'), findsOneWidget);
-      expect(find.text('Depende del cuadro'), findsOneWidget);
+      expect(find.text('Horario por definir'), findsNWidgets(2));
     });
 
     //? SINGLE_ELIMINATION manda un nombre cualitativo ya resuelto por la API
     //? (S5): se muestra tal cual, sin inventar nada más.
-    testWidgets('should show the qualitative round name when present',
-        (tester) async {
+    testWidgets('should show the qualitative round name when present', (
+      tester,
+    ) async {
       await pump(tester, matchSV(roundName: 'Octavos'));
 
       expect(find.text('Octavos'), findsOneWidget);
@@ -83,23 +87,27 @@ void main() {
 
     //? ROUND_ROBIN y AMERICANO no tienen "cuartos" ni "semifinal": la API
     //? manda `roundName: null` y la tarjeta cae a "Ronda {roundNumber}".
-    testWidgets('should fall back to Ronda {n} when there is no round name',
-        (tester) async {
+    testWidgets('should fall back to Ronda {n} when there is no round name', (
+      tester,
+    ) async {
       await pump(tester, matchSV());
 
       expect(find.text('Ronda 1'), findsOneWidget);
     });
 
     //? Solo se pregunta cuando hay algo concreto que aceptar.
-    testWidgets('should not ask for an answer while there is no court',
-        (tester) async {
+    testWidgets('should not ask for an answer while there is no court', (
+      tester,
+    ) async {
       await pump(tester, matchSV());
 
       expect(find.text('Me sirve'), findsNothing);
-      expect(find.text('No puedo'), findsNothing);
+      expect(find.text('Pedir cambio'), findsNothing);
     });
 
-    testWidgets('should ask for an answer once the court is held', (tester) async {
+    testWidgets('should ask for an answer once the court is held', (
+      tester,
+    ) async {
       await pump(
         tester,
         matchSV(scheduledAt: DateTime(2026, 10, 1, 14), courtName: 'Cancha 1'),
@@ -111,8 +119,9 @@ void main() {
 
     //? Copy verbatim del handoff (`cuadrala-torneos.jsx:371`): la pregunta
     //? solo aparece junto con los botones de responder.
-    testWidgets('should show the organizer-proposed-schedule question',
-        (tester) async {
+    testWidgets('should show the organizer-proposed-schedule question', (
+      tester,
+    ) async {
       await pump(
         tester,
         matchSV(scheduledAt: DateTime(2026, 10, 1, 14), courtName: 'Cancha 1'),
@@ -124,16 +133,16 @@ void main() {
       );
     });
 
-    //? Orden del handoff: primario "Me sirve" primero, secundario "No puedo"
+    //? Orden del handoff: primario "Me sirve" primero, secundario "Pedir cambio"
     //? después (`cuadrala-torneos.jsx:373-374`).
-    testWidgets('should show Me sirve before No puedo', (tester) async {
+    testWidgets('should show Me sirve before Pedir cambio', (tester) async {
       await pump(
         tester,
         matchSV(scheduledAt: DateTime(2026, 10, 1, 14), courtName: 'Cancha 1'),
       );
 
       final acceptX = tester.getTopLeft(find.text('Me sirve')).dx;
-      final rejectX = tester.getTopLeft(find.text('No puedo')).dx;
+      final rejectX = tester.getTopLeft(find.text('Pedir cambio')).dx;
       expect(acceptX, lessThan(rejectX));
     });
 
@@ -151,26 +160,28 @@ void main() {
 
     //? Copy verbatim del handoff (`cuadrala-torneos.jsx:379`): avisa que el
     //? partido se va a reprogramar, en vez de dejar la pantalla muda.
-    testWidgets('should tell the player we notified the organizer after No puedo',
-        (tester) async {
-      await pump(
-        tester,
-        matchSV(
-          scheduledAt: DateTime(2026, 10, 1, 14),
-          courtName: 'Cancha 1',
-          myResponse: 'REJECTED',
-          decision: 'REJECTED',
-        ),
-      );
+    testWidgets(
+      'should tell the player we notified the organizer after a change request',
+      (tester) async {
+        await pump(
+          tester,
+          matchSV(
+            scheduledAt: DateTime(2026, 10, 1, 14),
+            courtName: 'Cancha 1',
+            myResponse: 'REJECTED',
+            decision: 'REJECTED',
+          ),
+        );
 
-      expect(
-        find.text(
-          'Avisamos al organizador. Va a reprogramar el partido y te llega el horario nuevo.',
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Me sirve'), findsNothing);
-    });
+        expect(
+          find.text(
+            'Avisamos al organizador. Va a reprogramar el partido y te llega el horario nuevo.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Me sirve'), findsNothing);
+      },
+    );
 
     testWidgets('should report the accepted answer', (tester) async {
       await pump(
@@ -186,8 +197,9 @@ void main() {
 
     //? "Ya contesté, falta el resto" es distinto de "no contestaste": la app
     //? solo tiene que pedirte algo en el segundo caso.
-    testWidgets('should distinguish having answered from owing an answer',
-        (tester) async {
+    testWidgets('should distinguish having answered from owing an answer', (
+      tester,
+    ) async {
       await pump(
         tester,
         matchSV(
@@ -197,7 +209,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Esperando al resto'), findsOneWidget);
+      expect(find.text('Aceptaste · faltan los demás'), findsOneWidget);
       expect(find.text('Falta tu respuesta'), findsNothing);
       //? Ya contesté: no tiene sentido volver a preguntarme.
       expect(
@@ -217,7 +229,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Confirmado'), findsOneWidget);
+      expect(find.text('Horario confirmado'), findsOneWidget);
       expect(find.text('Me sirve'), findsNothing);
     });
   });

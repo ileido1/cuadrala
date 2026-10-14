@@ -23,6 +23,7 @@ export const FORMAT_PRESET_CODE_PARAM_SCHEMA = z
 export const PUBLISH_FORMAT_PRESET_VERSION_BODY_SCHEMA = z
   .object({
     name: z.string().min(1).max(120),
+    description: z.string().nullable().optional(),
     schemaVersion: z.coerce.number().int().min(1),
     defaultParameters: z.unknown(),
     effectiveFrom: z.string().datetime({ offset: true }).optional(),

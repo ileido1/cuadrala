@@ -6,12 +6,14 @@ final class _OrganizerPublishTab extends StatelessWidget {
     required this.tournamentId,
     required this.organizerUserId,
     required this.tournamentsRepository,
+    this.onTournamentUpdated,
   });
 
   final TournamentListItemDto? tournament;
   final String tournamentId;
   final String? organizerUserId;
   final TournamentsRepository tournamentsRepository;
+  final VoidCallback? onTournamentUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -80,11 +82,28 @@ final class _OrganizerPublishTab extends StatelessWidget {
                               child: PillToggle(
                                 key: const Key('tournament.visibilityControl'),
                                 value: state.visibility == 'PUBLIC',
-                                onChanged: (isPublic) => context
-                                    .read<TournamentPublishCubit>()
-                                    .setVisibility(
-                                      isPublic ? 'PUBLIC' : 'PRIVATE',
-                                    ),
+                                onChanged: (isPublic) async {
+                                  final cubit = context
+                                      .read<TournamentPublishCubit>();
+                                  final visibility = isPublic
+                                      ? 'PUBLIC'
+                                      : 'PRIVATE';
+                                  await cubit.setVisibility(visibility);
+                                  if (!context.mounted) return;
+                                  if (cubit.state.error == null &&
+                                      cubit.state.visibility == visibility) {
+                                    onTournamentUpdated?.call();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          visibility == 'PUBLIC'
+                                              ? 'El torneo ahora es público.'
+                                              : 'El torneo ahora es privado.',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
                               ),
                             ),
                           ],
@@ -120,6 +139,7 @@ final class _OrganizerPublishTab extends StatelessWidget {
                   organizerUserId: organizerUserId!,
                   currentStatus: tournament!.status,
                   tournamentsRepository: tournamentsRepository,
+                  onUpdated: onTournamentUpdated,
                 ),
               const SizedBox(height: 12),
               const Text(
@@ -503,12 +523,14 @@ final class OrganizerStatusControl extends StatelessWidget {
     required this.organizerUserId,
     required this.currentStatus,
     required this.tournamentsRepository,
+    this.onUpdated,
   });
 
   final String tournamentId;
   final String organizerUserId;
   final String currentStatus;
   final TournamentsRepository tournamentsRepository;
+  final VoidCallback? onUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -530,7 +552,7 @@ final class OrganizerStatusControl extends StatelessWidget {
             status: currentStatus,
             visibility: 'PUBLIC',
           ),
-          child: const _OrganizerStatusSegmented(),
+          child: _OrganizerStatusSegmented(onUpdated: onUpdated),
         );
       },
     );
@@ -538,7 +560,9 @@ final class OrganizerStatusControl extends StatelessWidget {
 }
 
 final class _OrganizerStatusSegmented extends StatelessWidget {
-  const _OrganizerStatusSegmented();
+  const _OrganizerStatusSegmented({this.onUpdated});
+
+  final VoidCallback? onUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -574,7 +598,22 @@ final class _OrganizerStatusSegmented extends StatelessWidget {
                     enabled: enabled.contains('IN_PROGRESS'),
                   ),
                 ],
-                onChanged: context.read<TournamentPublishCubit>().updateStatus,
+                onChanged: (status) async {
+                  final cubit = context.read<TournamentPublishCubit>();
+                  await cubit.updateStatus(status);
+                  if (!context.mounted) return;
+                  if (cubit.state.error == null &&
+                      cubit.state.status == status) {
+                    onUpdated?.call();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Estado actualizado: ${_statusLabel(status)}.',
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
             if (explanation != null) ...[
@@ -608,6 +647,13 @@ String? _statusExplanation(String status) => switch (status) {
   'IN_PROGRESS' =>
     'Se cierran las inscripciones: ya no entra ni sale nadie del plantel.',
   _ => null,
+};
+
+String _statusLabel(String status) => switch (status) {
+  'DRAFT' => 'Borrador',
+  'OPEN' => 'Abierta',
+  'IN_PROGRESS' => 'En juego',
+  _ => status,
 };
 
 final class _OrganizerAvisos extends StatelessWidget {

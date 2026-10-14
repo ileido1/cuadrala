@@ -105,21 +105,13 @@ final class _InfoTab extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    //? Convertir ratings a Map<String, String> para compatibilidad con resolver
-    final ratingsMap = playerRatings?.map((r) {
-      return {'categoryId': r.categoryId, 'categoryName': r.categoryName ?? ''};
-    }).toList();
-
-    final eligibility = resolveTournamentEligibilitySV(
-      tournamentCategoryId: tournament!.categoryId,
-      playerRatings: ratingsMap,
-      playerIsInvited: invited,
-    );
+    final eligibility = invited
+        ? TournamentEligibility.invited
+        : TournamentEligibility.eligible;
 
     //? Variable local para que el analizador promueva el tipo dentro del
     //? `if` de la lista de hijos más abajo (un campo `final` no siempre se
     //? promueve igual que una variable local).
-    final loadedRegistrations = registrationsState;
 
     //? Buscar la categoría del torneo en los ratings del jugador
     UserRatingDto? playerTournamentRating;
@@ -155,18 +147,32 @@ final class _InfoTab extends StatelessWidget {
           if (registration?.status == 'PENDING') ...[
             const _StatusBanner(
               tone: _BannerTone.warning,
-              title: 'Te anotaste. Falta que te acepten.',
+              title: 'Te anotaste. Falta que te confirmen.',
               body:
-                  'El organizador confirma los inscritos. Te avisamos apenas quedés adentro — no tenés que volver a entrar.',
+                  'El organizador confirma cada inscripción. Cuando quedes confirmado vas a ver el calendario y la tabla.',
             ),
             const SizedBox(height: 16),
           ],
           if (registration?.status == 'CONFIRMED') ...[
             _StatusBanner(
               tone: _BannerTone.success,
-              title: 'Estás adentro',
-              body: 'Inscripción confirmada.',
+              title: 'Inscripción confirmada',
+              body:
+                  'Cuando el organizador genere el calendario, tus partidos aparecen en Calendario.',
               action: () => DefaultTabController.of(context).animateTo(1),
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (registration == null &&
+              const {
+                'IN_PROGRESS',
+                'COMPLETED',
+              }.contains(tournament!.status)) ...[
+            const _StatusBanner(
+              tone: _BannerTone.success,
+              title: 'No participás en este torneo',
+              body:
+                  'Ya está en juego: podés seguir el calendario y la tabla, pero no inscribirte.',
             ),
             const SizedBox(height: 16),
           ],
@@ -181,8 +187,10 @@ final class _InfoTab extends StatelessWidget {
             playerCategoryName: playerTournamentRating?.categoryName,
             inscriptionPrice: tournament!.inscriptionPrice,
             startsAt: tournament!.startsAt,
+            endsAt: tournament!.endsAt,
             registrationClosesAt: tournament!.registrationClosesAt,
             venueName: tournament!.venueName,
+            organizerName: tournament!.organizerName,
           ),
           const SizedBox(height: 20),
           Text(
@@ -191,21 +199,6 @@ final class _InfoTab extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _ComoSeJuegaTiles(tournament: tournament!),
-          //? D17: la sección se oculta hasta que los inscritos terminen de
-          //? cargar — mostrar un conteo a medio cargar sería peor que no
-          //? mostrar nada.
-          if (loadedRegistrations is TournamentRegistrationsLoaded) ...[
-            const SizedBox(height: 20),
-            Text(
-              'Inscritos',
-              style: _sectionStyle(Theme.of(context).colorScheme),
-            ),
-            const SizedBox(height: 10),
-            _InscritosSummary(
-              registrationsState: loadedRegistrations,
-              pairedRegistration: tournament!.pairedRegistration,
-            ),
-          ],
         ],
       ),
     );
@@ -232,7 +225,7 @@ final class _StatusBanner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final color = tone == _BannerTone.success
         ? scheme.primary
-        : const Color(0xFFF59E0B);
+        : BrandColors.warningAmber;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -272,7 +265,7 @@ final class _StatusBanner extends StatelessWidget {
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: action,
-                    child: const Text('Ver mis partidos →'),
+                    child: const Text('Ir a Calendario →'),
                   ),
                 ],
               ],
@@ -284,13 +277,7 @@ final class _StatusBanner extends StatelessWidget {
   }
 }
 
-/// "Cómo se juega": Formato/Cuadro/Anotados (`cuadrala-torneos.jsx:268`).
-///
-/// "Formato" siempre muestra el preset (`formatPresetName` mapeado por
-/// `tournamentFormatLabel`), nunca `sportName`. "Cuadro" muestra
-/// `maxSlots` cuando el organizador lo declaró; sin eso no hay
-/// denominador que mostrar, así que la tarjeta entera se omite en vez de
-/// inventar un placeholder ("Cupos no declarados") como hacía antes.
+/// Formato, modalidad y cupos declarados por el torneo.
 final class _ComoSeJuegaTiles extends StatelessWidget {
   const _ComoSeJuegaTiles({required this.tournament});
 
@@ -304,107 +291,39 @@ final class _ComoSeJuegaTiles extends StatelessWidget {
         label: 'Formato',
         value: tournamentFormatLabel(tournament.formatPresetName),
       ),
-      if (maxSlots != null)
-        _InfoTile(label: 'Cuadro', value: '$maxSlots jugadores'),
       _InfoTile(
-        label: 'Anotados',
-        value: '${tournament.registrationCount}',
+        label: 'Modalidad',
+        value: tournament.pairedRegistration ? 'Dupla fija' : 'Individual',
+      ),
+      _InfoTile(
+        label: 'Cupos',
+        value: maxSlots == null
+            ? '${tournament.registrationCount} · sin tope'
+            : '${tournament.registrationCount} de $maxSlots',
       ),
     ];
 
-    return Row(
+    return Column(
       children: [
-        for (var i = 0; i < tiles.length; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
-          Expanded(child: tiles[i]),
+        Row(
+          children: [
+            for (var i = 0; i < tiles.length; i++) ...[
+              if (i > 0) const SizedBox(width: 10),
+              Expanded(child: tiles[i]),
+            ],
+          ],
+        ),
+        if (maxSlots != null) ...[
+          const SizedBox(height: 12),
+          TournamentCupoBar(
+            count: tournament.registrationCount,
+            capacity: maxSlots,
+          ),
         ],
       ],
     );
   }
 }
-
-/// Resumen de Inscritos (`cuadrala-torneos.jsx:277-285`): `AvatarStack` +
-/// "{N} confirmados" / "{M} esperando al organizador" + chevron que abre el
-/// roster (design D17, assumption A2).
-///
-/// Los conteos salen de `TournamentRegistrationsLoaded.items` (excluyendo
-/// WITHDRAWN vía `summarizeRoster`), nunca del `registrationCount` crudo del
-/// torneo: ese número no distingue confirmados de pendientes.
-final class _InscritosSummary extends StatelessWidget {
-  const _InscritosSummary({
-    required this.registrationsState,
-    required this.pairedRegistration,
-  });
-
-  final TournamentRegistrationsLoaded registrationsState;
-  final bool pairedRegistration;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final summary = summarizeRoster(
-      registrations: registrationsState.items,
-      paired: pairedRegistration,
-    );
-    final filled = math.min(6, summary.confirmed);
-
-    return InkWell(
-      key: const Key('tournament.inscritosSummary'),
-      borderRadius: BorderRadius.circular(18),
-      onTap: () => showTournamentRosterSheet(
-        context,
-        registrations: registrationsState.items,
-        pairedRegistration: pairedRegistration,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: scheme.outlineVariant, width: 1.5),
-        ),
-        child: Row(
-          children: [
-            AvatarStack(filledCount: filled, emptySpots: 6 - filled),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _inscritosConfirmedLabel(summary.confirmed),
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (summary.pending > 0)
-                    Text(
-                      _inscritosPendingLabel(summary.pending),
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Icon(AppIcons.chevronRight, size: 18, color: scheme.outline),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// "{N} confirmados" (`cuadrala-torneos.jsx:281`).
-String _inscritosConfirmedLabel(int confirmed) => '$confirmed confirmados';
-
-/// "{M} esperando al organizador" (`cuadrala-torneos.jsx:282`), sólo
-/// renderizado cuando `pending > 0`.
-String _inscritosPendingLabel(int pending) =>
-    '$pending esperando al organizador';
 
 final class _InfoTile extends StatelessWidget {
   const _InfoTile({required this.label, required this.value});

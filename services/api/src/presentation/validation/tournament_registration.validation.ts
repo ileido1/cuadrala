@@ -10,9 +10,7 @@ export const TOURNAMENT_REGISTRATION_PARAMS_SCHEMA = z
   .strict();
 
 export const CREATE_TOURNAMENT_REGISTRATION_BODY_SCHEMA = z
-  .object({
-    userId: z.string().uuid('userId debe ser un UUID valido.'),
-  })
+  .object({})
   .strict();
 
 export const WITHDRAW_TOURNAMENT_REGISTRATION_PARAMS_SCHEMA = z

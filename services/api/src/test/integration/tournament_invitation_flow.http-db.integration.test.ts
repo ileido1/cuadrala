@@ -89,7 +89,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(RES.body.data.invitedUserId).toBe(PLAYER.userId);
     });
 
-    it('completes invite -> accept -> CONFIRMED registration', async () => {
+    it('accepts an invitation as PENDING until the organizer confirms the registration', async () => {
       const TOURNAMENT = await createTournamentSV('DRAFT');
       const PLAYER = await createPlayerAndTokenSV('invite-player-b');
 
@@ -113,7 +113,19 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const REGISTRATION = await PRISMA.tournamentRegistration.findUnique({
         where: { tournamentId_userId: { tournamentId: TOURNAMENT.id, userId: PLAYER.userId } },
       });
-      expect(REGISTRATION?.status).toBe('CONFIRMED');
+      expect(REGISTRATION?.status).toBe('PENDING');
+
+      const CONFIRM_RES = await request(APP)
+        .patch(`/api/v1/tournaments/${TOURNAMENT.id}/registrations/${REGISTRATION?.id}`)
+        .send({ status: 'CONFIRMED' })
+        .set('Authorization', `Bearer ${organizerToken}`)
+        .set('Content-Type', 'application/json');
+      expect(CONFIRM_RES.status).toBe(200);
+
+      const CONFIRMED_REGISTRATION = await PRISMA.tournamentRegistration.findUnique({
+        where: { tournamentId_userId: { tournamentId: TOURNAMENT.id, userId: PLAYER.userId } },
+      });
+      expect(CONFIRMED_REGISTRATION?.status).toBe('CONFIRMED');
     });
 
     it('lets the invitee reject an invitation without creating a registration', async () => {

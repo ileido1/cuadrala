@@ -155,7 +155,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await PRISMA.$disconnect();
     });
 
-    it('GET scoreboard retorna array ordenado con puntos sumados, gamesPlayed y rank dense', async () => {
+    it('GET scoreboard retorna métricas completas y ordena empates por diferencia y enfrentamiento directo', async () => {
       const RES = await request(APP).get(`/api/v1/tournaments/${tournamentId}/scoreboard`);
 
       expect(RES.status).toBe(200);
@@ -167,18 +167,19 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       expect(Array.isArray(RES.body.data.rows)).toBe(true);
 
       // Esperados por tournamentId (sin contar OTHER_TOURNAMENT):
-      // Alice: 4+3+3 = 10, gamesPlayed=3, rank=1
-      //   gamesWon: match1 (4>2, gana) + match2 (3=3, empate) + match3 (3, no es el máximo) = 1
-      // Bob:   2+5   = 7,  gamesPlayed=2, rank=2
-      //   gamesWon: match1 (2<4, pierde) + match3 (5, máximo) = 1
-      // Carol: 3+4   = 7,  gamesPlayed=2, rank=2  (dense)
-      //   gamesWon: match2 (3=3, empate) + match3 (4, no es el máximo) = 0
+      // Alice: 10 pts; un triunfo y un empate histórico.
+      // Bob y Carol igualan puntos, pero Carol tiene mejor diferencia.
       const SCOREBOARD = RES.body.data.rows as Array<{
         userId: string;
         name: string;
         points: number;
         gamesPlayed: number;
         gamesWon: number;
+        gamesLost: number;
+        gamesDrawn: number;
+        pointsFor: number;
+        pointsAgainst: number;
+        difference: number;
         rank: number;
       }>;
 
@@ -189,25 +190,32 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         points: 10,
         gamesPlayed: 3,
         gamesWon: 1,
+        gamesLost: 1,
+        gamesDrawn: 1,
+        pointsFor: 10,
+        pointsAgainst: 14,
+        difference: -4,
         rank: 1,
       });
 
-      const TIED = SCOREBOARD.slice(1).map((_r) => ({
+      const LOWER = SCOREBOARD.slice(1).map((_r) => ({
         userId: _r.userId,
         name: _r.name,
         points: _r.points,
         gamesPlayed: _r.gamesPlayed,
         gamesWon: _r.gamesWon,
+        gamesLost: _r.gamesLost,
+        gamesDrawn: _r.gamesDrawn,
+        pointsFor: _r.pointsFor,
+        pointsAgainst: _r.pointsAgainst,
+        difference: _r.difference,
         rank: _r.rank,
       }));
 
-      expect(TIED).toHaveLength(2);
-      expect(TIED).toEqual(
-        expect.arrayContaining([
-          { userId: userBId, name: 'Bob', points: 7, gamesPlayed: 2, gamesWon: 1, rank: 2 },
-          { userId: userCId, name: 'Carol', points: 7, gamesPlayed: 2, gamesWon: 0, rank: 2 },
-        ]),
-      );
+      expect(LOWER).toEqual([
+        { userId: userBId, name: 'Bob', points: 7, gamesPlayed: 2, gamesWon: 1, gamesLost: 1, gamesDrawn: 0, pointsFor: 7, pointsAgainst: 11, difference: -4, rank: 2 },
+        { userId: userCId, name: 'Carol', points: 7, gamesPlayed: 2, gamesWon: 0, gamesLost: 1, gamesDrawn: 1, pointsFor: 7, pointsAgainst: 11, difference: -4, rank: 3 },
+      ]);
     });
 
     it('GET scoreboard responde 404 si el torneo no existe', async () => {
@@ -335,16 +343,21 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
         userId: string;
         gamesPlayed: number;
         gamesWon: number;
+        gamesLost: number;
+        gamesDrawn: number;
+        pointsFor: number;
+        pointsAgainst: number;
+        difference: number;
       }>;
       const BY_USER_ID = new Map(ROWS.map((_r) => [_r.userId, _r]));
 
       // Empate del partido 1 (nadie gana) + partido 2 ganado por el lado A.
-      expect(BY_USER_ID.get(A1.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 1 });
-      expect(BY_USER_ID.get(A2.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 1 });
+      expect(BY_USER_ID.get(A1.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 1, gamesLost: 0, gamesDrawn: 1, pointsFor: 49, pointsAgainst: 47, difference: 2 });
+      expect(BY_USER_ID.get(A2.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 1, gamesLost: 0, gamesDrawn: 1, pointsFor: 49, pointsAgainst: 47, difference: 2 });
       // B pierde el partido 2 pese a la fila individual más alta (15).
-      expect(BY_USER_ID.get(B1.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 0 });
-      expect(BY_USER_ID.get(B2.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 0 });
+      expect(BY_USER_ID.get(B1.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 0, gamesLost: 1, gamesDrawn: 1, pointsFor: 47, pointsAgainst: 49, difference: -2 });
+      expect(BY_USER_ID.get(B2.id)).toMatchObject({ gamesPlayed: 2, gamesWon: 0, gamesLost: 1, gamesDrawn: 1, pointsFor: 47, pointsAgainst: 49, difference: -2 });
+      expect(ROWS.every((_row) => !('headToHeadWins' in _row))).toBe(true);
     });
   },
 );
-

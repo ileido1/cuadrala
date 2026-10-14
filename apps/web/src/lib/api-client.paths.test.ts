@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Records the path every request is issued against, so these tests assert the
 // URL the real client builds instead of a mock of itself.
 const calls: Array<{ method: string; url: string; data?: unknown }> = [];
+let createConfig: Record<string, unknown> | undefined;
 
 function recorder(method: string) {
   return (url: string, data?: unknown) => {
@@ -24,7 +25,13 @@ vi.mock('axios', () => {
     },
   };
   return {
-    default: { create: () => instance, post: vi.fn() },
+    default: {
+      create: vi.fn((config) => {
+        createConfig = config;
+        return instance;
+      }),
+      post: vi.fn(),
+    },
   };
 });
 
@@ -63,6 +70,12 @@ describe('ApiClient profile paths', () => {
   });
 });
 
+describe('ApiClient request resilience', () => {
+  it('should time out stalled API requests instead of leaving dashboard loading indefinitely', () => {
+    expect(createConfig).toMatchObject({ timeout: 15_000 });
+  });
+});
+
 
 describe('ApiClient authentication and registration paths', () => {
   beforeEach(() => {
@@ -84,6 +97,40 @@ describe('ApiClient authentication and registration paths', () => {
         url: '/venues',
         data: { name: 'Club Cuadrala', address: 'Caracas' },
       },
+    ]);
+  });
+});
+
+describe('ApiClient dashboard paths', () => {
+  beforeEach(() => {
+    calls.length = 0;
+  });
+
+  it('should request every route used by the active venue dashboard', async () => {
+    await apiClient.venues.mine();
+    await apiClient.venues.get('v1');
+    await apiClient.venues.update('v1', { name: 'Club' });
+    await apiClient.venues.dashboardStats('v1');
+    await apiClient.venues.transactions.stats('v1');
+    await apiClient.venues.transactions.history('v1', 1);
+    await apiClient.venues.pendingTransactions('v1');
+    await apiClient.venues.courts.list('v1', { status: 'ACTIVE' });
+    await apiClient.venues.bookings.list('v1', { limit: 100 });
+    await apiClient.venues.paymentMethods.list('v1');
+    await apiClient.sports.list();
+
+    expect(calls.map(({ method, url }) => ({ method, url }))).toEqual([
+      { method: 'GET', url: '/venues/mine' },
+      { method: 'GET', url: '/venues/v1' },
+      { method: 'PATCH', url: '/venues/v1' },
+      { method: 'GET', url: '/venues/v1/dashboard-stats' },
+      { method: 'GET', url: '/venues/v1/transactions/stats' },
+      { method: 'GET', url: '/venues/v1/transactions/history' },
+      { method: 'GET', url: '/venues/v1/transactions/pending' },
+      { method: 'GET', url: '/venues/v1/courts' },
+      { method: 'GET', url: '/venues/v1/bookings' },
+      { method: 'GET', url: '/venues/v1/payment-methods' },
+      { method: 'GET', url: '/sports' },
     ]);
   });
 });

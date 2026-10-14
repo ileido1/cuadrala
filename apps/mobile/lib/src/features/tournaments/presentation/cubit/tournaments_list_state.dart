@@ -32,6 +32,8 @@ final class TournamentsListLoaded extends TournamentsListState {
     this.ownCategoryId,
     this.ownCategoryLabel,
     this.myTournaments = const [],
+    this.myTournamentsError,
+    this.loadMoreError,
   });
 
   final List<TournamentListItemDto> items;
@@ -60,6 +62,8 @@ final class TournamentsListLoaded extends TournamentsListState {
   /// que organiza, sourced de `GET /api/v1/users/me/tournaments`. Vacío
   /// mientras carga o si la llamada falla — nunca inventado.
   final List<ViewerTournamentDto> myTournaments;
+  final String? myTournamentsError;
+  final String? loadMoreError;
 
   TournamentsListLoaded copyWith({
     List<TournamentListItemDto>? items,
@@ -73,6 +77,8 @@ final class TournamentsListLoaded extends TournamentsListState {
     String? ownCategoryId,
     String? ownCategoryLabel,
     List<ViewerTournamentDto>? myTournaments,
+    String? loadMoreError,
+    bool clearLoadMoreError = false,
   }) {
     return TournamentsListLoaded(
       items: items ?? this.items,
@@ -86,23 +92,29 @@ final class TournamentsListLoaded extends TournamentsListState {
       ownCategoryId: ownCategoryId ?? this.ownCategoryId,
       ownCategoryLabel: ownCategoryLabel ?? this.ownCategoryLabel,
       myTournaments: myTournaments ?? this.myTournaments,
+      myTournamentsError: myTournamentsError,
+      loadMoreError: clearLoadMoreError
+          ? null
+          : loadMoreError ?? this.loadMoreError,
     );
   }
 
   @override
   List<Object?> get props => [
-        items,
-        page,
-        limit,
-        total,
-        isLoadingMore,
-        hasReachedEnd,
-        filters,
-        hasOwnCategory,
-        ownCategoryId,
-        ownCategoryLabel,
-        myTournaments,
-      ];
+    items,
+    page,
+    limit,
+    total,
+    isLoadingMore,
+    hasReachedEnd,
+    filters,
+    hasOwnCategory,
+    ownCategoryId,
+    ownCategoryLabel,
+    myTournaments,
+    myTournamentsError,
+    loadMoreError,
+  ];
 }
 
 final class TournamentsListFailure extends TournamentsListState {

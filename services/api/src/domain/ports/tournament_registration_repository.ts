@@ -15,6 +15,8 @@ export type TournamentRegistrationDTO = {
   registeredByUserId: string | null;
   /** La otra mitad de la dupla, en torneos de parejas fijas. */
   partnerRegistrationId: string | null;
+  /** Categoría actual del jugador en el deporte del torneo; solo en roster autorizado. */
+  sportCategoryName?: string | null;
   createdAt: Date;
 };
 

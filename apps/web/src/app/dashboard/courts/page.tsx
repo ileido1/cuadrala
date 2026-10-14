@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   CourtPricingTiersForm,
   courtTiersToDrafts,
@@ -8,6 +8,7 @@ import {
   validateTierDrafts,
 } from '~/components/courts/CourtPricingTiersForm';
 import { useVenue } from '~/contexts/venue-context';
+import { ErrorState } from '~/components/shared/ErrorState';
 import { apiClient } from '~/lib/api-client';
 import {
   parseBasePriceCents,
@@ -252,7 +253,8 @@ export default function CourtsPage() {
   const [activeTab, setActiveTab] = useState<TabValue>('active');
   const [courts, setCourts] = useState<Court[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sportsError, setSportsError] = useState(false);
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -275,22 +277,32 @@ export default function CourtsPage() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  useEffect(() => {
+  const loadPageData = useCallback(async () => {
     if (!currentVenue) return;
 
     setLoading(true);
-    Promise.all([
+    setError(null);
+    setSportsError(false);
+    const [courtsResult, sportsResult] = await Promise.allSettled([
       apiClient.venues.courts.list(currentVenue.id),
       apiClient.sports.list(),
-    ])
-      .then(([courtsRes, sportsRes]) => {
-        const sportsData = sportsRes.data.data?.sports ?? [];
-        setSports(sportsData as Sport[]);
-        setCourts((courtsRes.data.data?.items ?? courtsRes.data.data ?? []) as Court[]);
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+    ]);
+    if (courtsResult.status === 'fulfilled') {
+      setCourts((courtsResult.value.data.data?.items ?? courtsResult.value.data.data ?? []) as Court[]);
+    } else {
+      setError('No se pudieron cargar las canchas.');
+    }
+    if (sportsResult.status === 'fulfilled') {
+      setSports((sportsResult.value.data.data?.sports ?? []) as Sport[]);
+    } else {
+      setSportsError(true);
+    }
+    setLoading(false);
   }, [currentVenue]);
+
+  useEffect(() => {
+    void loadPageData();
+  }, [loadPageData]);
 
   const loadCourts = async () => {
     if (!currentVenue) return;
@@ -607,6 +619,12 @@ export default function CourtsPage() {
       </div>
 
       {/* Courts Grid */}
+      {sportsError ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          No se pudo cargar el catálogo de deportes. Podés revisar las canchas existentes, pero la creación puede estar limitada.
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
@@ -626,6 +644,8 @@ export default function CourtsPage() {
             </div>
           ))}
         </div>
+      ) : error ? (
+        <ErrorState message={error} onRetry={() => void loadPageData()} />
       ) : filteredCourts.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">

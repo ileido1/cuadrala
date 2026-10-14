@@ -1,5 +1,6 @@
 # Render Blueprint — API de Cuadrala.
-# Levanta el servicio web + una Postgres, y cablea DATABASE_URL entre los dos.
+# DATABASE_URL se configura manualmente en Render para usar la base externa.
+# cuadrala-db se conserva como recurso anterior y ya no alimenta a la API.
 # Los cinco secretos se generan solos: en produccion `assertProductionSecretsSV`
 # (services/api/src/config/env.ts) tira el arranque abajo si alguno quedo con su
 # valor de desarrollo, que esta publicado en el repo.
@@ -30,9 +31,7 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: DATABASE_URL
-        fromDatabase:
-          name: cuadrala-db
-          property: connectionString
+        sync: false
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET

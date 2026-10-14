@@ -1,58 +1,5 @@
 part of '../tournament_detail_screen.dart';
 
-final class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = tournamentStatusColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        tournamentStatusLabel(status),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-final class _SmallTag extends StatelessWidget {
-  const _SmallTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: scheme.onSurfaceVariant,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 final class _OrgBadge extends StatelessWidget {
   const _OrgBadge();
 
@@ -79,15 +26,9 @@ final class _OrgBadge extends StatelessWidget {
 }
 
 final class _TournamentFooter extends StatelessWidget {
-  const _TournamentFooter({
-    required this.tournament,
-    required this.playerRatings,
-    required this.invited,
-  });
+  const _TournamentFooter({required this.tournament});
 
   final TournamentListItemDto? tournament;
-  final List<UserRatingDto>? playerRatings;
-  final bool invited;
 
   @override
   Widget build(BuildContext context) {
@@ -104,24 +45,44 @@ final class _TournamentFooter extends StatelessWidget {
         final userId = cubit.currentUserId;
         if (userId == null) return const SizedBox.shrink();
         final registration = state.registrationFor(userId);
-        final ratings = playerRatings
-            ?.map(
-              (r) => {
-                'categoryId': r.categoryId,
-                'categoryName': r.categoryName ?? '',
-              },
-            )
-            .toList();
-        final eligibility = resolveTournamentEligibilitySV(
-          tournamentCategoryId: tournament!.categoryId,
-          playerRatings: ratings,
-          playerIsInvited: invited,
-        );
+        final invitation = state.pendingInvitationFor(userId);
         final scheme = Theme.of(context).colorScheme;
-        final open = isTournamentRosterOpen(tournament!.status);
+        final open = tournament!.status == 'OPEN';
+        final activeRegistrationCount = state.items
+            .where((item) => item.status != 'WITHDRAWN')
+            .length;
         final footer = <Widget>[];
 
-        if (registration?.status == 'PENDING') {
+        if (state.registerError != null) {
+          footer.add(_RosterError(message: state.registerError!));
+        }
+
+        if (invitation != null) {
+          footer.add(
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: state.registering
+                        ? null
+                        : () => cubit.rejectInvitation(invitation.id),
+                    child: const Text('Rechazar'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: state.registering
+                        ? null
+                        : () => cubit.acceptInvitation(invitation.id),
+                    icon: const Icon(AppIcons.check),
+                    label: const Text('Aceptar'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else if (registration?.status == 'PENDING') {
           footer.add(
             Row(
               children: [
@@ -146,7 +107,13 @@ final class _TournamentFooter extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text('Esperando al organizador'),
+                        const Flexible(
+                          child: Text(
+                            'Esperando confirmación',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -165,26 +132,43 @@ final class _TournamentFooter extends StatelessWidget {
         } else if (registration?.status == 'CONFIRMED') {
           footer.add(
             FilledButton.icon(
-              onPressed: () => DefaultTabController.of(context).animateTo(1),
+              onPressed: () => DefaultTabController.of(context).index = 1,
               icon: const Icon(AppIcons.calendar, size: 19),
-              label: const Text('Ver cuándo y dónde juego'),
+              label: const Text('Cuándo y dónde juego'),
             ),
           );
+          if (tournament!.status != 'IN_PROGRESS' &&
+              tournament!.status != 'COMPLETED') {
+            footer.add(
+              OutlinedButton(
+                onPressed: state.registering ? null : cubit.withdraw,
+                child: const Text('Darme de baja'),
+              ),
+            );
+          }
         } else if (!open) {
           footer.add(
             OutlinedButton.icon(
+              key: const Key('tournament.detail.closedRegistration'),
               onPressed: null,
               icon: const Icon(AppIcons.clock),
-              label: const Text('Inscripción cerrada'),
+              label: Text(
+                tournament!.status == 'DRAFT'
+                    ? 'Todavía no abrió la inscripción'
+                    : 'Inscripción cerrada',
+              ),
             ),
           );
-        } else if (eligibility == TournamentEligibility.wrongCategory &&
-            !invited) {
+        } else if (tournament!.maxSlots != null &&
+            activeRegistrationCount >= tournament!.maxSlots!) {
           footer.add(
             OutlinedButton.icon(
+              key: const Key('tournament.detail.fullRegistration'),
               onPressed: null,
-              icon: const Icon(AppIcons.lock),
-              label: Text('Es categoría ${tournament!.categoryName}'),
+              icon: const Icon(AppIcons.eventBusy),
+              label: Text(
+                'Cupo completo · $activeRegistrationCount/${tournament!.maxSlots} inscritos',
+              ),
             ),
           );
         } else {
@@ -228,6 +212,7 @@ final class _TournamentFooter extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 FilledButton.icon(
+                  key: const Key('tournament.detail.register'),
                   onPressed: state.registering ? null : cubit.register,
                   icon: state.registering
                       ? const SizedBox(
@@ -261,4 +246,3 @@ final class _TournamentFooter extends StatelessWidget {
     );
   }
 }
-

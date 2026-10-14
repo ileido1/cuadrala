@@ -37,8 +37,10 @@ class TournamentEntryCheck extends StatelessWidget {
     this.inscriptionPrice,
     this.inscriptionPriceBs,
     this.startsAt,
+    this.endsAt,
     this.registrationClosesAt,
     this.venueName,
+    this.organizerName,
   });
 
   final TournamentEligibility eligibility;
@@ -57,8 +59,10 @@ class TournamentEntryCheck extends StatelessWidget {
   final String? inscriptionPriceBs;
 
   final DateTime? startsAt;
+  final DateTime? endsAt;
   final DateTime? registrationClosesAt;
   final String? venueName;
+  final String? organizerName;
 
   @override
   Widget build(BuildContext context) {
@@ -90,32 +94,29 @@ class TournamentEntryCheck extends StatelessWidget {
           ),
         },
       ),
-      _EntryRow(
-        icon: AppIcons.payments,
-        label: 'INSCRIPCIÓN',
-        value: inscriptionPrice == null
-            ? 'Precio por confirmar'
-            : inscriptionPrice == 0
-            ? 'Gratis'
-            : null,
-        valueWidget: inscriptionPrice == null || inscriptionPrice == 0
-            ? null
-            : DualPrice(
-                primaryLabel: formatMoneyFromMajor(
-                  inscriptionPrice!,
-                  CurrencyCode.usd,
+      if (inscriptionPrice != null)
+        _EntryRow(
+          icon: AppIcons.payments,
+          label: 'INSCRIPCIÓN',
+          value: inscriptionPrice == 0 ? 'Gratis' : null,
+          valueWidget: inscriptionPrice == 0
+              ? null
+              : DualPrice(
+                  primaryLabel: formatMoneyFromMajor(
+                    inscriptionPrice!,
+                    CurrencyCode.usd,
+                  ),
+                  secondaryLabel: inscriptionPriceBs,
+                  alignEnd: false,
                 ),
-                secondaryLabel: inscriptionPriceBs,
-                alignEnd: false,
-              ),
-        sub: 'Por jugador, se paga al confirmar',
-      ),
+          sub: 'Precio informado por el organizador',
+        ),
       _EntryRow(
         icon: AppIcons.calendar,
         label: 'CUÁNDO',
         value: startsAt == null
             ? 'Fecha por confirmar'
-            : _formatDateTimeSV(startsAt!),
+            : '${_formatDateTimeSV(startsAt!)}${_endTimeSuffixSV()}',
         sub: registrationClosesAt == null
             ? null
             : 'Inscripción hasta ${_formatDateTimeSV(registrationClosesAt!)}',
@@ -124,7 +125,7 @@ class TournamentEntryCheck extends StatelessWidget {
         icon: AppIcons.pin,
         label: 'DÓNDE',
         value: venueName ?? 'Sede por confirmar',
-        sub: venueName == null ? 'La sede todavía no fue declarada' : null,
+        sub: organizerName == null ? null : 'Organiza $organizerName',
       ),
     ];
 
@@ -159,16 +160,29 @@ class TournamentEntryCheck extends StatelessWidget {
   //? categoría real del jugador (invitado) o la del torneo (bloqueado), en
   //? vez de una frase fija. Sin categoría declarada cae a una nota genérica.
   String _levelSubSV() => switch (eligibility) {
-    TournamentEligibility.invited => playerCategoryName == null
-        ? 'Te invitaron: entrás aunque juegues otra categoría.'
-        : 'Te invitaron: entrás aunque juegues $playerCategoryName.',
-    TournamentEligibility.wrongCategory => playerCategoryName == null
-        ? 'Este torneo es para $categoryName.'
-        : 'Jugás $playerCategoryName. Este torneo es para $categoryName.',
-    TournamentEligibility.eligible => playerCategoryName == null
-        ? 'Podés entrar.'
-        : 'Jugás $playerCategoryName. Podés entrar.',
+    TournamentEligibility.invited =>
+      playerCategoryName == null
+          ? 'Te invitaron: entrás aunque juegues otra categoría.'
+          : 'Te invitaron: entrás aunque juegues $playerCategoryName.',
+    TournamentEligibility.wrongCategory =>
+      playerCategoryName == null
+          ? 'Este torneo es para $categoryName.'
+          : 'Jugás $playerCategoryName. Este torneo es para $categoryName.',
+    TournamentEligibility.eligible =>
+      playerCategoryName == null
+          ? 'Podés entrar.'
+          : 'Jugás $playerCategoryName. Podés entrar.',
   };
+
+  String _endTimeSuffixSV() {
+    if (endsAt == null) return '';
+    final start = startsAt!.toLocal();
+    final end = endsAt!.toLocal();
+    final endLabel = DateUtils.isSameDay(start, end)
+        ? DateFormat('HH:mm', 'es_ES').format(end)
+        : _formatDateTimeSV(endsAt!);
+    return ' → $endLabel';
+  }
 
   static String _formatDateTimeSV(DateTime value) {
     final local = value.toLocal();

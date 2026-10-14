@@ -8,6 +8,9 @@ const registrationRepo = {
   countByTournamentIdSV: async (_tournamentId: string) => 0,
 };
 const assertOrganizer = { hasAccessSV: async (_input: unknown) => false };
+const userCategoryRepo = {
+  listByUserIdSV: async (_userId: string) => [] as Array<{ sportId: string; categoryName: string }>,
+};
 
 let useCase: ListTournamentRegistrationsUseCase;
 let hasAccessResult: boolean;
@@ -21,22 +24,38 @@ const GUEST_ROW = {
   guestPhone: '+584121230000',
   guestEmail: 'marta@example.com',
 };
+const PLAYER_ROW = {
+  id: 'reg-player-1',
+  tournamentId: 't-1',
+  registrationType: 'AUTHENTICATED',
+  status: 'CONFIRMED',
+  userId: 'player-1',
+  userName: 'Ana Jugadora',
+  guestName: null,
+  guestPhone: null,
+  guestEmail: null,
+};
 
 beforeEach(() => {
   hasAccessResult = false;
   tournamentRepo.findByIdSV = async () => ({
     id: 't-1',
+    sportId: 'sport-padel',
     organizerUserId: 'organizer-1',
     venueId: 'venue-1',
   });
   registrationRepo.listByTournamentIdSV = async () => [GUEST_ROW];
   registrationRepo.countByTournamentIdSV = async () => 1;
   assertOrganizer.hasAccessSV = async () => hasAccessResult;
+  userCategoryRepo.listByUserIdSV = async () => [
+    { sportId: 'sport-padel', categoryName: 'Avanzado' },
+  ];
 
   useCase = new ListTournamentRegistrationsUseCase(
     tournamentRepo as never,
     registrationRepo as never,
     assertOrganizer as never,
+    userCategoryRepo as never,
   );
 });
 
@@ -84,6 +103,24 @@ describe('ListTournamentRegistrationsUseCase — guest PII redaction', () => {
     const RESULT = await useCase.executeSV({ tournamentId: 't-1', actorUserId: 'outsider-1' });
 
     expect(RESULT.total).toBe(1);
+  });
+
+  it('should include the player category for the tournament sport only for organizers', async () => {
+    registrationRepo.listByTournamentIdSV = async () => [PLAYER_ROW];
+    hasAccessResult = true;
+
+    const RESULT = await useCase.executeSV({ tournamentId: 't-1', actorUserId: 'organizer-1' });
+
+    expect(RESULT.items[0]).toMatchObject({ sportCategoryName: 'Avanzado' });
+  });
+
+  it('should not expose player category to non-organizers', async () => {
+    registrationRepo.listByTournamentIdSV = async () => [PLAYER_ROW];
+    hasAccessResult = false;
+
+    const RESULT = await useCase.executeSV({ tournamentId: 't-1', actorUserId: 'outsider-1' });
+
+    expect(RESULT.items[0]).not.toHaveProperty('sportCategoryName');
   });
 
   it('should keep throwing 404 when the tournament does not exist, regardless of access', async () => {

@@ -281,7 +281,7 @@ export function PaymentMethodsSettings({
       )}
       {success && (
         <div className="mb-4 p-3 rounded bg-green-50 text-green-700 text-sm">
-          Guardado correctamente
+          Método de pago guardado
         </div>
       )}
 
@@ -550,7 +550,11 @@ export function PaymentMethodsSettings({
               disabled={saving}
               className="btn btn-primary text-sm"
             >
-              {saving ? 'Guardando...' : editingId ? 'Actualizar' : 'Agregar'}
+              {saving
+                ? 'Guardando...'
+                : editingId
+                  ? 'Guardar método de pago'
+                  : 'Agregar método de pago'}
             </button>
             <button
               type="button"

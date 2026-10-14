@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -35,7 +37,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
   void _submitSV(BuildContext context) {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    if (name.isEmpty || !email.contains('@')) return;
+    if (name.length < 2 || (email.isNotEmpty && !email.contains('@'))) return;
 
     setState(() => _submitted = true);
     context.read<TournamentRegistrationsCubit>().inviteGuest(
@@ -43,7 +45,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
       phone: _phoneController.text.trim().isEmpty
           ? null
           : _phoneController.text.trim(),
-      email: email,
+      email: email.isEmpty ? null : email,
     );
   }
 
@@ -104,7 +106,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                       ),
                     ),
                     Text(
-                      'Invitar invitado',
+                      'Agregar sin cuenta',
                       key: const Key('tournament.inviteGuestSheet.title'),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -112,7 +114,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Alguien sin cuenta en la app',
+                      'Para alguien que no usa la app',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -141,14 +143,14 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                       key: const Key('tournament.inviteGuestSheet.email'),
                       controller: _emailController,
                       decoration: const InputDecoration(
-                        hintText: 'Email *',
+                        hintText: 'Email (opcional)',
                       ),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.done,
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Entra como pendiente igual que el resto. Al confirmarlo, participa del cuadro de eliminación.',
+                      'Queda pendiente como el resto. No tiene cuenta: no ve el torneo en la app y lo gestionás vos.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.45,
@@ -175,7 +177,7 @@ final class _InviteGuestSheetState extends State<InviteGuestSheet> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(AppIcons.personAdd),
-                      label: const Text('Invitar'),
+                      label: const Text('Agregar'),
                     ),
                   ],
                 );
@@ -214,18 +216,21 @@ final class InvitePlayerSheet extends StatefulWidget {
 }
 
 final class _InvitePlayerSheetState extends State<InvitePlayerSheet> {
-  final _userIdController = TextEditingController();
+  final _queryController = TextEditingController();
+  Timer? _searchDebounce;
+  String? _selectedUserId;
   bool _submitted = false;
 
   @override
   void dispose() {
-    _userIdController.dispose();
+    _searchDebounce?.cancel();
+    _queryController.dispose();
     super.dispose();
   }
 
   void _submit(BuildContext context) {
-    final userId = _userIdController.text.trim();
-    if (userId.isEmpty) return;
+    final userId = _selectedUserId;
+    if (userId == null) return;
 
     setState(() => _submitted = true);
     context.read<TournamentRegistrationsCubit>().invite(userId);
@@ -264,7 +269,7 @@ final class _InvitePlayerSheetState extends State<InvitePlayerSheet> {
                       : null;
                   final busy = loaded?.inviting ?? false;
                   final error = loaded?.invitationError;
-                  final query = _userIdController.text.trim();
+                  final query = _queryController.text.trim();
 
                   return Column(
                     key: const Key('tournament.invitePlayerSheet'),
@@ -289,68 +294,87 @@ final class _InvitePlayerSheetState extends State<InvitePlayerSheet> {
                       const SizedBox(height: 16),
                       TextField(
                         key: const Key('tournament.invitePlayerSheet.search'),
-                        controller: _userIdController,
-                        onChanged: (_) => setState(() {}),
+                        controller: _queryController,
+                        onChanged: (value) {
+                          setState(() => _selectedUserId = null);
+                          _searchDebounce?.cancel();
+                          if (value.trim().length >= 2) {
+                            _searchDebounce = Timer(
+                              const Duration(milliseconds: 250),
+                              () {
+                                if (mounted) {
+                                  context
+                                      .read<TournamentRegistrationsCubit>()
+                                      .searchInvitationCandidates(value);
+                                }
+                              },
+                            );
+                          } else {
+                            context
+                                .read<TournamentRegistrationsCubit>()
+                                .searchInvitationCandidates(value);
+                          }
+                        },
                         decoration: const InputDecoration(
                           prefixIcon: Icon(AppIcons.search, size: 19),
-                          hintText: 'Buscar por nombre o handle',
+                          hintText: 'Buscar por nombre',
                         ),
                         textInputAction: TextInputAction.done,
                         onSubmitted: busy ? null : (_) => _submit(context),
                       ),
-                      if (query.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          key: const Key('tournament.invitePlayerSheet.result'),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outlineVariant,
-                              width: 1.5,
+                      if (query.length >= 2 &&
+                          (loaded?.searchingInvitationCandidates ?? false))
+                        const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      if (loaded?.invitationCandidateSearchError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(
+                            loaded!.invitationCandidateSearchError!,
+                            key: const Key(
+                              'tournament.invitePlayerSheet.searchError',
+                            ),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 17,
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.primaryContainer,
-                                child: Text(
-                                  query.substring(0, 1).toUpperCase(),
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.w800,
+                        ),
+                      if (query.length >= 2 &&
+                          !(loaded?.searchingInvitationCandidates ?? false) &&
+                          loaded?.invitationCandidates.isEmpty == true)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Text('No encontramos jugadores disponibles.'),
+                        ),
+                      if (query.length >= 2 &&
+                          loaded?.invitationCandidates.isNotEmpty == true) ...[
+                        const SizedBox(height: 10),
+                        ...loaded!.invitationCandidates.map(
+                          (candidate) => ListTile(
+                            key: Key(
+                              'tournament.invitePlayerSheet.candidate.${candidate.id}',
+                            ),
+                            contentPadding: EdgeInsets.zero,
+                            selected: _selectedUserId == candidate.id,
+                            leading: CircleAvatar(
+                              child: Text(
+                                candidate.name
+                                    .trim()
+                                    .substring(0, 1)
+                                    .toUpperCase(),
+                              ),
+                            ),
+                            title: Text(candidate.name),
+                            trailing: _selectedUserId == candidate.id
+                                ? const Icon(AppIcons.check)
+                                : null,
+                            onTap: busy
+                                ? null
+                                : () => setState(
+                                    () => _selectedUserId = candidate.id,
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  query,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                'ID disponible',
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
                           ),
                         ),
                       ],
@@ -367,7 +391,7 @@ final class _InvitePlayerSheetState extends State<InvitePlayerSheet> {
                       const SizedBox(height: 18),
                       FilledButton.icon(
                         key: const Key('tournament.invitePlayerSheet.submit'),
-                        onPressed: busy || query.isEmpty
+                        onPressed: busy || _selectedUserId == null
                             ? null
                             : () => _submit(context),
                         icon: busy

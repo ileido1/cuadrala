@@ -33,6 +33,11 @@ final class TournamentScoreboardRowDto extends Equatable {
     required this.points,
     this.gamesPlayed = 0,
     this.gamesWon = 0,
+    this.gamesLost = 0,
+    this.gamesDrawn = 0,
+    this.pointsFor = 0,
+    this.pointsAgainst = 0,
+    this.difference = 0,
     this.rank = 0,
   });
 
@@ -42,6 +47,11 @@ final class TournamentScoreboardRowDto extends Equatable {
   final int points;
   final int gamesPlayed;
   final int gamesWon;
+  final int gamesLost;
+  final int gamesDrawn;
+  final int pointsFor;
+  final int pointsAgainst;
+  final int difference;
   final int rank;
 
   factory TournamentScoreboardRowDto.fromJson(Map<String, Object?> json) {
@@ -52,6 +62,11 @@ final class TournamentScoreboardRowDto extends Equatable {
       points: (json['points'] as num?)?.toInt() ?? 0,
       gamesPlayed: (json['gamesPlayed'] as num?)?.toInt() ?? 0,
       gamesWon: (json['gamesWon'] as num?)?.toInt() ?? 0,
+      gamesLost: (json['gamesLost'] as num?)?.toInt() ?? 0,
+      gamesDrawn: (json['gamesDrawn'] as num?)?.toInt() ?? 0,
+      pointsFor: (json['pointsFor'] as num?)?.toInt() ?? 0,
+      pointsAgainst: (json['pointsAgainst'] as num?)?.toInt() ?? 0,
+      difference: (json['difference'] as num?)?.toInt() ?? 0,
       rank: (json['rank'] as num?)?.toInt() ?? 0,
     );
   }
@@ -63,6 +78,11 @@ final class TournamentScoreboardRowDto extends Equatable {
     'points': points,
     'gamesPlayed': gamesPlayed,
     'gamesWon': gamesWon,
+    'gamesLost': gamesLost,
+    'gamesDrawn': gamesDrawn,
+    'pointsFor': pointsFor,
+    'pointsAgainst': pointsAgainst,
+    'difference': difference,
     'rank': rank,
   };
 
@@ -74,6 +94,11 @@ final class TournamentScoreboardRowDto extends Equatable {
     points,
     gamesPlayed,
     gamesWon,
+    gamesLost,
+    gamesDrawn,
+    pointsFor,
+    pointsAgainst,
+    difference,
     rank,
   ];
 }

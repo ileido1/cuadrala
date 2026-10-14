@@ -189,6 +189,9 @@ class _BracketMatchCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final isInProgress = match.status == 'IN_PROGRESS';
     final isBye = match.status == 'BYE';
+    final formattedScore = match.score == null
+        ? null
+        : _formatScore(match.score!);
 
     return GestureDetector(
       onTap: !isBye ? () => _showMatchDetails(context) : null,
@@ -250,22 +253,26 @@ class _BracketMatchCard extends StatelessWidget {
             ),
             _MatchPlayer(
               player: match.playerA,
-              isWinner: match.winnerId == match.playerA?.userId,
+              isWinner:
+                  match.winnerId != null &&
+                  match.winnerId == match.playerA?.participantId,
               score: _scoreForPlayer(match.score, true),
             ),
             Divider(height: 1, color: scheme.outlineVariant),
             _MatchPlayer(
               player: match.playerB,
-              isWinner: match.winnerId == match.playerB?.userId,
+              isWinner:
+                  match.winnerId != null &&
+                  match.winnerId == match.playerB?.participantId,
               score: _scoreForPlayer(match.score, false),
               bye: isBye,
             ),
-            if (match.status == 'COMPLETED' && match.score != null) ...[
+            if (match.status == 'COMPLETED' && formattedScore != null) ...[
               Divider(height: 1, color: scheme.outlineVariant),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 child: Text(
-                  _formatScore(match.score!),
+                  formattedScore,
                   style: TextStyle(
                     fontSize: 10,
                     color: scheme.onSurfaceVariant,
@@ -281,6 +288,9 @@ class _BracketMatchCard extends StatelessWidget {
 
   void _showMatchDetails(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final formattedScore = match.score == null
+        ? null
+        : _formatScore(match.score!);
     showModalBottomSheet(
       context: context,
       builder: (context) => Padding(
@@ -303,10 +313,10 @@ class _BracketMatchCard extends StatelessWidget {
               match.playerB?.displayName ?? 'Por definir',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            if (match.status == 'COMPLETED' && match.score != null) ...[
+            if (match.status == 'COMPLETED' && formattedScore != null) ...[
               const SizedBox(height: 12),
               Text(
-                'Resultado: ${_formatScore(match.score!)}',
+                'Resultado: $formattedScore',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -339,28 +349,41 @@ class _BracketMatchCard extends StatelessWidget {
     };
   }
 
-  //? `score` trae un puntaje por participante (`{userId, points}`,
-  //? `get_tournament_bracket.use_case.ts:18-27`), no un arreglo de sets con
-  //? claves `playerAScore`/`playerBScore` — esas claves nunca existieron en
-  //? la respuesta real (ver `bracket_dto.dart`).
-  int? _pointsForUser(List<BracketScoreEntryDto>? score, String? userId) {
-    if (score == null || userId == null) return null;
+  //? Los invitados se identifican por registrationId. El userId puede ser
+  //? null; nunca comparar dos ids null como si fueran el mismo jugador.
+  int? _pointsForPlayer(
+    List<BracketScoreEntryDto>? score,
+    BracketPlayerDto? player,
+  ) {
+    if (score == null || player == null) return null;
+    final registrationId = player.registrationId;
+    if (registrationId != null) {
+      for (final entry in score) {
+        if (entry.tournamentRegistrationId == registrationId) {
+          return entry.points;
+        }
+      }
+    }
+    final userId = player.userId;
+    if (userId == null) return null;
     for (final entry in score) {
-      if (entry.userId == userId) return entry.points;
+      if (entry.tournamentRegistrationId == null && entry.userId == userId) {
+        return entry.points;
+      }
     }
     return null;
   }
 
-  String _formatScore(List<BracketScoreEntryDto> score) {
-    final playerAPoints = _pointsForUser(score, match.playerA?.userId) ?? 0;
-    final playerBPoints = _pointsForUser(score, match.playerB?.userId) ?? 0;
+  String? _formatScore(List<BracketScoreEntryDto> score) {
+    final playerAPoints = _pointsForPlayer(score, match.playerA);
+    final playerBPoints = _pointsForPlayer(score, match.playerB);
+    if (playerAPoints == null || playerBPoints == null) return null;
     return '$playerAPoints-$playerBPoints';
   }
 
   String? _scoreForPlayer(List<BracketScoreEntryDto>? score, bool playerA) {
-    final userId = playerA ? match.playerA?.userId : match.playerB?.userId;
-    final points = _pointsForUser(score, userId);
-    return points?.toString();
+    final player = playerA ? match.playerA : match.playerB;
+    return _pointsForPlayer(score, player)?.toString();
   }
 }
 

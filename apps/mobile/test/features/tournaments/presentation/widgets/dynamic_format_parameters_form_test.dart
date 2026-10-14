@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/format_parameter_field_def.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/widgets/dynamic_format_parameters_form.dart';
-import 'package:cuadrala_mobile/src/shared/widgets/selectable_chip.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 
 /// Records every onChanged call so tests can assert on key/value pairs.
@@ -48,20 +47,32 @@ void main() {
   });
 
   group('BooleanFieldDef', () {
-    const field = BooleanFieldDef(key: 'thirdPlaceMatch', label: 'Tercer puesto');
+    const field = BooleanFieldDef(
+      key: 'thirdPlaceMatch',
+      label: 'Tercer puesto',
+    );
 
-    testWidgets('should render a SelectableChip with the field label', (tester) async {
-      await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
-
-      expect(find.widgetWithText(SelectableChip, 'Tercer puesto'), findsOneWidget);
-    });
-
-    testWidgets('should call onChanged with true when the switch is toggled on', (
+    testWidgets('should render an accessible boolean toggle row', (
       tester,
     ) async {
-      await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
+      await tester.pumpWidget(
+        _buildForm(fields: const [field], recorder: recorder),
+      );
 
-      await tester.tap(find.widgetWithText(SelectableChip, 'Tercer puesto'));
+      expect(find.text('Tercer puesto'), findsOneWidget);
+      expect(find.byType(SegmentedControl<bool>), findsOneWidget);
+      expect(find.text('Sí'), findsOneWidget);
+      expect(find.text('No'), findsOneWidget);
+    });
+
+    testWidgets('should call onChanged with true when Sí is selected', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildForm(fields: const [field], recorder: recorder),
+      );
+
+      await tester.tap(find.text('Sí'));
 
       expect(recorder.calls.single.key, 'thirdPlaceMatch');
       expect(recorder.calls.single.value, true);
@@ -71,15 +82,25 @@ void main() {
   group('IntFieldDef', () {
     const field = IntFieldDef(key: 'rounds', label: 'Rondas', min: 2, max: 5);
 
-    testWidgets('should show min as the value when no value is set', (tester) async {
-      await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
+    testWidgets('should show min as the value when no value is set', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildForm(fields: const [field], recorder: recorder),
+      );
 
       expect(_inForm(find.text('2')), findsOneWidget);
     });
 
-    testWidgets('should call onChanged with value + 1 when + is tapped', (tester) async {
+    testWidgets('should call onChanged with value + 1 when + is tapped', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _buildForm(fields: const [field], values: {'rounds': 3}, recorder: recorder),
+        _buildForm(
+          fields: const [field],
+          values: {'rounds': 3},
+          recorder: recorder,
+        ),
       );
 
       await tester.tap(_inForm(find.byIcon(AppIcons.add)));
@@ -88,9 +109,15 @@ void main() {
       expect(recorder.calls.single.value, 4);
     });
 
-    testWidgets('should not call onChanged when + is tapped at max', (tester) async {
+    testWidgets('should not call onChanged when + is tapped at max', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _buildForm(fields: const [field], values: {'rounds': 5}, recorder: recorder),
+        _buildForm(
+          fields: const [field],
+          values: {'rounds': 5},
+          recorder: recorder,
+        ),
       );
 
       await tester.tap(_inForm(find.byIcon(AppIcons.add)));
@@ -98,17 +125,29 @@ void main() {
       expect(recorder.calls, isEmpty);
     });
 
-    testWidgets('should not call onChanged when - is tapped at min', (tester) async {
-      await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
+    testWidgets('should not call onChanged when - is tapped at min', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildForm(fields: const [field], recorder: recorder),
+      );
 
       await tester.tap(_inForm(find.byIcon(AppIcons.remove)));
 
       expect(recorder.calls, isEmpty);
     });
 
-    testWidgets('should preserve unbounded values without artificial limits', (tester) async {
+    testWidgets('should preserve unbounded values without artificial limits', (
+      tester,
+    ) async {
       const unbounded = IntFieldDef(key: 'wins', label: 'Victorias');
-      await tester.pumpWidget(_buildForm(fields: const [unbounded], values: const {'wins': 0}, recorder: recorder));
+      await tester.pumpWidget(
+        _buildForm(
+          fields: const [unbounded],
+          values: const {'wins': 0},
+          recorder: recorder,
+        ),
+      );
 
       await tester.tap(_inForm(find.byIcon(AppIcons.remove)));
       await tester.tap(_inForm(find.byIcon(AppIcons.add)));
@@ -130,26 +169,37 @@ void main() {
       ],
     );
 
-    testWidgets('should render options with a shared SegmentedControl', (tester) async {
-      await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
+    testWidgets('should render options with a shared SegmentedControl', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildForm(fields: const [field], recorder: recorder),
+      );
 
       expect(find.byType(SegmentedControl<String>), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNothing);
     });
 
-    testWidgets('should call onChanged with the option value when a chip is tapped', (
+    testWidgets(
+      'should call onChanged with the option value when a chip is tapped',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildForm(fields: const [field], recorder: recorder),
+        );
+
+        await tester.tap(find.text('Dobles'));
+
+        expect(recorder.calls.single.key, 'modality');
+        expect(recorder.calls.single.value, 'DOUBLES');
+      },
+    );
+
+    testWidgets('should mark the label with * when the field is required', (
       tester,
     ) async {
-      await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
-
-      await tester.tap(find.text('Dobles'));
-
-      expect(recorder.calls.single.key, 'modality');
-      expect(recorder.calls.single.value, 'DOUBLES');
-    });
-
-    testWidgets('should mark the label with * when the field is required', (tester) async {
-      await tester.pumpWidget(_buildForm(fields: const [field], recorder: recorder));
+      await tester.pumpWidget(
+        _buildForm(fields: const [field], recorder: recorder),
+      );
 
       expect(find.text('Modalidad'), findsOneWidget);
       expect(find.text(' *'), findsOneWidget);

@@ -139,6 +139,115 @@ void main() {
       );
     });
 
+    testWidgets('resolves guest winner and score by registration id', (
+      tester,
+    ) async {
+      final repository = _TestTournamentsRepository(
+        bracketProvider: () async => BracketDto(
+          tournamentId: 't-1',
+          tournamentName: 'Test',
+          totalRounds: 1,
+          bracketSize: 2,
+          rounds: [
+            BracketRoundDto(
+              roundNumber: 1,
+              name: 'Finales',
+              matches: [
+                BracketMatchDto(
+                  matchNumber: 1,
+                  roundNumber: 1,
+                  playerA: const BracketPlayerDto(
+                    registrationId: 'reg-a',
+                    userId: null,
+                    displayName: 'Invitada',
+                    seedPosition: 1,
+                  ),
+                  playerB: const BracketPlayerDto(
+                    registrationId: 'reg-b',
+                    userId: null,
+                    displayName: 'Invitado B',
+                    seedPosition: 2,
+                  ),
+                  winnerId: 'reg-a',
+                  score: const [
+                    BracketScoreEntryDto(
+                      userId: null,
+                      tournamentRegistrationId: 'reg-a',
+                      points: 6,
+                    ),
+                    BracketScoreEntryDto(
+                      userId: null,
+                      tournamentRegistrationId: 'reg-b',
+                      points: 3,
+                    ),
+                  ],
+                  status: 'COMPLETED',
+                  matchId: 'm-1',
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(buildTestWidget(repository));
+      await tester.pumpAndSettle();
+
+      final guestName = tester.widget<Text>(find.text('Invitada'));
+      expect(guestName.style?.fontWeight, FontWeight.w700);
+      expect(find.text('6-3'), findsOneWidget);
+    });
+
+    testWidgets(
+      'does not display zero scores when the response has no identities',
+      (tester) async {
+        final repository = _TestTournamentsRepository(
+          bracketProvider: () async => BracketDto(
+            tournamentId: 't-1',
+            tournamentName: 'Test',
+            totalRounds: 1,
+            bracketSize: 2,
+            rounds: [
+              BracketRoundDto(
+                roundNumber: 1,
+                name: 'Finales',
+                matches: [
+                  BracketMatchDto(
+                    matchNumber: 1,
+                    roundNumber: 1,
+                    playerA: const BracketPlayerDto(
+                      registrationId: 'reg-a',
+                      userId: null,
+                      displayName: 'Invitada A',
+                      seedPosition: 1,
+                    ),
+                    playerB: const BracketPlayerDto(
+                      registrationId: 'reg-b',
+                      userId: null,
+                      displayName: 'Invitado B',
+                      seedPosition: 2,
+                    ),
+                    winnerId: null,
+                    score: const [
+                      BracketScoreEntryDto(userId: null, points: 0),
+                      BracketScoreEntryDto(userId: null, points: 0),
+                    ],
+                    status: 'COMPLETED',
+                    matchId: 'm-1',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+
+        await tester.pumpWidget(buildTestWidget(repository));
+        await tester.pumpAndSettle();
+
+        expect(find.text('0-0'), findsNothing);
+      },
+    );
+
     testWidgets('shows BYE match correctly', (tester) async {
       final bracket = BracketDto(
         tournamentId: 't-1',

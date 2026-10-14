@@ -36,6 +36,8 @@ export type TournamentListItemDTO = {
   registrationClosesAt: string | null;
   /** Reusa `MatchGender`; `null` = sin declarar. */
   gender: TournamentGender | null;
+  /** Indica que cada inscripción representa una dupla, no un jugador. */
+  pairedRegistration: boolean;
   /** Distancia a `near` en km. Ausente (nunca `null`) cuando el listado no se filtró por `near`. */
   distanceKm?: number;
 };

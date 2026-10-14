@@ -25,16 +25,14 @@ export async function postRegisterTournamentParticipantCON(
   _req: Request,
   _res: Response,
 ): Promise<void> {
-  //? TODO: el actor se autentica pero no se usa — el userId sale del body, asi
-  //? que cualquier autenticado puede inscribir a otro. Falta definir criterio.
-  requireActorUserIdSV(_req);
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
 
   const PARAMS = TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
-  const BODY = CREATE_TOURNAMENT_REGISTRATION_BODY_SCHEMA.parse(_req.body);
+  CREATE_TOURNAMENT_REGISTRATION_BODY_SCHEMA.parse(_req.body);
 
   const RESULT = await REGISTER_TOURNAMENT_PARTICIPANT_UC.executeSV({
     tournamentId: PARAMS.tournamentId,
-    userId: BODY.userId,
+    userId: ACTOR_USER_ID,
   });
 
   _res.status(RESULT.created ? 201 : 200).json({

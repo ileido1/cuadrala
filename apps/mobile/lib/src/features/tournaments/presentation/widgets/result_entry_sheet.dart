@@ -18,11 +18,13 @@ final class ResultEntrySheet extends StatefulWidget {
     super.key,
     required this.match,
     required this.roundName,
+    this.formatPresetName,
     required this.onSubmit,
   });
 
   final TournamentScheduleMatchDto match;
   final String roundName;
+  final String? formatPresetName;
   final Future<void> Function(List<TournamentScheduleMatchScoreDto> scores)
   onSubmit;
 
@@ -36,6 +38,15 @@ class _ResultEntrySheetState extends State<ResultEntrySheet> {
   };
   bool _submitting = false;
   String? _error;
+
+  bool get _tiedSideTotals {
+    if (widget.match.sides.length != 2) {
+      return false;
+    }
+    final first = _pointsBySideKey[widget.match.sides[0].sideKey] ?? 0;
+    final second = _pointsBySideKey[widget.match.sides[1].sideKey] ?? 0;
+    return first == second;
+  }
 
   /// "{name} vs {name}" splits cleanly onto one label per side for the
   /// common singles case; any mismatch (doubles, missing label) falls back
@@ -152,11 +163,18 @@ class _ResultEntrySheetState extends State<ResultEntrySheet> {
                   min: 0,
                   max: 9,
                   onChanged: (value) => setState(
-                    () => _pointsBySideKey[widget.match.sides[i].sideKey] =
-                        value,
+                    () =>
+                        _pointsBySideKey[widget.match.sides[i].sideKey] = value,
                   ),
                 ),
               ],
+            ),
+          ],
+          if (_tiedSideTotals) ...[
+            const SizedBox(height: 12),
+            Text(
+              'El resultado debe definir un ganador.',
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
           if (_error != null) ...[
@@ -166,7 +184,7 @@ class _ResultEntrySheetState extends State<ResultEntrySheet> {
           const SizedBox(height: 18),
           FilledButton.icon(
             key: const Key('tournament.resultEntrySheet.submit'),
-            onPressed: _submitting ? null : _submitSV,
+            onPressed: _submitting || _tiedSideTotals ? null : _submitSV,
             icon: _submitting
                 ? const SizedBox(
                     width: 16,
@@ -187,6 +205,7 @@ Future<void> showResultEntrySheet(
   BuildContext context, {
   required TournamentScheduleMatchDto match,
   required String roundName,
+  String? formatPresetName,
   required Future<void> Function(List<TournamentScheduleMatchScoreDto> scores)
   onSubmit,
 }) {
@@ -196,6 +215,7 @@ Future<void> showResultEntrySheet(
     builder: (_) => ResultEntrySheet(
       match: match,
       roundName: roundName,
+      formatPresetName: formatPresetName,
       onSubmit: onSubmit,
     ),
   );

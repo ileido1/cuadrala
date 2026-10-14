@@ -15,6 +15,8 @@ export type UserDocumentSearchResultDTO = {
   documentNumber: string | null;
 };
 
+export type TournamentInvitationCandidateDTO = { id: string; name: string };
+
 export interface UserRepository {
   findByIdSV(_id: string): Promise<UserDTO | null>;
   findByEmailSV(_emailLower: string): Promise<UserDTO | null>;
@@ -31,4 +33,10 @@ export interface UserRepository {
   countByIdsSV(_ids: string[]): Promise<number>;
 
   findByDocumentNumberSV(_documentNumber: string): Promise<UserDocumentSearchResultDTO[]>;
+
+  searchTournamentInvitationCandidatesSV?(
+    _tournamentId: string,
+    _query: string,
+    _limit: number,
+  ): Promise<TournamentInvitationCandidateDTO[]>;
 }

@@ -35,6 +35,7 @@ export function toListItemDTO(_row: {
   maxSlots: number | null;
   registrationClosesAt: Date | null;
   gender: TournamentListItemDTO['gender'];
+  pairedRegistration: boolean;
   _count: { registrations: number };
   distanceKm?: number;
 }): TournamentListItemDTO {
@@ -61,6 +62,7 @@ export function toListItemDTO(_row: {
     registrationClosesAt:
       _row.registrationClosesAt != null ? _row.registrationClosesAt.toISOString() : null,
     gender: _row.gender,
+    pairedRegistration: _row.pairedRegistration,
     //? distanceKm solo se agrega cuando el listado se filtró por `near`: su
     //? ausencia (no `null`) es lo que el contrato usa para decir "no se pidió".
     ...(_row.distanceKm !== undefined ? { distanceKm: _row.distanceKm } : {}),
@@ -131,6 +133,7 @@ const TOURNAMENT_LIST_SELECT = {
   maxSlots: true,
   registrationClosesAt: true,
   gender: true,
+  pairedRegistration: true,
   _count: { select: { registrations: true } },
 } as const;
 
@@ -277,6 +280,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
         maxSlots: true,
         registrationClosesAt: true,
         gender: true,
+        pairedRegistration: true,
         formatPresetId: true,
         formatPreset: { select: { code: true } },
         presetSchemaVersion: true,
@@ -373,6 +377,7 @@ export class PrismaTournamentQueryRepository implements TournamentQueryRepositor
           maxSlots: true,
           registrationClosesAt: true,
           gender: true,
+          pairedRegistration: true,
           _count: { select: { registrations: true } },
         },
       }),

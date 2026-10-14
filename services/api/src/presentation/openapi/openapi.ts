@@ -150,6 +150,7 @@ const OPENAPI_CONST = {
                 required: ['name', 'schemaVersion', 'defaultParameters'],
                 properties: {
                   name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
                   schemaVersion: { type: 'integer', minimum: 1 },
                   defaultParameters: { type: 'object', additionalProperties: true },
                   effectiveFrom: { type: 'string', format: 'date-time' },
@@ -205,7 +206,7 @@ const OPENAPI_CONST = {
         responses: {
           '200': {
             description:
-              'OK. Cada item de `data.items` incluye `distanceKm` (number, opcional): presente solo cuando se envió `near`; `gender` ("MALE"|"FEMALE"|"MIXED"|null): `null` cuando el torneo no lo declaró; y `organizerName` (string|null): nombre del organizador, `null` cuando el torneo no tiene uno asignado.',
+              'OK. Cada item de `data.items` incluye `pairedRegistration` (boolean): indica si el torneo se juega por duplas; `distanceKm` (number, opcional): presente solo cuando se envió `near`; `gender` ("MALE"|"FEMALE"|"MIXED"|null): `null` cuando el torneo no lo declaró; y `organizerName` (string|null): nombre del organizador, `null` cuando el torneo no tiene uno asignado.',
           },
           '400': { description: 'Validación fallida' },
         },
@@ -296,6 +297,25 @@ const OPENAPI_CONST = {
         responses: {
           '201': { description: 'Creado' },
           '400': { description: 'Validación fallida' },
+        },
+      },
+    },
+    '/api/v1/tournaments/{tournamentId}/invitations/candidates': {
+      get: {
+        tags: ['Tournaments'],
+        summary: 'Buscar jugadores disponibles para invitar a un torneo',
+        description:
+          'Solo organizador o staff de la sede. Busca por nombre parcial sin distinguir mayúsculas, requiere 2–80 caracteres y devuelve hasta 20 resultados con id y nombre; excluye usuarios ya inscritos o invitados.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'tournamentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 2, maxLength: 80 } },
+        ],
+        responses: {
+          '200': { description: 'Jugadores disponibles' },
+          '400': { description: 'Búsqueda inválida' },
+          '403': { description: 'No es el organizador ni staff de la sede' },
+          '404': { description: 'Torneo no encontrado' },
         },
       },
     },
@@ -679,7 +699,7 @@ const OPENAPI_CONST = {
         tags: ['Tournaments'],
         summary: 'Consultar scoreboard de un torneo',
         description:
-          '`data.rows` trae `userId/name/points/gamesPlayed/gamesWon/rank`. `gamesWon` suma 1 por partido donde el lado del usuario (agrupado por `MatchParticipant.teamLabel` en duplas, o el propio jugador en singles) sumó estrictamente más puntos que cualquier otro lado; un empate entre lados no le suma a nadie, aunque `gamesPlayed` sí cuenta ese partido para todos.',
+          '`data.rows` devuelve `userId`, `tournamentRegistrationId?`, `name`, `points`, `gamesPlayed`, `gamesWon`, `gamesLost`, `gamesDrawn`, `pointsFor`, `pointsAgainst`, `difference` y `rank`. `userId` es null para invitados sin cuenta. Las métricas cuentan partidos finalizados; resultados históricos empatados se cuentan en `gamesDrawn`, aunque nuevos resultados empatados son rechazados. `gamesWon` suma 1 por partido donde el lado del usuario (agrupado por `MatchParticipant.teamLabel` en duplas, o el propio jugador en singles) sumó estrictamente más puntos que cualquier otro lado. El ranking ordena por puntos, diferencia, head-to-head (victorias en la mini-tabla directa del grupo empatado) y, finalmente, nombre (`name`) e identidad. Los datos internos de enfrentamientos directos no se incluyen en la respuesta.',
         parameters: [
           {
             name: 'tournamentId',
@@ -689,7 +709,58 @@ const OPENAPI_CONST = {
           },
         ],
         responses: {
-          '200': { description: 'OK' },
+          '200': {
+            description: 'Scoreboard del torneo',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        rows: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            required: [
+                              'userId',
+                              'name',
+                              'points',
+                              'gamesPlayed',
+                              'gamesWon',
+                              'gamesLost',
+                              'gamesDrawn',
+                              'pointsFor',
+                              'pointsAgainst',
+                              'difference',
+                              'rank',
+                            ],
+                            properties: {
+                              userId: { type: 'string', nullable: true },
+                              tournamentRegistrationId: { type: 'string' },
+                              name: { type: 'string' },
+                              points: { type: 'number' },
+                              gamesPlayed: { type: 'integer' },
+                              gamesWon: { type: 'integer' },
+                              gamesLost: { type: 'integer' },
+                              gamesDrawn: { type: 'integer' },
+                              pointsFor: { type: 'number' },
+                              pointsAgainst: { type: 'number' },
+                              difference: { type: 'number' },
+                              rank: { type: 'integer' },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           '400': { description: 'Validación fallida' },
           '404': { description: 'Torneo no encontrado' },
         },

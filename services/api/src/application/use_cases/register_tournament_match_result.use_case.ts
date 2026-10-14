@@ -8,10 +8,6 @@ import {
   type MatchParticipantScoreSV,
 } from '../../domain/tournament/match_side_aggregation.js';
 
-//? Único formato donde un empate es inválido (D13): el bracket necesita un
-//? ganador para avanzar. Round robin/americano aceptan empates sin avance.
-const SINGLE_ELIMINATION_FORMAT_CODE = 'SINGLE_ELIMINATION';
-
 export type ScoreEntryDTO = {
   scores: { userId?: string; tournamentRegistrationId?: string; points: number }[];
 };
@@ -99,33 +95,30 @@ export class RegisterTournamentMatchResultUseCase {
       }
     }
 
-    //? Empate inválido solo en eliminación simple (D13). El agrupamiento por
-    //? lado (teamLabel ?? userId) reutiliza resolveMatchWinningUserIdsSV — nunca
-    //? se reimplementa la comparación de filas individuales (pattern #807).
-    if (TOURNAMENT.formatPresetName === SINGLE_ELIMINATION_FORMAT_CODE) {
-      const PARTICIPANT_SIDES =
-        await this._tournamentMatchResultRepository.listMatchParticipantSidesSV(matchId);
-      const TEAM_LABEL_BY_REF = new Map(
-        PARTICIPANT_SIDES.flatMap((_p) => [
-          [_p.userId, _p.teamLabel] as const,
-          [_p.tournamentRegistrationId, _p.teamLabel] as const,
-        ]),
+    //? Ningún formato de raqueta admite empate. Se comparan totales por lado
+    //? (teamLabel ?? userId), no filas individuales, también para duplas.
+    const PARTICIPANT_SIDES =
+      await this._tournamentMatchResultRepository.listMatchParticipantSidesSV(matchId);
+    const TEAM_LABEL_BY_REF = new Map(
+      PARTICIPANT_SIDES.flatMap((_p) => [
+        [_p.userId, _p.teamLabel] as const,
+        [_p.tournamentRegistrationId, _p.teamLabel] as const,
+      ]),
+    );
+
+    const SIDE_SCORES: MatchParticipantScoreSV[] = scores.map((_score) => ({
+      userId: _score.tournamentRegistrationId ?? _score.userId!,
+      teamLabel: TEAM_LABEL_BY_REF.get(_score.tournamentRegistrationId ?? _score.userId!) ?? null,
+      points: _score.points,
+    }));
+
+    const WINNING_USER_IDS = resolveMatchWinningUserIdsSV(SIDE_SCORES);
+    if (WINNING_USER_IDS.length === 0) {
+      throw new AppError(
+        'VALIDACION_FALLIDA',
+        'Un partido no puede terminar empatado.',
+        400,
       );
-
-      const SIDE_SCORES: MatchParticipantScoreSV[] = scores.map((_score) => ({
-        userId: _score.tournamentRegistrationId ?? _score.userId!,
-        teamLabel: TEAM_LABEL_BY_REF.get(_score.tournamentRegistrationId ?? _score.userId!) ?? null,
-        points: _score.points,
-      }));
-
-      const WINNING_USER_IDS = resolveMatchWinningUserIdsSV(SIDE_SCORES);
-      if (WINNING_USER_IDS.length === 0) {
-        throw new AppError(
-          'VALIDACION_FALLIDA',
-          'Un partido de eliminación simple no puede terminar empatado.',
-          400,
-        );
-      }
     }
 
     //? La escritura del resultado y el avance automático de eliminación simple

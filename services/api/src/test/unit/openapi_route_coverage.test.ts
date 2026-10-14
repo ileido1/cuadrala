@@ -170,4 +170,57 @@ describe('OpenAPI route coverage', () => {
 
     expect(GONE, 'Estas rutas ya no existen: sacalas de la lista de deuda.').toEqual([]);
   });
+
+  it('should document the scoreboard metrics and ranking contract', () => {
+    const OPERATION = OPENAPI_CONST.paths['/api/v1/tournaments/{tournamentId}/scoreboard']?.get as
+      | {
+          description?: string;
+          responses?: Record<string, { content?: Record<string, { schema?: unknown }> }>;
+        }
+      | undefined;
+    const DESCRIPTION = OPERATION?.description ?? '';
+
+    for (const FIELD of [
+      'gamesPlayed',
+      'gamesWon',
+      'gamesLost',
+      'gamesDrawn',
+      'pointsFor',
+      'pointsAgainst',
+      'difference',
+      'points',
+      'rank',
+    ]) {
+      expect(DESCRIPTION, `Falta documentar ${FIELD} en el scoreboard.`).toContain(FIELD);
+    }
+
+    expect(DESCRIPTION).toMatch(/points.*difference.*head.to.head.*name/i);
+    expect(DESCRIPTION).toMatch(/mini.?table|grupo empatado/i);
+
+    const RESPONSE_SCHEMA = OPERATION?.responses?.['200']?.content?.['application/json']
+      ?.schema as {
+        properties?: {
+          data?: { properties?: { rows?: { items?: { properties?: Record<string, unknown> } } } };
+        };
+      } | undefined;
+    const ROW_PROPERTIES = RESPONSE_SCHEMA?.properties?.data?.properties?.rows?.items?.properties;
+    expect(ROW_PROPERTIES, 'Falta el schema de data.rows en la respuesta 200.').toBeDefined();
+    for (const FIELD of [
+      'userId',
+      'tournamentRegistrationId',
+      'name',
+      'points',
+      'gamesPlayed',
+      'gamesWon',
+      'gamesLost',
+      'gamesDrawn',
+      'pointsFor',
+      'pointsAgainst',
+      'difference',
+      'rank',
+    ]) {
+      expect(ROW_PROPERTIES, `Falta documentar ${FIELD} en el schema del scoreboard.`).toHaveProperty(FIELD);
+    }
+    expect(ROW_PROPERTIES).not.toHaveProperty('headToHeadWins');
+  });
 });

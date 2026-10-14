@@ -4,6 +4,22 @@ import type { CreateCourtPricingTierRequest, UpdateCourtPricingTierRequest, Venu
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 const API_BASE_PATH = process.env.NEXT_PUBLIC_API_BASE_PATH ?? '/api/v1/';
+const REQUEST_TIMEOUT_MS = 15_000;
+
+export interface CourtSlotAvailability {
+  start: string;
+  end: string;
+  isAvailable: boolean;
+  reason?: string;
+}
+
+export interface CourtSlotsResponse {
+  courtId: string;
+  date: string;
+  durationMinutes: number;
+  stepMinutes: number;
+  slots: CourtSlotAvailability[];
+}
 
 class ApiClient {
   private client: AxiosInstance;
@@ -16,6 +32,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: `${API_URL}${API_BASE_PATH}`,
+      timeout: REQUEST_TIMEOUT_MS,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -276,15 +293,14 @@ class ApiClient {
     },
     slots: {
       block: (venueId: string, courtId: string, data: {
-        date: string;
-        startTime: string;
+        scheduledAt: string;
         durationMinutes: number;
         notes?: string;
       }) =>
         this.client.post(`/venues/${venueId}/courts/${courtId}/slots/block`, data),
       unblock: (venueId: string, courtId: string, data: {
-        date: string;
-        startTime: string;
+        scheduledAt: string;
+        durationMinutes: number;
       }) =>
         this.client.delete(`/venues/${venueId}/courts/${courtId}/slots/block`, { data }),
     },
@@ -297,8 +313,21 @@ class ApiClient {
         this.client.put(`/venues/${venueId}/courts/${courtId}`, data),
       cancel: (venueId: string, courtId: string) =>
         this.client.delete(`/venues/${venueId}/courts/${courtId}`),
-      slots: (venueId: string, courtId: string, params: { date: string; durationMinutes?: number; stepMinutes?: number; sportId?: string; categoryId?: string }) =>
-        this.client.get(`/venues/${venueId}/courts/${courtId}/slots`, { params }),
+      slots: (
+        venueId: string,
+        courtId: string,
+        params: {
+          date: string;
+          durationMinutes?: number;
+          stepMinutes?: number;
+          sportId?: string;
+          categoryId?: string;
+        },
+      ) =>
+        this.client.get<CourtSlotsResponse>(
+          `/venues/${venueId}/courts/${courtId}/slots`,
+          { params },
+        ),
       pricingTiers: {
         list: (venueId: string, courtId: string) =>
           this.client.get(`/venues/${venueId}/courts/${courtId}/pricing-tiers`),

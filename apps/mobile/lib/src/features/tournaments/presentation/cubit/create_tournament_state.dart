@@ -33,3 +33,15 @@ final class CreateTournamentError extends CreateTournamentState {
   List<Object?> get props => [message];
 }
 
+final class CreateTournamentPublishError extends CreateTournamentState {
+  const CreateTournamentPublishError({
+    required this.tournamentId,
+    required this.message,
+  });
+
+  final String tournamentId;
+  final String message;
+
+  @override
+  List<Object?> get props => [tournamentId, message];
+}

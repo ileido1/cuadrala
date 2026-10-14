@@ -8,6 +8,7 @@ final class TournamentPresetDto extends Equatable {
     required this.code,
     required this.version,
     required this.name,
+    this.description,
     required this.schemaVersion,
     required this.defaultParameters,
     this.parametersSchema,
@@ -18,6 +19,7 @@ final class TournamentPresetDto extends Equatable {
   final String code;
   final int version;
   final String name;
+  final String? description;
   final int schemaVersion;
   final Object? defaultParameters;
   final List<FormatParameterFieldDef>? parametersSchema;
@@ -35,6 +37,7 @@ final class TournamentPresetDto extends Equatable {
       code: (json['code'] ?? '').toString(),
       version: (json['version'] as num?)?.toInt() ?? 0,
       name: (json['name'] ?? '').toString(),
+      description: json['description'] as String?,
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 0,
       defaultParameters: json['defaultParameters'],
       parametersSchema: schema,
@@ -47,6 +50,7 @@ final class TournamentPresetDto extends Equatable {
         'code': code,
         'version': version,
         'name': name,
+        'description': description,
         'schemaVersion': schemaVersion,
         'defaultParameters': defaultParameters,
         if (parametersSchema != null)
@@ -61,9 +65,9 @@ final class TournamentPresetDto extends Equatable {
     code,
     version,
     name,
+    description,
     schemaVersion,
     defaultParameters,
     parametersSchema,
   ];
 }
-

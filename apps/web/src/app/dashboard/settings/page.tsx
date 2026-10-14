@@ -464,20 +464,16 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Payment Methods */}
-      <PaymentMethodsSettings
-        defaultSettlementCurrency={
-          resolveCurrencyCode(pricingCurrency, 'USD') as CurrencyCode
-        }
-      />
-
-      {/* Save Button */}
+      {/* Venue settings use their own save action. Payment methods below are
+          persisted independently to avoid implying one button saves both. */}
       <div className="flex justify-end gap-4">
         {error && (
           <span className="text-error text-sm self-center">{error}</span>
         )}
         {success && (
-          <span className="text-primary text-sm self-center">Cambios guardados</span>
+          <span className="text-primary text-sm self-center">
+            Datos del club guardados
+          </span>
         )}
         <button
           type="button"
@@ -485,8 +481,16 @@ export default function SettingsPage() {
           disabled={saving}
           className="btn btn-primary px-8"
         >
-          {saving ? 'Guardando...' : 'Guardar cambios'}
+          {saving ? 'Guardando...' : 'Guardar datos del club'}
         </button>
+      </div>
+
+      <div className="mt-6">
+        <PaymentMethodsSettings
+          defaultSettlementCurrency={
+            resolveCurrencyCode(pricingCurrency, 'USD') as CurrencyCode
+          }
+        />
       </div>
     </div>
   );

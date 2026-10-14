@@ -97,7 +97,7 @@ void main() {
     );
 
     blocTest<TournamentPublishCubit, TournamentPublishState>(
-      'should retain the optimistic visibility when its request succeeds',
+      'should retain the current visibility until its request succeeds',
       build: () {
         when(
           () => tournamentsRepository.updateTournamentVisibility(
@@ -111,7 +111,7 @@ void main() {
       expect: () => const [
         TournamentPublishState(
           status: 'DRAFT',
-          visibility: 'PUBLIC',
+          visibility: 'PRIVATE',
           submitting: true,
         ),
         TournamentPublishState(status: 'DRAFT', visibility: 'PUBLIC'),
@@ -127,7 +127,7 @@ void main() {
     );
 
     blocTest<TournamentPublishCubit, TournamentPublishState>(
-      'should optimistically change visibility and revert it when its request fails',
+      'should retain the current visibility and expose an error when its request fails',
       build: () {
         when(
           () => tournamentsRepository.updateTournamentVisibility(
@@ -143,7 +143,7 @@ void main() {
       expect: () => const [
         TournamentPublishState(
           status: 'DRAFT',
-          visibility: 'PUBLIC',
+          visibility: 'PRIVATE',
           submitting: true,
         ),
         TournamentPublishState(

@@ -1,6 +1,7 @@
 import type {
   UserDocumentSearchResultDTO,
   UserDTO,
+  TournamentInvitationCandidateDTO,
   UserRepository,
 } from '../../domain/ports/user_repository.js';
 
@@ -103,5 +104,22 @@ export class PrismaUserRepository implements UserRepository {
       email: _user.email,
       documentNumber: _user.playerProfile?.documentNumber ?? null,
     }));
+  }
+
+  async searchTournamentInvitationCandidatesSV(
+    _tournamentId: string,
+    _query: string,
+    _limit: number,
+  ): Promise<TournamentInvitationCandidateDTO[]> {
+    return PRISMA.user.findMany({
+      where: {
+        name: { contains: _query, mode: 'insensitive' },
+        tournamentRegistrations: { none: { tournamentId: _tournamentId } },
+        invitationsReceived: { none: { tournamentId: _tournamentId } },
+      },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+      take: _limit,
+    });
   }
 }
