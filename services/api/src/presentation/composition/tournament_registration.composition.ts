@@ -53,6 +53,7 @@ export const LIST_TOURNAMENT_REGISTRATIONS_UC = new ListTournamentRegistrationsU
 export const WITHDRAW_TOURNAMENT_REGISTRATION_UC = new WithdrawTournamentRegistrationUseCase(
   TOURNAMENT_REPO,
   REGISTRATION_REPO,
+  ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
 );
 
 export const INVITE_GUEST_TOURNAMENT_PARTICIPANT_UC = new InviteGuestTournamentParticipantUseCase(
