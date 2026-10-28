@@ -257,10 +257,10 @@ Confirmed by exploration: `apps/web/src/middleware.ts` does not guard `/invite`,
 ---
 
 ## Tasks (checklist)
-- [ ] T1 — Prisma migration (new model + aditive field)
-- [ ] T2 — `tournament_invite_link_repository.ts` port + DTOs
-- [ ] T3 — modify `tournament_registration_repository.ts` port
-- [ ] T4 — `tournament_invite_link_validity.ts` pure function
+- [x] T1 — Prisma migration (new model + aditive field). `prisma validate` passes, `prisma generate` applied. Migration SQL written by hand at `prisma/migrations/20261028000000_add_tournament_invite_link/migration.sql` (standard Prisma `-- CreateTable/-- CreateIndex/-- AddForeignKey` format) because `prisma migrate dev` could not run: the local dev DB has pre-existing drift unrelated to this change (migration `20260915010000_add_registration_identity_to_match_scores`, introduced in commit `ac79b5d`, was modified after being applied). Fixing that requires a destructive `prisma migrate reset`, which was not run without explicit user authorization — NOT applied against the live dev DB yet.
+- [x] T2 — `tournament_invite_link_repository.ts` port + DTOs
+- [x] T3 — modify `tournament_registration_repository.ts` port (`inviteLinkId?` on `CreateGuestTournamentRegistrationDTO`, `setInviteLinkIdSV` on the interface)
+- [x] T4 — `tournament_invite_link_validity.ts` pure function. TDD: RED confirmed (`assertTournamentInviteLinkUsableSV` didn't exist), GREEN confirmed (4/4 tests pass) in `src/test/unit/tournament_invite_link_validity.test.ts`.
 - [ ] T5 — extract `register_guest_for_tournament_core.ts`
 - [ ] T6 — refactor `invite_guest_tournament_participant.use_case.ts` to delegate
 - [ ] T7 — `create_tournament_invite_link.use_case.ts`
