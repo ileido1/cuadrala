@@ -22,6 +22,7 @@ export async function postUpsertVenueStaffCON(_req: Request, _res: Response): Pr
   const BODY = UPSERT_VENUE_STAFF_BODY_SCHEMA.parse(_req.body);
 
   const RESULT = await UPSERT_VENUE_STAFF_UC.executeSV({
+    actorUserId: ACTOR_USER_ID,
     venueId: PARAMS.venueId,
     userId: BODY.userId,
     ...(BODY.role !== undefined && { role: BODY.role }),
