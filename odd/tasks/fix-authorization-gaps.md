@@ -1,7 +1,7 @@
 # Fix authorization gaps (issues #49, #50, #67)
 
 ## Objective
-Close three authorization bugs found while auditing the API against the GitHub project board. Each gets its own branch, commit, and (eventually) PR, closing its own issue.
+Close three authorization bugs found while auditing the API against the GitHub project board. Each gets its own branch and commit(s), closing its own issue.
 
 ## Problem
 Three write endpoints authenticate the caller but either skip authorization entirely or ignore the authenticated actor:
@@ -10,11 +10,14 @@ Three write endpoints authenticate the caller but either skip authorization enti
 - `postVenueCON`, `postRegisterTournamentParticipantCON`, `withdrawTournamentRegistrationCON` authenticate but take the acting identity from body/path instead of `_req.authUser` (issue #50).
 - `postUpsertVenueStaffCON` extracts the actor only for the 401 guard, then lets any authenticated user grant themselves staff/owner role on any venue (issue #67).
 
-## Decisions (user, 2026-10-23)
-- **#49**: actor must be a participant of the match/reservation, and `participantUserIds` (if provided) may not contain any id other than the actor's — matches the only real caller (`pay_method_screen.dart`, self-service "pay my share").
-- **#50**: resolve identity from `_req.authUser`; acting on behalf of another user requires the actor to be the match/tournament organizer or venue staff (per issue #50 acceptance criteria).
-- **#67**: actor must already be `VenueStaff` of that venue (`assertVenueStaffSV`), with a bootstrap exception: the venue's `ownerUserId` may create the first staff record for a venue that has none yet.
-- **#67 revised (2026-10-23)**: dropped the owner-bootstrap exception. `createVenueSV` already inserts a `VenueStaff` row with `role: 'OWNER'` for `ownerUserId` in the same transaction as venue creation (`prisma_venue_repository.ts:321-351`), so "sede nueva sin staff" does not occur in the real flow — the exception would have been dead code. Also: implementing it would have required a new read method on `VenueRepository`/`PrismaVenueRepository` to expose `ownerUserId`, which is outside T1's allowed edit surface. `UpsertVenueStaffUseCase` now enforces `assertVenueStaffSV` with no exception.
+## Decisions (user, 2026-10-23 — refined 2026-10-26, refined again 2026-10-28)
+- **#49 match obligations — final design**: two authorization paths, same mechanism as #50 (`AssertTournamentOrganizerAccessUseCase`, generic despite the name — reused, not reinvented):
+  - Self-service: `TARGET_IDS` (the ids the request would create obligations for, i.e. `participantUserIds` or, when omitted, all match participants) is exactly `[actorUserId]` → allowed with only the pre-existing "must be a participant" check. This is the real `apps/mobile` `pay_method_screen.dart` caller.
+  - Anyone else, or "all participants at once" (the default when `participantUserIds` is omitted, same as before this fix existed) → requires `assertTournamentOrganizerAccess.executeSV({ actorUserId, organizerUserId: MATCH.organizerUserId, venueId: MATCH.venueId })`: the match organizer, or venue staff of the match's venue. This restores the pre-fix "organizer/staff generates for everyone" behavior, now gated instead of open to any authenticated user.
+  - Superseded: the earlier "never a non-self id, period" rule from 2026-10-26 — that broke the real staff/organizer flow and is no longer correct.
+- **#49 reservation obligations**: unchanged from 2026-10-26 — actor must be **venue staff of that reservation's venue** (`assertVenueStaffSV`), no self-only restriction (staff generates for the reservation's responsible user, e.g. `apps/web/src/components/schedule/PaymentConfirmDialog.tsx:779-789`).
+- **#50**: resolve identity from `_req.authUser`; acting on behalf of another user requires the actor to be the match/tournament organizer or venue staff. **Done** — see T2 evidence below; only `withdrawTournamentRegistrationCON` needed the fix, the other two endpoints in the original issue were already correct in `main`.
+- **#67**: actor must already be `VenueStaff` of that venue (`assertVenueStaffSV`), no bootstrap exception needed — venue creation already inserts the owner as staff in the same transaction. **Done** — see T1 evidence below.
 
 ## Scope and constraints
 - TDD: Vitest is the runner; observe RED before implementing each fix.
@@ -23,16 +26,21 @@ Three write endpoints authenticate the caller but either skip authorization enti
 - Do not touch the 5 backlog feature issues (#33, #35, #36, #37, #47) — out of scope here.
 
 ## Tasks
-- [x] T1 (#67) `UpsertVenueStaffUseCase` takes `actorUserId`, enforces `assertVenueStaffSV` (no bootstrap exception — see revised decision above); controller passes the actor through. Tests: non-staff → 403; existing staff can add another; venue owner (already staff via auto-creation) can add another.
-  - Files: `services/api/src/application/use_cases/upsert_venue_staff.use_case.ts` (added `actorUserId` to `executeSV`, calls `assertVenueStaffSV` before `upsertSV`), `services/api/src/application/use_cases/upsert_venue_staff.use_case.test.ts` (new, 3 tests), `services/api/src/presentation/controllers/venue_staff.controller.ts:25` (passes `ACTOR_USER_ID`). `venue_staff.composition.ts` needed no change — `VenueStaffRepository` was already injected.
-  - RED confirmed: 3/3 new tests failed before the fix (no authorization check, so the non-staff case didn't reject).
-  - GREEN confirmed: 3/3 new tests pass after the fix.
-  - `npm run typecheck`: pass, no errors.
-  - `npm run lint`: pass, 0 errors/0 warnings repo-wide.
-  - `npm test` (full suite): 1057/1058 passed. 1 pre-existing failure, unrelated: `src/test/integration/quick_match_group.http-db.integration.test.ts` (quick-match group departure, expects 201 got 500). Verified identical on `main` (`git diff main fix/venue-staff-authorization -- services/api/src/test/integration/quick_match_group.http-db.integration.test.ts services/api/src/application/use_cases/match_quick_match.use_case.ts` → empty diff), so this is a pre-existing red on `main`, not caused by this change.
-  - Branch: `fix/venue-staff-authorization`.
-- [ ] T2 (#50) `postVenueCON` sets `ownerUserId` from `_req.authUser`; `postRegisterTournamentParticipantCON`/`withdrawTournamentRegistrationCON` resolve the target user from `_req.authUser` unless the actor is the tournament organizer or venue staff. Tests cover "user A sends user B's id".
-- [ ] T3 (#49) Add `requireAuth` to both `create-obligations` routes; use cases take `actorUserId`, reject if not a match/reservation participant, reject if `participantUserIds` contains anyone but the actor.
+- [x] T1 (#67) `UpsertVenueStaffUseCase` takes `actorUserId`, enforces `assertVenueStaffSV` (no bootstrap exception — owner is already staff via auto-creation at venue creation). Branch `fix/venue-staff-authorization`, commit `11f3cfe`. TDD RED→GREEN confirmed (3/3). `typecheck`/`lint` clean. `npm test` full suite: 1057/1058 passed, 1 pre-existing unrelated failure (`quick_match_group.http-db.integration.test.ts`, confirmed identical on `main`).
+- [x] T2 (#50) `WithdrawTournamentRegistrationUseCase` takes `actorUserId` + `AssertTournamentOrganizerAccessUseCase` (reused existing dependency); self-withdrawal skips the check, anyone else requires organizer or venue staff. `postVenueCON`/`postRegisterTournamentParticipantCON` needed no change (already correct). Branch `fix/tournament-withdrawal-authorization`, commits `fafb9f7` + `9c68b86` (fixed a pre-existing integration test that implicitly relied on the authorization gap to reach its 409 assertion). TDD RED→GREEN confirmed. `typecheck`/`lint` clean. `npm test` full suite: 1058/1059 passed, same 1 pre-existing unrelated failure as T1.
+- [x] T3 (#49) — two sub-fixes, same endpoint family, branch `fix/create-obligations-authorization`.
+  - Match side: `requireAuth` added to `POST /matches/:matchId/transactions/create-obligations`. `CreateMatchObligationUseCase` takes `actorUserId` + injected `AssertTournamentOrganizerAccessUseCase`. Self-service (`TARGET_IDS === [actorUserId]`) only requires match participation; anyone else, or the "all participants" default, requires organizer-or-staff access (see Decisions above). Added `organizerUserId: string` to `PaymentMatchWithParticipantsDTO` (`domain/ports/payment_match_read_repository.ts`) and to the Prisma adapter's return (`infrastructure/adapters/prisma_payment_match_read_repository.ts`) — it's a required scalar on `Match` already returned by the existing `include`-based query, no query shape change needed.
+  - Reservation side: `requireAuth` added to `POST /reservations/:reservationId/transactions/create-obligations`; `CreateReservationObligationUseCase` takes `actorUserId` + injected `VenueStaffRepository`, requires `assertVenueStaffSV(actorUserId, RESERVATION.venueId, venueStaffRepository)` before creating (no self-only restriction). Unchanged from the first pass.
+  - Controller (`monetization.controller.ts`): both `postCreateMatchObligationsCON`/`postCreateReservationObligationsCON` extract `ACTOR_USER_ID` via the file's existing inline `_req.authUser?.id` + 401-guard pattern (consistent with 3 other handlers in the same file) and pass it through.
+  - Composition (`monetization.composition.ts`): instantiated `ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAccessUseCase(VENUE_STAFF_REPOSITORY)` locally (same per-file-instance convention as `tournaments.composition.ts` etc. — it's stateless, no shared singleton needed) and wired it into `CREATE_MATCH_OBLIGATION_UC`; `VENUE_STAFF_REPOSITORY` (already instantiated) wired into `CREATE_RESERVATION_OBLIGATION_UC`. `PaymentOrchestrator` needed no change (forwards via `Parameters<UseCase['executeSV']>`).
+  - Unit tests: `create_match_obligation.use_case.test.ts` (6 tests — self-service, non-participant self-service rejected, organizer-generates-for-all, staff-generates-for-all, default-to-self-when-no-organizer-access, non-organizer-targeting-another-participant rejected) and `create_reservation_obligation.use_case.test.ts` (3 tests), both TDD RED→GREEN confirmed.
+  - 6 integration/contract test files fixed (user-authorized expansion of the allowed edit surface, confirmed each one's existing setup already had the right actor/token available — no scenario rewrites were actually needed, only missing `Authorization` headers):
+    - `src/test/http/endpoints.http.contract.test.ts` — added the file's existing `VALID_ACCESS_TOKEN` to the matchId-UUID-validation request.
+    - `src/test/integration/monetization.integration.test.ts` — added `Authorization: Bearer ${authToken}` (userA, already `VenueStaff` of the match's venue) to both create-obligations requests.
+    - `src/test/integration/payment_wave1_gate.integration.test.ts`, `multi_currency_match_confirm.integration.test.ts` — added `Authorization: Bearer ${authToken}` (staffUserId, already `VenueStaff`, signed before the call) to the match create-obligations request.
+    - `src/test/integration/multi_currency_ledger.integration.test.ts`, `multi_currency_reservation_confirm.integration.test.ts` — added `Authorization: Bearer ${authToken}` (staffUserId, already `VenueStaff` of the reservation's venue) to the reservation create-obligations request.
+  - `typecheck` and `lint` (services/api): clean.
+  - `npm test` full suite: **1063/1064 passed** (188/189 files), 1 pre-existing unrelated failure (`quick_match_group.http-db.integration.test.ts`, same baseline as T1/T2, confirmed identical on `main`). All 6 previously-broken files now pass.
 
 ## Verification
 - `cd services/api && npm run typecheck`

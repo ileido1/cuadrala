@@ -64,15 +64,14 @@ export async function withdrawTournamentRegistrationCON(
   _req: Request,
   _res: Response,
 ): Promise<void> {
-  //? TODO: el actor se autentica pero no se usa — el userId sale del path, asi
-  //? que cualquier autenticado puede dar de baja a otro. Falta definir criterio.
-  requireActorUserIdSV(_req);
+  const ACTOR_USER_ID = requireActorUserIdSV(_req);
 
   const PARAMS = WITHDRAW_TOURNAMENT_REGISTRATION_PARAMS_SCHEMA.parse(_req.params);
 
   await WITHDRAW_TOURNAMENT_REGISTRATION_UC.executeSV({
     tournamentId: PARAMS.tournamentId,
     userId: PARAMS.userId,
+    actorUserId: ACTOR_USER_ID,
   });
 
   _res.status(204).send();

@@ -128,10 +128,14 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
           status: 'CONFIRMED',
         },
       });
+      const CONFIRMED_USER_TOKEN = signAccessTokenSV(CONFIRMED_USER.id, CONFIRMED_USER.email);
 
+      //? El propio usuario se da de baja a sí mismo: sin esto, un actor sin
+      //? autoridad (no es el afectado, ni organizador, ni staff) recibiría 403
+      //? por autorización antes de llegar a este guard de 409.
       const RES = await request(APP)
         .post(`/api/v1/tournaments/${TOURNAMENT.id}/registrations/${CONFIRMED_USER.id}/withdraw`)
-        .set('Authorization', `Bearer ${playerToken}`)
+        .set('Authorization', `Bearer ${CONFIRMED_USER_TOKEN}`)
         .set('Content-Type', 'application/json');
 
       expect(RES.status).toBe(409);
