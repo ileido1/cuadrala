@@ -1,13 +1,16 @@
 import { AppError } from '../../domain/errors/app_error.js';
+import { assertVenueStaffSV } from '../helpers/assert_venue_court_access.js';
 import { calculateReservationTotalCentsSV } from '../../domain/services/booking/pricing.service.js';
 import type { PaymentReservationReadRepository } from '../../domain/ports/payment_reservation_read_repository.js';
 import type { PaymentTransactionRepository } from '../../domain/ports/payment_transaction_repository.js';
 import type { VenueFeeRuleRepository } from '../../domain/ports/venue_fee_rule_repository.js';
+import type { VenueStaffRepository } from '../../domain/ports/venue_staff_repository.js';
 import { computeObligationFeeSV } from '../../domain/services/payments/fee_policy.service.js';
 import type { CreateObligationsResultDTO } from '../dto/payment_obligation.dto.js';
 
 export type CreateReservationObligationInput = {
   reservationId: string;
+  actorUserId: string;
   amountBasePerPerson: number;
   participantUserIds?: string[];
 };
@@ -17,8 +20,20 @@ export class CreateReservationObligationUseCase {
     private readonly _reservationReadRepository: PaymentReservationReadRepository,
     private readonly _transactionRepository: PaymentTransactionRepository,
     private readonly _feeRuleRepository: VenueFeeRuleRepository,
+    private readonly _venueStaffRepository: VenueStaffRepository,
   ) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Genera obligaciones de pago para una reserva. A diferencia
+   * del lado partido (autoservicio), aqui el caller real es el dashboard de
+   * staff (apps/web PaymentConfirmDialog.tsx), que genera la obligacion para
+   * el responsable de la reserva, no para si mismo (issue #49). El actor
+   * debe ser venue staff de la sede de esa reserva; sin restriccion de
+   * "solo para si mismo" en este lado.
+   * @throws {AppError} 403 si el actor no es staff de la sede de la reserva
+   */
   async executeSV(
     _input: CreateReservationObligationInput,
   ): Promise<CreateObligationsResultDTO> {
@@ -32,6 +47,8 @@ export class CreateReservationObligationUseCase {
     if (RESERVATION === null) {
       throw new AppError('RESERVA_NO_ENCONTRADA', 'La reserva indicada no existe.', 404);
     }
+
+    await assertVenueStaffSV(_input.actorUserId, RESERVATION.venueId, this._venueStaffRepository);
 
     const RULE = await this._feeRuleRepository.findActiveForVenueAndScopeSV(
       RESERVATION.venueId,

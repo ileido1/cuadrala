@@ -4,9 +4,11 @@ import type { PaymentTransactionRepository } from '../../domain/ports/payment_tr
 import type { VenueFeeRuleRepository } from '../../domain/ports/venue_fee_rule_repository.js';
 import { computeObligationFeeSV } from '../../domain/services/payments/fee_policy.service.js';
 import type { CreateObligationsResultDTO } from '../dto/payment_obligation.dto.js';
+import { AssertTournamentOrganizerAccessUseCase } from './assert_tournament_organizer_access.use_case.js';
 
 export type CreateMatchObligationInput = {
   matchId: string;
+  actorUserId: string;
   amountBasePerPerson: number;
   participantUserIds?: string[];
 };
@@ -16,8 +18,25 @@ export class CreateMatchObligationUseCase {
     private readonly _matchReadRepository: PaymentMatchReadRepository,
     private readonly _transactionRepository: PaymentTransactionRepository,
     private readonly _feeRuleRepository: VenueFeeRuleRepository,
+    private readonly _assertTournamentOrganizerAccess: AssertTournamentOrganizerAccessUseCase,
   ) {}
 
+  /**
+   * @name    :executeSV
+   * @version :1.0.0
+   * @description :Genera obligaciones de pago para un partido (issue #49).
+   * Dos caminos de autorizacion:
+   *  - Autoservicio: el actor genera unicamente la suya (`TARGET_IDS` es
+   *    exactamente `[actorUserId]`) — el caso real de apps/mobile
+   *    (pay_method_screen.dart). Solo exige ser participante del partido.
+   *  - Para terceros o "todos los participantes" (el default cuando no se
+   *    envia `participantUserIds`, igual que antes de este fix): exige ser
+   *    el organizador del partido o staff de su sede, mismo mecanismo que
+   *    #50 (`AssertTournamentOrganizerAccessUseCase`, generico a pesar del
+   *    nombre).
+   * @throws {AppError} 403 si no es participante (autoservicio) o no tiene
+   * autoridad de organizador/staff (para terceros)
+   */
   async executeSV(_input: CreateMatchObligationInput): Promise<CreateObligationsResultDTO> {
     if (!Number.isFinite(_input.amountBasePerPerson) || _input.amountBasePerPerson <= 0) {
       throw new AppError('MONTO_INVALIDO', 'El monto base por persona debe ser mayor que cero.', 400);
@@ -29,18 +48,34 @@ export class CreateMatchObligationUseCase {
     }
 
     const PARTICIPANT_IDS = new Set(MATCH.participants.map((_p) => _p.userId));
-    const TARGET_IDS =
-      _input.participantUserIds !== undefined
-        ? _input.participantUserIds
-        : [...PARTICIPANT_IDS];
+    const TARGET_IDS = _input.participantUserIds ?? [...PARTICIPANT_IDS];
+    const IS_SELF_SERVICE = TARGET_IDS.length === 1 && TARGET_IDS[0] === _input.actorUserId;
 
-    for (const _uid of TARGET_IDS) {
-      if (!PARTICIPANT_IDS.has(_uid)) {
+    if (IS_SELF_SERVICE) {
+      if (!PARTICIPANT_IDS.has(_input.actorUserId)) {
         throw new AppError(
-          'PARTICIPANTE_NO_EN_PARTIDO',
-          'Uno o más usuarios no pertenecen a este partido.',
-          400,
+          'NO_AUTORIZADO',
+          'Debes ser participante del partido para generar obligaciones de pago.',
+          403,
         );
+      }
+    } else {
+      await this._assertTournamentOrganizerAccess.executeSV({
+        actorUserId: _input.actorUserId,
+        organizerUserId: MATCH.organizerUserId,
+        venueId: MATCH.venueId,
+        forbiddenMessage:
+          'Debes ser el organizador del partido o staff de su sede para generar obligaciones de pago para otros participantes.',
+      });
+
+      for (const _uid of TARGET_IDS) {
+        if (!PARTICIPANT_IDS.has(_uid)) {
+          throw new AppError(
+            'PARTICIPANTE_NO_EN_PARTIDO',
+            'Uno o más usuarios no pertenecen a este partido.',
+            400,
+          );
+        }
       }
     }
 

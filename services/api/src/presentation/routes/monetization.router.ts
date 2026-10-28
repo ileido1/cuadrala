@@ -38,6 +38,7 @@ export const MONETIZATION_ROUTER = Router();
 
 MONETIZATION_ROUTER.post(
   '/matches/:matchId/transactions/create-obligations',
+  requireAuth,
   asyncHandler(postCreateMatchObligationsCON),
 );
 MONETIZATION_ROUTER.get(
@@ -77,6 +78,7 @@ MONETIZATION_ROUTER.patch(
 // Reservation payment obligations
 MONETIZATION_ROUTER.post(
   '/reservations/:reservationId/transactions/create-obligations',
+  requireAuth,
   asyncHandler(postCreateReservationObligationsCON),
 );
 MONETIZATION_ROUTER.get(

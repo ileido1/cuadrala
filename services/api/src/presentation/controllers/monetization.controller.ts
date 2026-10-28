@@ -27,11 +27,17 @@ import {
 } from '../validation/monetization.validation.js';
 
 export async function postCreateMatchObligationsCON(_req: Request, _res: Response): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
   const PARAMS = MATCH_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = CREATE_OBLIGATIONS_BODY_SCHEMA.parse(_req.body);
 
   const RESULT = await CREATE_MATCH_OBLIGATION_UC.executeSV({
     matchId: PARAMS.matchId,
+    actorUserId: ACTOR_USER_ID,
     amountBasePerPerson: BODY.amountBasePerPerson,
     ...(BODY.participantUserIds !== undefined
       ? { participantUserIds: BODY.participantUserIds }
@@ -158,11 +164,17 @@ export async function postCreateReservationObligationsCON(
   _req: Request,
   _res: Response,
 ): Promise<void> {
+  const ACTOR_USER_ID = _req.authUser?.id;
+  if (ACTOR_USER_ID === undefined) {
+    throw new AppError('NO_AUTORIZADO', 'Sesion no disponible.', 401);
+  }
+
   const PARAMS = RESERVATION_ID_PARAM_SCHEMA.parse(_req.params);
   const BODY = CREATE_OBLIGATIONS_BODY_SCHEMA.parse(_req.body);
 
   const RESULT = await CREATE_RESERVATION_OBLIGATION_UC.executeSV({
     reservationId: PARAMS.reservationId,
+    actorUserId: ACTOR_USER_ID,
     amountBasePerPerson: BODY.amountBasePerPerson,
     ...(BODY.participantUserIds !== undefined
       ? { participantUserIds: BODY.participantUserIds }

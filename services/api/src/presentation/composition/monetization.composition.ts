@@ -1,3 +1,4 @@
+import { AssertTournamentOrganizerAccessUseCase } from '../../application/use_cases/assert_tournament_organizer_access.use_case.js';
 import { CreateMatchObligationUseCase } from '../../application/use_cases/create_match_obligation.use_case.js';
 import { CreateReservationObligationUseCase } from '../../application/use_cases/create_reservation_obligation.use_case.js';
 import { ConfirmTransactionAsVenueStaffUseCase } from '../../application/use_cases/confirm_transaction_as_venue_staff.use_case.js';
@@ -46,16 +47,22 @@ export const RECORD_RESERVATION_LEDGER_ENTRY_UC = new RecordReservationLedgerEnt
   RESERVATION_LEDGER_REPOSITORY,
 );
 
+const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAccessUseCase(
+  VENUE_STAFF_REPOSITORY,
+);
+
 export const CREATE_MATCH_OBLIGATION_UC = new CreateMatchObligationUseCase(
   MATCH_READ_REPOSITORY,
   PAYMENT_TX_REPOSITORY,
   FEE_RULE_REPOSITORY,
+  ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
 );
 
 export const CREATE_RESERVATION_OBLIGATION_UC = new CreateReservationObligationUseCase(
   RESERVATION_READ_REPOSITORY,
   PAYMENT_TX_REPOSITORY,
   FEE_RULE_REPOSITORY,
+  VENUE_STAFF_REPOSITORY,
 );
 
 export const GET_MATCH_TRANSACTIONS_SUMMARY_UC = new GetMatchTransactionsSummaryUseCase(

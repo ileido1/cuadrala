@@ -140,7 +140,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const OBLIGATIONS = await request(app)
         .post(`/api/v1/reservations/${reservationId}/transactions/create-obligations`)
         .send({ amountBasePerPerson: 50, participantUserIds: [payerUserId] })
-        .set('Content-Type', 'application/json');
+        .set('Content-Type', 'application/json')
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(OBLIGATIONS.status).toBe(201);
       txId = OBLIGATIONS.body.data.created[0].id as string;

@@ -89,7 +89,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const OBLIGATIONS = await request(app)
         .post(`/api/v1/matches/${matchId}/transactions/create-obligations`)
         .send({ amountBasePerPerson: 8 })
-        .set('Content-Type', 'application/json');
+        .set('Content-Type', 'application/json')
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(OBLIGATIONS.status).toBe(201);
       const PAYER_ROW = OBLIGATIONS.body.data.created.find(
