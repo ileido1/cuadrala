@@ -261,8 +261,8 @@ Confirmed by exploration: `apps/web/src/middleware.ts` does not guard `/invite`,
 - [x] T2 — `tournament_invite_link_repository.ts` port + DTOs
 - [x] T3 — modify `tournament_registration_repository.ts` port (`inviteLinkId?` on `CreateGuestTournamentRegistrationDTO`, `setInviteLinkIdSV` on the interface)
 - [x] T4 — `tournament_invite_link_validity.ts` pure function. TDD: RED confirmed (`assertTournamentInviteLinkUsableSV` didn't exist), GREEN confirmed (4/4 tests pass) in `src/test/unit/tournament_invite_link_validity.test.ts`.
-- [ ] T5 — extract `register_guest_for_tournament_core.ts`
-- [ ] T6 — refactor `invite_guest_tournament_participant.use_case.ts` to delegate
+- [x] T5 — extract `register_guest_for_tournament_core.ts`. TDD: RED confirmed (module didn't exist), GREEN confirmed (7/7 tests) in `src/test/unit/register_guest_for_tournament_core.test.ts` — covers roster-closed → `TORNEO_CERRADO`, competitive+paid → `403 TORNEO_RESTRINGIDO` (2026-10-28 user-confirmed scenario), `maxSlots` exhausted → `CUPOS_AGOTADOS`, happy path with/without `inviteLinkId`.
+- [x] T6 — refactor `invite_guest_tournament_participant.use_case.ts` to delegate. Behavior-preserving (no new RED/GREEN, per AGENTS.md exception). Regression guard: `tournament_guest_registration.http-db.integration.test.ts` + `tournament_guest_registration_end_to_end.http-db.integration.test.ts` showed identical 21 failed / 12 passed (33) before and after — the 21 pre-existing failures are caused by `TournamentRegistration.inviteLinkId` not existing on `TEST_DATABASE_URL` yet (T1's migration was handwritten and never applied there, out of this phase's scope), not by this refactor.
 - [ ] T7 — `create_tournament_invite_link.use_case.ts`
 - [ ] T8 — `list_tournament_invite_links.use_case.ts`
 - [ ] T9 — `revoke_tournament_invite_link.use_case.ts`
