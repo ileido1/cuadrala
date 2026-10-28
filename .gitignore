@@ -39,5 +39,11 @@ Thumbs.db
 # Logs
 *.log
 
+# CodeGraph index (per-worktree, never shared)
+.codegraph/
+
+# Golden test failure diffs (generated locally by flutter test)
+apps/mobile/test/**/goldens/failures/
+
 # Credenciales OAuth de Google: nunca versionadas.
 client_secret_*.json
