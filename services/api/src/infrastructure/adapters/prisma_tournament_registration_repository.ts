@@ -160,9 +160,17 @@ export class PrismaTournamentRegistrationRepository implements TournamentRegistr
         guestPhone: _input.guestPhone ?? null,
         guestEmail: _input.guestEmail ?? null,
         registeredByUserId: _input.registeredByUserId,
+        inviteLinkId: _input.inviteLinkId ?? null,
       },
     });
     return mapRowSV(CREATED);
+  }
+
+  async setInviteLinkIdSV(_registrationId: string, _inviteLinkId: string): Promise<void> {
+    await PRISMA.tournamentRegistration.update({
+      where: { id: _registrationId },
+      data: { inviteLinkId: _inviteLinkId },
+    });
   }
 
   async updateStatusByIdSV(
