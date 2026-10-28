@@ -367,7 +367,8 @@ describe('Contrato HTTP (validación sin tocar datos)', () => {
     const RES = await request(APP)
       .post('/api/v1/matches/not-uuid/transactions/create-obligations')
       .send({ amountBasePerPerson: 10 })
-      .set('Content-Type', 'application/json');
+      .set('Content-Type', 'application/json')
+      .set('Authorization', `Bearer ${VALID_ACCESS_TOKEN}`);
 
     expect(RES.status).toBe(400);
     expect(RES.body.code).toBe('VALIDACION_FALLIDA');

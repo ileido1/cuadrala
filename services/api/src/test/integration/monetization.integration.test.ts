@@ -82,7 +82,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const RES = await request(APP)
         .post(`/api/v1/matches/${matchId}/transactions/create-obligations`)
         .send({ amountBasePerPerson: 10 })
-        .set('Content-Type', 'application/json');
+        .set('Content-Type', 'application/json')
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(RES.status).toBe(201);
       expect(RES.body.data.created).toHaveLength(2);
@@ -150,7 +151,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       const RES = await request(APP)
         .post(`/api/v1/matches/${matchId}/transactions/create-obligations`)
         .send({ amountBasePerPerson: 5 })
-        .set('Content-Type', 'application/json');
+        .set('Content-Type', 'application/json')
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(RES.status).toBe(201);
       expect(RES.body.data.created).toHaveLength(0);

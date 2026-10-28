@@ -45,6 +45,7 @@ export class PrismaPaymentMatchReadRepository implements PaymentMatchReadReposit
     return {
       id: MATCH.id,
       venueId: MATCH.court?.venueId ?? null,
+      organizerUserId: MATCH.organizerUserId,
       participants: MATCH.participants
         //? Los invitados (GUEST) no tienen `userId`: solo los jugadores
         //? autenticados son relevantes para el cobro por participante.
