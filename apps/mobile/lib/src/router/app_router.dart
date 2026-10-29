@@ -43,6 +43,8 @@ import '../features/venues/presentation/cubit/venue_booking_cubit.dart';
 import '../features/matches/presentation/cubit/discover_matches_cubit.dart';
 import '../features/tournaments/presentation/create_tournament_screen.dart';
 import '../features/tournaments/presentation/tournament_detail_screen.dart';
+import '../features/tournament_invite_link/presentation/tournament_invite_link_register_screen.dart';
+import '../features/tournament_invite_link/presentation/tournament_invite_links_screen.dart';
 import 'auth_redirect.dart';
 import 'go_router_refresh_stream.dart';
 import 'routes.dart';
@@ -282,6 +284,20 @@ final class AppRouter {
               return TournamentChatReadOnlyScreen(tournamentId: tournamentId);
             },
           ),
+          // Organizer-only screen to generate/list/revoke invite links
+          // (issue #47, REQ-TIL-001/005/006). Requires session: this path
+          // starts with Routes.tournaments, so authRedirect already treats
+          // it as protected — no change needed in auth_redirect.dart.
+          // IMPORTANT: must be registered BEFORE /tournaments/:tournamentId
+          // (same reasoning as the /matches/:matchId sub-routes above) so
+          // GoRouter matches this sub-path first.
+          GoRoute(
+            path: '/tournaments/:tournamentId/invite-links',
+            builder: (context, state) {
+              final tournamentId = state.pathParameters['tournamentId'] ?? '';
+              return TournamentInviteLinksScreen(tournamentId: tournamentId);
+            },
+          ),
           GoRoute(
             path: '/tournaments/:tournamentId',
             builder: (context, state) {
@@ -314,6 +330,18 @@ final class AppRouter {
           // ------------------------------------------------------------------
           // Other top-level overlays
           // ------------------------------------------------------------------
+          // Public deep link landing for tournament invite links (issue #47,
+          // REQ-TIL-007/008/011/012). Opens without a session and without a
+          // previous stack, same as Routes.availability below — '/invite'
+          // does not start with any protected prefix in auth_redirect.dart,
+          // so no change was needed there.
+          GoRoute(
+            path: '/invite/:token',
+            builder: (context, state) {
+              final token = state.pathParameters['token'] ?? '';
+              return TournamentInviteLinkRegisterScreen(token: token);
+            },
+          ),
           GoRoute(
             path: Routes.availability,
             builder: (context, state) => BlocProvider<AvailabilityCubit>(

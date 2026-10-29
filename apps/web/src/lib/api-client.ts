@@ -21,6 +21,33 @@ export interface CourtSlotsResponse {
   slots: CourtSlotAvailability[];
 }
 
+// REQ-TIL-012: shapes returned by the public tournament-invite-link
+// endpoints — same contract the backend's `tournament_invite_link.controller.ts`
+// and the mobile app's `TournamentInviteLinkPreviewDto`/`...RegistrationResultDto` consume.
+export interface TournamentInviteLinkPreview {
+  tournamentId: string;
+  tournamentName: string;
+  sportName: string;
+  categoryName: string;
+  venueName: string | null;
+  startsAt: string | null;
+  status: string;
+  acceptsRegistration: boolean;
+}
+
+export interface TournamentInviteLinkRegistrationResult {
+  registrationId: string;
+  registrationType: 'AUTHENTICATED' | 'GUEST';
+  tournamentId: string;
+  status: string;
+}
+
+export interface RegisterViaTournamentInviteLinkBody {
+  name?: string;
+  phone?: string;
+  email?: string;
+}
+
 class ApiClient {
   private client: AxiosInstance;
 
@@ -405,6 +432,34 @@ class ApiClient {
     refresh: (countryCode: string) =>
       this.client.post(`/countries/${countryCode}/exchange-rates/refresh`),
   };
+
+  /**
+   * REQ-TIL-012: preview of the tournament behind an invite link, used by
+   * the public `/invite/[token]` landing before showing the registration
+   * form. No `Authorization` is required — `optionalAuth` on the backend.
+   */
+  getTournamentInviteLinkPreview(token: string) {
+    // The backend wraps every response in `{ success, message, data }`
+    // (`error.middleware.ts`/the controller's `_res.json({ ..., data })`) —
+    // the generic types the envelope, not the unwrapped preview, so callers
+    // read `response.data.data` with a type-checked shape.
+    return this.client.get<{ data: TournamentInviteLinkPreview }>(
+      `/public/tournament-invite-links/${token}`,
+    );
+  }
+
+  /**
+   * REQ-TIL-007/008: registers through an invite link. With an active
+   * session the request interceptor attaches `Authorization` automatically
+   * and `body` MUST be empty; without one, `body` MUST carry the guest data
+   * (`name`/`email` required, `phone` optional).
+   */
+  registerViaTournamentInviteLink(token: string, body: RegisterViaTournamentInviteLinkBody) {
+    return this.client.post<{ data: TournamentInviteLinkRegistrationResult }>(
+      `/public/tournament-invite-links/${token}/register`,
+      body,
+    );
+  }
 
   get instance(): AxiosInstance {
     return this.client;

@@ -101,6 +101,46 @@ describe('ApiClient authentication and registration paths', () => {
   });
 });
 
+describe('ApiClient tournament invite link paths', () => {
+  beforeEach(() => {
+    calls.length = 0;
+  });
+
+  // REQ-TIL-007/008/012: the web landing (/invite/[token]) talks directly to
+  // the same public endpoints the mobile app and the backend contract table
+  // define — no `/tournaments/...` prefix, no auth required.
+  it('should request the public preview endpoint when calling getTournamentInviteLinkPreview', async () => {
+    await apiClient.getTournamentInviteLinkPreview('tok-123');
+
+    expect(calls).toEqual([
+      { method: 'GET', url: '/public/tournament-invite-links/tok-123' },
+    ]);
+  });
+
+  it('should send an empty body to the register endpoint for an authenticated registrant', async () => {
+    await apiClient.registerViaTournamentInviteLink('tok-123', {});
+
+    expect(calls).toEqual([
+      { method: 'POST', url: '/public/tournament-invite-links/tok-123/register', data: {} },
+    ]);
+  });
+
+  it('should send the guest data to the register endpoint for a guest registrant', async () => {
+    await apiClient.registerViaTournamentInviteLink('tok-123', {
+      name: 'Juan Pérez',
+      email: 'juan@mail.com',
+    });
+
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: '/public/tournament-invite-links/tok-123/register',
+        data: { name: 'Juan Pérez', email: 'juan@mail.com' },
+      },
+    ]);
+  });
+});
+
 describe('ApiClient dashboard paths', () => {
   beforeEach(() => {
     calls.length = 0;

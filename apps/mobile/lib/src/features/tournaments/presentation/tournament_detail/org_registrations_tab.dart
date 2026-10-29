@@ -186,6 +186,15 @@ final class _RegistrationsTab extends StatelessWidget {
                       const Spacer(),
                   ],
                 ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  key: const Key('tournament.generateInviteLinkButton'),
+                  onPressed: () => context.push(
+                    Routes.tournamentInviteLinks(tournamentId),
+                  ),
+                  icon: const Icon(AppIcons.share, size: 18),
+                  label: const Text('Generar link'),
+                ),
               ],
               if (isOrganizer && loaded.canManageInvitations) ...[
                 const SizedBox(height: 22),

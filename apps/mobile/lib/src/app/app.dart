@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import '../core/deep_link/tournament_invite_link_deep_link_handler.dart';
 import '../core/di/service_locator.dart';
 import '../core/push/foreground_notification_handler.dart';
 import '../core/push/push_notification_tap_handler.dart';
@@ -24,6 +25,7 @@ final class App extends StatelessWidget {
         builder: (context) {
           final router = AppRouter(sessionCubit: context.read<SessionCubit>());
           setupPushNotificationTapHandler(router.router);
+          setupTournamentInviteLinkDeepLinkHandler(router.router);
           return PushTokenSyncLifecycle(
             child: ForegroundNotificationHandler(
               child: MaterialApp.router(

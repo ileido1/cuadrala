@@ -90,6 +90,9 @@ const ENV_SCHEMA = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().email().optional(),
   PUBLIC_API_URL: z.string().url().default('http://localhost:4000'),
+  //? Dominio de apps/web, distinto de PUBLIC_API_URL: ahí vive la landing
+  //? pública `/invite/:token` (issue #47, design.md decisión #8).
+  PUBLIC_WEB_URL: z.string().url().default('http://localhost:3000'),
   FCM_DRY_RUN: z
     .enum(['true', 'false'])
     .optional()

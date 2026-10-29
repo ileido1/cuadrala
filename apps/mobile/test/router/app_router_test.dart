@@ -1,9 +1,12 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
+import 'package:cuadrala_mobile/src/core/failures/app_failure_mapper.dart';
+import 'package:cuadrala_mobile/src/core/network/api_client.dart';
 import 'package:cuadrala_mobile/src/features/auth/data/auth_repository.dart';
 import 'package:cuadrala_mobile/src/features/auth/presentation/cubit/login_cubit.dart';
 import 'package:cuadrala_mobile/src/features/auth/presentation/cubit/session_cubit.dart';
@@ -32,6 +35,8 @@ import 'package:cuadrala_mobile/src/router/app_router.dart';
 class _MockSessionCubit extends MockCubit<SessionState> implements SessionCubit {}
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
+
+class _MockDio extends Mock implements Dio {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -386,6 +391,80 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('welcome.screen')), findsOneWidget);
+    });
+
+    // ── 6. /tournaments/:id/invite-links is protected (issue #47, T35) ─────
+
+    testWidgets(
+        'unauthenticated user navigating to /tournaments/:id/invite-links redirects to /welcome',
+        (tester) async {
+      final sessionCubit = _MockSessionCubit();
+      when(() => sessionCubit.state)
+          .thenReturn(const SessionState.unauthenticated());
+      whenListen(sessionCubit, const Stream<SessionState>.empty());
+
+      final router = AppRouter(sessionCubit: sessionCubit).router;
+      router.go('/tournaments/tournament-1/invite-links');
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('welcome.screen')), findsOneWidget);
+    });
+
+    // ── 7. /invite/:token is public (issue #47, T35) ────────────────────────
+
+    testWidgets(
+        'unauthenticated user navigating to /invite/:token renders the public register screen — no redirect',
+        (tester) async {
+      final dio = _MockDio();
+      const path = '/api/v1/public/tournament-invite-links/tok-1';
+      when(
+        () => dio.request<Object?>(
+          path,
+          data: any(named: 'data'),
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+        ),
+      ).thenAnswer(
+        (_) async => Response<Object?>(
+          requestOptions: RequestOptions(path: path),
+          statusCode: 200,
+          data: {
+            'success': true,
+            'data': {
+              'tournamentId': 'tournament-1',
+              'tournamentName': 'Torneo de prueba',
+              'sportName': 'Pádel',
+              'categoryName': 'Primera',
+              'venueName': 'Sede 1',
+              'startsAt': '2026-06-01T12:00:00.000Z',
+              'status': 'REGISTRATION_OPEN',
+              'acceptsRegistration': true,
+            },
+          },
+        ),
+      );
+      getIt.registerSingleton<ApiClient>(
+        ApiClient(dio: dio, failureMapper: AppFailureMapper()),
+      );
+
+      final sessionCubit = _MockSessionCubit();
+      when(() => sessionCubit.state)
+          .thenReturn(const SessionState.unauthenticated());
+      whenListen(sessionCubit, const Stream<SessionState>.empty());
+
+      final router = AppRouter(sessionCubit: sessionCubit).router;
+      router.go('/invite/tok-1');
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('tournamentInviteLinkRegister.screen')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('welcome.screen')), findsNothing);
     });
   });
 }

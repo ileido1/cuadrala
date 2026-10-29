@@ -385,6 +385,8 @@ model User {
   invitationsCreated        TournamentInvitation[]   @relation("TournamentInviter")
   /// Slice 1 (tournament-guest-registration): invitados agregados por este organizador.
   guestRegistrationsCreated TournamentRegistration[] @relation("TournamentGuestRegistrar")
+  /// issue-47 (tournament-invite-link): links de invitación generados por este organizador/staff.
+  tournamentInviteLinksCreated TournamentInviteLink[] @relation("TournamentInviteLinkCreator")
 }
 
 model RefreshToken {
@@ -791,6 +793,8 @@ model Tournament {
   slotResponses      TournamentSlotResponse[]
   chatThread         ChatThread?
   notificationEvents NotificationEvent[]
+  /// issue-47 (tournament-invite-link): links de autoinscripción generados para este torneo.
+  inviteLinks        TournamentInviteLink[]
 
   @@index([sportId])
   @@index([formatPresetId])
@@ -834,6 +838,36 @@ model TournamentGuestScheduleToken {
   usedAt             DateTime?
 
   @@index([tournamentRegistrationId])
+  @@index([expiresAt])
+}
+
+/// issue-47 (tournament-invite-link): link compartible para que cualquiera se
+/// inscriba a un torneo sin que el organizador conozca de antemano quien va a
+/// entrar. Mismo patron de token seguro que `TournamentGuestScheduleToken`
+/// (hash sha256, nunca se persiste el token crudo).
+model TournamentInviteLink {
+  id              String     @id @default(uuid())
+  tournamentId    String
+  tournament      Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tokenHash       String     @unique
+  /// Actor que generó el link (organizador o staff). No-nullable a propósito:
+  /// si se borra el usuario, Postgres bloquea el borrado (onDelete: Restrict)
+  /// en vez de perder en silencio el historial de `registrants`.
+  createdByUserId String
+  createdBy       User       @relation("TournamentInviteLinkCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  /// Siempre tiene valor (default atado al ciclo de vida del torneo o +30d; ver NFR-TIL-004).
+  expiresAt       DateTime
+  /// null = sin límite de usos; si se define, MUST ser >= 1.
+  maxUses         Int?
+  /// Se incrementa solo en altas nuevas (REQ-TIL-008/REQ-TIL-010).
+  usesCount       Int        @default(0)
+  /// null = activo.
+  revokedAt       DateTime?
+  createdAt       DateTime   @default(now())
+
+  registrations TournamentRegistration[]
+
+  @@index([tournamentId])
   @@index([expiresAt])
 }
 
@@ -881,6 +915,10 @@ model TournamentRegistration {
   /// Organizador que dio de alta al invitado (requerido cuando registrationType=GUEST).
   registeredByUserId String?
   registeredBy       User?              @relation("TournamentGuestRegistrar", fields: [registeredByUserId], references: [id], onDelete: SetNull)
+  /// issue-47 (tournament-invite-link): link que originó esta inscripción; null
+  /// cuando la inscripción no vino de un link (ver spec "Modelo de datos").
+  inviteLinkId       String?
+  inviteLink         TournamentInviteLink? @relation(fields: [inviteLinkId], references: [id], onDelete: SetNull)
   createdAt          DateTime           @default(now())
 
   matchParticipants MatchParticipant[]

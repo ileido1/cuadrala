@@ -32,6 +32,8 @@ export type CreateGuestTournamentRegistrationDTO = {
   guestPhone?: string | null;
   guestEmail?: string | null;
   registeredByUserId: string;
+  /** Id del `TournamentInviteLink` que originó el alta; null cuando no vino de un link. */
+  inviteLinkId?: string | null;
 };
 
 export interface TournamentRegistrationRepository {
@@ -71,4 +73,7 @@ export interface TournamentRegistrationRepository {
 
   /** Cambia el estado de una inscripcion y el de su companero a la vez. */
   updateStatusWithPartnerSV(_id: string, _status: string): Promise<TournamentRegistrationDTO | null>;
+
+  /** Atribuye una inscripción ya existente a un `TournamentInviteLink` (write de atribución, no crea fila nueva). */
+  setInviteLinkIdSV(_registrationId: string, _inviteLinkId: string): Promise<void>;
 }
