@@ -1,8 +1,10 @@
 import { GetTournamentBracketUseCase } from '../../application/use_cases/get_tournament_bracket.use_case.js';
 import { RegisterTournamentMatchResultUseCase } from '../../application/use_cases/register_tournament_match_result.use_case.js';
 import { AssertTournamentOrganizerAccessUseCase } from '../../application/use_cases/assert_tournament_organizer_access.use_case.js';
+import { AssertTournamentViewAccessUseCase } from '../../application/use_cases/assert_tournament_view_access.use_case.js';
 import { PrismaTournamentQueryRepository } from '../../infrastructure/adapters/prisma_tournament_query_repository.js';
 import { PrismaVenueStaffRepository } from '../../infrastructure/adapters/prisma_venue_staff_repository.js';
+import { PrismaTournamentRegistrationRepository } from '../../infrastructure/adapters/prisma_tournament_registration_repository.js';
 import { PrismaMatchCrudRepository } from '../../infrastructure/adapters/prisma_match_crud_repository.js';
 import { PrismaTournamentMatchResultRepository } from '../../infrastructure/adapters/prisma_tournament_match_result_repository.js';
 import { PrismaTournamentScheduleRepository } from '../../infrastructure/adapters/prisma_tournament_schedule_repository.js';
@@ -11,11 +13,16 @@ import { CREATE_TOURNAMENT_NOTIFICATION_EVENT_UC } from './notifications.composi
 
 const TOURNAMENT_QUERY_REPOSITORY = new PrismaTournamentQueryRepository();
 const VENUE_STAFF_REPOSITORY = new PrismaVenueStaffRepository(PRISMA);
+const TOURNAMENT_REGISTRATION_REPOSITORY = new PrismaTournamentRegistrationRepository();
 const MATCH_CRUD_REPOSITORY = new PrismaMatchCrudRepository();
 const TOURNAMENT_MATCH_RESULT_REPOSITORY = new PrismaTournamentMatchResultRepository();
 const TOURNAMENT_SCHEDULE_REPOSITORY = new PrismaTournamentScheduleRepository();
 const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAccessUseCase(
   VENUE_STAFF_REPOSITORY,
+);
+const ASSERT_TOURNAMENT_VIEW_ACCESS_UC = new AssertTournamentViewAccessUseCase(
+  ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+  TOURNAMENT_REGISTRATION_REPOSITORY,
 );
 
 export const GET_TOURNAMENT_BRACKET_UC = new GetTournamentBracketUseCase(
@@ -23,6 +30,7 @@ export const GET_TOURNAMENT_BRACKET_UC = new GetTournamentBracketUseCase(
   MATCH_CRUD_REPOSITORY,
   TOURNAMENT_SCHEDULE_REPOSITORY,
   TOURNAMENT_MATCH_RESULT_REPOSITORY,
+  ASSERT_TOURNAMENT_VIEW_ACCESS_UC,
 );
 
 export const REGISTER_TOURNAMENT_MATCH_RESULT_UC = new RegisterTournamentMatchResultUseCase(
