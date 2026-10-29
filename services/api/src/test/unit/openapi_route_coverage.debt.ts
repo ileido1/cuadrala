@@ -52,6 +52,13 @@ export const UNDOCUMENTED_ROUTES: readonly string[] = [
   'DELETE /tournaments/:tournamentId/invitations/:invitationId',
   'POST /tournaments/:tournamentId/invitations/:invitationId/respond',
 
+  //? tournament_invite_link (issue #47) — 5 de 5
+  'POST /tournaments/:tournamentId/invite-links',
+  'GET /tournaments/:tournamentId/invite-links',
+  'DELETE /tournaments/:tournamentId/invite-links/:linkId',
+  'GET /public/tournament-invite-links/:token',
+  'POST /public/tournament-invite-links/:token/register',
+
   //? tournament_registration — 6 de 6
   'POST /tournaments/:tournamentId/invite-guest',
   'GET /tournaments/:tournamentId/registrations',
