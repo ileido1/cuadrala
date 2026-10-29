@@ -165,9 +165,11 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
       where: {
         dayOfWeek: DAY_OF_WEEK as never, slot: { in: _search.slots },
         user: {
-          id: { notIn: [OWNER.userId, ...EXISTING_PLAYER_IDS, ...ACTIVE_USER_IDS] },
-          userSportCategories: { some: { sportId: _search.sportId, categoryId: _search.categoryId } },
-          OR: [{ quickMatchSearch: { is: null } }, { quickMatchSearch: { is: { status: { notIn: ['SEARCHING', 'PROPOSAL', 'CONFIRMED'] } } } }],
+          is: {
+            id: { notIn: [OWNER.userId, ...EXISTING_PLAYER_IDS, ...ACTIVE_USER_IDS] },
+            sportCategories: { some: { sportId: _search.sportId, categoryId: _search.categoryId } },
+            OR: [{ quickMatchSearch: { is: null } }, { quickMatchSearch: { is: { status: { notIn: ['SEARCHING', 'PROPOSAL', 'CONFIRMED'] } } } }],
+          },
         },
       }, distinct: ['userId'], take: SLOTS_LEFT, select: { userId: true },
     })).map((_availability) => _availability.userId);
@@ -196,7 +198,11 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
       const ACTIVE_SEARCHES = await _tx.quickMatchSearch.findMany({ where: { id: { in: _group.searchIds }, status: 'SEARCHING' }, select: { id: true, userId: true } });
       if (!ACTIVE_SEARCHES.some((_candidate) => _candidate.id === _search.id)) return null;
       const EXISTING = await _tx.quickMatchProposal.findMany({ where: { groupKey: GROUP_KEY }, select: { id: true, searchId: true, status: true, playerIds: true, search: { select: { userId: true } } } });
-      const EXISTING_PLAYER_IDS = EXISTING[0]?.playerIds ?? [];
+      //? playerIds solo es confiable en una fila activa: una fila DISMISSED/EXPIRED
+      //? conserva el snapshot previo a que alguien se fuera (hasta 4 jugadores),
+      //? y sin esto el orden no determinístico de `findMany` podía agarrar esa
+      //? fila vieja y devolver `null` cuando en realidad quedaba un cupo libre.
+      const EXISTING_PLAYER_IDS = EXISTING.find((_proposal) => ['PENDING', 'CONFIRMED'].includes(_proposal.status))?.playerIds ?? [];
       if (EXISTING_PLAYER_IDS.length >= 4) return null;
       const INVITED_SEARCHES: Array<{ id: string; userId: string }> = [];
       for (const USER_ID of _group.invitationUserIds ?? []) {
@@ -213,7 +219,10 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
       const MEMBERS = [...ACTIVE_SEARCHES, ...INVITED_SEARCHES];
       const PLAYER_IDS = [...new Set([...EXISTING_PLAYER_IDS, ...MEMBERS.map((_member) => _member.userId)])];
       if (PLAYER_IDS.length === 0 || PLAYER_IDS.length > 4) return null;
-      const CONFIRMED_IDS = new Set([...EXISTING.filter((_proposal) => _proposal.status === 'CONFIRMED').map((_proposal) => _proposal.search.userId), ...ACTIVE_SEARCHES.map((_candidate) => _candidate.userId)]);
+      //? Solo los miembros ya confirmados conservan ese estado; quien se suma ahora
+      //? (ACTIVE_SEARCHES/INVITED_SEARCHES) siempre arranca PENDING y debe confirmar
+      //? explícitamente via /proposal/confirm, igual que todos los demás.
+      const CONFIRMED_IDS = new Set(EXISTING.filter((_proposal) => _proposal.status === 'CONFIRMED').map((_proposal) => _proposal.search.userId));
       const ROWS = new Map(EXISTING.map((_proposal) => [_proposal.searchId, _proposal]));
       for (const MEMBER of MEMBERS) {
         const IS_CONFIRMED = CONFIRMED_IDS.has(MEMBER.userId);

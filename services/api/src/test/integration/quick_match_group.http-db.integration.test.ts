@@ -39,6 +39,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match group departure', () => 
     for (const player of [players[0]!, players[2]!, players[3]!]) expect((await request(APP).post('/api/v1/quick-match/proposal/confirm').set('Authorization', `Bearer ${player.token}`).send({})).status).toBe(200);
     const option = refill.body.data.proposal.venueOptions[0]; const done = await request(APP).post('/api/v1/quick-match/proposal/confirm').set('Authorization', `Bearer ${players[4]!.token}`).send({ venueId: option.venueId, courtId: option.courtId, scheduledAt: option.scheduledAt }); expect(done.status).toBe(200);
     const match = await PRISMA.match.findUniqueOrThrow({ where: { id: done.body.data.proposal.matchId }, include: { participants: true, reservation: true } }); expect(match.participants).toHaveLength(4); expect(match.reservation).toMatchObject({ venueId, courtId, status: 'CONFIRMED' });
-    const obligations = await request(APP).post(`/api/v1/matches/${match.id}/transactions/create-obligations`).send({ amountBasePerPerson: 10 }); expect(obligations.status).toBe(201); expect(obligations.body.data.created).toHaveLength(4);
+    //? players[0] es el organizerUserId del match (primer elemento de PLAYER_IDS
+    //? al finalizar el grupo) — necesita autorización de organizador/staff para
+    //? generar la obligación de los 4 participantes de una sola vez (#49).
+    const obligations = await request(APP).post(`/api/v1/matches/${match.id}/transactions/create-obligations`).set('Authorization', `Bearer ${players[0]!.token}`).send({ amountBasePerPerson: 10 }); expect(obligations.status).toBe(201); expect(obligations.body.data.created).toHaveLength(4);
   });
 });
