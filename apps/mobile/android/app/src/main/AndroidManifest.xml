@@ -28,6 +28,26 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- App Links para el link de invitación a torneos (issue #47,
+                 REQ-TIL-011). `autoVerify="true"` requiere publicar
+                 `assetlinks.json` en el dominio para que Android verifique la
+                 propiedad y abra la app directo en vez de mostrar el selector.
+                 Dominio placeholder: todavía no hay un dominio real de
+                 producción definido (`PUBLIC_WEB_URL` en
+                 `services/api/src/config/env.ts` solo tiene el default
+                 `http://localhost:3000`). Reemplazar `cuadrala.app` por el
+                 dominio real cuando se defina, en sincronía con
+                 `tournament_invite_link_deep_link_handler.dart` y las
+                 Associated Domains de iOS. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="cuadrala.app"
+                    android:pathPrefix="/invite"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

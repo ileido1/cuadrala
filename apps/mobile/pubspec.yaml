@@ -59,6 +59,7 @@ dependencies:
   latlong2: ^0.9.1
   phosphor_flutter: ^2.1.0
   intl: ^0.20.2
+  app_links: ^6.4.1
 
 dev_dependencies:
   flutter_test:

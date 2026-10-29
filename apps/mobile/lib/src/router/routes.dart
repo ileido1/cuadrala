@@ -38,6 +38,16 @@ final class Routes {
       '/tournaments/$tournamentId/chat';
   static String tournamentChatReadOnly(String tournamentId) =>
       '/tournaments/$tournamentId/chat/readonly';
+
+  /// Pantalla del organizador para generar/listar/revocar links de invitación
+  /// (issue #47, REQ-TIL-001/005/006).
+  static String tournamentInviteLinks(String tournamentId) =>
+      '/tournaments/$tournamentId/invite-links';
+
+  /// Destino del deep link universal `https://<dominio>/invite/:token`
+  /// (issue #47, REQ-TIL-011). Fuera del shell a propósito: se abre sin
+  /// sesión y sin stack previo, igual que `/availability`.
+  static String tournamentInviteLinkRegister(String token) => '/invite/$token';
   static const notifications = '/notifications';
   static const notificationPrefs = '/notifications/prefs';
   static const availability = '/availability';
