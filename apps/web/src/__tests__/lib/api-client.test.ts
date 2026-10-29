@@ -2,9 +2,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { apiClient } from '~/lib/api-client';
 
 describe('API Client Token Management', () => {
+  const store = new Map<string, string>();
+
   beforeEach(() => {
-    // Clear localStorage before each test
-    localStorage.clear();
+    // Node 26's native localStorage throws without --localstorage-file,
+    // overriding jsdom's — stub it with a Map-backed fake instead (same
+    // pattern as api-client.refresh.test.ts).
+    store.clear();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+      removeItem: (key: string) => void store.delete(key),
+      clear: () => void store.clear(),
+    });
     vi.clearAllMocks();
   });
 
