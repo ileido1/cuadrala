@@ -72,6 +72,16 @@ class _BracketScreenState extends State<BracketScreen> {
               subtitle:
                   'El cuadro existe sólo para eliminación simple. Este torneo es round robin: seguí la posición en la tabla.',
             );
+          //? GROUPS_PLUS_KNOCKOUT antes del avance a semifinales: distinto de
+          //? FORMATO_NO_SOPORTADO porque este formato SÍ tiene cuadro, sólo
+          //? que todavía no se generó (issue #81, S5).
+          case 'CUADRO_NO_GENERADO':
+            return _EmptyState(
+              icon: AppIcons.info,
+              title: 'El cuadro todavía no se generó',
+              subtitle:
+                  'El cuadro final todavía no fue generado para este torneo.',
+            );
           case 'VALIDACION_FALLIDA':
             return _EmptyState(
               icon: AppIcons.group,

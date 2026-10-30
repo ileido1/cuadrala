@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { AssertTournamentOrganizerAccessUseCase } from '../../application/use_cases/assert_tournament_organizer_access.use_case.js';
 import { AssertTournamentViewAccessUseCase } from '../../application/use_cases/assert_tournament_view_access.use_case.js';
 import { GetTournamentBracketUseCase } from '../../application/use_cases/get_tournament_bracket.use_case.js';
+import { generateGroupsPlusKnockoutScheduleSV } from '../../domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
+import type { GroupsPlusKnockoutScheduleDTO } from '../../domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
 
 // Mock tournament query repository
 const mockTournamentQueryRepository = {
@@ -503,4 +505,242 @@ describe('GetTournamentBracketUseCase — visibility PRIVATE (#75)', () => {
 
     expect(RESULT.tournamentId).toBe('tournament-private');
   });
+});
+
+//? Issue #81 (S1-S3): GROUPS_PLUS_KNOCKOUT solo expone bracket una vez que
+//? `AdvanceGroupsPlusKnockoutUseCase` resolvió semifinales (ver
+//? groups_plus_knockout_transition_resolver.ts:174-182). Antes de eso, el
+//? error debe ser distinto de 'FORMATO_NO_SOPORTADO' (ese mensaje es
+//? engañoso para este formato, que sí tiene bracket conceptualmente).
+describe('GetTournamentBracketUseCase — GROUPS_PLUS_KNOCKOUT (#81, S1-S3)', () => {
+  const GPK_TOURNAMENT = {
+    id: 'tournament-gpk',
+    name: 'Torneo Grupos + Knockout',
+    status: 'IN_PROGRESS',
+    sportId: 'sport-uuid',
+    sportName: 'Padel',
+    categoryId: 'cat-uuid',
+    categoryName: 'Masculino',
+    startsAt: '2026-06-01T00:00:00.000Z',
+    registrationCount: 4,
+    maxParticipants: 4,
+    formatPresetId: 'preset-uuid',
+    formatPresetName: 'GROUPS_PLUS_KNOCKOUT',
+    presetSchemaVersion: 1,
+    formatParameters: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+
+  const GPK_REGISTRATIONS = [
+    { id: 'reg-1', userId: 'user-1', userName: 'Jugador 1', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'reg-2', userId: 'user-2', userName: 'Jugador 2', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:01.000Z' },
+    { id: 'reg-3', userId: 'user-3', userName: 'Jugador 3', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:02.000Z' },
+    { id: 'reg-4', userId: 'user-4', userName: 'Jugador 4', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:03.000Z' },
+  ];
+
+  // Payload real producido por el generador de dominio: grupos armados,
+  // semifinales/final sin jugadores resueltos todavía (igual que al generar
+  // el calendario por primera vez, antes de cualquier avance de fase).
+  const UNRESOLVED_PAYLOAD: GroupsPlusKnockoutScheduleDTO = generateGroupsPlusKnockoutScheduleSV({
+    participantRegistrationIds: ['reg-1', 'reg-2', 'reg-3', 'reg-4'],
+  });
+
+  // Simula lo que `AdvanceGroupsPlusKnockoutUseCase._materializeSemifinalsSV`
+  // deja en el payload una vez resueltas las semifinales
+  // (groups_plus_knockout_transition_resolver.ts:174-182 exige playerA/playerB
+  // no nulos en la ronda de semifinales para considerarla resuelta). La Final
+  // queda intencionalmente sin resolver (S3: no se inventan ganadores).
+  const RESOLVED_PAYLOAD: GroupsPlusKnockoutScheduleDTO = {
+    ...UNRESOLVED_PAYLOAD,
+    rounds: UNRESOLVED_PAYLOAD.rounds.map((_round) =>
+      _round.roundNumber === UNRESOLVED_PAYLOAD.knockout.semifinalRoundNumber
+        ? {
+            ..._round,
+            matches: [
+              { ..._round.matches[0]!, playerA: 'reg-1', playerB: 'reg-4' },
+              { ..._round.matches[1]!, playerA: 'reg-2', playerB: 'reg-3' },
+            ],
+          }
+        : _round,
+    ),
+  };
+
+  function buildGpkUseCase() {
+    const tournamentQueryRepository = {
+      listTournamentsSV: vi.fn(),
+      getTournamentByIdSV: vi.fn().mockResolvedValue(GPK_TOURNAMENT),
+      listTournamentRegistrationsSV: vi.fn().mockResolvedValue(GPK_REGISTRATIONS),
+      listTournamentsByVenueSV: vi.fn(),
+      listViewerTournamentsSV: vi.fn(),
+    };
+    const scheduleRepository = {
+      findByTournamentIdSV: vi.fn(),
+      createOrValidateIdempotencySV: vi.fn(),
+      saveSlotPlanSV: vi.fn(),
+      updatePayloadSV: vi.fn(),
+    };
+    const matchResultRepository = {
+      getVenueIdForTournamentSV: vi.fn(),
+      matchBelongsToTournamentSV: vi.fn(),
+      matchHasResultSV: vi.fn(),
+      registerResultAndAdvanceSV: vi.fn(),
+      listMatchParticipantSidesSV: vi.fn(),
+      listTournamentMatchStatesSV: vi.fn().mockResolvedValue([]),
+    };
+    const allowViewAccess = { executeSV: vi.fn().mockResolvedValue(undefined) };
+    const gpkUseCase = new GetTournamentBracketUseCase(
+      tournamentQueryRepository as never,
+      mockMatchRepository,
+      scheduleRepository as never,
+      matchResultRepository as never,
+      allowViewAccess as never,
+    );
+    return { gpkUseCase, scheduleRepository, matchResultRepository };
+  }
+
+  // S1: happy path — semifinales ya resueltas, debe devolver el DTO de 2
+  // rondas construido desde el payload real, no desde generateSingleEliminationScheduleSV.
+  it('returns a 2-round bracket DTO from the stored payload once semifinals are materialized', async () => {
+    const { gpkUseCase, scheduleRepository } = buildGpkUseCase();
+    scheduleRepository.findByTournamentIdSV.mockResolvedValue({
+      id: 'schedule-gpk',
+      tournamentId: 'tournament-gpk',
+      formatCode: 'GROUPS_PLUS_KNOCKOUT',
+      scheduleKey: 'gpk-schedule-key',
+      payload: RESOLVED_PAYLOAD,
+      slotPlan: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    const result = await gpkUseCase.executeSV({ tournamentId: 'tournament-gpk' });
+
+    expect(result.tournamentId).toBe('tournament-gpk');
+    expect(result.tournamentName).toBe('Torneo Grupos + Knockout');
+    expect(result.totalRounds).toBe(2);
+    expect(result.bracketSize).toBe(4);
+    expect(result.rounds).toHaveLength(2);
+
+    const SEMIFINALS = result.rounds[0]!;
+    expect(SEMIFINALS.name).toBe('Semifinales');
+    expect(SEMIFINALS.matches).toHaveLength(2);
+    expect(SEMIFINALS.matches[0]!.playerA?.registrationId).toBe('reg-1');
+    expect(SEMIFINALS.matches[0]!.playerA?.displayName).toBe('Jugador 1');
+    expect(SEMIFINALS.matches[0]!.playerB?.registrationId).toBe('reg-4');
+    expect(SEMIFINALS.matches[1]!.playerA?.registrationId).toBe('reg-2');
+    expect(SEMIFINALS.matches[1]!.playerB?.registrationId).toBe('reg-3');
+
+    const FINAL = result.rounds[1]!;
+    expect(FINAL.name).toBe('Final');
+    expect(FINAL.matches).toHaveLength(1);
+    // S3: la Final puede (y debe) mostrarse como TBD mientras nadie propague
+    // los ganadores de semifinales — no se inventan jugadores.
+    expect(FINAL.matches[0]!.playerA).toBeNull();
+    expect(FINAL.matches[0]!.playerB).toBeNull();
+    expect(FINAL.matches[0]!.status).toBe('PENDING');
+  });
+
+  // S2: calendario guardado pero semifinales sin resolver todavía -> error
+  // distinto y preciso, no el mensaje de SINGLE_ELIMINATION.
+  it('throws CUADRO_NO_GENERADO when the schedule exists but the knockout phase is not materialized yet', async () => {
+    const { gpkUseCase, scheduleRepository } = buildGpkUseCase();
+    scheduleRepository.findByTournamentIdSV.mockResolvedValue({
+      id: 'schedule-gpk-pending',
+      tournamentId: 'tournament-gpk',
+      formatCode: 'GROUPS_PLUS_KNOCKOUT',
+      scheduleKey: 'gpk-schedule-key-pending',
+      payload: UNRESOLVED_PAYLOAD,
+      slotPlan: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    await expect(gpkUseCase.executeSV({ tournamentId: 'tournament-gpk' })).rejects.toMatchObject({
+      code: 'CUADRO_NO_GENERADO',
+      statusCode: 400,
+      message: 'El cuadro final todavía no fue generado para este torneo.',
+    });
+  });
+
+  // S2: ningún calendario guardado todavía -> mismo error, no 'SCHEDULE_NO_ENCONTRADO'
+  // ni el 'FORMATO_NO_SOPORTADO' de SINGLE_ELIMINATION.
+  it('throws CUADRO_NO_GENERADO when no schedule was ever stored for the tournament', async () => {
+    const { gpkUseCase, scheduleRepository } = buildGpkUseCase();
+    scheduleRepository.findByTournamentIdSV.mockResolvedValue(null);
+
+    await expect(gpkUseCase.executeSV({ tournamentId: 'tournament-gpk' })).rejects.toMatchObject({
+      code: 'CUADRO_NO_GENERADO',
+      statusCode: 400,
+      message: 'El cuadro final todavía no fue generado para este torneo.',
+    });
+  });
+});
+
+//? Regresión (#81): todo formato que no sea SINGLE_ELIMINATION ni
+//? GROUPS_PLUS_KNOCKOUT debe seguir rechazándose con el 'FORMATO_NO_SOPORTADO'
+//? genérico, sin cambios. No ensanchar esa rama.
+describe('GetTournamentBracketUseCase — other formats keep FORMATO_NO_SOPORTADO unchanged (#81 regression)', () => {
+  it.each(['ROUND_ROBIN', 'AMERICANO'])(
+    'should throw FORMATO_NO_SOPORTADO for %s',
+    async (formatPresetName) => {
+      const tournamentQueryRepository = {
+        listTournamentsSV: vi.fn(),
+        getTournamentByIdSV: vi.fn().mockResolvedValue({
+          id: `tournament-${formatPresetName}`,
+          name: `Torneo ${formatPresetName}`,
+          status: 'IN_PROGRESS',
+          sportId: 'sport-uuid',
+          sportName: 'Padel',
+          categoryId: 'cat-uuid',
+          categoryName: 'Masculino',
+          startsAt: '2026-06-01T00:00:00.000Z',
+          registrationCount: 4,
+          maxParticipants: 4,
+          formatPresetId: 'preset-uuid',
+          formatPresetName,
+          presetSchemaVersion: 1,
+          formatParameters: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
+        listTournamentRegistrationsSV: vi.fn().mockResolvedValue([
+          { id: 'reg-1', userId: 'user-1', userName: 'Jugador 1', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:00.000Z' },
+          { id: 'reg-2', userId: 'user-2', userName: 'Jugador 2', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:01.000Z' },
+        ]),
+        listTournamentsByVenueSV: vi.fn(),
+        listViewerTournamentsSV: vi.fn(),
+      };
+      const scheduleRepository = {
+        findByTournamentIdSV: vi.fn().mockResolvedValue(null),
+        createOrValidateIdempotencySV: vi.fn(),
+        saveSlotPlanSV: vi.fn(),
+        updatePayloadSV: vi.fn(),
+      };
+      const matchResultRepository = {
+        getVenueIdForTournamentSV: vi.fn(),
+        matchBelongsToTournamentSV: vi.fn(),
+        matchHasResultSV: vi.fn(),
+        registerResultAndAdvanceSV: vi.fn(),
+        listMatchParticipantSidesSV: vi.fn(),
+        listTournamentMatchStatesSV: vi.fn(),
+      };
+      const allowViewAccess = { executeSV: vi.fn().mockResolvedValue(undefined) };
+      const regressionUseCase = new GetTournamentBracketUseCase(
+        tournamentQueryRepository as never,
+        mockMatchRepository,
+        scheduleRepository as never,
+        matchResultRepository as never,
+        allowViewAccess as never,
+      );
+
+      await expect(
+        regressionUseCase.executeSV({ tournamentId: `tournament-${formatPresetName}` }),
+      ).rejects.toMatchObject({
+        code: 'FORMATO_NO_SOPORTADO',
+        statusCode: 400,
+        message: 'Bracket disponible solo para torneos SINGLE_ELIMINATION.',
+      });
+    },
+  );
 });

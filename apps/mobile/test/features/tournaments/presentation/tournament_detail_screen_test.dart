@@ -1736,6 +1736,118 @@ void main() {
     });
   });
 
+  group('_ScoreboardTab — Ver el cuadro completo gating (#81 S4/S6)', () {
+    //? GROUPS_PLUS_KNOCKOUT only has a real bracket once semifinals are
+    //? materialized (`matchId != null`). Offering the button before that
+    //? would open a BracketScreen known to fail with CUADRO_NO_GENERADO.
+    TournamentScheduleDto scheduleWithSemifinals({required bool materialized}) {
+      final groupMatch = TournamentScheduleMatchDto(
+        id: 'group-1',
+        label: 'Ana vs Bea',
+        status: 'SCHEDULED',
+        matchId: 'group-match-1',
+        matchStatus: 'FINISHED',
+        scores: const [
+          TournamentScheduleMatchScoreDto(userId: 'ana', points: 6),
+          TournamentScheduleMatchScoreDto(userId: 'bea', points: 3),
+        ],
+      );
+      return TournamentScheduleDto(
+        rounds: [
+          TournamentScheduleRoundDto(name: 'Ronda 1', matches: [groupMatch]),
+          TournamentScheduleRoundDto(name: 'Ronda 2', matches: [groupMatch]),
+          TournamentScheduleRoundDto(
+            name: 'Semifinales',
+            matches: [
+              TournamentScheduleMatchDto(
+                id: 'semi-1',
+                label: '',
+                status: '',
+                matchId: materialized ? 'semi-match-1' : null,
+              ),
+            ],
+          ),
+          const TournamentScheduleRoundDto(
+            name: 'Final',
+            matches: [
+              TournamentScheduleMatchDto(id: 'final-1', label: '', status: ''),
+            ],
+          ),
+        ],
+      );
+    }
+
+    Future<void> pumpGroupsPlusKnockoutTabla(
+      WidgetTester tester, {
+      required bool knockoutMaterialized,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(
+        TournamentRegistrationsLoaded(
+          items: [_authRegistration(userId: 'user-1')],
+          total: 1,
+          invitations: const [],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(() => scheduleCubit.state).thenReturn(
+        TournamentScheduleSuccess(
+          schedule: scheduleWithSemifinals(
+            materialized: knockoutMaterialized,
+          ),
+        ),
+      );
+      when(() => scoreboardCubit.state).thenReturn(
+        const TournamentScoreboardSuccess(
+          scoreboard: TournamentScoreboardDto(
+            rows: [
+              TournamentScoreboardRowDto(
+                userId: 'user-1',
+                name: 'Yo Jugador',
+                points: 6,
+                gamesPlayed: 1,
+                gamesWon: 1,
+                rank: 1,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: _tournament(
+            organizerUserId: null,
+            formatPresetName: 'GROUPS_PLUS_KNOCKOUT',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tabla'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'hides Ver el cuadro completo while the knockout phase is not generated',
+      (tester) async {
+        await pumpGroupsPlusKnockoutTabla(tester, knockoutMaterialized: false);
+
+        expect(find.text('Ver el cuadro completo'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'shows Ver el cuadro completo once the knockout phase is generated',
+      (tester) async {
+        await pumpGroupsPlusKnockoutTabla(tester, knockoutMaterialized: true);
+
+        expect(find.text('Ver el cuadro completo'), findsOneWidget);
+      },
+    );
+  });
+
   group('Cómo se juega tiles (M6b-2)', () {
     Future<void> pumpInfoTab(
       WidgetTester tester, {
@@ -2252,6 +2364,95 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Generar cuadro y horarios'), findsNothing);
+      },
+    );
+
+    //? Issue #81 S4: once semifinals are materialized (post-advance), the
+    //? organizer gets a "Ver cuadro" action instead of the now-irrelevant
+    //? "Generar cuadro final" CTA — opening the same unmodified BracketScreen.
+    testWidgets(
+      'shows a Ver cuadro action once the knockout phase is materialized',
+      (tester) async {
+        final groupMatch = TournamentScheduleMatchDto(
+          id: 'group-1',
+          label: 'Ana vs Bea',
+          status: 'SCHEDULED',
+          matchId: 'group-match-1',
+          matchStatus: 'FINISHED',
+          scores: const [
+            TournamentScheduleMatchScoreDto(userId: 'ana', points: 6),
+            TournamentScheduleMatchScoreDto(userId: 'bea', points: 3),
+          ],
+        );
+        final readySchedule = TournamentScheduleDto(
+          rounds: [
+            TournamentScheduleRoundDto(name: 'Ronda 1', matches: [groupMatch]),
+            TournamentScheduleRoundDto(name: 'Ronda 2', matches: [groupMatch]),
+            const TournamentScheduleRoundDto(
+              name: 'Semifinales',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'semi-1',
+                  label: '',
+                  status: '',
+                  matchId: 'semi-match-1',
+                ),
+                TournamentScheduleMatchDto(
+                  id: 'semi-2',
+                  label: '',
+                  status: '',
+                  matchId: 'semi-match-2',
+                ),
+              ],
+            ),
+            const TournamentScheduleRoundDto(
+              name: 'Final',
+              matches: [
+                TournamentScheduleMatchDto(
+                  id: 'final-1',
+                  label: '',
+                  status: '',
+                ),
+              ],
+            ),
+          ],
+        );
+        when(() => registrationsCubit.state).thenReturn(
+          TournamentRegistrationsLoaded(
+            items: [
+              _authRegistration(id: 'reg-1', userId: 'player-1'),
+              _authRegistration(id: 'reg-2', userId: 'player-2'),
+            ],
+            total: 2,
+          ),
+        );
+        when(() => registrationsCubit.currentUserId).thenReturn('organizer-1');
+        when(
+          () => scheduleCubit.state,
+        ).thenReturn(TournamentScheduleSuccess(schedule: readySchedule));
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            registrationsCubit: registrationsCubit,
+            scheduleCubit: scheduleCubit,
+            scoreboardCubit: scoreboardCubit,
+            tournament: _tournament(
+              organizerUserId: 'organizer-1',
+              formatPresetName: 'GROUPS_PLUS_KNOCKOUT',
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(SegmentedControl<int>),
+            matching: find.text('Cuadro'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Generar cuadro final'), findsNothing);
+        expect(find.text('Ver cuadro'), findsOneWidget);
       },
     );
 
