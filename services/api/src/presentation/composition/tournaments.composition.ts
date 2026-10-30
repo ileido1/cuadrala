@@ -6,6 +6,7 @@ import { UpdateTournamentStatusUseCase } from '../../application/use_cases/updat
 import { UpdateTournamentVisibilityUseCase } from '../../application/use_cases/update_tournament_visibility.use_case.js';
 import { UpdateTournamentSettingsUseCase } from '../../application/use_cases/update_tournament_settings.use_case.js';
 import { AssertTournamentOrganizerAccessUseCase } from '../../application/use_cases/assert_tournament_organizer_access.use_case.js';
+import { AssertTournamentViewAccessUseCase } from '../../application/use_cases/assert_tournament_view_access.use_case.js';
 import { MaterializeTournamentMatchesUseCase } from '../../application/use_cases/materialize_tournament_matches.use_case.js';
 import { PrismaTournamentQueryRepository } from '../../infrastructure/adapters/prisma_tournament_query_repository.js';
 import { PrismaCategoryRepository } from '../../infrastructure/adapters/prisma_category_repository.js';
@@ -37,6 +38,10 @@ const FORMAT_VALIDATOR = new DefaultTournamentFormatParametersValidator();
 const ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC = new AssertTournamentOrganizerAccessUseCase(
   VENUE_STAFF_REPOSITORY,
 );
+const ASSERT_TOURNAMENT_VIEW_ACCESS_UC = new AssertTournamentViewAccessUseCase(
+  ASSERT_TOURNAMENT_ORGANIZER_ACCESS_UC,
+  TOURNAMENT_REGISTRATION_REPOSITORY,
+);
 const MATERIALIZE_TOURNAMENT_MATCHES_UC = new MaterializeTournamentMatchesUseCase(
   TOURNAMENT_SCHEDULE_REPOSITORY,
   TOURNAMENT_MATCH_MATERIALIZATION_REPOSITORY,
@@ -47,7 +52,10 @@ export const LIST_TOURNAMENTS_UC = new ListTournamentsUseCase(
   TOURNAMENT_QUERY_REPOSITORY,
   MATCHMAKING_DEFAULT_RADIUS_KM,
 );
-export const GET_TOURNAMENT_UC = new GetTournamentUseCase(TOURNAMENT_QUERY_REPOSITORY);
+export const GET_TOURNAMENT_UC = new GetTournamentUseCase(
+  TOURNAMENT_QUERY_REPOSITORY,
+  ASSERT_TOURNAMENT_VIEW_ACCESS_UC,
+);
 export const LIST_TOURNAMENTS_BY_VENUE_UC = new ListTournamentsByVenueUseCase(
   TOURNAMENT_QUERY_REPOSITORY,
 );

@@ -4,24 +4,43 @@ import type {
   TournamentScoreboardRepository,
   TournamentScoreboardRow,
 } from '../../domain/ports/tournament_scoreboard_repository.js';
+import type { AssertTournamentViewAccessUseCase } from './assert_tournament_view_access.use_case.js';
 
 export type TournamentScoreboardItemDTO = Omit<TournamentScoreboardRow, 'headToHeadWins'> & {
   rank: number;
+};
+
+export type GetTournamentScoreboardInput = {
+  readonly tournamentId: string;
+  /** `undefined` cuando la request no trae sesión (ruta con `optionalAuth`). */
+  readonly actorUserId?: string;
 };
 
 export class GetTournamentScoreboardUseCase {
   constructor(
     private readonly _tournamentRepository: TournamentRepository,
     private readonly _scoreboardRepository: TournamentScoreboardRepository,
+    private readonly _assertTournamentViewAccess: AssertTournamentViewAccessUseCase,
   ) {}
 
-  async executeSV(_tournamentId: string): Promise<TournamentScoreboardItemDTO[]> {
-    const TOURNAMENT = await this._tournamentRepository.findByIdSV(_tournamentId);
+  async executeSV(_input: GetTournamentScoreboardInput): Promise<TournamentScoreboardItemDTO[]> {
+    const TOURNAMENT = await this._tournamentRepository.findByIdSV(_input.tournamentId);
     if (TOURNAMENT === null) {
       throw new AppError('TORNEO_NO_ENCONTRADO', 'El torneo indicado no existe.', 404);
     }
 
-    const ROWS = await this._scoreboardRepository.listScoreboardByTournamentIdSV(_tournamentId);
+    //? Si el torneo es PRIVATE, solo organizador/staff/participante pueden ver el scoreboard
+    await this._assertTournamentViewAccess.executeSV({
+      tournamentId: _input.tournamentId,
+      actorUserId: _input.actorUserId,
+      visibility: TOURNAMENT.visibility,
+      organizerUserId: TOURNAMENT.organizerUserId,
+      venueId: TOURNAMENT.venueId,
+    });
+
+    const ROWS = await this._scoreboardRepository.listScoreboardByTournamentIdSV(
+      _input.tournamentId,
+    );
     if (ROWS.length === 0) return [];
 
     const SORTED = [...ROWS].sort((_a, _b) => {

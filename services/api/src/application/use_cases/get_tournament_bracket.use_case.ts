@@ -8,6 +8,7 @@ import type {
   TournamentMatchResultRepository,
   TournamentMatchStateSV,
 } from '../../domain/ports/tournament_match_result_repository.js';
+import type { AssertTournamentViewAccessUseCase } from './assert_tournament_view_access.use_case.js';
 
 export type PlayerBracketSlotDTO = {
   registrationId: string;
@@ -85,13 +86,27 @@ export class GetTournamentBracketUseCase {
     private readonly _matchCrudRepository: MatchCrudRepository,
     private readonly _tournamentScheduleRepository: TournamentScheduleRepository,
     private readonly _tournamentMatchResultRepository: TournamentMatchResultRepository,
+    private readonly _assertTournamentViewAccess: AssertTournamentViewAccessUseCase,
   ) {}
 
-  async executeSV(_input: { tournamentId: string }): Promise<TournamentBracketDTO> {
+  async executeSV(_input: {
+    tournamentId: string;
+    /** `undefined` cuando la request no trae sesión (ruta con `optionalAuth`). */
+    actorUserId?: string;
+  }): Promise<TournamentBracketDTO> {
     const TOURNAMENT = await this._tournamentQueryRepository.getTournamentByIdSV(_input.tournamentId);
     if (TOURNAMENT === null) {
       throw new AppError('TORNEO_NO_ENCONTRADO', 'El torneo indicado no existe.', 404);
     }
+
+    //? Si el torneo es PRIVATE, solo organizador/staff/participante pueden ver el bracket
+    await this._assertTournamentViewAccess.executeSV({
+      tournamentId: _input.tournamentId,
+      actorUserId: _input.actorUserId,
+      visibility: TOURNAMENT.visibility,
+      organizerUserId: TOURNAMENT.organizerUserId,
+      venueId: TOURNAMENT.venueId,
+    });
 
     // Validar que el formato sea SINGLE_ELIMINATION
     if (TOURNAMENT.formatPresetName !== 'SINGLE_ELIMINATION') {

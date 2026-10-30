@@ -45,7 +45,10 @@ export async function getListTournamentsCON(_req: Request, _res: Response): Prom
 export async function getTournamentByIdCON(_req: Request, _res: Response): Promise<void> {
   const PARAMS = TOURNAMENT_ID_PARAM_SCHEMA.parse(_req.params);
 
-  const RESULT = await GET_TOURNAMENT_UC.executeSV(PARAMS.tournamentId);
+  const RESULT = await GET_TOURNAMENT_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    ...(_req.authUser?.id !== undefined ? { actorUserId: _req.authUser.id } : {}),
+  });
 
   _res.status(200).json({
     success: true,

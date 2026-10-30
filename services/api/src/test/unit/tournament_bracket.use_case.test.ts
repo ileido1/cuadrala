@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
+import { AssertTournamentOrganizerAccessUseCase } from '../../application/use_cases/assert_tournament_organizer_access.use_case.js';
+import { AssertTournamentViewAccessUseCase } from '../../application/use_cases/assert_tournament_view_access.use_case.js';
 import { GetTournamentBracketUseCase } from '../../application/use_cases/get_tournament_bracket.use_case.js';
 
 // Mock tournament query repository
@@ -36,11 +38,17 @@ const mockTournamentMatchResultRepository = {
   listTournamentMatchStatesSV: vi.fn(),
 };
 
+// Stub de acceso: los tests de esta suite son todos sobre torneos sin
+// `visibility` declarado (tratado como PUBLIC) salvo el describe dedicado a
+// PRIVATE más abajo, que compone la regla real con sus propios mocks.
+const ALLOW_VIEW_ACCESS = { executeSV: vi.fn().mockResolvedValue(undefined) };
+
 const useCase = new GetTournamentBracketUseCase(
   mockTournamentQueryRepository,
   mockMatchRepository,
   mockTournamentScheduleRepository,
   mockTournamentMatchResultRepository,
+  ALLOW_VIEW_ACCESS as never,
 );
 
 //? Por defecto ningún torneo tiene calendario generado: los tests existentes
@@ -376,5 +384,123 @@ describe('GetTournamentBracketUseCase — real match state once a schedule exist
     expect(MATCH.status).toBe('IN_PROGRESS');
     expect(MATCH.winnerId).toBeNull();
     expect(MATCH.score).toBeNull();
+  });
+});
+
+//? Cierra #75: el bracket de un torneo PRIVATE solo puede verlo organizador,
+//? staff de la sede, o un participante con inscripción activa. Compone la
+//? regla real (no el stub ALLOW_VIEW_ACCESS de arriba) con sus propios mocks
+//? de sede/inscripción.
+describe('GetTournamentBracketUseCase — visibility PRIVATE (#75)', () => {
+  const PRIVATE_TOURNAMENT = {
+    id: 'tournament-private',
+    name: 'Torneo Privado',
+    status: 'IN_PROGRESS',
+    sportId: 'sport-uuid',
+    sportName: 'Padel',
+    categoryId: 'cat-uuid',
+    categoryName: 'Masculino',
+    startsAt: '2026-06-01T00:00:00.000Z',
+    registrationCount: 2,
+    maxParticipants: 2,
+    formatPresetId: 'preset-uuid',
+    formatPresetName: 'SINGLE_ELIMINATION',
+    presetSchemaVersion: 1,
+    formatParameters: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    visibility: 'PRIVATE' as const,
+    organizerUserId: 'organizer-1',
+    venueId: null,
+  };
+
+  const TWO_REGISTRATIONS = [
+    { id: 'reg-1', userId: 'user-1', userName: 'Jugador 1', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'reg-2', userId: 'user-2', userName: 'Jugador 2', status: 'CONFIRMED', createdAt: '2026-01-01T00:00:01.000Z' },
+  ];
+
+  const venueStaffRepository = { isUserStaffOfVenueSV: vi.fn().mockResolvedValue(false) };
+  const registrationRepository = { findByTournamentAndUserSV: vi.fn().mockResolvedValue(null) };
+  const assertOrganizerAccess = new AssertTournamentOrganizerAccessUseCase(
+    venueStaffRepository as never,
+  );
+  const assertViewAccess = new AssertTournamentViewAccessUseCase(
+    assertOrganizerAccess,
+    registrationRepository as never,
+  );
+
+  function buildPrivateUseCase() {
+    const tournamentQueryRepository = {
+      listTournamentsSV: vi.fn(),
+      getTournamentByIdSV: vi.fn().mockResolvedValue(PRIVATE_TOURNAMENT),
+      listTournamentRegistrationsSV: vi.fn().mockResolvedValue(TWO_REGISTRATIONS),
+      listTournamentsByVenueSV: vi.fn(),
+      listViewerTournamentsSV: vi.fn(),
+    };
+    const scheduleRepository = {
+      findByTournamentIdSV: vi.fn().mockResolvedValue(null),
+      createOrValidateIdempotencySV: vi.fn(),
+      saveSlotPlanSV: vi.fn(),
+      updatePayloadSV: vi.fn(),
+    };
+    const matchResultRepository = {
+      getVenueIdForTournamentSV: vi.fn(),
+      matchBelongsToTournamentSV: vi.fn(),
+      matchHasResultSV: vi.fn(),
+      registerResultAndAdvanceSV: vi.fn(),
+      listMatchParticipantSidesSV: vi.fn(),
+      listTournamentMatchStatesSV: vi.fn(),
+    };
+    return new GetTournamentBracketUseCase(
+      tournamentQueryRepository as never,
+      mockMatchRepository,
+      scheduleRepository as never,
+      matchResultRepository as never,
+      assertViewAccess,
+    );
+  }
+
+  it('should reject with a 401 AppError when there is no session', async () => {
+    const privateUseCase = buildPrivateUseCase();
+
+    await expect(
+      privateUseCase.executeSV({ tournamentId: 'tournament-private' }),
+    ).rejects.toMatchObject({ statusCode: 401, code: 'NO_AUTORIZADO' });
+  });
+
+  it('should reject with a 403 AppError for an outsider actor', async () => {
+    venueStaffRepository.isUserStaffOfVenueSV.mockResolvedValueOnce(false);
+    registrationRepository.findByTournamentAndUserSV.mockResolvedValueOnce(null);
+    const privateUseCase = buildPrivateUseCase();
+
+    await expect(
+      privateUseCase.executeSV({ tournamentId: 'tournament-private', actorUserId: 'outsider-1' }),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'NO_AUTORIZADO' });
+  });
+
+  it('should resolve for the tournament organizer', async () => {
+    const privateUseCase = buildPrivateUseCase();
+
+    const RESULT = await privateUseCase.executeSV({
+      tournamentId: 'tournament-private',
+      actorUserId: 'organizer-1',
+    });
+
+    expect(RESULT.tournamentId).toBe('tournament-private');
+  });
+
+  it('should resolve for a participant with an active registration', async () => {
+    registrationRepository.findByTournamentAndUserSV.mockResolvedValueOnce({
+      id: 'reg-1',
+      status: 'CONFIRMED',
+    });
+    const privateUseCase = buildPrivateUseCase();
+
+    const RESULT = await privateUseCase.executeSV({
+      tournamentId: 'tournament-private',
+      actorUserId: 'user-1',
+    });
+
+    expect(RESULT.tournamentId).toBe('tournament-private');
   });
 });
