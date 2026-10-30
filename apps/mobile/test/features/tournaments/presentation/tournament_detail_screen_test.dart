@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/deep_link/tournament_invite_link_deep_link_handler.dart';
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_invitation_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/tournament_list_item_dto.dart';
@@ -2452,6 +2454,90 @@ void main() {
           ),
         ).called(1);
         verify(() => scoreboardCubit.load()).called(1);
+      },
+    );
+  });
+
+  group('Issue #77: share public tournament link', () {
+    Future<void> pumpDetail(
+      WidgetTester tester, {
+      required TournamentListItemDto tournament,
+    }) async {
+      when(() => registrationsCubit.state).thenReturn(
+        const TournamentRegistrationsLoaded(
+          items: [],
+          total: 0,
+          invitations: [],
+        ),
+      );
+      when(() => registrationsCubit.currentUserId).thenReturn('user-1');
+      when(
+        () => scheduleCubit.state,
+      ).thenReturn(const TournamentScheduleEmpty());
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          registrationsCubit: registrationsCubit,
+          scheduleCubit: scheduleCubit,
+          scoreboardCubit: scoreboardCubit,
+          tournament: tournament,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows the share action for a public tournament', (
+      tester,
+    ) async {
+      await pumpDetail(tester, tournament: _tournament(visibility: 'PUBLIC'));
+
+      expect(
+        find.byKey(const Key('tournament.detail.share')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('hides the share action for a private tournament', (
+      tester,
+    ) async {
+      await pumpDetail(
+        tester,
+        tournament: _tournament(visibility: 'PRIVATE'),
+      );
+
+      expect(find.byKey(const Key('tournament.detail.share')), findsNothing);
+    });
+
+    testWidgets(
+      'copies the public scoreboard URL and shows a confirmation when tapped',
+      (tester) async {
+        final clipboardCalls = <Map<Object?, Object?>>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+              if (call.method == 'Clipboard.setData') {
+                clipboardCalls.add(call.arguments as Map<Object?, Object?>);
+              }
+              return null;
+            });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(SystemChannels.platform, null);
+        });
+
+        await pumpDetail(
+          tester,
+          tournament: _tournament(visibility: 'PUBLIC'),
+        );
+
+        await tester.tap(find.byKey(const Key('tournament.detail.share')));
+        await tester.pumpAndSettle();
+
+        expect(clipboardCalls, hasLength(1));
+        expect(
+          clipboardCalls.single['text'],
+          contains('https://$kTournamentInviteLinkHost/t/t-1'),
+        );
+        expect(find.textContaining('copiado'), findsOneWidget);
       },
     );
   });

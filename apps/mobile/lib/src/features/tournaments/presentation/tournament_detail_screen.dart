@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/deep_link/tournament_invite_link_deep_link_handler.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/failures/app_failure.dart';
 import '../../../core/formatting/money_format.dart';
@@ -438,6 +440,13 @@ final class TournamentDetailBody extends StatelessWidget {
                     if (isOrganizer) ...[
                       const SizedBox(width: 6),
                       const _OrgBadge(),
+                    ],
+                    // Issue #77: sharing a private tournament's scoreboard
+                    // makes no sense — nobody but its own participants could
+                    // open it — so the action only shows up for PUBLIC ones.
+                    if (tournament?.visibility == 'PUBLIC') ...[
+                      const SizedBox(width: 2),
+                      _ShareTournamentButton(tournament: tournament!),
                     ],
                   ],
                 ),
