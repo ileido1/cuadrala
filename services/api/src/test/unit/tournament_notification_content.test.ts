@@ -17,6 +17,7 @@ describe('Tournament notification events', () => {
       //? el mismo problema, "este partido necesita que lo mires".
       'TOURNAMENT_MATCH_NEEDS_ATTENTION',
       'TOURNAMENT_MATCH_RESULT_RECORDED',
+      'TOURNAMENT_CANCELLED',
     ]);
   });
 

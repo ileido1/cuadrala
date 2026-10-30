@@ -1,5 +1,5 @@
 /**
- * Los cuatro momentos en los que un torneo tiene que hablar.
+ * Los momentos en los que un torneo tiene que hablar.
  *
  * Antes no emitía ninguno: el jugador se anotaba y quedaba `PENDING` sin saberlo,
  * el organizador lo confirmaba en silencio, el cuadro salía en silencio y el
@@ -19,6 +19,9 @@ export const TOURNAMENT_NOTIFICATION_EVENT_TYPES = [
   //? de inventar dos notificaciones para el mismo problema.
   'TOURNAMENT_MATCH_NEEDS_ATTENTION',
   'TOURNAMENT_MATCH_RESULT_RECORDED',
+  //? El organizador que cancela no necesita avisarse a sí mismo: el que lo
+  //? recibe es el resto de los inscritos activos (PENDING o CONFIRMED).
+  'TOURNAMENT_CANCELLED',
 ] as const;
 
 export type TournamentNotificationEventType =
