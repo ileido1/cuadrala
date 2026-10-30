@@ -141,6 +141,29 @@ describe('ApiClient tournament invite link paths', () => {
   });
 });
 
+describe('ApiClient public tournament scoreboard paths', () => {
+  beforeEach(() => {
+    calls.length = 0;
+  });
+
+  // Issue #77: the public landing (/t/[tournamentId]) reads the same public
+  // GET /tournaments/:tournamentId and GET /tournaments/:tournamentId/scoreboard
+  // endpoints the backend already serves without auth for any tournament
+  // (tournaments.router.ts / tournament_scoreboard.router.ts have no
+  // `requireAuth` on these two routes).
+  it('should request the tournament endpoint when calling getTournament', async () => {
+    await apiClient.getTournament('tour-1');
+
+    expect(calls).toEqual([{ method: 'GET', url: '/tournaments/tour-1' }]);
+  });
+
+  it('should request the scoreboard endpoint when calling getTournamentScoreboard', async () => {
+    await apiClient.getTournamentScoreboard('tour-1');
+
+    expect(calls).toEqual([{ method: 'GET', url: '/tournaments/tour-1/scoreboard' }]);
+  });
+});
+
 describe('ApiClient dashboard paths', () => {
   beforeEach(() => {
     calls.length = 0;

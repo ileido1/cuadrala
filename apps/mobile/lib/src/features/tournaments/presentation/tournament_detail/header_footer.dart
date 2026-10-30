@@ -1,5 +1,41 @@
 part of '../tournament_detail_screen.dart';
 
+/// Issue #77: compact header action that copies the public scoreboard
+/// landing URL (`https://<host>/t/<tournamentId>`) to the clipboard — same
+/// clipboard + `SnackBar` confirmation pattern as `_shareMatchInvite` in
+/// `match_detail_screen.dart` and `GenerateInviteLinkSheet._share`, since
+/// this tournament has no backend-issued shareable link (unlike invite
+/// links) to reuse instead.
+final class _ShareTournamentButton extends StatelessWidget {
+  const _ShareTournamentButton({required this.tournament});
+
+  final TournamentListItemDto tournament;
+
+  void _share(BuildContext context) {
+    final url = 'https://$kTournamentInviteLinkHost/t/${tournament.id}';
+    final text = 'Mirá el torneo "${tournament.name}" en Cuadrala: $url';
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Link copiado. Pegalo en WhatsApp o donde quieras.'),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      key: const Key('tournament.detail.share'),
+      onPressed: () => _share(context),
+      icon: const Icon(AppIcons.share, size: 18),
+      tooltip: 'Compartir',
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
 final class _OrgBadge extends StatelessWidget {
   const _OrgBadge();
 

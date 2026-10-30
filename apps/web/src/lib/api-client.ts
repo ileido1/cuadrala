@@ -48,6 +48,40 @@ export interface RegisterViaTournamentInviteLinkBody {
   email?: string;
 }
 
+// Issue #77: shapes the public `/t/[tournamentId]` landing reads from
+// GET /tournaments/:tournamentId and GET /tournaments/:tournamentId/scoreboard.
+// Both endpoints are public for any tournament today (no visibility check on
+// the backend yet — see `tournaments.router.ts`/`tournament_scoreboard.router.ts`),
+// so the landing itself gates on `visibility !== 'PUBLIC'` instead of relying
+// on a 403. Narrowed to just what the landing needs, same approach as
+// `TournamentInviteLinkPreview`, rather than reusing the already-drifted
+// `TournamentDetail` type (missing `visibility`, stale field names).
+export interface PublicTournamentSummary {
+  id: string;
+  name: string;
+  status: string;
+  visibility: 'PUBLIC' | 'PRIVATE';
+  sportName: string;
+  categoryName: string;
+  venueName: string | null;
+  startsAt: string | null;
+}
+
+export interface PublicTournamentScoreboardRow {
+  rank: number;
+  userId: string | null;
+  tournamentRegistrationId?: string;
+  name: string;
+  points: number;
+  gamesPlayed: number;
+  gamesWon: number;
+  gamesLost: number;
+  gamesDrawn: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  difference: number;
+}
+
 class ApiClient {
   private client: AxiosInstance;
 
@@ -458,6 +492,28 @@ class ApiClient {
     return this.client.post<{ data: TournamentInviteLinkRegistrationResult }>(
       `/public/tournament-invite-links/${token}/register`,
       body,
+    );
+  }
+
+  /**
+   * Issue #77: tournament summary for the public scoreboard landing
+   * (`/t/[tournamentId]`). Same `/tournaments/:id` route `tournaments.get`
+   * already calls, but typed to the shape the landing actually needs
+   * (including `visibility`) instead of the untyped dashboard call.
+   */
+  getTournament(tournamentId: string) {
+    return this.client.get<{
+      data: { tournament: PublicTournamentSummary; registrations: unknown[] };
+    }>(`/tournaments/${tournamentId}`);
+  }
+
+  /**
+   * Issue #77: scoreboard rows for the public scoreboard landing. No
+   * `Authorization` is required — the backend route has no `requireAuth`.
+   */
+  getTournamentScoreboard(tournamentId: string) {
+    return this.client.get<{ data: { rows: PublicTournamentScoreboardRow[] } }>(
+      `/tournaments/${tournamentId}/scoreboard`,
     );
   }
 
