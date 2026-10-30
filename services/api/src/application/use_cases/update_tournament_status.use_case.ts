@@ -53,6 +53,48 @@ export class UpdateTournamentStatusUseCase {
     }
   }
 
+  /**
+   * Avisa a los inscritos activos (PENDING o CONFIRMED) que el torneo fue
+   * cancelado, excepto al propio actor que ejecutó la cancelación.
+   * Nunca bloquea la transición de estado.
+   */
+  private async _notifyCancelledSV(
+    _tournament: { id: string; name: string; categoryId: string },
+    _actorUserId: string,
+  ): Promise<void> {
+    if (this._createTournamentNotificationEvent === null) return;
+    if (this._tournamentRegistrationRepository === null) return;
+
+    try {
+      const [PENDING, CONFIRMED] = await Promise.all([
+        this._tournamentRegistrationRepository.listByTournamentIdAndStatusSV(
+          _tournament.id,
+          'PENDING',
+        ),
+        this._tournamentRegistrationRepository.listByTournamentIdAndStatusSV(
+          _tournament.id,
+          'CONFIRMED',
+        ),
+      ]);
+
+      //? Los invitados sin cuenta no reciben notificaciones, y el propio actor
+      //? que cancela no necesita que le avisen de su propia acción.
+      const USER_IDS = [...PENDING, ...CONFIRMED]
+        .map((_r) => _r.userId)
+        .filter((_id): _id is string => _id !== null && _id !== _actorUserId);
+
+      await this._createTournamentNotificationEvent.executeSV({
+        type: 'TOURNAMENT_CANCELLED',
+        tournamentId: _tournament.id,
+        categoryId: _tournament.categoryId,
+        payload: { tournamentName: _tournament.name },
+        userIds: USER_IDS,
+      });
+    } catch {
+      // No bloquear la cancelacion del torneo si falla la notificacion.
+    }
+  }
+
   async executeSV(_input: {
     tournamentId: string;
     status: string;
@@ -100,6 +142,10 @@ export class UpdateTournamentStatusUseCase {
 
     if (UPDATED === null) {
       throw new AppError('NO_ENCONTRADO', 'Torneo no encontrado.', 404);
+    }
+
+    if (_input.status === 'CANCELLED') {
+      await this._notifyCancelledSV(TOURNAMENT, _input.actorUserId);
     }
 
     return UPDATED;

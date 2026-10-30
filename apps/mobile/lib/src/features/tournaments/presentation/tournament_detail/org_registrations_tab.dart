@@ -98,6 +98,11 @@ final class _RegistrationsTab extends StatelessWidget {
                       ? null
                       : () => cubit.confirmPendingRegistrations(),
                 ),
+                const SizedBox(height: 10),
+                const _InfoBox(
+                  message:
+                      'La confirmación de pagos se gestiona desde el panel web.',
+                ),
                 const SizedBox(height: 16),
               ],
               if (loaded.registerError != null ||

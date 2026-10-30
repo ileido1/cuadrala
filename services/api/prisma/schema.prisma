@@ -193,6 +193,8 @@ enum NotificationEventType {
   TOURNAMENT_MATCH_NEEDS_ATTENTION
   /// Se cargo el resultado de un partido: avisa a ambos lados con userId.
   TOURNAMENT_MATCH_RESULT_RECORDED
+  /// El organizador cancelo el torneo: avisa a los inscritos activos excepto al actor.
+  TOURNAMENT_CANCELLED
   QUICK_MATCH_PROPOSAL
 }
 

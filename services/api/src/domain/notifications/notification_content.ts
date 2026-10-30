@@ -55,6 +55,11 @@ export function notificationContentForTypeSV(
         title: 'Arrancó el torneo',
         body: 'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
       };
+    case 'TOURNAMENT_CANCELLED':
+      return {
+        title: 'Torneo cancelado',
+        body: 'El organizador canceló el torneo. Tu inscripción queda sin efecto.',
+      };
     case 'TOURNAMENT_MATCH_NEEDS_ATTENTION':
       return {
         title: 'Un partido necesita horario',

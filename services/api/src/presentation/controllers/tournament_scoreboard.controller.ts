@@ -5,7 +5,10 @@ import { TOURNAMENT_SCOREBOARD_TOURNAMENT_ID_PARAM_SCHEMA } from '../validation/
 
 export async function getTournamentScoreboardCON(_req: Request, _res: Response): Promise<void> {
   const PARAMS = TOURNAMENT_SCOREBOARD_TOURNAMENT_ID_PARAM_SCHEMA.parse(_req.params);
-  const RESULT = await GET_TOURNAMENT_SCOREBOARD_UC.executeSV(PARAMS.tournamentId);
+  const RESULT = await GET_TOURNAMENT_SCOREBOARD_UC.executeSV({
+    tournamentId: PARAMS.tournamentId,
+    ...(_req.authUser?.id !== undefined ? { actorUserId: _req.authUser.id } : {}),
+  });
 
   //? El cliente (mobile) espera `data: { rows: [...] }`, no un array suelto
   //? (su `decodeEnvelopeDataMap` solo acepta objetos).

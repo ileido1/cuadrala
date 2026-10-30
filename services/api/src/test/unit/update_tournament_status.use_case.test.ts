@@ -17,10 +17,26 @@ const mockMaterializeTournamentMatches = {
   executeSV: vi.fn(),
 };
 
+const mockCreateTournamentNotificationEvent = {
+  executeSV: vi.fn(),
+};
+
+const mockTournamentRegistrationRepository = {
+  listByTournamentIdAndStatusSV: vi.fn(),
+};
+
 const useCase = new UpdateTournamentStatusUseCase(
   mockTournamentRepository,
   mockAssertTournamentOrganizerAccess as never,
   mockMaterializeTournamentMatches as never,
+);
+
+const useCaseWithNotifications = new UpdateTournamentStatusUseCase(
+  mockTournamentRepository,
+  mockAssertTournamentOrganizerAccess as never,
+  mockMaterializeTournamentMatches as never,
+  mockCreateTournamentNotificationEvent as never,
+  mockTournamentRegistrationRepository as never,
 );
 
 const BASE_TOURNAMENT = {
@@ -154,6 +170,83 @@ describe('UpdateTournamentStatusUseCase', () => {
 
     expect(mockMaterializeTournamentMatches.executeSV).toHaveBeenCalledWith(
       expect.objectContaining({ organizerUserId: 'venue-staff-1' }),
+    );
+  });
+
+  it('notifies active registrants (PENDING and CONFIRMED) except the actor when the tournament is cancelled', async () => {
+    mockTournamentRepository.findByIdSV.mockResolvedValue({ ...BASE_TOURNAMENT, status: 'OPEN' });
+    mockAssertTournamentOrganizerAccess.executeSV.mockResolvedValue(undefined);
+    mockTournamentRepository.updateStatusSV.mockResolvedValue({
+      id: 'tournament-1',
+      name: 'Torneo Demo',
+      status: 'CANCELLED',
+    });
+    mockTournamentRegistrationRepository.listByTournamentIdAndStatusSV.mockImplementation(
+      async (_tournamentId: string, _status: string) => {
+        if (_status === 'PENDING') return [{ userId: 'player-pending-1' }];
+        if (_status === 'CONFIRMED') {
+          return [{ userId: 'organizer-1' }, { userId: 'player-confirmed-1' }];
+        }
+        return [];
+      },
+    );
+
+    const RESULT = await useCaseWithNotifications.executeSV({
+      tournamentId: 'tournament-1',
+      status: 'CANCELLED',
+      actorUserId: 'organizer-1',
+    });
+
+    expect(RESULT).toEqual({ id: 'tournament-1', name: 'Torneo Demo', status: 'CANCELLED' });
+    expect(mockCreateTournamentNotificationEvent.executeSV).toHaveBeenCalledWith({
+      type: 'TOURNAMENT_CANCELLED',
+      tournamentId: 'tournament-1',
+      categoryId: 'category-1',
+      payload: { tournamentName: 'Torneo Demo' },
+      userIds: ['player-pending-1', 'player-confirmed-1'],
+    });
+  });
+
+  it('completes the CANCELLED transition even when the notification fails', async () => {
+    mockTournamentRepository.findByIdSV.mockResolvedValue({ ...BASE_TOURNAMENT, status: 'OPEN' });
+    mockAssertTournamentOrganizerAccess.executeSV.mockResolvedValue(undefined);
+    mockTournamentRepository.updateStatusSV.mockResolvedValue({
+      id: 'tournament-1',
+      name: 'Torneo Demo',
+      status: 'CANCELLED',
+    });
+    mockTournamentRegistrationRepository.listByTournamentIdAndStatusSV.mockRejectedValue(
+      new Error('db unavailable'),
+    );
+
+    const RESULT = await useCaseWithNotifications.executeSV({
+      tournamentId: 'tournament-1',
+      status: 'CANCELLED',
+      actorUserId: 'organizer-1',
+    });
+
+    expect(RESULT).toEqual({ id: 'tournament-1', name: 'Torneo Demo', status: 'CANCELLED' });
+  });
+
+  it('cancels a tournament with no registrants without error and without notifying', async () => {
+    mockTournamentRepository.findByIdSV.mockResolvedValue({ ...BASE_TOURNAMENT, status: 'OPEN' });
+    mockAssertTournamentOrganizerAccess.executeSV.mockResolvedValue(undefined);
+    mockTournamentRepository.updateStatusSV.mockResolvedValue({
+      id: 'tournament-1',
+      name: 'Torneo Demo',
+      status: 'CANCELLED',
+    });
+    mockTournamentRegistrationRepository.listByTournamentIdAndStatusSV.mockResolvedValue([]);
+
+    const RESULT = await useCaseWithNotifications.executeSV({
+      tournamentId: 'tournament-1',
+      status: 'CANCELLED',
+      actorUserId: 'organizer-1',
+    });
+
+    expect(RESULT).toEqual({ id: 'tournament-1', name: 'Torneo Demo', status: 'CANCELLED' });
+    expect(mockCreateTournamentNotificationEvent.executeSV).toHaveBeenCalledWith(
+      expect.objectContaining({ userIds: [] }),
     );
   });
 });
