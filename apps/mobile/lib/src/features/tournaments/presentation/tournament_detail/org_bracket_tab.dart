@@ -243,10 +243,20 @@ final class _OrganizerStandingsContent extends StatelessWidget {
             _ => const SizedBox.shrink(),
           },
         ),
-        if (showFinalBracketAction &&
-            _canAdvanceGroupsPlusKnockout(schedule)) ...[
-          const SizedBox(height: 16),
-          _OrganizerFinalBracketAction(onAdvance: () => _advance(context)),
+        if (showFinalBracketAction) ...[
+          if (_canAdvanceGroupsPlusKnockout(schedule)) ...[
+            const SizedBox(height: 16),
+            _OrganizerFinalBracketAction(onAdvance: () => _advance(context)),
+          ] else if (_groupsPlusKnockoutBracketReady(schedule)) ...[
+            //? Issue #81 S4: once semifinals are materialized, the organizer
+            //? can open the same BracketScreen SINGLE_ELIMINATION already
+            //? reuses — the DTO shape is identical.
+            const SizedBox(height: 16),
+            _OrganizerViewBracketAction(
+              tournamentId: tournamentId,
+              tournamentsRepository: tournamentsRepository,
+            ),
+          ],
         ],
         const SizedBox(height: 22),
         Text(
@@ -297,6 +307,20 @@ bool _canAdvanceGroupsPlusKnockout(TournamentScheduleDto schedule) {
       semifinals.every((match) => match.matchId == null);
 }
 
+/// True once the knockout phase has been materialized: the semifinal round
+/// (second-to-last, same round-shape assumption as above) carries real
+/// match records (`matchId != null`) instead of the pre-advance placeholders.
+/// This is the mobile side's "reliable local knowledge" that `GET /bracket`
+/// would now return 200 rather than `CUADRO_NO_GENERADO` (issue #81, S4).
+bool _groupsPlusKnockoutBracketReady(TournamentScheduleDto schedule) {
+  if (schedule.rounds.length < 3) return false;
+
+  final semifinals = schedule.rounds[schedule.rounds.length - 2].matches;
+
+  return semifinals.isNotEmpty &&
+      semifinals.every((match) => match.matchId != null);
+}
+
 final class _OrganizerFinalBracketAction extends StatelessWidget {
   const _OrganizerFinalBracketAction({required this.onAdvance});
 
@@ -338,6 +362,38 @@ final class _OrganizerFinalBracketAction extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Ver cuadro" action shown once GROUPS_PLUS_KNOCKOUT's semifinals exist —
+/// mirrors the SINGLE_ELIMINATION button in `_OrganizerGeneratedSchedule`
+/// below, opening the same unmodified `BracketScreen` (issue #81, S4).
+final class _OrganizerViewBracketAction extends StatelessWidget {
+  const _OrganizerViewBracketAction({
+    required this.tournamentId,
+    required this.tournamentsRepository,
+  });
+
+  final String tournamentId;
+  final TournamentsRepository tournamentsRepository;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => SizedBox(
+          height: MediaQuery.sizeOf(context).height * .9,
+          child: BracketScreen(
+            tournamentId: tournamentId,
+            tournamentsRepository: tournamentsRepository,
+          ),
+        ),
+      ),
+      icon: const Icon(AppIcons.trophy, size: 17),
+      label: const Text('Ver cuadro'),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/models/bracket_dto.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
@@ -495,5 +496,54 @@ void main() {
       expect(find.text('RONDA 2'), findsOneWidget);
       expect(find.text('RONDA 3'), findsOneWidget);
     });
+
+    //? Issue #81 S5: branch the empty state on the real error code, not a
+    //? single hardcoded "es round robin" message shared by every format.
+    testWidgets(
+      'shows the round-robin empty state for FORMATO_NO_SOPORTADO',
+      (tester) async {
+        final repository = _TestTournamentsRepository(
+          bracketProvider: () async => throw const AppFailure(
+            code: 'FORMATO_NO_SOPORTADO',
+            message: 'Bracket disponible solo para torneos SINGLE_ELIMINATION.',
+          ),
+        );
+
+        await tester.pumpWidget(buildTestWidget(repository));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Este torneo no arma cuadro'), findsOneWidget);
+        expect(
+          find.textContaining('Este torneo es round robin'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'shows an accurate not-generated-yet empty state for CUADRO_NO_GENERADO, '
+      'never the round-robin copy',
+      (tester) async {
+        final repository = _TestTournamentsRepository(
+          bracketProvider: () async => throw const AppFailure(
+            code: 'CUADRO_NO_GENERADO',
+            message: 'El cuadro final todavía no fue generado para este torneo.',
+          ),
+        );
+
+        await tester.pumpWidget(buildTestWidget(repository));
+        await tester.pumpAndSettle();
+
+        expect(find.text('El cuadro todavía no se generó'), findsOneWidget);
+        expect(
+          find.text(
+            'El cuadro final todavía no fue generado para este torneo.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('round robin'), findsNothing);
+        expect(find.text('Este torneo no arma cuadro'), findsNothing);
+      },
+    );
   });
 }

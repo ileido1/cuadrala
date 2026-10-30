@@ -348,7 +348,23 @@ final class _ScoreboardTab extends StatelessWidget {
                           scheduleState is TournamentScheduleSuccess
                           ? scheduleState.schedule
                           : null;
+                      //? Issue #81 S4/S6: GROUPS_PLUS_KNOCKOUT only has a
+                      //? bracket once semifinals are materialized — before
+                      //? that, "Ver el cuadro completo" would open a
+                      //? BracketScreen known to fail with
+                      //? CUADRO_NO_GENERADO. Every other format keeps its
+                      //? existing, unconditional-by-format behavior below.
+                      final isGroupsPlusKnockout =
+                          tournamentFormatPresentation(
+                            tournament?.formatPresetName,
+                          ) ==
+                          TournamentFormatPresentation.groupsPlusKnockout;
+                      final bracketNotReadyForFormat =
+                          isGroupsPlusKnockout &&
+                          !(schedule != null &&
+                              _groupsPlusKnockoutBracketReady(schedule));
                       if (!showBracketButton ||
+                          bracketNotReadyForFormat ||
                           (!_scoreboardHasResults(scoreboard) &&
                               !_scheduleHasResults(schedule))) {
                         return const SizedBox.shrink();
