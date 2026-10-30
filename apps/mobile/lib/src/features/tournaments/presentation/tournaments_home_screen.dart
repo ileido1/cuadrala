@@ -15,6 +15,7 @@ import '../data/models/viewer_tournament_dto.dart';
 import 'cubit/tournaments_list_cubit.dart';
 import 'cubit/tournaments_list_state.dart';
 import 'widgets/tournament_list_item_tile.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/segmented_control.dart';
 import '../../../core/theme/tournament_theme.dart';
 import '../../../core/formatting/money_conversion.dart';
@@ -329,22 +330,12 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
     onOrganizerTap: () => _open(viewer),
   );
 
-  Widget _error(String message, {bool more = false}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 36),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(AppIcons.warning, size: 30),
-        const SizedBox(height: 12),
-        Text(message, textAlign: TextAlign.center),
-        TextButton(
-          onPressed: () => more
-              ? context.read<TournamentsListCubit>().loadMore()
-              : context.read<TournamentsListCubit>().load(),
-          child: const Text('Reintentar'),
-        ),
-      ],
-    ),
+  Widget _error(String message, {bool more = false}) => ErrorState(
+    icon: AppIcons.warning,
+    message: message,
+    onRetry: () => more
+        ? context.read<TournamentsListCubit>().loadMore()
+        : context.read<TournamentsListCubit>().load(),
   );
 
   Widget _filters(TournamentsListLoaded state) {
