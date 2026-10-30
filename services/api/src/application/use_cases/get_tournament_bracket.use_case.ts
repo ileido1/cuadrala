@@ -1,6 +1,9 @@
 import { AppError } from '../../domain/errors/app_error.js';
 import { generateSingleEliminationScheduleSV } from '../../domain/single_elimination/bracket_generator.js';
 import { resolveMatchWinningUserIdsSV } from '../../domain/tournament/match_side_aggregation.js';
+import { GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS } from '../../domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
+import { isGroupsPlusKnockoutResolvedSV } from '../../domain/groups_plus_knockout/groups_plus_knockout_transition_resolver.js';
+import type { GroupsPlusKnockoutScheduleDTO } from '../../domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
 import type { TournamentQueryRepository } from '../../domain/ports/tournament_query_repository.js';
 import type { MatchCrudRepository } from '../../domain/ports/match_crud_repository.js';
 import type { TournamentScheduleRepository } from '../../domain/ports/tournament_schedule_repository.js';
@@ -108,6 +111,15 @@ export class GetTournamentBracketUseCase {
       venueId: TOURNAMENT.venueId,
     });
 
+    //? Issue #81 (S1-S3): GROUPS_PLUS_KNOCKOUT tiene su propio bracket (las
+    //? rondas KNOCKOUT del calendario ya guardado), distinto del cuadro de
+    //? SINGLE_ELIMINATION que arma `generateSingleEliminationScheduleSV` más
+    //? abajo. Se resuelve antes de la validación de formato de abajo para no
+    //? ensanchar esa rama genérica.
+    if (TOURNAMENT.formatPresetName === 'GROUPS_PLUS_KNOCKOUT') {
+      return this._buildGroupsPlusKnockoutBracketSV(TOURNAMENT, _input.tournamentId);
+    }
+
     // Validar que el formato sea SINGLE_ELIMINATION
     if (TOURNAMENT.formatPresetName !== 'SINGLE_ELIMINATION') {
       throw new AppError(
@@ -209,6 +221,122 @@ export class GetTournamentBracketUseCase {
       tournamentName: TOURNAMENT.name,
       totalRounds: SCHEDULE.totalRounds,
       bracketSize: SCHEDULE.bracketSize,
+      rounds: ROUNDS,
+    };
+  }
+
+  /**
+   * Issue #81 (S1-S3): bracket de GROUPS_PLUS_KNOCKOUT a partir del
+   * calendario ya guardado por `GenerateTournamentScheduleUseCase` y resuelto
+   * por `AdvanceGroupsPlusKnockoutUseCase` (materialización de semifinales en
+   * advance_groups_plus_knockout.use_case.ts:112-175). Nunca usa
+   * `generateSingleEliminationScheduleSV` — ese generador produce una
+   * estructura distinta (bracket completo desde los participantes), no la de
+   * grupos + 2 rondas KNOCKOUT de este formato.
+   */
+  private async _buildGroupsPlusKnockoutBracketSV(
+    _tournament: { id: string; name: string },
+    _tournamentId: string,
+  ): Promise<TournamentBracketDTO> {
+    const SCHEDULE = await this._tournamentScheduleRepository.findByTournamentIdSV(_tournamentId);
+
+    //? S2: sin calendario guardado todavía, o calendario guardado pero con
+    //? semifinales sin resolver (`isGroupsPlusKnockoutResolvedSV` exige
+    //? playerA/playerB no nulos en la ronda de semifinales, igual criterio que
+    //? `AdvanceGroupsPlusKnockoutUseCase`). En ambos casos el mensaje debe ser
+    //? preciso para este formato, no el de SINGLE_ELIMINATION.
+    if (SCHEDULE === null) {
+      throw new AppError(
+        'CUADRO_NO_GENERADO',
+        'El cuadro final todavía no fue generado para este torneo.',
+        400,
+      );
+    }
+
+    const PAYLOAD = SCHEDULE.payload as GroupsPlusKnockoutScheduleDTO;
+    if (!isGroupsPlusKnockoutResolvedSV(PAYLOAD)) {
+      throw new AppError(
+        'CUADRO_NO_GENERADO',
+        'El cuadro final todavía no fue generado para este torneo.',
+        400,
+      );
+    }
+
+    const REGISTRATIONS = await this._tournamentQueryRepository.listTournamentRegistrationsSV(_tournamentId);
+    const REGISTRATION_BY_ID = new Map(REGISTRATIONS.map((_r) => [_r.id, _r]));
+
+    // Estado real (mismo patrón que SINGLE_ELIMINATION arriba): el payload es
+    // el "quien contra quien" ya resuelto; cada slot con Match materializado
+    // se pisa con su estado real.
+    const MATCH_STATES = await this._tournamentMatchResultRepository.listTournamentMatchStatesSV({
+      tournamentId: _tournamentId,
+      scheduleKey: SCHEDULE.scheduleKey,
+    });
+    const MATCH_STATE_BY_SLOT = new Map<string, TournamentMatchStateSV>();
+    for (const STATE of MATCH_STATES) {
+      MATCH_STATE_BY_SLOT.set(`${STATE.roundNumber}:${STATE.matchNumber}`, STATE);
+    }
+
+    // S1: solo las dos rondas KNOCKOUT (Semifinales, Final) — las rondas
+    // GROUP no forman parte del bracket visual.
+    const KNOCKOUT_ROUNDS = PAYLOAD.rounds
+      .filter((_round) => _round.stage === 'KNOCKOUT')
+      .sort((_a, _b) => _a.roundNumber - _b.roundNumber);
+
+    const ROUNDS: BracketRoundDTO[] = KNOCKOUT_ROUNDS.map((_round) => ({
+      roundNumber: _round.roundNumber,
+      name: _round.name,
+      matches: _round.matches.map((_match) => {
+        const PLAYER_A_REGISTRATION =
+          _match.playerA === null ? null : REGISTRATION_BY_ID.get(_match.playerA);
+        const PLAYER_B_REGISTRATION =
+          _match.playerB === null ? null : REGISTRATION_BY_ID.get(_match.playerB);
+        //? No existe noción de seed en este formato (los slots vienen de
+        //? `playerASource`/`playerBSource`, posiciones de clasificación por
+        //? grupo, no un seed de bracket), por eso siempre 0.
+        const PLAYER_A_SLOT: PlayerBracketSlotDTO =
+          PLAYER_A_REGISTRATION === undefined || PLAYER_A_REGISTRATION === null
+            ? null
+            : {
+                registrationId: PLAYER_A_REGISTRATION.id,
+                userId: PLAYER_A_REGISTRATION.userId,
+                displayName: PLAYER_A_REGISTRATION.userName ?? PLAYER_A_REGISTRATION.guestName ?? 'Jugador desconocido',
+                seedPosition: 0,
+              };
+        const PLAYER_B_SLOT: PlayerBracketSlotDTO =
+          PLAYER_B_REGISTRATION === undefined || PLAYER_B_REGISTRATION === null
+            ? null
+            : {
+                registrationId: PLAYER_B_REGISTRATION.id,
+                userId: PLAYER_B_REGISTRATION.userId,
+                displayName: PLAYER_B_REGISTRATION.userName ?? PLAYER_B_REGISTRATION.guestName ?? 'Jugador desconocido',
+                seedPosition: 0,
+              };
+
+        const REAL_STATE = MATCH_STATE_BY_SLOT.get(`${_round.roundNumber}:${_match.matchNumber}`);
+
+        return {
+          matchNumber: _match.matchNumber,
+          roundNumber: _round.roundNumber,
+          playerA: PLAYER_A_SLOT,
+          playerB: PLAYER_B_SLOT,
+          winnerId: REAL_STATE !== undefined ? resolveBracketWinnerIdSV(REAL_STATE) : null,
+          score: REAL_STATE !== undefined && REAL_STATE.scores.length > 0 ? REAL_STATE.scores : null,
+          //? `GroupsPlusKnockoutMatchDTO.bye` siempre es `false` (este formato
+          //? no genera byes): sin estado real, el slot queda PENDING.
+          status: REAL_STATE !== undefined ? mapMatchStatusToBracketStatusSV(REAL_STATE.matchStatus) : 'PENDING',
+          matchId: REAL_STATE?.matchId ?? null,
+        };
+      }),
+    }));
+
+    return {
+      tournamentId: _tournament.id,
+      tournamentName: _tournament.name,
+      totalRounds: 2,
+      bracketSize:
+        GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS.groupCount *
+        GROUPS_PLUS_KNOCKOUT_DEFAULT_PARAMETERS.qualifiersPerGroup,
       rounds: ROUNDS,
     };
   }
