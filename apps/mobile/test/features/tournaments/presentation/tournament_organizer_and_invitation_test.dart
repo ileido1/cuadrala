@@ -429,6 +429,14 @@ void main() {
       final scoreboardCubit = _MockScoreboardCubit();
       final repository = _MockTournamentsRepository();
 
+      //? Con el roster vacío, el header del organizador + info box + fila
+      //? del dueño del torneo + CTAs de invitar empujan la sección de
+      //? invitaciones enviadas fuera de la ventana por defecto del ListView
+      //? perezoso (mismo patrón que tournament_detail_screen_test.dart).
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       when(() => registrationsCubit.state).thenReturn(
         TournamentRegistrationsLoaded(
           items: const [],
