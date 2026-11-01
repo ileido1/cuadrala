@@ -114,6 +114,14 @@ void main() {
   testWidgets('paired roster keeps individual Inscritos next to Duplas', (
     tester,
   ) async {
+    //? El header del organizador + info box + fila del dueño del torneo
+    //? empujan la TournamentPairingSection fuera de la ventana por defecto
+    //? del ListView perezoso del roster; se agranda la ventana para que se
+    //? construya (mismo patrón que tournament_detail_screen_test.dart).
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await _pumpOrganizer(
       tester,
       status: 'OPEN',
