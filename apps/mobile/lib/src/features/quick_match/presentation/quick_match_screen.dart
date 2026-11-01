@@ -10,9 +10,15 @@ import '../data/models/quick_match_search_dto.dart';
 import '../../matches/data/matches_repository.dart';
 import '../../matches/data/models/match_detail_dto.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/formatting/fx_price_labels.dart';
+import '../../../core/formatting/money_conversion.dart';
+import '../../../core/formatting/money_format.dart';
+import '../../../core/models/currency_code.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/date_strip.dart';
+import '../../../shared/widgets/dual_price.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/segmented_control.dart';
 
 final class QuickMatchScreen extends StatefulWidget {
@@ -81,31 +87,72 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
     body: SafeArea(
       top: false,
       child: BlocBuilder<QuickMatchCubit, QuickMatchState>(
-        builder: (context, state) => switch (state) {
-          QuickMatchInitial() || QuickMatchLoading() => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          QuickMatchFailure(:final message) => _Failure(message: message),
-          QuickMatchIdle() => _IdleQuickMatch(
-            onOpenConfiguration: _showInitialConfiguration,
-          ),
-          QuickMatchActive(:final search)
-              when search.status == 'PROPOSAL' &&
-                  search.proposal?.status == 'PENDING' =>
-            _Proposal(search: search),
-          QuickMatchActive(:final search) when search.status == 'CONFIRMED' =>
-            _Confirmed(
-              isNewGroup: search.proposal?.type == 'NEW_GROUP',
-              matchId: search.proposal?.matchId,
-              playerCount: search.proposal?.playerIds.length ?? 4,
+        builder: (context, state) => AnimatedSwitcher(
+          // Mismo timing que el handoff de diseño (`sheetUp .28s
+          // cubic-bezier(.3,.8,.3,1)`): cada paso del flujo entra con un
+          // leve deslizamiento hacia arriba en vez de aparecer de golpe.
+          duration: const Duration(milliseconds: 280),
+          switchInCurve: const Cubic(.3, .8, .3, 1),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, .04),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
             ),
-          QuickMatchActive(:final search) when search.status == 'EXPIRED' =>
-            const _Expired(),
-          QuickMatchActive(:final search) => _Searching(search: search),
-        },
+          ),
+          child: KeyedSubtree(
+            key: ValueKey(_quickMatchStateKey(state)),
+            child: switch (state) {
+              QuickMatchInitial() || QuickMatchLoading() => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              QuickMatchFailure(:final message) => _Failure(message: message),
+              QuickMatchIdle() => _IdleQuickMatch(
+                onOpenConfiguration: _showInitialConfiguration,
+              ),
+              QuickMatchActive(:final search, :final exchangeRates)
+                  when search.status == 'PROPOSAL' &&
+                      search.proposal?.status == 'PENDING' =>
+                _Proposal(search: search, exchangeRates: exchangeRates),
+              QuickMatchActive(:final search)
+                  when search.status == 'CONFIRMED' =>
+                _Confirmed(
+                  isNewGroup: search.proposal?.type == 'NEW_GROUP',
+                  matchId: search.proposal?.matchId,
+                  playerCount: search.proposal?.playerIds.length ?? 4,
+                ),
+              QuickMatchActive(:final search)
+                  when search.status == 'EXPIRED' =>
+                _Expired(wasOpenMatch: search.proposal?.type == 'OPEN_MATCH'),
+              QuickMatchActive(:final search) => _Searching(search: search),
+            },
+          ),
+        ),
       ),
     ),
   );
+
+  /// One key per visually distinct step of the flow — not per state object —
+  /// so `AnimatedSwitcher` only replays its transition when the step itself
+  /// changes (e.g. searching → proposal), never on every silent poll tick
+  /// that re-emits the same step.
+  String _quickMatchStateKey(QuickMatchState state) => switch (state) {
+    QuickMatchInitial() || QuickMatchLoading() => 'loading',
+    QuickMatchFailure() => 'failure',
+    QuickMatchIdle() => 'idle',
+    QuickMatchActive(:final search)
+        when search.status == 'PROPOSAL' &&
+            search.proposal?.status == 'PENDING' =>
+      'proposal',
+    QuickMatchActive(:final search) when search.status == 'CONFIRMED' =>
+      'confirmed',
+    QuickMatchActive(:final search) when search.status == 'EXPIRED' =>
+      'expired',
+    QuickMatchActive() => 'searching',
+  };
 
   void _showScheduleSheet(BuildContext context, QuickMatchSearchDto search) {
     showModalBottomSheet<void>(
@@ -629,7 +676,7 @@ final class _PreferenceCard extends StatelessWidget {
     padding: const EdgeInsets.all(13),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(18),
       border: Border.all(
         color: Theme.of(context).colorScheme.outlineVariant,
         width: 1.5,
@@ -648,7 +695,7 @@ final class _LevelTag extends StatelessWidget {
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.tertiary,
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(12),
     ),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -682,15 +729,15 @@ final class _ChoicePill extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: selected ? scheme.primaryContainer : scheme.surface,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected ? scheme.primary : scheme.outlineVariant,
               width: 1.5,
@@ -788,25 +835,35 @@ final class _TimeSlot extends StatelessWidget {
 }
 
 final class _Proposal extends StatelessWidget {
-  const _Proposal({required this.search});
+  const _Proposal({required this.search, required this.exchangeRates});
 
   final QuickMatchSearchDto search;
+  final List<ExchangeRateRow> exchangeRates;
 
   @override
   Widget build(BuildContext context) {
     final proposal = search.proposal!;
     if (proposal.type == 'OPEN_MATCH') {
-      return _OpenMatchProposal(search: search, proposal: proposal);
+      return _OpenMatchProposal(
+        search: search,
+        proposal: proposal,
+        exchangeRates: exchangeRates,
+      );
     }
-    return _NewGroupProposal(proposal: proposal);
+    return _NewGroupProposal(proposal: proposal, exchangeRates: exchangeRates);
   }
 }
 
 final class _OpenMatchProposal extends StatelessWidget {
-  const _OpenMatchProposal({required this.search, required this.proposal});
+  const _OpenMatchProposal({
+    required this.search,
+    required this.proposal,
+    required this.exchangeRates,
+  });
 
   final QuickMatchSearchDto search;
   final QuickMatchProposalDto proposal;
+  final List<ExchangeRateRow> exchangeRates;
 
   @override
   Widget build(BuildContext context) {
@@ -821,6 +878,7 @@ final class _OpenMatchProposal extends StatelessWidget {
         search: search,
         proposal: proposal,
         match: snapshot.data,
+        exchangeRates: exchangeRates,
       ),
     );
   }
@@ -831,11 +889,13 @@ final class _OpenMatchProposalLayout extends StatelessWidget {
     required this.search,
     required this.proposal,
     required this.match,
+    required this.exchangeRates,
   });
 
   final QuickMatchSearchDto search;
   final QuickMatchProposalDto proposal;
   final MatchDetailDto? match;
+  final List<ExchangeRateRow> exchangeRates;
 
   @override
   Widget build(BuildContext context) {
@@ -872,6 +932,7 @@ final class _OpenMatchProposalLayout extends StatelessWidget {
                 title: title,
                 location: location,
                 date: date,
+                exchangeRates: exchangeRates,
               ),
               const SizedBox(height: 12),
               _ProposalHold(expiresAt: proposal.expiresAt),
@@ -914,7 +975,7 @@ final class _ProposalEyebrow extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: scheme.primary.withValues(alpha: .14),
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -945,12 +1006,14 @@ final class _OpenMatchCard extends StatelessWidget {
     required this.title,
     required this.location,
     required this.date,
+    required this.exchangeRates,
   });
 
   final MatchDetailDto? match;
   final String title;
   final String? location;
   final DateTime date;
+  final List<ExchangeRateRow> exchangeRates;
 
   @override
   Widget build(BuildContext context) {
@@ -985,6 +1048,8 @@ final class _OpenMatchCard extends StatelessWidget {
                 _ProposalPrice(
                   amountCents: match!.pricePerPlayerCents,
                   currency: match!.displayCurrency ?? match!.pricingCurrency,
+                  scheduledAt: date,
+                  exchangeRates: exchangeRates,
                 ),
             ],
           ),
@@ -996,6 +1061,8 @@ final class _OpenMatchCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
@@ -1007,6 +1074,8 @@ final class _OpenMatchCard extends StatelessWidget {
               padding: const EdgeInsets.only(left: 21),
               child: Text(
                 location!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
               ),
             ),
@@ -1044,20 +1113,34 @@ final class _OpenMatchCard extends StatelessWidget {
 }
 
 final class _ProposalPrice extends StatelessWidget {
-  const _ProposalPrice({required this.amountCents, required this.currency});
+  const _ProposalPrice({
+    required this.amountCents,
+    required this.currency,
+    required this.scheduledAt,
+    required this.exchangeRates,
+  });
 
   final int amountCents;
   final String? currency;
+  final DateTime scheduledAt;
+  final List<ExchangeRateRow> exchangeRates;
 
   @override
   Widget build(BuildContext context) {
-    final symbol = currency == 'USD' ? 'US\$' : (currency ?? '');
+    final resolvedCurrency = CurrencyCode.fromApiValue(currency);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
-          '$symbol${(amountCents / 100).toStringAsFixed(2)} p/p',
-          style: const TextStyle(fontWeight: FontWeight.w900),
+        DualPrice(
+          primaryLabel: formatMoneyFromMinor(amountCents, resolvedCurrency),
+          secondaryLabel: secondaryBsLabelSV(
+            primaryMinor: amountCents,
+            primaryCurrency: resolvedCurrency,
+            rates: exchangeRates,
+            effectiveDateIso: localCalendarDateIsoSV(scheduledAt),
+          ),
+          suffix: 'p/p',
+          primarySize: 15,
         ),
         Text(
           'Precio por jugador',
@@ -1083,7 +1166,7 @@ final class _ProposalTag extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: emphasized ? scheme.tertiary : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1304,9 +1387,10 @@ final class _ProposalFooter extends StatelessWidget {
 }
 
 final class _NewGroupProposal extends StatefulWidget {
-  const _NewGroupProposal({required this.proposal});
+  const _NewGroupProposal({required this.proposal, required this.exchangeRates});
 
   final QuickMatchProposalDto proposal;
+  final List<ExchangeRateRow> exchangeRates;
 
   @override
   State<_NewGroupProposal> createState() => _NewGroupProposalState();
@@ -1353,12 +1437,29 @@ final class _NewGroupProposalState extends State<_NewGroupProposal> {
                   selected ? AppIcons.checkCircle : AppIcons.pending,
                   color: selected ? scheme.primary : scheme.onSurfaceVariant,
                 ),
-                title: Text(option.venueName),
+                title: Text(
+                  option.venueName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Text(
                   '${option.courtName} · ${_formatOptionDate(option.scheduledAt)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                trailing: Text(
-                  'US\$ ${(option.pricePerPlayerCents / 100).toStringAsFixed(2)}',
+                trailing: DualPrice(
+                  primaryLabel: formatMoneyFromMinor(
+                    option.pricePerPlayerCents,
+                    CurrencyCode.usd,
+                  ),
+                  secondaryLabel: secondaryBsLabelSV(
+                    primaryMinor: option.pricePerPlayerCents,
+                    primaryCurrency: CurrencyCode.usd,
+                    rates: widget.exchangeRates,
+                    effectiveDateIso: localCalendarDateIsoSV(
+                      option.scheduledAt,
+                    ),
+                  ),
                 ),
               ),
             );
@@ -1755,7 +1856,7 @@ final class _NoMatchActions extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(18),
       border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
     ),
     child: Column(
@@ -1881,16 +1982,18 @@ final class _ScheduleSheetState extends State<_ScheduleSheet> {
 }
 
 final class _Expired extends StatelessWidget {
-  const _Expired();
+  const _Expired({required this.wasOpenMatch});
+
+  final bool wasOpenMatch;
 
   @override
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.fromLTRB(20, 36, 20, 28),
     children: [
-      _PulseIcon(icon: Icons.schedule_rounded),
+      _PulseIcon(icon: AppIcons.clock),
       const SizedBox(height: 20),
       Text(
-        'La propuesta expiró',
+        wasOpenMatch ? 'Se liberó el cupo' : 'La propuesta expiró',
         textAlign: TextAlign.center,
         style: Theme.of(
           context,
@@ -1992,7 +2095,7 @@ final class _Confirmed extends StatelessWidget {
                 ],
               ),
               child: Icon(
-                Icons.check_rounded,
+                AppIcons.checkCircle,
                 color: Theme.of(context).colorScheme.onPrimary,
                 size: 44,
               ),
@@ -2020,7 +2123,7 @@ final class _Confirmed extends StatelessWidget {
                 child: FilledButton.icon(
                   key: const Key('quick-match.open-match'),
                   onPressed: () => context.go(Routes.matchDetail(matchId!)),
-                  icon: const Icon(Icons.sports_tennis_rounded),
+                  icon: const Icon(AppIcons.racquetSport),
                   label: const Text('Ver partida'),
                 ),
               ),
@@ -2043,22 +2146,9 @@ final class _Failure extends StatelessWidget {
   const _Failure({required this.message});
   final String message;
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline_rounded, size: 48),
-          const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: () => context.read<QuickMatchCubit>().load(),
-            child: const Text('Reintentar'),
-          ),
-        ],
-      ),
-    ),
+  Widget build(BuildContext context) => ErrorState(
+    icon: AppIcons.warning,
+    message: message,
+    onRetry: () => context.read<QuickMatchCubit>().load(),
   );
 }

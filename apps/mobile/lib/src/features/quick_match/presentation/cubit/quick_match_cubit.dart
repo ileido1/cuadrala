@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../../../core/formatting/fx_price_labels.dart';
+import '../../../../core/formatting/money_conversion.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../../catalog/data/models/category_dto.dart';
 import '../../../catalog/data/models/sport_dto.dart';
@@ -24,8 +26,17 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
   Future<void> load() async {
     emit(const QuickMatchLoading());
     try {
-      final search = await _repository.current();
-      emit(search == null ? const QuickMatchIdle() : QuickMatchActive(search));
+      final results = await Future.wait([
+        _repository.current(),
+        loadExchangeRatesSafelySV(),
+      ]);
+      final search = results[0] as QuickMatchSearchDto?;
+      final rates = results[1] as List<ExchangeRateRow>;
+      emit(
+        search == null
+            ? const QuickMatchIdle()
+            : QuickMatchActive(search, exchangeRates: rates),
+      );
     } on AppFailure catch (e) {
       emit(QuickMatchFailure(e.message));
     } catch (_) {
@@ -40,9 +51,18 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
   /// tries again.
   Future<void> refreshSilently() async {
     try {
-      final search = await _repository.current();
+      final results = await Future.wait([
+        _repository.current(),
+        loadExchangeRatesSafelySV(),
+      ]);
       if (isClosed) return;
-      emit(search == null ? const QuickMatchIdle() : QuickMatchActive(search));
+      final search = results[0] as QuickMatchSearchDto?;
+      final rates = results[1] as List<ExchangeRateRow>;
+      emit(
+        search == null
+            ? const QuickMatchIdle()
+            : QuickMatchActive(search, exchangeRates: rates),
+      );
     } catch (_) {
       // Keep showing the last known state.
     }
@@ -51,7 +71,13 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
   Future<void> start(Map<String, Object?> preferences) async {
     emit(const QuickMatchLoading());
     try {
-      emit(QuickMatchActive(await _repository.start(preferences)));
+      final results = await Future.wait([
+        _repository.start(preferences),
+        loadExchangeRatesSafelySV(),
+      ]);
+      final search = results[0] as QuickMatchSearchDto;
+      final rates = results[1] as List<ExchangeRateRow>;
+      emit(QuickMatchActive(search, exchangeRates: rates));
     } on AppFailure catch (e) {
       emit(QuickMatchFailure(e.message));
     } catch (_) {

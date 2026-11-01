@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../../core/formatting/money_conversion.dart';
 import '../../data/models/quick_match_search_dto.dart';
 
 sealed class QuickMatchState extends Equatable {
@@ -20,8 +21,13 @@ final class QuickMatchIdle extends QuickMatchState {
 }
 
 final class QuickMatchActive extends QuickMatchState {
-  const QuickMatchActive(this.search);
+  const QuickMatchActive(this.search, {this.exchangeRates = const []});
   final QuickMatchSearchDto search;
+
+  /// Tasas del día para mostrar el precio dual (USD + Bs) en las propuestas
+  /// — mismo patrón que `DiscoverMatchesLoaded.exchangeRates`.
+  final List<ExchangeRateRow> exchangeRates;
+
   @override
   List<Object?> get props => [search.id, search.status, search.noMatchYet];
 }

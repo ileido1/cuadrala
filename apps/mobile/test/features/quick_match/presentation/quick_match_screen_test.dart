@@ -1,4 +1,6 @@
+import 'package:cuadrala_mobile/src/core/data/exchange_rates_repository.dart';
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
+import 'package:cuadrala_mobile/src/core/formatting/money_conversion.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/models/category_dto.dart';
@@ -17,6 +19,9 @@ import 'package:mocktail/mocktail.dart';
 class _MockQuickMatchRepository extends Mock implements QuickMatchRepository {}
 
 class _MockCatalogRepository extends Mock implements CatalogRepository {}
+
+class _MockExchangeRatesRepository extends Mock
+    implements ExchangeRatesRepository {}
 
 class _MockMatchesRepository extends Mock implements MatchesRepository {}
 
@@ -115,23 +120,51 @@ QuickMatchSearchDto _waitingGroup() => QuickMatchSearchDto(
   ),
 );
 
+QuickMatchSearchDto _expired({required String proposalType}) =>
+    QuickMatchSearchDto(
+      id: 'search-1',
+      sportId: 'sport-1',
+      categoryId: 'category-1',
+      status: 'EXPIRED',
+      noMatchYet: true,
+      slots: const ['EVENING'],
+      targetDate: DateTime(2030, 6, 1),
+      widenLevel: false,
+      zoneKm: 5,
+      includeOpenMatches: true,
+      proposal: QuickMatchProposalDto(
+        id: 'proposal-1',
+        type: proposalType,
+        status: 'EXPIRED',
+        matchId: null,
+        expiresAt: DateTime.now().subtract(const Duration(minutes: 1)),
+      ),
+    );
+
 void main() {
   late _MockQuickMatchRepository repository;
   late _MockCatalogRepository catalog;
   late _MockMatchesRepository matches;
+  late _MockExchangeRatesRepository exchangeRates;
   late QuickMatchCubit cubit;
 
   setUp(() {
     repository = _MockQuickMatchRepository();
     catalog = _MockCatalogRepository();
     matches = _MockMatchesRepository();
+    exchangeRates = _MockExchangeRatesRepository();
     cubit = QuickMatchCubit(repository: repository, catalogRepository: catalog);
     getIt.registerSingleton<MatchesRepository>(matches);
+    getIt.registerSingleton<ExchangeRatesRepository>(exchangeRates);
+    when(
+      () => exchangeRates.listByCountry(countryCode: any(named: 'countryCode')),
+    ).thenAnswer((_) async => const []);
   });
 
   tearDown(() {
     cubit.close();
     getIt.unregister<MatchesRepository>();
+    getIt.unregister<ExchangeRatesRepository>();
   });
 
   testWidgets('renders the active queue handoff hierarchy while searching', (
@@ -175,7 +208,7 @@ void main() {
     expect(find.text('Partida abierta con cupo'), findsOneWidget);
     expect(find.text('¡Partida encontrada!'), findsOneWidget);
     expect(find.text('Club Cuádrala · Cancha 2'), findsOneWidget);
-    expect(find.text('US\$9.00 p/p'), findsOneWidget);
+    expect(find.text('US\$ 9.00 p/p'), findsOneWidget);
     expect(find.text('Confirmar cupo'), findsOneWidget);
     expect(find.text('Seguir buscando'), findsOneWidget);
   });
@@ -267,5 +300,69 @@ void main() {
             as Map<String, Object?>;
     expect(captured['sportId'], 'tennis');
     expect(captured['categoryId'], 'tennis-6');
+  });
+
+  testWidgets('shows that the slot was freed, not a generic expiry, when an open-match hold expires', (
+    tester,
+  ) async {
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _expired(proposalType: 'OPEN_MATCH'));
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Se liberó el cupo'), findsOneWidget);
+    expect(find.text('La propuesta expiró'), findsNothing);
+  });
+
+  testWidgets('shows the generic expiry copy when a new-group proposal expires', (
+    tester,
+  ) async {
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _expired(proposalType: 'NEW_GROUP'));
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('La propuesta expiró'), findsOneWidget);
+    expect(find.text('Se liberó el cupo'), findsNothing);
+  });
+
+  testWidgets('shows the Bs secondary price once exchange rates are available', (
+    tester,
+  ) async {
+    when(
+      () => exchangeRates.listByCountry(countryCode: any(named: 'countryCode')),
+    ).thenAnswer(
+      (_) async => const [ExchangeRateRow(currency: 'USD', rateToBs: 50)],
+    );
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _openMatchProposal());
+    when(
+      () => matches.getMatchDetail('match-1'),
+    ).thenAnswer((_) async => _matchDetail());
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('US\$ 9.00 p/p'), findsOneWidget);
+    expect(find.textContaining('Bs. 450.00'), findsOneWidget);
+  });
+
+  testWidgets('shows the shared ErrorState with a retry action on failure', (
+    tester,
+  ) async {
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => throw Exception('boom'));
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No pudimos cargar tu búsqueda.'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 }
