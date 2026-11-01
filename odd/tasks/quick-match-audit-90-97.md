@@ -22,11 +22,12 @@ Two independent units, disjoint edit surfaces: T1 (API, parent inline) and T2 (M
 
 | ID | Linked S# | Route | Status | Commit/Evidence |
 |----|-----------|-------|--------|------------------|
-| T1 | S1-S4 | inline (parent) | done | see Log |
-| T2 | S5-S8 | delegated (mobile writer) | pending | |
+| T1 | S1-S4 | inline (parent) | done | PR #98, merged `73bc583` |
+| T2 | S5-S8 | delegated (mobile writer) | done | branch `fix/quick-match-mobile-ux-94-95-96-97`, commit `8318d77` |
 | T3 | all | parent seam check | pending | |
 
 ## Log
 
 - **L1**: User asked (informal Spanish) what's missing re: Quick Match queue, notifications, UX, unseen errors. Audited via explorer agent, documented as #90-#97, user confirmed "si" to start implementing all.
 - T1 (API): fixed in `prisma_quick_match_repository.ts` (S1, S2), `confirm_my_quick_match_proposal.use_case.ts` (S3), `match_quick_match.use_case.ts` + `quick_match_repository.ts` port (S4). New test file `quick_match_correctness.http-db.integration.test.ts`, 4 RED-then-GREEN cases. Regression: existing `quick_match_group.http-db.integration.test.ts` unchanged and green. Typecheck/lint clean.
+- T2 (Mobile): S5 — `quick_match_cubit.dart`'s `load/start/confirmProposal/dismissProposal` now catch `on AppFailure catch (e) { emit(Failure(e.message)) }` before the generic `catch (_)`, reusing the convention from `matchmaking_cubit.dart`/`open_matches_cubit.dart`; `ApiClient` already throws `AppFailure` for every HTTP failure, so backend codes like `CANCHA_NO_DISPONIBLE`/`PROPUESTA_VENCIDA` now reach the UI. S6 — `_Searching` in `quick_match_screen.dart` became a `StatefulWidget` with a `Timer.periodic(5s)` calling a new `QuickMatchCubit.refreshSilently()` (fetches `current()` without emitting `QuickMatchLoading`, so no spinner flash); timer is cancelled in `dispose()`. S7 — `foreground_notification_handler.dart` gained `resolveNotificationNavigation(...)`, which returns `null` (skip push) when the resolved destination is already the visible route; `_navigateFromData` now uses it before `router.go`/`router.push`. The actual file lives at `lib/src/core/push/foreground_notification_handler.dart`, not under `features/notifications/` as the ticket guessed. S8 — RED-then-GREEN evidence for all three: 4 new cubit tests, 2 new screen tests (poll + timer-cancel-on-dispose), 4 new handler tests, all in pre-existing test files/siblings; no prior quick-match test changed behavior. `flutter analyze`: clean. Commit: `8318d77`.

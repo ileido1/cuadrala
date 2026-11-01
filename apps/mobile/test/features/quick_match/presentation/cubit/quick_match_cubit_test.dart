@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/quick_match/data/models/quick_match_search_dto.dart';
 import 'package:cuadrala_mobile/src/features/quick_match/data/quick_match_repository.dart';
@@ -80,6 +81,88 @@ void main() {
       })).called(1);
     },
     expect: () => [isA<QuickMatchLoading>(), isA<QuickMatchActive>()],
+  );
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should surface the backend error message when loading fails',
+    build: build,
+    setUp: () => when(repository.current).thenThrow(
+      const AppFailure(code: 'SERVER_DOWN', message: 'El servidor no responde.'),
+    ),
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<QuickMatchLoading>(),
+      isA<QuickMatchFailure>().having(
+        (s) => s.message,
+        'message',
+        'El servidor no responde.',
+      ),
+    ],
+  );
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should fall back to a generic message when loading fails without an AppFailure',
+    build: build,
+    setUp: () => when(repository.current).thenThrow(Exception('boom')),
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<QuickMatchLoading>(),
+      isA<QuickMatchFailure>().having(
+        (s) => s.message,
+        'message',
+        'No pudimos cargar tu búsqueda.',
+      ),
+    ],
+  );
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should surface the backend error message when starting the search fails',
+    build: build,
+    setUp: () => when(() => repository.start(any())).thenThrow(
+      const AppFailure(code: 'CANCHA_REQUERIDA', message: 'Debes elegir una cancha.'),
+    ),
+    act: (cubit) => cubit.start({'sportId': 'sport'}),
+    expect: () => [
+      isA<QuickMatchLoading>(),
+      isA<QuickMatchFailure>().having(
+        (s) => s.message,
+        'message',
+        'Debes elegir una cancha.',
+      ),
+    ],
+  );
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should surface the backend error message when confirming a proposal fails',
+    build: build,
+    setUp: () => when(() => repository.confirmProposal(option: any(named: 'option')))
+        .thenThrow(
+      const AppFailure(code: 'PROPUESTA_VENCIDA', message: 'La propuesta venció.'),
+    ),
+    act: (cubit) => cubit.confirmProposal(),
+    expect: () => [
+      isA<QuickMatchFailure>().having(
+        (s) => s.message,
+        'message',
+        'La propuesta venció.',
+      ),
+    ],
+  );
+
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should surface the backend error message when dismissing a proposal fails',
+    build: build,
+    setUp: () => when(repository.dismissProposal).thenThrow(
+      const AppFailure(code: 'CANCHA_NO_DISPONIBLE', message: 'La cancha ya no está disponible.'),
+    ),
+    act: (cubit) => cubit.dismissProposal(),
+    expect: () => [
+      isA<QuickMatchFailure>().having(
+        (s) => s.message,
+        'message',
+        'La cancha ya no está disponible.',
+      ),
+    ],
   );
 
   blocTest<QuickMatchCubit, QuickMatchState>(

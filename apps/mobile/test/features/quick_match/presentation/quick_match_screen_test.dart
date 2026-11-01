@@ -20,12 +20,12 @@ class _MockCatalogRepository extends Mock implements CatalogRepository {}
 
 class _MockMatchesRepository extends Mock implements MatchesRepository {}
 
-QuickMatchSearchDto _searching() => QuickMatchSearchDto(
+QuickMatchSearchDto _searching({bool noMatchYet = false}) => QuickMatchSearchDto(
   id: 'search-1',
   sportId: 'sport-1',
   categoryId: 'category-1',
   status: 'SEARCHING',
-  noMatchYet: false,
+  noMatchYet: noMatchYet,
   slots: const ['EVENING'],
   targetDate: DateTime(2030, 6, 1),
   widenLevel: false,
@@ -178,6 +178,42 @@ void main() {
     expect(find.text('US\$9.00 p/p'), findsOneWidget);
     expect(find.text('Confirmar cupo'), findsOneWidget);
     expect(find.text('Seguir buscando'), findsOneWidget);
+  });
+
+  testWidgets('refreshes the waiting screen periodically while it stays open', (
+    tester,
+  ) async {
+    var callCount = 0;
+    when(() => repository.current()).thenAnswer((_) async {
+      callCount++;
+      return callCount == 1 ? _searching() : _searching(noMatchYet: true);
+    });
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Buscando jugadores'), findsOneWidget);
+    expect(callCount, 1);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seguimos buscando'), findsOneWidget);
+    expect(callCount, greaterThanOrEqualTo(2));
+  });
+
+  testWidgets('cancels the polling timer when the waiting screen is removed', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => _searching());
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    // If the periodic timer isn't cancelled on dispose, flutter_test fails
+    // this test with "A Timer is still pending" once it finishes.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
   });
 
   testWidgets('lets the player choose a sport and submits its category', (

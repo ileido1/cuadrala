@@ -1435,13 +1435,41 @@ final class _Countdown extends StatelessWidget {
   );
 }
 
-final class _Searching extends StatelessWidget {
+final class _Searching extends StatefulWidget {
   const _Searching({required this.search});
 
   final QuickMatchSearchDto search;
 
   @override
+  State<_Searching> createState() => _SearchingState();
+}
+
+final class _SearchingState extends State<_Searching> {
+  /// How often the waiting screen silently re-fetches the search while it
+  /// stays open, so a proposal/group update surfaces without the player
+  /// needing to leave and reopen the screen.
+  static const _pollInterval = Duration(seconds: 5);
+
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pollTimer = Timer.periodic(
+      _pollInterval,
+      (_) => context.read<QuickMatchCubit>().refreshSilently(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final search = widget.search;
     final noMatch = search.noMatchYet;
     return Column(
       children: [
@@ -1521,7 +1549,7 @@ final class _Searching extends StatelessWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) =>
-          _QuickMatchSheetFrame(child: _ScheduleSheet(search: search)),
+          _QuickMatchSheetFrame(child: _ScheduleSheet(search: widget.search)),
     );
   }
 }
