@@ -5,9 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/failures/app_failure.dart';
+import '../../../core/formatting/fx_price_labels.dart';
+import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../shared/widgets/dual_price.dart';
 import '../data/monetization_repository.dart';
 import 'waiting_confirmation_screen.dart';
 
@@ -60,6 +64,18 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
   bool _uploading = false;
   Uint8List? _imageBytes;
   String _fileName = 'receipt.jpg';
+  List<ExchangeRateRow> _exchangeRates = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExchangeRates();
+  }
+
+  Future<void> _loadExchangeRates() async {
+    final rates = await loadExchangeRatesSafelySV();
+    if (mounted) setState(() => _exchangeRates = rates);
+  }
 
   Future<void> _pick() async {
     final picker = ImagePicker();
@@ -102,8 +118,11 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final message = e is AppFailure
+          ? e.message
+          : 'No se pudo subir el comprobante.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo subir el comprobante.')),
+        SnackBar(content: Text(message)),
       );
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -114,7 +133,12 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final currency = CurrencyCode.resolve(pricingCurrency: widget.pricingCurrency);
-    final amount = formatMoneyCents(widget.amountPerPersonCents, currency);
+    final secondaryBsLabel = secondaryBsLabelSV(
+      primaryMinor: widget.amountPerPersonCents,
+      primaryCurrency: currency,
+      rates: _exchangeRates,
+      effectiveDateIso: localCalendarDateIsoSV(DateTime.now()),
+    );
 
     return Scaffold(
       key: const Key('pay.upload.receipt.screen'),
@@ -143,13 +167,21 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '${widget.matchTitle} · $amount',
+                    widget.matchTitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w900,
                         ),
                   ),
+                ),
+                const SizedBox(width: 10),
+                DualPrice(
+                  primaryLabel: formatMoneyCents(
+                    widget.amountPerPersonCents,
+                    currency,
+                  ),
+                  secondaryLabel: secondaryBsLabel,
                 ),
               ],
             ),
