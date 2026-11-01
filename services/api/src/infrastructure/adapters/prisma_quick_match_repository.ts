@@ -140,16 +140,22 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
     const DAY_OF_WEEK = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][_search.targetDate.getUTCDay()]!;
     const PREVIOUS_PROPOSAL = await PRISMA.quickMatchProposal.findUnique({ where: { searchId: _search.id }, select: { groupKey: true, status: true } });
     const EXCLUDED_GROUP_KEYS = PREVIOUS_PROPOSAL?.status === 'DISMISSED' && PREVIOUS_PROPOSAL.groupKey !== null ? [PREVIOUS_PROPOSAL.groupKey] : [];
+    //? #90: mismo filtro de vigencia que ya usa el camino de partido abierto
+    //? (`findOpenCandidateSV`/`createOpenProposalSV`, `expiresAt: {gt: new Date()}`)
+    //? — sin esto, una propuesta grupal ya vencida pero no "barrida" todavía
+    //? (el sweep es perezoso, ver `expireProposalForUserSV`) sigue ocupando
+    //? cupo y bloquea que se forme un grupo nuevo.
+    const NOW = new Date();
     const ACTIVE_GROUP = await PRISMA.quickMatchProposal.findFirst({
       where: {
-        groupKey: { not: null }, status: { in: ['PENDING', 'CONFIRMED'] },
+        groupKey: { not: null }, status: { in: ['PENDING', 'CONFIRMED'] }, expiresAt: { gt: NOW },
         search: { sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: { hasSome: _search.slots } },
         playerIds: { has: OWNER.userId },
       }, select: { groupKey: true, playerIds: true },
     });
     const GROUPS = ACTIVE_GROUP === null ? await PRISMA.quickMatchProposal.findMany({
       where: {
-        groupKey: { not: null, notIn: EXCLUDED_GROUP_KEYS }, status: { in: ['PENDING', 'CONFIRMED'] },
+        groupKey: { not: null, notIn: EXCLUDED_GROUP_KEYS }, status: { in: ['PENDING', 'CONFIRMED'] }, expiresAt: { gt: NOW },
         search: { sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: { hasSome: _search.slots } },
       }, orderBy: { createdAt: 'asc' }, take: 10, select: { groupKey: true, playerIds: true },
     }) : [ACTIVE_GROUP];
@@ -179,6 +185,7 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
       userIds: [...EXISTING_PLAYER_IDS, OWNER.userId, ...ACTIVE_USER_IDS, ...INVITATION_USER_IDS],
       confirmedUserIds: [...EXISTING_PLAYER_IDS, OWNER.userId, ...ACTIVE_USER_IDS],
       invitationUserIds: INVITATION_USER_IDS,
+      existingMemberUserIds: EXISTING_PLAYER_IDS,
       ...(EXCLUDED_GROUP_KEYS.length === 0 ? {} : { excludedGroupKeys: EXCLUDED_GROUP_KEYS }),
     };
   }
@@ -189,7 +196,7 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
     const SEARCH = await PRISMA.$transaction(async (_tx) => {
       await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${SCOPE_KEY}))`;
       const SERIALIZED_GROUPS = _group.groupKey === undefined ? await _tx.quickMatchProposal.findMany({
-        where: { groupKey: { not: null, notIn: _group.excludedGroupKeys ?? [] }, status: { in: ['PENDING', 'CONFIRMED'] }, search: { sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: { hasSome: _search.slots } } },
+        where: { groupKey: { not: null, notIn: _group.excludedGroupKeys ?? [] }, status: { in: ['PENDING', 'CONFIRMED'] }, expiresAt: { gt: new Date() }, search: { sportId: _search.sportId, categoryId: _search.categoryId, targetDate: _search.targetDate, slots: { hasSome: _search.slots } } },
         orderBy: { createdAt: 'asc' }, take: 10, select: { groupKey: true, playerIds: true },
       }) : [];
       const SERIALIZED_GROUP = SERIALIZED_GROUPS.find((_candidate) => _candidate.playerIds.length < 4);
@@ -367,7 +374,26 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
   }
 
   async cancelForUserSV(_userId: string): Promise<void> {
-    await PRISMA.quickMatchSearch.updateMany({ where: { userId: _userId, status: { in: ['SEARCHING', 'PROPOSAL'] } }, data: { status: 'CANCELLED' } });
+    await PRISMA.$transaction(async (_tx) => {
+      const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, include: SEARCH_INCLUDE });
+      if (CURRENT === null || !['SEARCHING', 'PROPOSAL'].includes(CURRENT.status)) return;
+      //? #91: si hay una propuesta grupal PENDING/CONFIRMED, libera el cupo igual
+      //? que `dismissProposalForUserSV` — sin esto el grupo queda con un cupo
+      //? fantasma que nunca puede completar los 4 confirmados (el cancelado no
+      //? vuelve a confirmar).
+      if (CURRENT.proposal !== null && ['PENDING', 'CONFIRMED'].includes(CURRENT.proposal.status) && CURRENT.proposal.groupKey !== null) {
+        await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${CURRENT.proposal.groupKey}))`;
+        const GROUP = await _tx.quickMatchProposal.findMany({ where: { groupKey: CURRENT.proposal.groupKey, status: { in: ['PENDING', 'CONFIRMED'] } }, select: { id: true, searchId: true, playerIds: true } });
+        const PLAYER_IDS = GROUP[0]?.playerIds.filter((_id) => _id !== _userId) ?? [];
+        const REMAINING_SEARCH_IDS = GROUP.filter((_proposal) => _proposal.id !== CURRENT.proposal!.id).map((_proposal) => _proposal.searchId);
+        await _tx.quickMatchProposal.updateMany({ where: { groupKey: CURRENT.proposal.groupKey, id: { not: CURRENT.proposal.id }, status: { in: ['PENDING', 'CONFIRMED'] } }, data: { playerIds: PLAYER_IDS, status: 'PENDING' } });
+        await _tx.quickMatchProposal.update({ where: { id: CURRENT.proposal.id }, data: { status: 'DISMISSED' } });
+        await _tx.quickMatchSearch.updateMany({ where: { id: { in: REMAINING_SEARCH_IDS } }, data: { status: 'PROPOSAL', noMatchYet: false } });
+      } else if (CURRENT.proposal !== null && ['PENDING', 'CONFIRMED'].includes(CURRENT.proposal.status)) {
+        await _tx.quickMatchProposal.update({ where: { id: CURRENT.proposal.id }, data: { status: 'DISMISSED' } });
+      }
+      await _tx.quickMatchSearch.update({ where: { id: CURRENT.id }, data: { status: 'CANCELLED' } });
+    });
   }
 
   private async expireProposalForUserSV(_userId: string): Promise<void> {

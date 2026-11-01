@@ -48,6 +48,8 @@ export type QuickMatchGroupCandidateDTO = {
   confirmedUserIds?: string[];
   invitationUserIds?: string[];
   excludedGroupKeys?: string[];
+  /** #93: miembros que ya estaban PENDING/CONFIRMED en el grupo antes de esta llamada — deben ser notificados de que se sumó alguien nuevo. */
+  existingMemberUserIds?: string[];
 };
 
 export interface QuickMatchRepository {
