@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/formatting/fx_price_labels.dart';
 import '../../../core/formatting/id_preview.dart';
+import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../shared/widgets/dual_price.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/info_badge.dart';
 import '../../monetization/data/monetization_repository.dart';
@@ -91,6 +94,16 @@ final class _MatchLifecycleView extends StatelessWidget {
           final scheduleText = scheduled == null
               ? 'Por confirmar'
               : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';
+          final currency = matchDetailDisplayCurrency(m);
+          final priceDateIso = scheduled != null
+              ? localCalendarDateIsoSV(scheduled)
+              : localCalendarDateIsoSV(DateTime.now());
+          final secondaryPriceLabel = secondaryBsLabelSV(
+            primaryMinor: m.pricePerPlayerCents,
+            primaryCurrency: currency,
+            rates: loaded.exchangeRates,
+            effectiveDateIso: priceDateIso,
+          );
 
           final isScheduled = m.status == 'SCHEDULED';
           final inProgress = m.status == 'IN_PROGRESS';
@@ -212,18 +225,14 @@ final class _MatchLifecycleView extends StatelessWidget {
                               Icon(AppIcons.payments,
                                   size: 16, color: scheme.onPrimary),
                               const SizedBox(width: 6),
-                              Text(
-                                formatMoneyCents(
+                              DualPrice(
+                                alignEnd: false,
+                                primaryLabel: formatMoneyCents(
                                   m.pricePerPlayerCents,
-                                  matchDetailDisplayCurrency(m),
+                                  currency,
                                 ),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: scheme.onPrimary.withValues(alpha: 0.9),
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                secondaryLabel: secondaryPriceLabel,
+                                primarySize: 14,
                               ),
                             ],
                           ),

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/formatting/money_conversion.dart';
 import '../../data/models/match_detail_dto.dart';
 
 sealed class MatchDetailState extends Equatable {
@@ -26,6 +27,7 @@ final class MatchDetailLoaded extends MatchDetailState {
     this.actionLoading = false,
     this.actionMessage,
     this.actionMessageIsError = false,
+    this.exchangeRates = const [],
   });
 
   final MatchDetailDto match;
@@ -37,6 +39,7 @@ final class MatchDetailLoaded extends MatchDetailState {
   final bool actionLoading;
   final String? actionMessage;
   final bool actionMessageIsError;
+  final List<ExchangeRateRow> exchangeRates;
 
   bool get isParticipant => match.participants.any((p) => p.userId == viewerUserId);
 
@@ -49,6 +52,7 @@ final class MatchDetailLoaded extends MatchDetailState {
         actionLoading,
         actionMessage,
         actionMessageIsError,
+        exchangeRates,
       ];
 }
 

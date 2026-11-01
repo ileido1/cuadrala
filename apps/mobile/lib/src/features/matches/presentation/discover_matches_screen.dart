@@ -11,6 +11,7 @@ import '../../../core/formatting/scheduled_label.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/date_strip.dart';
+import '../../../shared/widgets/dual_price.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/match_card.dart';
 import '../../../shared/widgets/selectable_chip.dart';
@@ -111,7 +112,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                     child: Row(
                       children: [
                         Icon(
-                          Icons.bolt_rounded,
+                          AppIcons.bolt,
                           color: scheme.onPrimaryContainer,
                         ),
                         const SizedBox(width: 10),
@@ -137,7 +138,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                           ),
                         ),
                         Icon(
-                          Icons.chevron_right_rounded,
+                          AppIcons.chevronRight,
                           color: scheme.onPrimaryContainer,
                         ),
                       ],
@@ -340,6 +341,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
                                   useSafeArea: true,
                                   builder: (_) => _JoinConfirmSheet(
                                     match: m,
+                                    exchangeRates: loaded.exchangeRates,
                                     matchesRepository:
                                         getIt<MatchesRepository>(),
                                   ),
@@ -590,10 +592,12 @@ final class _AvailabilityToggle extends StatelessWidget {
 final class _JoinConfirmSheet extends StatefulWidget {
   const _JoinConfirmSheet({
     required this.match,
+    required this.exchangeRates,
     required this.matchesRepository,
   });
 
   final OpenMatchDto match;
+  final List<ExchangeRateRow> exchangeRates;
   final MatchesRepository matchesRepository;
 
   @override
@@ -628,6 +632,10 @@ class _JoinConfirmSheetState extends State<_JoinConfirmSheet> {
     final textTheme = Theme.of(context).textTheme;
     final match = widget.match;
     final scheduled = match.scheduledAt;
+    final currency = openMatchDisplayCurrency(match);
+    final dateIso = scheduled != null
+        ? localCalendarDateIsoSV(scheduled)
+        : localCalendarDateIsoSV(DateTime.now());
 
     return Padding(
       padding: EdgeInsets.only(
@@ -665,20 +673,26 @@ class _JoinConfirmSheetState extends State<_JoinConfirmSheet> {
             ),
           const SizedBox(height: 12),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Icon(AppIcons.payments, size: 18, color: scheme.primary),
               const SizedBox(width: 6),
-              Text(
-                formatMoneyLabel(
+              DualPrice(
+                alignEnd: false,
+                primaryLabel: formatMoneyLabel(
                   match.pricePerPlayerCents,
-                  openMatchDisplayCurrency(match),
+                  currency,
                 ),
-                style: textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
+                secondaryLabel: secondaryBsLabelSV(
+                  primaryMinor: match.pricePerPlayerCents,
+                  primaryCurrency: currency,
+                  rates: widget.exchangeRates,
+                  effectiveDateIso: dateIso,
                 ),
               ),
+              const SizedBox(width: 4),
               Text(
-                ' por jugador',
+                'por jugador',
                 style: textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),

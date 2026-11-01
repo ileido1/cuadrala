@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/failures/app_failure.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../data/matches_repository.dart';
 import '../../domain/scoring/scoring_registry.dart';
@@ -35,10 +36,12 @@ final class ResultEntryCubit extends Cubit<ResultEntryState> {
         ),
       );
     } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo cargar el partido.';
       emit(
         state.copyWith(
           loading: false,
-          error: e.toString(),
+          error: message,
         ),
       );
     }
@@ -127,10 +130,12 @@ final class ResultEntryCubit extends Cubit<ResultEntryState> {
 
       emit(state.copyWith(submitting: false, submitted: true));
     } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo guardar el resultado.';
       emit(
         state.copyWith(
           submitting: false,
-          error: e.toString(),
+          error: message,
         ),
       );
     }
