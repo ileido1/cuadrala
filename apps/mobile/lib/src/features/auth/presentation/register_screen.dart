@@ -204,6 +204,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelText: 'Contraseña',
                   prefixIcon: const Icon(AppIcons.lock),
                   suffixIcon: IconButton(
+                    tooltip: _obscurePassword
+                        ? 'Mostrar contraseña'
+                        : 'Ocultar contraseña',
                     onPressed: () =>
                         setState(() => _obscurePassword = !_obscurePassword),
                     icon: Icon(
@@ -225,6 +228,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelText: 'Confirmar contraseña',
                   prefixIcon: const Icon(AppIcons.lock),
                   suffixIcon: IconButton(
+                    tooltip: _obscureConfirm
+                        ? 'Mostrar contraseña'
+                        : 'Ocultar contraseña',
                     onPressed: () =>
                         setState(() => _obscureConfirm = !_obscureConfirm),
                     icon: Icon(

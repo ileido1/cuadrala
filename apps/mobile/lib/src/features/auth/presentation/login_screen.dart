@@ -311,6 +311,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: 'Contraseña',
                   prefixIcon: const Icon(AppIcons.lock),
                   suffixIcon: IconButton(
+                    tooltip: _obscurePassword
+                        ? 'Mostrar contraseña'
+                        : 'Ocultar contraseña',
                     onPressed: isBusy
                         ? null
                         : () => setState(
