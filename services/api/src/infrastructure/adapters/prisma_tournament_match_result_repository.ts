@@ -12,10 +12,13 @@ import {
   type SingleEliminationRecordedResultSV,
 } from '../../domain/single_elimination/single_elimination_progress.js';
 import type { SingleEliminationScheduleDTO } from '../../domain/single_elimination/bracket_generator.js';
+import { isGroupsPlusKnockoutResolvedSV } from '../../domain/groups_plus_knockout/groups_plus_knockout_transition_resolver.js';
+import type { GroupsPlusKnockoutScheduleDTO } from '../../domain/groups_plus_knockout/groups_plus_knockout_schedule_generator.js';
 import { PRISMA } from '../prisma_client.js';
 import type { PrismaClient } from '../../generated/prisma/client.js';
 
 const SINGLE_ELIMINATION_FORMAT_CODE = 'SINGLE_ELIMINATION';
+const GROUPS_PLUS_KNOCKOUT_FORMAT_CODE = 'GROUPS_PLUS_KNOCKOUT';
 
 /** Cliente Prisma dentro de una transacción interactiva (`$transaction(async (_tx) => ...)`). */
 type PrismaTransactionClientSV = Omit<
@@ -137,10 +140,16 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
         data: { status: 'FINISHED' },
       });
 
-      const CREATED_MATCH_IDS = await this._advanceSingleEliminationIfApplicableSV(_tx, {
-        tournamentId: TOURNAMENT_ID,
-        currentMatch: MATCH,
-      });
+      const CREATED_MATCH_IDS = [
+        ...(await this._advanceSingleEliminationIfApplicableSV(_tx, {
+          tournamentId: TOURNAMENT_ID,
+          currentMatch: MATCH,
+        })),
+        ...(await this._advanceGroupsPlusKnockoutFinalIfApplicableSV(_tx, {
+          tournamentId: TOURNAMENT_ID,
+          currentMatch: MATCH,
+        })),
+      ];
 
       return {
         resultId: CREATED_RESULT.id,
@@ -256,6 +265,121 @@ export class PrismaTournamentMatchResultRepository implements TournamentMatchRes
     }
 
     return CREATED_MATCH_IDS;
+  }
+
+  /**
+   * Avance de la Final de GROUPS_PLUS_KNOCKOUT (issue #88), dentro de la misma
+   * transacción y lock que el resultado recién escrito arriba. A diferencia de
+   * SINGLE_ELIMINATION no hay múltiples rondas a resolver: la Final tiene un
+   * único slot fijo (ganador de semifinal 1 vs ganador de semifinal 2), así
+   * que no reutiliza `resolveSingleEliminationProgressSV` — alcanza con leer
+   * los dos resultados de semifinal directamente. Si el torneo no es GPK, o
+   * las semifinales todavía no están materializadas, no hace nada (`[]`).
+   * Idempotente por el mismo chequeo de materialización que el avance SE.
+   */
+  private async _advanceGroupsPlusKnockoutFinalIfApplicableSV(
+    _tx: PrismaTransactionClientSV,
+    _input: {
+      tournamentId: string;
+      currentMatch: {
+        sportId: string;
+        categoryId: string;
+        organizerUserId: string;
+        type: string;
+        formatParameters: unknown;
+      };
+    },
+  ): Promise<string[]> {
+    const SCHEDULE = await _tx.tournamentSchedule.findUnique({
+      where: { tournamentId: _input.tournamentId },
+      select: { formatCode: true, scheduleKey: true, payload: true },
+    });
+    if (SCHEDULE === null || SCHEDULE.formatCode !== GROUPS_PLUS_KNOCKOUT_FORMAT_CODE) {
+      return [];
+    }
+
+    const PAYLOAD = SCHEDULE.payload as GroupsPlusKnockoutScheduleDTO;
+    //? Las semifinales todavía no se materializaron (fase GROUPS): nada que avanzar.
+    if (!isGroupsPlusKnockoutResolvedSV(PAYLOAD)) {
+      return [];
+    }
+
+    const { semifinalRoundNumber: SEMIFINAL_ROUND_NUMBER, finalRoundNumber: FINAL_ROUND_NUMBER } =
+      PAYLOAD.knockout;
+
+    const RESULTS = await this._listPlayedSingleEliminationResultsSV(_tx, {
+      tournamentId: _input.tournamentId,
+      scheduleKey: SCHEDULE.scheduleKey,
+    });
+    const WINNER_REF_BY_SEMIFINAL_MATCH_NUMBER = new Map(
+      RESULTS.filter((_r) => _r.roundNumber === SEMIFINAL_ROUND_NUMBER).map((_r) => [_r.matchNumber, _r.winnerRef]),
+    );
+    const PLAYER_A_REF = WINNER_REF_BY_SEMIFINAL_MATCH_NUMBER.get(1) ?? null;
+    const PLAYER_B_REF = WINNER_REF_BY_SEMIFINAL_MATCH_NUMBER.get(2) ?? null;
+    //? Falta jugar alguna semifinal: la Final sigue en TBD.
+    if (PLAYER_A_REF === null || PLAYER_B_REF === null) {
+      return [];
+    }
+
+    const ALREADY_MATERIALIZED = await _tx.match.findFirst({
+      where: {
+        tournamentId: _input.tournamentId,
+        AND: [
+          { formatParameters: { path: ['scheduleKey'], equals: SCHEDULE.scheduleKey } },
+          { formatParameters: { path: ['roundNumber'], equals: FINAL_ROUND_NUMBER } },
+          { formatParameters: { path: ['matchNumber'], equals: 1 } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (ALREADY_MATERIALIZED !== null) return [];
+
+    const REGISTRATIONS = await _tx.tournamentRegistration.findMany({
+      where: { tournamentId: _input.tournamentId },
+      select: { id: true, userId: true, partnerRegistrationId: true },
+    });
+    const REGISTRATION_BY_ID = new Map<string, SingleEliminationAdvancementRegistrationSV>(
+      REGISTRATIONS.map((_r) => [_r.id, _r]),
+    );
+
+    const PARTICIPANTS = [
+      ...resolveSingleEliminationAdvancementParticipantsSV({
+        ref: PLAYER_A_REF,
+        teamLabel: 'A',
+        registrationById: REGISTRATION_BY_ID,
+      }),
+      ...resolveSingleEliminationAdvancementParticipantsSV({
+        ref: PLAYER_B_REF,
+        teamLabel: 'B',
+        registrationById: REGISTRATION_BY_ID,
+      }),
+    ];
+
+    const CREATED_MATCH = await _tx.match.create({
+      data: {
+        sportId: _input.currentMatch.sportId,
+        categoryId: _input.currentMatch.categoryId,
+        organizerUserId: _input.currentMatch.organizerUserId,
+        tournamentId: _input.tournamentId,
+        type: _input.currentMatch.type as never,
+        status: 'SCHEDULED',
+        maxParticipants: PARTICIPANTS.length,
+        formatParameters: {
+          scheduleKey: SCHEDULE.scheduleKey,
+          roundNumber: FINAL_ROUND_NUMBER,
+          matchNumber: 1,
+        } as never,
+        participants: {
+          create: PARTICIPANTS.map((_p) => ({
+            ...(_p.userId !== null ? { userId: _p.userId } : {}),
+            tournamentRegistrationId: _p.tournamentRegistrationId,
+            ...(_p.teamLabel !== null ? { teamLabel: _p.teamLabel } : {}),
+          })),
+        },
+      },
+    });
+
+    return [CREATED_MATCH.id];
   }
 
   /**
