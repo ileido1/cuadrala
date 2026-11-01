@@ -10,6 +10,29 @@ import 'notification_destination.dart';
 /// Overlay entry key for the active foreground notification.
 final _notificationKey = GlobalKey<_ForegroundNotificationState>();
 
+/// Resolves what navigation a notification tap should perform, given the
+/// route currently on top ([currentLocation]).
+///
+/// Returns `null` when the resolved destination is already the visible
+/// route — e.g. tapping a Quick Match proposal notification while the
+/// Quick Match screen is already open must not stack a second instance of
+/// it; that screen's own periodic refresh (see `QuickMatchCubit.refreshSilently`
+/// and `_Searching` in `quick_match_screen.dart`) already surfaces the
+/// update.
+NotificationDestination? resolveNotificationNavigation({
+  required String eventType,
+  required String? matchId,
+  required String? tournamentId,
+  required String currentLocation,
+}) {
+  final destination = notificationDestination(
+    eventType: eventType,
+    matchId: matchId,
+    tournamentId: tournamentId,
+  );
+  return destination.route == currentLocation ? null : destination;
+}
+
 /// Shows a foreground FCM notification as a floating snackbar-style banner.
 /// Listens to [FirebaseMessaging.onMessage] and displays each incoming message
 /// as a dismissable overlay. Tapping navigates to the relevant screen.
@@ -101,11 +124,13 @@ class _ForegroundNotificationState
 
   void _navigateFromData(Map<String, dynamic> data) {
     final router = GoRouter.of(context);
-    final destination = notificationDestination(
+    final destination = resolveNotificationNavigation(
       eventType: data['eventType'] as String? ?? '',
       matchId: data['matchId'] as String?,
       tournamentId: data['tournamentId'] as String?,
+      currentLocation: router.state.uri.toString(),
     );
+    if (destination == null) return;
 
     if (destination.replacesStack) {
       router.go(destination.route);

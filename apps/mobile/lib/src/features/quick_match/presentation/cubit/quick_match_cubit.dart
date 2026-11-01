@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/failures/app_failure.dart';
 import '../../../catalog/data/catalog_repository.dart';
 import '../../../catalog/data/models/category_dto.dart';
 import '../../../catalog/data/models/sport_dto.dart';
@@ -23,8 +26,25 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
     try {
       final search = await _repository.current();
       emit(search == null ? const QuickMatchIdle() : QuickMatchActive(search));
+    } on AppFailure catch (e) {
+      emit(QuickMatchFailure(e.message));
     } catch (_) {
       emit(const QuickMatchFailure('No pudimos cargar tu búsqueda.'));
+    }
+  }
+
+  /// Re-fetches the current search without emitting [QuickMatchLoading],
+  /// so periodic polling (see `_Searching` in `quick_match_screen.dart`)
+  /// does not flash a spinner while the player is waiting. Failures are
+  /// swallowed: the last known state stays on screen and the next poll
+  /// tries again.
+  Future<void> refreshSilently() async {
+    try {
+      final search = await _repository.current();
+      if (isClosed) return;
+      emit(search == null ? const QuickMatchIdle() : QuickMatchActive(search));
+    } catch (_) {
+      // Keep showing the last known state.
     }
   }
 
@@ -32,6 +52,8 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
     emit(const QuickMatchLoading());
     try {
       emit(QuickMatchActive(await _repository.start(preferences)));
+    } on AppFailure catch (e) {
+      emit(QuickMatchFailure(e.message));
     } catch (_) {
       emit(const QuickMatchFailure('No pudimos iniciar la búsqueda.'));
     }
@@ -40,6 +62,8 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
   Future<void> confirmProposal({QuickMatchVenueOptionDto? option}) async {
     try {
       emit(QuickMatchActive(await _repository.confirmProposal(option: option)));
+    } on AppFailure catch (e) {
+      emit(QuickMatchFailure(e.message));
     } catch (_) {
       emit(const QuickMatchFailure('La propuesta ya no está disponible.'));
     }
@@ -48,6 +72,8 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
   Future<void> dismissProposal() async {
     try {
       emit(QuickMatchActive(await _repository.dismissProposal()));
+    } on AppFailure catch (e) {
+      emit(QuickMatchFailure(e.message));
     } catch (_) {
       emit(const QuickMatchFailure('No pudimos descartar la propuesta.'));
     }
