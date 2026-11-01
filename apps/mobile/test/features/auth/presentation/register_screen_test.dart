@@ -91,4 +91,40 @@ void main() {
       ),
     ).called(1);
   });
+
+  testWidgets(
+    'los botones de mostrar/ocultar contraseña tienen tooltip accesible',
+    (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      final passwordToggleFinder = find.descendant(
+        of: find.byKey(const Key('register.password')),
+        matching: find.byType(IconButton),
+      );
+      final confirmToggleFinder = find.descendant(
+        of: find.byKey(const Key('register.confirm_password')),
+        matching: find.byType(IconButton),
+      );
+      expect(passwordToggleFinder, findsOneWidget);
+      expect(confirmToggleFinder, findsOneWidget);
+
+      expect(
+        tester.widget<IconButton>(passwordToggleFinder).tooltip,
+        'Mostrar contraseña',
+      );
+      expect(
+        tester.widget<IconButton>(confirmToggleFinder).tooltip,
+        'Mostrar contraseña',
+      );
+
+      await tester.tap(passwordToggleFinder);
+      await tester.pump();
+
+      expect(
+        tester.widget<IconButton>(passwordToggleFinder).tooltip,
+        'Ocultar contraseña',
+      );
+    },
+  );
 }

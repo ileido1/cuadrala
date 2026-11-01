@@ -57,6 +57,9 @@ abstract final class AppIcons {
 
   // ─── Ubicación / mapa ──────────────────────────────────────────────────────
   static const pin = PhosphorIconsLight.mapPin;
+  /// Variante "outline" de [pin] — usada en estados vacíos (p. ej. sin zonas
+  /// guardadas) donde se busca un ícono más sutil que el marcador relleno.
+  static const pinOutline = PhosphorIconsLight.mapPinLine;
   static const map = PhosphorIconsLight.mapTrifold;
   static const myLocation = PhosphorIconsLight.crosshair;
   static const navigationArrow = PhosphorIconsLight.navigationArrow;
@@ -93,6 +96,9 @@ abstract final class AppIcons {
   static const bolt = PhosphorIconsLight.lightning;
   static const target = PhosphorIconsLight.target;
   static const eventBusy = PhosphorIconsLight.calendarX;
+  /// Insignia de categoría/logro del jugador (p. ej. categoría asignada en una
+  /// reserva) — distinto de [badge] (credencial de identidad).
+  static const medal = PhosphorIconsLight.medal;
 
   // ─── Deportes ──────────────────────────────────────────────────────────────
   /// Genérico "deporte de raqueta" — Phosphor no tiene un ícono literal de

@@ -9,6 +9,7 @@ import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
 import 'package:cuadrala_mobile/src/features/auth/presentation/cubit/session_cubit.dart';
 import 'package:cuadrala_mobile/src/features/auth/presentation/cubit/session_state.dart';
 import 'package:cuadrala_mobile/src/features/onboarding/data/models/onboarding_status_dto.dart';
+import 'package:cuadrala_mobile/src/features/onboarding/data/models/user_location_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/player_profile_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_stats_dto.dart';
@@ -116,6 +117,57 @@ void main() {
     expect(find.textContaining('@testuser'), findsNothing);
     expect(find.text('Sin datos'), findsOneWidget);
   });
+
+  testWidgets(
+    'public route truncates long name and location with ellipsis instead of wrapping',
+    (tester) async {
+      const longName = 'Jose Alejandro De La Cruz Fernandez Gonzalez Lopez';
+      const longLocationLabel =
+          'Barrio Residencial Muy Largo, Ciudad de Buenos Aires, Argentina';
+      final loadedWithLongLabels = ProfileLoaded(
+        me: const UserMeDto(
+          id: 'me-id',
+          email: 'me@test.com',
+          name: longName,
+          subscriptionType: 'FREE',
+        ),
+        stats: _loaded.stats,
+        ratings: _loaded.ratings,
+        history: _loaded.history,
+        playerProfile: _loaded.playerProfile,
+        onboardingStatus: _loaded.onboardingStatus,
+        sportProfiles: _loaded.sportProfiles,
+        location: const UserLocationDto(
+          label: longLocationLabel,
+          latitude: 0,
+          longitude: 0,
+          radiusKm: 5,
+        ),
+        availability: _loaded.availability,
+        sports: _loaded.sports,
+      );
+      when(() => profileCubit.state).thenReturn(loadedWithLongLabels);
+      whenListen(
+        profileCubit,
+        Stream.value(loadedWithLongLabels),
+        initialState: loadedWithLongLabels,
+      );
+      final router = AppRouter(sessionCubit: sessionCubit).router;
+      router.go(Routes.publicProfile);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      final nameText = tester.widget<Text>(find.text(longName));
+      expect(nameText.maxLines, 1);
+      expect(nameText.overflow, TextOverflow.ellipsis);
+
+      final locationText = tester.widget<Text>(find.text(longLocationLabel));
+      expect(locationText.maxLines, 1);
+      expect(locationText.overflow, TextOverflow.ellipsis);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('public route falls back to initials when avatarUrl is absent', (
     tester,

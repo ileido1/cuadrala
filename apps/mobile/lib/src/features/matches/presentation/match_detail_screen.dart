@@ -8,13 +8,16 @@ import 'package:go_router/go_router.dart';
 // ignore_for_file: use_build_context_synchronously
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/formatting/fx_price_labels.dart';
 import '../../../core/formatting/id_preview.dart';
+import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/formatting/scheduled_label.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/court_view.dart';
+import '../../../shared/widgets/dual_price.dart';
 import '../../../shared/widgets/info_badge.dart';
 import '../data/matches_repository.dart';
 import '../data/models/match_detail_dto.dart';
@@ -141,7 +144,10 @@ final class _MatchDetailView extends StatelessWidget {
                         _LocationRow(match: m),
                         _Banner(phase: phase),
                         const SizedBox(height: 14),
-                        _InfoTilesRow(match: m),
+                        _InfoTilesRow(
+                          match: m,
+                          exchangeRates: loaded.exchangeRates,
+                        ),
                         const SizedBox(height: 12),
                         _DetailChips(match: m),
                         const SizedBox(height: 24),
@@ -381,15 +387,21 @@ final class _Banner extends StatelessWidget {
 // ─── Info tiles (fecha + precio) ──────────────────────────────────────────────
 
 final class _InfoTilesRow extends StatelessWidget {
-  const _InfoTilesRow({required this.match});
+  const _InfoTilesRow({required this.match, required this.exchangeRates});
 
   final MatchDetailDto match;
+  final List<ExchangeRateRow> exchangeRates;
 
   @override
   Widget build(BuildContext context) {
     final m = match;
     final scheduled = m.scheduledAt;
     final hasPrice = m.pricePerPlayerCents > 0;
+    final pricePerPlayerMinor =
+        (m.pricePerPlayerCents / m.maxParticipants).toInt();
+    final dateIso = scheduled != null
+        ? localCalendarDateIsoSV(scheduled)
+        : localCalendarDateIsoSV(DateTime.now());
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -427,13 +439,20 @@ final class _InfoTilesRow extends StatelessWidget {
               icon: AppIcons.info,
               label: 'Precio',
               child: hasPrice
-                  ? Text(
-                      '${formatMoneyLabel((m.pricePerPlayerCents / m.maxParticipants).toInt(), matchDetailDisplayCurrency(m))} p/p',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Theme.of(context).colorScheme.primary,
+                  ? DualPrice(
+                      alignEnd: false,
+                      primaryLabel: formatMoneyLabel(
+                        pricePerPlayerMinor,
+                        matchDetailDisplayCurrency(m),
                       ),
+                      secondaryLabel: secondaryBsLabelSV(
+                        primaryMinor: pricePerPlayerMinor,
+                        primaryCurrency: matchDetailDisplayCurrency(m),
+                        rates: exchangeRates,
+                        effectiveDateIso: dateIso,
+                      ),
+                      suffix: 'p/p',
+                      primarySize: 15,
                     )
                   : const Text(
                       'Gratis',
@@ -942,9 +961,18 @@ final class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final m = loaded.match;
-    final priceLabel = formatMoneyLabel(
-      (m.pricePerPlayerCents / m.maxParticipants).toInt(),
-      matchDetailDisplayCurrency(m),
+    final pricePerPlayerMinor = (m.pricePerPlayerCents / m.maxParticipants).toInt();
+    final currency = matchDetailDisplayCurrency(m);
+    final priceLabel = formatMoneyLabel(pricePerPlayerMinor, currency);
+    final scheduled = m.scheduledAt;
+    final dateIso = scheduled != null
+        ? localCalendarDateIsoSV(scheduled)
+        : localCalendarDateIsoSV(DateTime.now());
+    final secondaryPriceLabel = secondaryBsLabelSV(
+      primaryMinor: pricePerPlayerMinor,
+      primaryCurrency: currency,
+      rates: loaded.exchangeRates,
+      effectiveDateIso: dateIso,
     );
 
     return Container(
@@ -970,7 +998,7 @@ final class _Footer extends StatelessWidget {
               height: 54,
               child: Center(child: CircularProgressIndicator()),
             )
-          : _content(context, scheme, m, priceLabel),
+          : _content(context, scheme, m, priceLabel, secondaryPriceLabel),
     );
   }
 
@@ -979,6 +1007,7 @@ final class _Footer extends StatelessWidget {
     ColorScheme scheme,
     MatchDetailDto m,
     String priceLabel,
+    String? secondaryPriceLabel,
   ) {
     switch (phase) {
       case _Phase.browse:
@@ -1016,13 +1045,11 @@ final class _Footer extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  '$priceLabel p/p',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
+                DualPrice(
+                  primaryLabel: priceLabel,
+                  secondaryLabel: secondaryPriceLabel,
+                  suffix: 'p/p',
+                  primarySize: 13,
                 ),
               ],
             ),

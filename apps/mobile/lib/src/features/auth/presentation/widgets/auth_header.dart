@@ -18,7 +18,7 @@ class AuthHeader extends StatelessWidget {
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
                     color: scheme.primary.withValues(alpha: 0.22),

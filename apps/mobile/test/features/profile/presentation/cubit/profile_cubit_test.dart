@@ -411,6 +411,62 @@ void main() {
     ],
   );
 
+  blocTest<ProfileCubit, ProfileState>(
+    'emits ProfileLoaded with leaderboardLoadFailed=true when leaderboard throws',
+    build: () {
+      _stubHappyPath(
+        profileRepo: profileRepo,
+        onboardingRepo: onboardingRepo,
+        catalogApi: catalogApi,
+        ratings: [_kRatingWithCategory],
+      );
+      when(
+        () => profileRepo.getLeaderboard(any()),
+      ).thenThrow(Exception('network error'));
+      return _makeCubit(
+        profileRepo: profileRepo,
+        onboardingRepo: onboardingRepo,
+        catalogApi: catalogApi,
+      );
+    },
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      const ProfileLoading(),
+      isA<ProfileLoaded>().having(
+        (s) => s.leaderboardLoadFailed,
+        'leaderboardLoadFailed',
+        isTrue,
+      ),
+    ],
+  );
+
+  blocTest<ProfileCubit, ProfileState>(
+    'emits ProfileLoaded with leaderboardLoadFailed=false on happy path',
+    build: () {
+      _stubHappyPath(
+        profileRepo: profileRepo,
+        onboardingRepo: onboardingRepo,
+        catalogApi: catalogApi,
+        ratings: [_kRatingWithCategory],
+        leaderboard: [_kLeaderboardEntry],
+      );
+      return _makeCubit(
+        profileRepo: profileRepo,
+        onboardingRepo: onboardingRepo,
+        catalogApi: catalogApi,
+      );
+    },
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      const ProfileLoading(),
+      isA<ProfileLoaded>().having(
+        (s) => s.leaderboardLoadFailed,
+        'leaderboardLoadFailed',
+        isFalse,
+      ),
+    ],
+  );
+
   // ── Outer failure — AppFailure ────────────────────────────────────────────
 
   blocTest<ProfileCubit, ProfileState>(

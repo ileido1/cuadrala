@@ -27,6 +27,7 @@ final class HomeLoaded extends HomeState {
     this.levelCategory,
     this.levelElo,
     this.exchangeRates = const [],
+    this.myMatchesLoadFailed = false,
   });
 
   final String greetingName;
@@ -46,6 +47,9 @@ final class HomeLoaded extends HomeState {
   /// Tasas de cambio para precio dual en tarjetas (Bs secundario).
   final List<ExchangeRateRow> exchangeRates;
 
+  /// `true` cuando `_safeListMyMatches` degradó a lista vacía por un error.
+  final bool myMatchesLoadFailed;
+
   OpenMatchDto? get nextMatch =>
       openMatches.isEmpty ? null : openMatches.first;
 
@@ -58,6 +62,7 @@ final class HomeLoaded extends HomeState {
         levelCategory,
         levelElo,
         exchangeRates,
+        myMatchesLoadFailed,
       ];
 }
 

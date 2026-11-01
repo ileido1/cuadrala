@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/failures/app_failure.dart';
 import '../../data/matches_repository.dart';
 import 'match_live_state.dart';
 
@@ -35,7 +36,10 @@ class MatchLiveCubit extends Cubit<MatchLiveState> {
       _startPolling();
       _startTimer();
     } catch (e) {
-      emit(MatchLiveStateFailure(e.toString()));
+      final message = e is AppFailure
+          ? e.message
+          : 'No se pudo cargar la partida en vivo.';
+      emit(MatchLiveStateFailure(message));
     }
   }
 
@@ -91,9 +95,11 @@ class MatchLiveCubit extends Cubit<MatchLiveState> {
         shouldNavigateToResult: true,
       ));
     } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo finalizar la partida.';
       emit((state as MatchLiveStateLoaded).copyWith(
         submitting: false,
-        error: e.toString(),
+        error: message,
       ));
     }
   }

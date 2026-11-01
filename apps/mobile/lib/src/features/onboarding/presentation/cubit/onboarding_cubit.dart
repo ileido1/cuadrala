@@ -101,11 +101,11 @@ class OnboardingCubit extends Cubit<OnboardingState> {
           errorMessage: f.message,
         ),
       );
-    } catch (e) {
+    } catch (_) {
       emit(
         state.copyWith(
           type: OnboardingStatusType.error,
-          errorMessage: e.toString(),
+          errorMessage: 'No se pudo cargar tu progreso. Inténtalo de nuevo.',
         ),
       );
     }
@@ -136,8 +136,13 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     } on AppFailure catch (f) {
       emit(state.copyWith(errorMessage: f.message, clearSaving: true));
       return false;
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString(), clearSaving: true));
+    } catch (_) {
+      emit(
+        state.copyWith(
+          errorMessage: 'No se pudo guardar tu identidad. Inténtalo de nuevo.',
+          clearSaving: true,
+        ),
+      );
       return false;
     }
   }
@@ -170,8 +175,14 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     } on AppFailure catch (f) {
       emit(state.copyWith(errorMessage: f.message, clearSaving: true));
       return false;
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString(), clearSaving: true));
+    } catch (_) {
+      emit(
+        state.copyWith(
+          errorMessage:
+              'No se pudieron guardar tus deportes. Inténtalo de nuevo.',
+          clearSaving: true,
+        ),
+      );
       return false;
     }
   }
@@ -191,8 +202,14 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     } on AppFailure catch (f) {
       emit(state.copyWith(errorMessage: f.message, clearSaving: true));
       return false;
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString(), clearSaving: true));
+    } catch (_) {
+      emit(
+        state.copyWith(
+          errorMessage:
+              'No se pudo guardar tu disponibilidad. Inténtalo de nuevo.',
+          clearSaving: true,
+        ),
+      );
       return false;
     }
   }
@@ -216,8 +233,13 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     } on AppFailure catch (f) {
       emit(state.copyWith(errorMessage: f.message, clearSaving: true));
       return false;
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString(), clearSaving: true));
+    } catch (_) {
+      emit(
+        state.copyWith(
+          errorMessage: 'No se pudo guardar tu ubicación. Inténtalo de nuevo.',
+          clearSaving: true,
+        ),
+      );
       return false;
     }
   }

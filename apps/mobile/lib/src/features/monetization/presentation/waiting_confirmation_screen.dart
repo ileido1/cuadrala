@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/formatting/fx_price_labels.dart';
+import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
+import '../../../shared/widgets/dual_price.dart';
 import '../data/monetization_repository.dart';
 import 'pay_method_screen.dart';
 
@@ -54,9 +57,18 @@ final class WaitingConfirmationScreen extends StatefulWidget {
 }
 
 class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
+  //? Corte de polling: el staff confirma manualmente en el panel web y puede
+  //? tardar, pero no puede quedar reintentando para siempre si la pantalla
+  //? se deja abierta. Con el backoff tope de 15s, 20 intentos son ~5
+  //? minutos de margen — de sobra para una confirmación manual típica.
+  static const int _maxPollAttempts = 20;
+
   Timer? _pollTimer;
   String _status = 'PENDING';
   int _pollSeconds = 5;
+  int _pollAttempts = 0;
+  bool _pollTimedOut = false;
+  List<ExchangeRateRow> _exchangeRates = const [];
 
   CurrencyCode get _currency => CurrencyCode.resolve(
         pricingCurrency: widget.pricingCurrency,
@@ -65,6 +77,7 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
   @override
   void initState() {
     super.initState();
+    _loadExchangeRates();
     _pollOnce();
     _schedulePoll();
   }
@@ -75,16 +88,35 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
     super.dispose();
   }
 
+  Future<void> _loadExchangeRates() async {
+    final rates = await loadExchangeRatesSafelySV();
+    if (mounted) setState(() => _exchangeRates = rates);
+  }
+
   void _schedulePoll() {
     _pollTimer?.cancel();
     _pollTimer = Timer(Duration(seconds: _pollSeconds), () async {
       await _pollOnce();
       if (!mounted) return;
-      if (_status == 'PENDING') {
-        _pollSeconds = (_pollSeconds + 2).clamp(5, 15);
-        _schedulePoll();
+      if (_status != 'PENDING') return;
+      _pollAttempts++;
+      if (_pollAttempts >= _maxPollAttempts) {
+        setState(() => _pollTimedOut = true);
+        return;
       }
+      _pollSeconds = (_pollSeconds + 2).clamp(5, 15);
+      _schedulePoll();
     });
+  }
+
+  void _retryPoll() {
+    setState(() {
+      _pollTimedOut = false;
+      _pollSeconds = 5;
+      _pollAttempts = 0;
+    });
+    _pollOnce();
+    _schedulePoll();
   }
 
   Future<void> _pollOnce() async {
@@ -112,9 +144,16 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final amount = formatMoneyCents(widget.amountPerPersonCents, _currency);
+    final secondaryBsLabel = secondaryBsLabelSV(
+      primaryMinor: widget.amountPerPersonCents,
+      primaryCurrency: _currency,
+      rates: _exchangeRates,
+      effectiveDateIso: localCalendarDateIsoSV(DateTime.now()),
+    );
 
     final isConfirmed = _status == 'CONFIRMED';
     final isRejected = _status == 'CANCELLED';
+    final isTimedOut = _pollTimedOut && !isConfirmed && !isRejected;
 
     return Scaffold(
       key: const Key('pay.waiting.screen'),
@@ -141,14 +180,22 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
                     ? scheme.primaryContainer
                     : isRejected
                         ? scheme.errorContainer
-                        : scheme.primary.withValues(alpha: 0.12),
+                        : isTimedOut
+                            ? scheme.surfaceContainerHighest
+                            : scheme.primary.withValues(alpha: 0.12),
               ),
               child: Center(
                 child: isConfirmed
                     ? Icon(AppIcons.checkCircle, color: scheme.primary, size: 48)
                     : isRejected
                         ? Icon(AppIcons.closeCircle, color: scheme.error, size: 48)
-                        : const CircularProgressIndicator(),
+                        : isTimedOut
+                            ? Icon(
+                                AppIcons.warning,
+                                color: scheme.onSurfaceVariant,
+                                size: 48,
+                              )
+                            : const CircularProgressIndicator(),
               ),
             ),
             const SizedBox(height: 18),
@@ -157,7 +204,9 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
                   ? '¡Pago confirmado!'
                   : isRejected
                       ? 'Pago no aceptado'
-                      : 'Comprobante enviado',
+                      : isTimedOut
+                          ? 'Esto está tardando más de lo esperado'
+                          : 'Comprobante enviado',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
                   ),
@@ -168,7 +217,10 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
                   ? 'El staff validó tu pago. Ya estás al día.'
                   : isRejected
                       ? 'Revisá los datos o contactá al organizador para reintentar.'
-                      : 'El staff de la sede revisará el pago en el panel web.',
+                      : isTimedOut
+                          ? 'El staff aún no confirmó tu pago. Puedes '
+                              'reintentar la verificación o volver más tarde.'
+                          : 'El staff de la sede revisará el pago en el panel web.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
@@ -200,13 +252,25 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
                                   ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'Monto: $amount',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        Row(
+                          children: [
+                            Text(
+                              'Monto: ',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: scheme.onSurfaceVariant,
                                   ),
+                            ),
+                            DualPrice(
+                              primaryLabel: amount,
+                              secondaryLabel: secondaryBsLabel,
+                              alignEnd: false,
+                              primarySize: 14,
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -267,11 +331,17 @@ class _WaitingConfirmationScreenState extends State<WaitingConfirmationScreen> {
                                   venueId: widget.venueId,
                                 ),
                               )
-                          : () => context.go(
-                                Routes.matchDetail(widget.matchId),
-                              ),
+                          : isTimedOut
+                              ? _retryPoll
+                              : () => context.go(
+                                    Routes.matchDetail(widget.matchId),
+                                  ),
                       child: Text(
-                        isRejected ? 'Volver a pagar' : 'Ver mi partida',
+                        isRejected
+                            ? 'Volver a pagar'
+                            : isTimedOut
+                                ? 'Reintentar'
+                                : 'Ver mi partida',
                       ),
                     ),
                   ),

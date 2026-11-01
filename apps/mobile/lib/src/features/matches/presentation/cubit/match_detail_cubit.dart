@@ -1,7 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/failures/app_failure.dart';
+import '../../../../core/formatting/fx_price_labels.dart';
+import '../../../../core/formatting/money_conversion.dart';
 import '../../../monetization/data/monetization_repository.dart';
+import '../../../profile/data/models/user_me_dto.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/matches_repository.dart';
 import '../../data/models/match_detail_dto.dart';
@@ -24,6 +27,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
   final MonetizationRepository _monetizationRepository;
   final String _matchId;
   String? _viewerUserId;
+  List<ExchangeRateRow> _exchangeRates = const [];
 
   /// Estado de pago del viewer para esta partida: confirmado (staff aprobó),
   /// pendiente (comprobante enviado, en revisión) o ninguno.
@@ -65,14 +69,20 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       actionLoading: actionLoading,
       actionMessage: actionMessage,
       actionMessageIsError: actionMessageIsError,
+      exchangeRates: _exchangeRates,
     );
   }
 
   Future<void> load() async {
     emit(const MatchDetailLoading());
     try {
-      final me = await _profileRepository.getMe();
+      final results = await Future.wait<Object>([
+        _profileRepository.getMe(),
+        loadExchangeRatesSafelySV(),
+      ]);
+      final me = results[0] as UserMeDto;
       _viewerUserId = me.id;
+      _exchangeRates = results[1] as List<ExchangeRateRow>;
       final match = await _matchesRepository.getMatchById(_matchId);
       emit(await _loadedFromMatch(match, _viewerUserId!));
     } catch (e) {
@@ -98,6 +108,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         viewerHasPendingPayment: current.viewerHasPendingPayment,
         actionLoading: true,
+        exchangeRates: current.exchangeRates,
       ),
     );
 
@@ -121,6 +132,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerHasPendingPayment: current.viewerHasPendingPayment,
           actionMessage: message,
           actionMessageIsError: true,
+          exchangeRates: current.exchangeRates,
         ),
       );
     }
@@ -138,6 +150,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         viewerHasPendingPayment: current.viewerHasPendingPayment,
         actionLoading: true,
+        exchangeRates: current.exchangeRates,
       ),
     );
 
@@ -161,6 +174,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerHasPendingPayment: current.viewerHasPendingPayment,
           actionMessage: message,
           actionMessageIsError: true,
+          exchangeRates: current.exchangeRates,
         ),
       );
     }
@@ -206,6 +220,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         viewerHasPendingPayment: current.viewerHasPendingPayment,
         actionLoading: true,
+        exchangeRates: current.exchangeRates,
       ),
     );
 
@@ -229,6 +244,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerHasPendingPayment: current.viewerHasPendingPayment,
           actionMessage: message,
           actionMessageIsError: true,
+          exchangeRates: current.exchangeRates,
         ),
       );
     }

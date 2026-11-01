@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/failures/app_failure.dart';
 import '../../data/matches_repository.dart';
 import 'confirm_result_state.dart';
 
@@ -44,7 +45,9 @@ class ConfirmResultCubit extends Cubit<ConfirmResultState> {
         ),
       );
     } catch (e) {
-      emit(ConfirmResultStateFailure(e.toString()));
+      final message =
+          e is AppFailure ? e.message : 'No se pudo cargar el resultado.';
+      emit(ConfirmResultStateFailure(message));
     }
   }
 
@@ -68,9 +71,11 @@ class ConfirmResultCubit extends Cubit<ConfirmResultState> {
         completed: true,
       ));
     } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo confirmar el resultado.';
       emit((state as ConfirmResultStateLoaded).copyWith(
         submitting: false,
-        error: e.toString(),
+        error: message,
       ));
     }
   }
@@ -92,9 +97,11 @@ class ConfirmResultCubit extends Cubit<ConfirmResultState> {
       //? Volver a cargar para mostrar que fue rechazado
       await load();
     } catch (e) {
+      final message =
+          e is AppFailure ? e.message : 'No se pudo rechazar el resultado.';
       emit((state as ConfirmResultStateLoaded).copyWith(
         submitting: false,
-        error: e.toString(),
+        error: message,
       ));
     }
   }

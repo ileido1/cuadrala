@@ -2,7 +2,10 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/data/exchange_rates_repository.dart';
+import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
 import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
+import 'package:cuadrala_mobile/src/core/formatting/money_conversion.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/match_detail_dto.dart';
 import 'package:cuadrala_mobile/src/features/monetization/data/monetization_repository.dart';
@@ -18,6 +21,9 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockMonetizationRepository extends Mock
     implements MonetizationRepository {}
+
+class _MockExchangeRatesRepository extends Mock
+    implements ExchangeRatesRepository {}
 
 void main() {
   group('MatchDetailCubit', () {
@@ -76,6 +82,49 @@ void main() {
           name: 'User',
           subscriptionType: 'FREE',
         ),
+      );
+    });
+
+    group('load() con tasas de cambio', () {
+      late _MockExchangeRatesRepository exchangeRatesRepository;
+
+      setUp(() {
+        exchangeRatesRepository = _MockExchangeRatesRepository();
+        getIt.registerSingleton<ExchangeRatesRepository>(exchangeRatesRepository);
+      });
+
+      tearDown(() {
+        getIt.unregister<ExchangeRatesRepository>();
+      });
+
+      blocTest<MatchDetailCubit, MatchDetailState>(
+        'coloca las tasas reales en el estado cargado para habilitar el Bs secundario',
+        setUp: () {
+          when(() => matchesRepository.getMatchById(matchId))
+              .thenAnswer((_) async => buildMatch());
+          when(
+            () => exchangeRatesRepository.listByCountry(
+              countryCode: any(named: 'countryCode'),
+            ),
+          ).thenAnswer(
+            (_) async => const [ExchangeRateRow(currency: 'USD', rateToBs: 50)],
+          );
+        },
+        build: () => MatchDetailCubit(
+          matchesRepository: matchesRepository,
+          profileRepository: profileRepository,
+          monetizationRepository: monetizationRepository,
+          matchId: matchId,
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const MatchDetailLoading(),
+          isA<MatchDetailLoaded>().having(
+            (s) => s.exchangeRates,
+            'exchangeRates',
+            const [ExchangeRateRow(currency: 'USD', rateToBs: 50)],
+          ),
+        ],
       );
     });
 

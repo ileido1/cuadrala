@@ -124,6 +124,29 @@ void main() {
     });
 
     testWidgets(
+      'el botón de mostrar/ocultar contraseña tiene tooltip accesible',
+      (tester) async {
+        await tester.pumpWidget(wrap());
+        await tester.pumpAndSettle();
+
+        final toggleFinder = find.descendant(
+          of: find.byKey(const Key('login.password')),
+          matching: find.byType(IconButton),
+        );
+        expect(toggleFinder, findsOneWidget);
+
+        final toggle = tester.widget<IconButton>(toggleFinder);
+        expect(toggle.tooltip, 'Mostrar contraseña');
+
+        await tester.tap(toggleFinder);
+        await tester.pump();
+
+        final toggledWidget = tester.widget<IconButton>(toggleFinder);
+        expect(toggledWidget.tooltip, 'Ocultar contraseña');
+      },
+    );
+
+    testWidgets(
       'tocar "¿Olvidaste tu contraseña?" muestra SnackBar con "Próximamente"',
       (tester) async {
         await tester.pumpWidget(wrap());

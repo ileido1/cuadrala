@@ -161,6 +161,29 @@ void main() {
     );
 
     blocTest<OnboardingCubit, OnboardingState>(
+      'load surfaces a Spanish fallback message, not the raw exception text, on unexpected errors',
+      build: () {
+        when(
+          () => repository.getStatus(),
+        ).thenThrow(Exception('socket closed unexpectedly'));
+        return OnboardingCubit(
+          repository: repository,
+          profileRepository: profileRepository,
+        );
+      },
+      act: (cubit) => cubit.load(),
+      verify: (cubit) {
+        expect(cubit.state.type, OnboardingStatusType.error);
+        expect(cubit.state.errorMessage, isNotNull);
+        expect(
+          cubit.state.errorMessage,
+          isNot(contains('socket closed unexpectedly')),
+        );
+        expect(cubit.state.errorMessage, isNot(contains('Exception')));
+      },
+    );
+
+    blocTest<OnboardingCubit, OnboardingState>(
       'saveIdentity llama al repo y refresca el status',
       build: () {
         when(

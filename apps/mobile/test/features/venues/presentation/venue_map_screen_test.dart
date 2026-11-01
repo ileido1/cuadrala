@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/storage/saved_zones_repository.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_map_cubit.dart';
@@ -44,6 +45,20 @@ VenueDto _venue({
       distanceKm: distanceKm,
       averageRating: averageRating,
       sports: sports,
+    );
+
+SavedZone _zone({
+  String id = 'z1',
+  String name = 'Casa',
+  int radiusKm = 5,
+}) =>
+    SavedZone(
+      id: id,
+      name: name,
+      latitude: -34.6,
+      longitude: -58.4,
+      radiusKm: radiusKm,
+      updatedAt: DateTime(2024, 1, 1),
     );
 
 // ---------------------------------------------------------------------------
@@ -402,7 +417,12 @@ void main() {
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
-    expect(find.byIcon(AppIcons.myLocation), findsOneWidget);
+    // AppIcons.myLocation también lo usa el chip "Mi ubicación" (línea 286);
+    // se desambigua acotando al FloatingActionButton de recentrado GPS.
+    expect(
+      find.widgetWithIcon(FloatingActionButton, AppIcons.myLocation),
+      findsOneWidget,
+    );
   });
 
   testWidgets('tapping GPS button → calls cubit.recenterToCurrentLocation()',
@@ -415,7 +435,127 @@ void main() {
     await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.myLocation));
+    await tester.tap(find.byType(FloatingActionButton));
     verify(() => cubit.recenterToCurrentLocation()).called(1);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 12. mini sheet close button has a tooltip (#113)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  testWidgets('mini sheet close IconButton has tooltip "Cerrar"',
+      (tester) async {
+    final venue = _venue(id: 'v1', name: 'Club Norte');
+    when(() => cubit.state).thenReturn(
+      VenueMapState(
+        status: VenueMapStatus.loaded,
+        venues: [venue],
+        filtered: [venue],
+        selectedVenue: venue,
+      ),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    final closeButton = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(AppIcons.close),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(closeButton.tooltip, 'Cerrar');
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 13. zone chips use AppIcons constants (#112)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  testWidgets(
+      'zone chips bar: current-location, saved-zone and add icons use AppIcons',
+      (tester) async {
+    when(() => cubit.state).thenReturn(
+      VenueMapState(
+        status: VenueMapStatus.loaded,
+        savedZones: [_zone()],
+      ),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    // selectedZone == null → chip "Mi ubicación" shows AppIcons.myLocation
+    // (también lo usa el FAB de GPS, por eso findsWidgets en vez de uno solo).
+    expect(find.byIcon(AppIcons.myLocation), findsWidgets);
+    expect(find.widgetWithIcon(ActionChip, AppIcons.myLocation), findsOneWidget);
+    // Saved zone chip, not selected → AppIcons.pin.
+    expect(find.byIcon(AppIcons.pin), findsOneWidget);
+    // "Zona" add action chip → AppIcons.add.
+    expect(find.byIcon(AppIcons.add), findsOneWidget);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 14. zones bottom sheet: empty state icon + close tooltip (#112/#113)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  testWidgets(
+      'tapping "Zona" opens zones sheet: empty-state icon is AppIcons.pinOutline, '
+      'close button has tooltip "Cerrar"', (tester) async {
+    when(() => cubit.state).thenReturn(
+      const VenueMapState(status: VenueMapStatus.loaded, savedZones: []),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    await tester.tap(find.text('Zona'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay zonas guardadas'), findsOneWidget);
+    expect(find.byIcon(AppIcons.pinOutline), findsOneWidget);
+
+    final closeButton = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(AppIcons.close),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(closeButton.tooltip, 'Cerrar');
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 15. zones bottom sheet with a zone: delete button tooltip (#112/#113)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  testWidgets(
+      'zones sheet with a saved zone shows it with AppIcons.pin and a delete '
+      'button with tooltip "Eliminar zona"', (tester) async {
+    when(() => cubit.state).thenReturn(
+      VenueMapState(status: VenueMapStatus.loaded, savedZones: [_zone()]),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+    when(() => cubit.deleteZone(any())).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    await tester.tap(find.text('Zona'));
+    await tester.pumpAndSettle();
+
+    // AppIcons.pin aparece tanto en el chip de la zona (detrás del sheet)
+    // como en el ListTile dentro del sheet de zonas guardadas.
+    expect(find.byIcon(AppIcons.pin), findsWidgets);
+    expect(find.widgetWithIcon(ListTile, AppIcons.pin), findsOneWidget);
+
+    final deleteButton = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(AppIcons.delete),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(deleteButton.tooltip, 'Eliminar zona');
   });
 }

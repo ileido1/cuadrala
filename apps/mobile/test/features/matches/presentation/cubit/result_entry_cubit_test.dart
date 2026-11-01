@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_api.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_api.dart';
@@ -239,6 +240,27 @@ void main() {
           isA<ResultEntryState>()
               .having((s) => s.loading, 'loading', isFalse)
               .having((s) => s.error, 'error', isNotNull),
+        ],
+      );
+
+      blocTest<ResultEntryCubit, ResultEntryState>(
+        'surfaces the message of a real AppFailure instead of e.toString()',
+        setUp: () {
+          when(() => matchesApi.getMatchEnvelope(matchId: matchId)).thenThrow(
+            const AppFailure(
+              code: 'SERVER_DOWN',
+              message: 'El servidor no responde.',
+            ),
+          );
+          when(() => catalogApi.listSportsEnvelope())
+              .thenAnswer((_) async => padelSportsResponse);
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          isA<ResultEntryState>()
+              .having((s) => s.loading, 'loading', isFalse)
+              .having((s) => s.error, 'error', 'El servidor no responde.'),
         ],
       );
     });
@@ -663,6 +685,43 @@ void main() {
         },
         verify: (cubit) {
           expect(cubit.state.error, isNotNull);
+          expect(cubit.state.submitting, isFalse);
+          expect(cubit.state.submitted, isFalse);
+        },
+      );
+
+      blocTest<ResultEntryCubit, ResultEntryState>(
+        'surfaces the message of a real AppFailure instead of e.toString()',
+        setUp: () {
+          when(() => matchesApi.getMatchEnvelope(matchId: matchId))
+              .thenAnswer((_) async => buildMatchJson(buildMatch()));
+          when(() => catalogApi.listSportsEnvelope())
+              .thenAnswer((_) async => padelSportsResponse);
+          when(
+            () => matchesApi.upsertResultDraftEnvelope(
+              matchId: any(named: 'matchId'),
+              body: any(named: 'body'),
+            ),
+          ).thenThrow(
+            const AppFailure(
+              code: 'CONFLICT',
+              message: 'El resultado ya fue registrado.',
+            ),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.assignToPosition(CourtPosition.teamADrive, 'u1');
+          cubit.assignToPosition(CourtPosition.teamAReves, 'u2');
+          cubit.assignToPosition(CourtPosition.teamBDrive, 'u3');
+          cubit.assignToPosition(CourtPosition.teamBReves, 'u4');
+          cubit.addSet(const SetScore(teamA: 6, teamB: 4));
+          cubit.addSet(const SetScore(teamA: 6, teamB: 3));
+          await cubit.submit();
+        },
+        verify: (cubit) {
+          expect(cubit.state.error, 'El resultado ya fue registrado.');
           expect(cubit.state.submitting, isFalse);
           expect(cubit.state.submitted, isFalse);
         },

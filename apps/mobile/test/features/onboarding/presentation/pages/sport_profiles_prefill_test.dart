@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +17,7 @@ import 'package:cuadrala_mobile/src/features/onboarding/presentation/cubit/onboa
 import 'package:cuadrala_mobile/src/features/onboarding/presentation/pages/sport_profiles_page.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/player_profile_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/skeleton_list.dart';
 
 class _MockOnboardingCubit extends MockCubit<OnboardingState>
     implements OnboardingCubit {}
@@ -111,6 +114,31 @@ void main() {
         expect(find.text('Tu banda de nivel'), findsOneWidget);
         expect(find.text('Revés (izquierda)'), findsOneWidget);
         expect(find.text('Zurdo'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'shows SkeletonList while sports are loading, not CircularProgressIndicator',
+      (tester) async {
+        // Reemplaza el stub por defecto: el Future nunca se resuelve, así
+        // _loading se mantiene true durante todo el test.
+        when(() => catalogRepository.listSports()).thenAnswer(
+          (_) => Completer<List<SportDto>>().future,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BlocProvider<OnboardingCubit>.value(
+              value: cubit,
+              child: Scaffold(
+                body: OnboardingSportProfilesPage(onContinue: () {}),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(SkeletonList), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
       },
     );
 

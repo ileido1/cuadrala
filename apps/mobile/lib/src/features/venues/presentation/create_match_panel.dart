@@ -719,7 +719,7 @@ class _FallbackNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, size: 18, color: scheme.onSurfaceVariant),
+          Icon(AppIcons.info, size: 18, color: scheme.onSurfaceVariant),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

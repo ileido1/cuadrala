@@ -11,6 +11,7 @@ import 'package:cuadrala_mobile/src/features/onboarding/data/models/onboarding_s
 import 'package:cuadrala_mobile/src/features/onboarding/presentation/cubit/onboarding_cubit.dart';
 import 'package:cuadrala_mobile/src/features/onboarding/presentation/cubit/onboarding_state.dart';
 import 'package:cuadrala_mobile/src/features/onboarding/presentation/onboarding_flow_screen.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/skeleton_list.dart';
 
 class _MockOnboardingCubit extends MockCubit<OnboardingState>
     implements OnboardingCubit {}
@@ -67,6 +68,7 @@ void main() {
     tearDown(() {
       final getIt = GetIt.instance;
       getIt.unregister<OnboardingCubit>();
+      getIt.unregister<SessionCubit>();
     });
 
     testWidgets('does not complete onboarding from the flow screen itself', (
@@ -94,5 +96,34 @@ void main() {
       expect(find.byKey(const Key('onboarding.flow.screen')), findsOneWidget);
       verifyNever(() => sessionCubit.refreshOnboardingStatus());
     });
+
+    testWidgets(
+      'shows SkeletonList while loading, not CircularProgressIndicator',
+      (tester) async {
+        when(() => onboardingCubit.state).thenReturn(
+          OnboardingState.initial().copyWith(
+            type: OnboardingStatusType.loading,
+          ),
+        );
+        when(
+          () => onboardingCubit.stream,
+        ).thenAnswer((_) => Stream.value(onboardingCubit.state));
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MultiBlocProvider(
+              providers: [
+                BlocProvider<OnboardingCubit>.value(value: onboardingCubit),
+                BlocProvider<SessionCubit>.value(value: sessionCubit),
+              ],
+              child: const OnboardingFlowScreen(),
+            ),
+          ),
+        );
+
+        expect(find.byType(SkeletonList), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
   });
 }

@@ -39,7 +39,7 @@ class HomeCubit extends Cubit<HomeState> {
       ]);
 
       final openMatchesPage = results[0] as OpenMatchesPage;
-      final myMatchesPage = results[1] as OpenMatchesPage;
+      final myMatchesResult = results[1] as ({OpenMatchesPage page, bool failed});
       final exchangeRates = results[2] as List<ExchangeRateRow>;
 
       final rating = me.primaryRating;
@@ -49,10 +49,11 @@ class HomeCubit extends Cubit<HomeState> {
           greetingName: _firstName(me.name),
           sportId: sportId,
           openMatches: openMatchesPage.items,
-          myMatches: _upcomingSorted(myMatchesPage.items),
+          myMatches: _upcomingSorted(myMatchesResult.page.items),
           levelCategory: rating?.categoryName,
           levelElo: rating?.rating.round(),
           exchangeRates: exchangeRates,
+          myMatchesLoadFailed: myMatchesResult.failed,
         ),
       );
     } catch (e) {
@@ -69,12 +70,20 @@ class HomeCubit extends Cubit<HomeState> {
       ..sort(byScheduledAtAscNullsLast);
   }
 
-  /// Calls [listMyMatchesSV] and silently returns an empty page on any error.
-  Future<OpenMatchesPage> _safeListMyMatches() async {
+  /// Calls [listMyMatchesSV] and degrades to an empty page with `failed: true`
+  /// on any error, rather than failing the whole home screen.
+  Future<({OpenMatchesPage page, bool failed})> _safeListMyMatches() async {
     try {
-      return await _matchesRepository.listMyMatchesSV(page: 1, limit: 20);
+      final page = await _matchesRepository.listMyMatchesSV(
+        page: 1,
+        limit: 20,
+      );
+      return (page: page, failed: false);
     } catch (_) {
-      return const OpenMatchesPage(items: [], page: 1, limit: 20, total: 0);
+      return (
+        page: const OpenMatchesPage(items: [], page: 1, limit: 20, total: 0),
+        failed: true,
+      );
     }
   }
 

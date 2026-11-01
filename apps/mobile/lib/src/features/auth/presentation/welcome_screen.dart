@@ -26,7 +26,7 @@ class WelcomeScreen extends StatelessWidget {
                   Center(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
                             color: scheme.primary.withValues(alpha: 0.24),
@@ -35,7 +35,7 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: const CuadralaLogo(size: 96, borderRadius: 22),
+                      child: const CuadralaLogo(size: 96, borderRadius: 18),
                     ),
                   ),
                   const SizedBox(height: 12),
