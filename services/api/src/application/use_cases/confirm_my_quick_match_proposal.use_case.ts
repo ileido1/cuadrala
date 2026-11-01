@@ -22,7 +22,14 @@ export class ConfirmMyQuickMatchProposalUseCase {
       if (PROPOSAL.matchId === null) {
         throw new AppError('PROPUESTA_SIN_PARTIDO', 'Esta propuesta no tiene una partida confirmable.', 409);
       }
-      await this._joinMatch.executeSV(PROPOSAL.matchId, _userId);
+      try {
+        await this._joinMatch.executeSV(PROPOSAL.matchId, _userId);
+      } catch (_error) {
+        //? #92: reintento seguro — un intento anterior puede haber unido al
+        //? usuario al partido y fallado antes de confirmar la propuesta. Sin
+        //? esto, reintentar queda atascado para siempre en 409 YA_UNIDO.
+        if (!(_error instanceof AppError) || _error.code !== 'YA_UNIDO') throw _error;
+      }
     }
     // Un grupo nuevo no aparta cancha ni genera pagos: cada jugador solo confirma interés.
     return this._repository.confirmProposalForUserSV(_userId, _venueSelection);
