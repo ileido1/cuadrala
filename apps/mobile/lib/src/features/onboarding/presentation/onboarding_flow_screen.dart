@@ -6,6 +6,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/skeleton_list.dart';
 import '../../auth/presentation/cubit/session_cubit.dart';
 import 'cubit/onboarding_cubit.dart';
 import 'cubit/onboarding_state.dart';
@@ -68,7 +69,7 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
         builder: (context, state) {
           if (state.type == OnboardingStatusType.loading ||
               state.type == OnboardingStatusType.initial) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonList();
           }
           if (state.type == OnboardingStatusType.error) {
             return ErrorState(
@@ -147,13 +148,13 @@ class _OnboardingHeader extends StatelessWidget {
                 children: [
                   InkWell(
                     onTap: onBack,
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
                         color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(11),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(AppIcons.chevronLeft, size: 20),
                     ),

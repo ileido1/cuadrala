@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cuadrala_mobile/src/app/app.dart';
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
@@ -7,6 +9,7 @@ import 'package:cuadrala_mobile/src/features/onboarding/presentation/cubit/onboa
 import 'package:cuadrala_mobile/src/features/onboarding/presentation/pages/identity_page.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/skeleton_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -74,6 +77,38 @@ void main() {
     await tester.tap(find.text('Selecciona tu fecha de nacimiento'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'shows SkeletonList while the profile is loading, not CircularProgressIndicator',
+    (tester) async {
+      // Reemplaza el stub por defecto: el Future nunca se resuelve, así
+      // _loading se mantiene true durante todo el test.
+      when(() => profile.getMe()).thenAnswer((_) => Completer<UserMeDto>().future);
+
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('es'),
+          supportedLocales: const [Locale('es')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          theme: AppTheme.dark(),
+          builder: (context, child) => WebMobileFrame(child: child!),
+          home: Scaffold(
+            body: BlocProvider<OnboardingCubit>.value(
+              value: cubit,
+              child: OnboardingIdentityPage(onContinue: () {}),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(SkeletonList), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    },
+  );
 
   testWidgets('should default to Venezuela when the phone is empty', (
     tester,

@@ -6,6 +6,7 @@ import 'package:phone_form_field/phone_form_field.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../../shared/widgets/skeleton_list.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/models/onboarding_status_dto.dart';
 import '../cubit/onboarding_cubit.dart';
@@ -144,7 +145,7 @@ class _OnboardingIdentityPageState extends State<OnboardingIdentityPage> {
         final scheme = Theme.of(context).colorScheme;
 
         if (_loading) {
-          return const Center(child: CircularProgressIndicator());
+          return const SkeletonList();
         }
 
         return SafeArea(
@@ -358,11 +359,11 @@ class _BirthDatePickerCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           color: isSelected
               ? scheme.primary.withValues(alpha: .1)
               : scheme.surfaceContainerHigh,

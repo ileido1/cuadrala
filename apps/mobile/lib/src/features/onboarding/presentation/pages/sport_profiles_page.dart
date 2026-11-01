@@ -6,6 +6,7 @@ import '../../../../core/sport/sport_classification.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/brand_colors.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../../shared/widgets/skeleton_list.dart';
 import '../../../../shared/widgets/segmented_control.dart';
 import '../../../../shared/widgets/selectable_chip.dart';
 import '../../../catalog/data/catalog_repository.dart';
@@ -252,7 +253,7 @@ class _OnboardingSportProfilesPageState extends State<OnboardingSportProfilesPag
         final scheme = Theme.of(context).colorScheme;
 
         if (_loading) {
-          return const Center(child: CircularProgressIndicator());
+          return const SkeletonList();
         }
         if (_sports.isEmpty) {
           return const Center(child: Text('No hay deportes configurados.'));
@@ -511,12 +512,12 @@ class _SportTile extends StatelessWidget {
     final meta = _metaFor(sport);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(18),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           color: selected ? scheme.primary.withValues(alpha: .08) : scheme.surface,
           border: Border.all(
             color: selected ? scheme.primary : scheme.outlineVariant,
@@ -530,7 +531,7 @@ class _SportTile extends StatelessWidget {
               height: 40,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(12),
                 color: meta.color,
               ),
               child: Icon(meta.icon, color: Colors.white, size: 21),
