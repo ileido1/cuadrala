@@ -374,7 +374,7 @@ class _CategoryReadOnly extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: scheme.errorContainer,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
           children: [
@@ -395,16 +395,12 @@ class _CategoryReadOnly extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: scheme.outlineVariant, width: 1.5),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.workspace_premium_outlined,
-            size: 18,
-            color: scheme.primary,
-          ),
+          Icon(AppIcons.medal, size: 18, color: scheme.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -416,7 +412,7 @@ class _CategoryReadOnly extends StatelessWidget {
               ),
             ),
           ),
-          Icon(Icons.lock_outline, size: 16, color: scheme.onSurfaceVariant),
+          Icon(AppIcons.lock, size: 16, color: scheme.onSurfaceVariant),
         ],
       ),
     );

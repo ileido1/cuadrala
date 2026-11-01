@@ -283,7 +283,7 @@ class _ZoneChips extends StatelessWidget {
           // Current location chip
           ActionChip(
             avatar: Icon(
-              selectedZone == null ? Icons.my_location : Icons.check,
+              selectedZone == null ? AppIcons.myLocation : AppIcons.check,
               size: 16,
               color: selectedZone == null ? scheme.primary : null,
             ),
@@ -297,7 +297,7 @@ class _ZoneChips extends StatelessWidget {
               padding: const EdgeInsets.only(right: 6),
               child: FilterChip(
                 avatar: Icon(
-                  selectedZone?.id == zone.id ? Icons.check : Icons.place,
+                  selectedZone?.id == zone.id ? AppIcons.check : AppIcons.pin,
                   size: 16,
                 ),
                 label: Text(zone.name),
@@ -308,7 +308,7 @@ class _ZoneChips extends StatelessWidget {
             ),
           // Add zone button
           ActionChip(
-            avatar: const Icon(Icons.add, size: 16),
+            avatar: const Icon(AppIcons.add, size: 16),
             label: const Text('Zona'),
             onPressed: onManage,
           ),
@@ -391,7 +391,8 @@ class _ZonesBottomSheet extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(AppIcons.close),
+                  tooltip: 'Cerrar',
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -404,7 +405,7 @@ class _ZonesBottomSheet extends StatelessWidget {
                   child: Column(
                     children: [
                       Icon(
-                        Icons.place_outlined,
+                        AppIcons.pinOutline,
                         size: 40,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -430,11 +431,12 @@ class _ZonesBottomSheet extends StatelessWidget {
             else
               ...zones.map(
                 (z) => ListTile(
-                  leading: const Icon(Icons.place),
+                  leading: const Icon(AppIcons.pin),
                   title: Text(z.name),
                   subtitle: Text('${z.radiusKm} km de radio'),
                   trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
+                    icon: const Icon(AppIcons.delete),
+                    tooltip: 'Eliminar zona',
                     onPressed: () {
                       context.read<VenueMapCubit>().deleteZone(z.id);
                       Navigator.pop(context);
@@ -524,6 +526,7 @@ class _VenueMiniSheet extends StatelessWidget {
                   ),
                   IconButton(
                     icon: const Icon(AppIcons.close),
+                    tooltip: 'Cerrar',
                     onPressed: onClose,
                   ),
                 ],

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/court_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/models/venue_dto.dart';
 import 'package:cuadrala_mobile/src/features/venues/presentation/cubit/venue_booking_cubit.dart';
@@ -253,6 +254,24 @@ void main() {
     expect(find.text('Masculino'), findsOneWidget);
     expect(find.text('Femenino'), findsOneWidget);
     expect(find.text('Mixto'), findsOneWidget);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Category read-only banner icons use AppIcons (#112)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  testWidgets(
+      'category banner with a category shows AppIcons.medal and AppIcons.lock',
+      (tester) async {
+    final state = _loadedState(canSubmitState: true);
+    when(() => cubit.state).thenReturn(state);
+    whenListen(cubit, Stream<VenueBookingState>.empty(), initialState: state);
+
+    await tester.pumpWidget(_buildTestApp(state: state, cubit: cubit));
+    await tester.pump();
+
+    expect(find.byIcon(AppIcons.medal), findsOneWidget);
+    expect(find.byIcon(AppIcons.lock), findsOneWidget);
   });
 
   // ──────────────────────────────────────────────────────────────────────────
