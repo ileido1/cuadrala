@@ -142,7 +142,15 @@ final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_radius),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          // `fontFamily` explícito: sin esto, `TextStyle.merge` deja pasar el
+          // peso/tamaño pero el family ambient no siempre llega al label
+          // resuelto (visible en golden tests — `TournamentTheme.apply`
+          // tenía que parchar esto mismo localmente; acá se corrige en la raíz).
+          textStyle: const TextStyle(
+            fontFamily: plusJakartaFontFamily,
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -155,7 +163,11 @@ final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_radius),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          textStyle: const TextStyle(
+            fontFamily: plusJakartaFontFamily,
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
         ),
       ),
       cardTheme: CardThemeData(
