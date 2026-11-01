@@ -37,8 +37,13 @@ NotificationDestination? resolveNotificationNavigation({
 /// Listens to [FirebaseMessaging.onMessage] and displays each incoming message
 /// as a dismissable overlay. Tapping navigates to the relevant screen.
 final class ForegroundNotificationHandler extends StatefulWidget {
-  const ForegroundNotificationHandler({required this.child, super.key});
+  const ForegroundNotificationHandler({
+    required this.router,
+    required this.child,
+    super.key,
+  });
 
+  final GoRouter router;
   final Widget child;
 
   /// Returns whether a foreground notification is currently being shown.
@@ -63,8 +68,13 @@ class _ForegroundNotificationState
 
   @override
   void dispose() {
+    //? No llamar `_dismissOverlay()` acá: en `dispose()` el Element ya está
+    //? en camino a `defunct` aunque `mounted` todavía devuelva `true`, y
+    //? `setState` revienta esa aserción. Solo se limpia el OverlayEntry, sin
+    //? disparar un rebuild que ya no tiene sentido.
     _subscription?.cancel();
-    _dismissOverlay();
+    _currentEntry?.remove();
+    _currentEntry = null;
     super.dispose();
   }
 
@@ -94,7 +104,13 @@ class _ForegroundNotificationState
   }) {
     if (!mounted) return;
 
-    final overlay = Overlay.of(context);
+    //? Issue #100: no usar `Overlay.of(context)` — este widget vive por fuera
+    //? de `MaterialApp.router`, así que su propio `context` nunca puede ver el
+    //? Overlay interno del Navigator (un lookup por `InheritedWidget` solo
+    //? mira hacia los ancestros). El `navigatorKey` del propio router sí tiene
+    //? acceso directo a su `OverlayState`, sin pasar por `context` en absoluto.
+    final overlay = widget.router.routerDelegate.navigatorKey.currentState?.overlay;
+    if (overlay == null) return;
     final entry = OverlayEntry(
       builder: (context) => _NotificationBanner(
         title: title,
@@ -123,20 +139,21 @@ class _ForegroundNotificationState
   }
 
   void _navigateFromData(Map<String, dynamic> data) {
-    final router = GoRouter.of(context);
+    //? Issue #100: `widget.router` (recibido directo, no vía `GoRouter.of`)
+    //? — mismo motivo que `_showOverlay`.
     final destination = resolveNotificationNavigation(
       eventType: data['eventType'] as String? ?? '',
       matchId: data['matchId'] as String?,
       tournamentId: data['tournamentId'] as String?,
-      currentLocation: router.state.uri.toString(),
+      currentLocation: widget.router.state.uri.toString(),
     );
     if (destination == null) return;
 
     if (destination.replacesStack) {
-      router.go(destination.route);
+      widget.router.go(destination.route);
       return;
     }
-    router.push(destination.route);
+    widget.router.push(destination.route);
   }
 
   String _defaultTitle(String? eventType) {

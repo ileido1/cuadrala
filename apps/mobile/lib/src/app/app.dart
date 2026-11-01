@@ -27,7 +27,15 @@ final class App extends StatelessWidget {
           setupPushNotificationTapHandler(router.router);
           setupTournamentInviteLinkDeepLinkHandler(router.router);
           return PushTokenSyncLifecycle(
+            //? Issue #100: ForegroundNotificationHandler se queda por fuera de
+            //? MaterialApp.router — no importa, porque ya no depende de
+            //? GoRouter.of(context)/Overlay.of(context) (un lookup por
+            //? ancestros nunca puede ver un InheritedWidget provisto por un
+            //? descendiente, sin importar en qué posición del árbol se envuelva
+            //? el widget). En su lugar recibe la instancia de `GoRouter`
+            //? directamente y usa `navigatorKey.currentState.overlay`.
             child: ForegroundNotificationHandler(
+              router: router.router,
               child: MaterialApp.router(
                 title: 'Cuádrala',
                 locale: const Locale('es', 'VE'),
