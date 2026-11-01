@@ -85,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _MyMatchesSection(
                     myMatches: loaded.myMatches,
                     exchangeRates: loaded.exchangeRates,
+                    myMatchesLoadFailed: loaded.myMatchesLoadFailed,
                     onVerTodas: () =>
                         StatefulNavigationShell.of(context).goBranch(1),
                     onMatchTap: (id) => context.push(Routes.matchDetail(id)),
@@ -504,12 +505,14 @@ final class _MyMatchesSection extends StatelessWidget {
     required this.exchangeRates,
     required this.onVerTodas,
     required this.onMatchTap,
+    this.myMatchesLoadFailed = false,
   });
 
   final List<OpenMatchDto> myMatches;
   final List<ExchangeRateRow> exchangeRates;
   final VoidCallback onVerTodas;
   final void Function(String matchId) onMatchTap;
+  final bool myMatchesLoadFailed;
 
   @override
   Widget build(BuildContext context) {
@@ -534,7 +537,9 @@ final class _MyMatchesSection extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'No tenés partidas. ¡Buscá una!',
+                    myMatchesLoadFailed
+                        ? 'No pudimos cargar tus partidas'
+                        : 'No tenés partidas. ¡Buscá una!',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: scheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,

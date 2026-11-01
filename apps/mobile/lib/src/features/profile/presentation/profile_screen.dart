@@ -6,6 +6,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/skeleton_list.dart';
 import '../../onboarding/data/models/user_availability_dto.dart';
 import 'cubit/profile_cubit.dart';
 import 'cubit/profile_state.dart';
@@ -31,7 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) => BlocBuilder<ProfileCubit, ProfileState>(
     builder: (context, state) {
       if (state is ProfileInitial || state is ProfileLoading) {
-        return const Center(child: CircularProgressIndicator());
+        return const SkeletonList(itemCount: 5);
       }
       if (state is ProfileFailure) {
         return ErrorState(
@@ -563,7 +564,7 @@ final class _FormPill extends StatelessWidget {
       color: result == true
           ? BrandColors.limeAccent
           : Theme.of(context).colorScheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(12),
       border: result == null
           ? Border.all(color: Theme.of(context).colorScheme.outlineVariant)
           : null,
@@ -739,7 +740,7 @@ final class _Tournaments extends StatelessWidget {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: scheme.primary.withValues(alpha: .15),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         AppIcons.trophy,
@@ -871,7 +872,7 @@ final class _Achievement extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(6, 13, 6, 11),
       decoration: BoxDecoration(
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
@@ -995,7 +996,7 @@ final class _AvailabilityCell extends StatelessWidget {
         color: active
             ? Theme.of(context).colorScheme.primary
             : Theme.of(context).colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(12),
         border: active
             ? null
             : Border.all(color: Theme.of(context).colorScheme.outlineVariant),

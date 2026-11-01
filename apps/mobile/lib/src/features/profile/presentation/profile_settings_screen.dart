@@ -30,9 +30,9 @@ final class ProfileSettingsScreen extends StatelessWidget {
                   label: 'Volver',
                   child: Material(
                     color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(12),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(11),
+                      borderRadius: BorderRadius.circular(12),
                       onTap: () => Navigator.of(context).pop(),
                       child: const SizedBox(
                         width: 36,
@@ -156,7 +156,7 @@ final class _SettingsGroup extends StatelessWidget {
       Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: Theme.of(context).colorScheme.outlineVariant,
           ),

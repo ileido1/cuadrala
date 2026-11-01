@@ -16,6 +16,7 @@ import 'package:cuadrala_mobile/src/features/profile/data/models/user_stats_dto.
 import 'package:cuadrala_mobile/src/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:cuadrala_mobile/src/features/profile/presentation/cubit/profile_state.dart';
 import 'package:cuadrala_mobile/src/features/profile/presentation/profile_screen.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/skeleton_list.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -101,6 +102,7 @@ ProfileLoaded _makeLoaded({
   List<LeaderboardEntryDto> leaderboard = const [],
   List<UserRatingHistoryItemDto> history = const [],
   PlayerProfileDto playerProfile = _kPlayerProfile,
+  bool leaderboardLoadFailed = false,
 }) {
   return ProfileLoaded(
     me: _kMe,
@@ -114,6 +116,7 @@ ProfileLoaded _makeLoaded({
     availability: const [],
     sports: const [],
     leaderboard: leaderboard,
+    leaderboardLoadFailed: leaderboardLoadFailed,
   );
 }
 
@@ -176,6 +179,42 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'UT-05b: leaderboardLoadFailed shows failure text (not "sin datos") in ELO sheet',
+    (tester) async {
+      final loaded = _makeLoaded(
+        ratings: [],
+        leaderboard: [],
+        leaderboardLoadFailed: true,
+      );
+      when(() => profileCubit.state).thenReturn(loaded);
+      whenListen(profileCubit, Stream.value(loaded), initialState: loaded);
+
+      await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+      await tester.pumpAndSettle();
+      await _openEloSheet(tester);
+
+      expect(find.text('No pudimos cargar la clasificación'), findsOneWidget);
+      expect(find.text('Sin datos de clasificación'), findsNothing);
+    },
+  );
+
+  testWidgets('UT-15: ProfileLoading shows SkeletonList, not CircularProgressIndicator', (
+    tester,
+  ) async {
+    when(() => profileCubit.state).thenReturn(const ProfileLoading());
+    whenListen(
+      profileCubit,
+      Stream.value(const ProfileLoading()),
+      initialState: const ProfileLoading(),
+    );
+
+    await tester.pumpWidget(_wrapScreen(sessionCubit, profileCubit));
+
+    expect(find.byType(SkeletonList), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
 
   testWidgets('UT-06: screen renders user name when ProfileLoaded is emitted', (
     tester,

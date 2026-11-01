@@ -154,6 +154,62 @@ void main() {
     ],
   );
 
+  blocTest<HomeCubit, HomeState>(
+    'load() emits HomeLoaded with myMatchesLoadFailed=true when listMyMatchesSV throws',
+    build: () {
+      when(() => profileRepo.getMe()).thenAnswer((_) async => _stubProfile());
+      when(() => matchesRepo.resolveDefaultSportId()).thenAnswer((_) async => 'sport-1');
+      when(
+        () => matchesRepo.listOpenMatches(
+          sportId: any(named: 'sportId'),
+          page: any(named: 'page'),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) async => _pageWith([_openMatch('open-1')]));
+      when(
+        () => matchesRepo.listMyMatchesSV(page: any(named: 'page'), limit: any(named: 'limit')),
+      ).thenThrow(const AppFailure(code: 'NETWORK', message: 'timeout'));
+      return makeCubit();
+    },
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<HomeLoading>(),
+      isA<HomeLoaded>().having(
+        (s) => s.myMatchesLoadFailed,
+        'myMatchesLoadFailed',
+        isTrue,
+      ),
+    ],
+  );
+
+  blocTest<HomeCubit, HomeState>(
+    'load() emits HomeLoaded with myMatchesLoadFailed=false when listMyMatchesSV succeeds',
+    build: () {
+      when(() => profileRepo.getMe()).thenAnswer((_) async => _stubProfile());
+      when(() => matchesRepo.resolveDefaultSportId()).thenAnswer((_) async => 'sport-1');
+      when(
+        () => matchesRepo.listOpenMatches(
+          sportId: any(named: 'sportId'),
+          page: any(named: 'page'),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) async => _pageWith([_openMatch('open-1')]));
+      when(
+        () => matchesRepo.listMyMatchesSV(page: any(named: 'page'), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => _pageWith([_openMatch('my-1')]));
+      return makeCubit();
+    },
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<HomeLoading>(),
+      isA<HomeLoaded>().having(
+        (s) => s.myMatchesLoadFailed,
+        'myMatchesLoadFailed',
+        isFalse,
+      ),
+    ],
+  );
+
   // ── 3. Total failure: profile throws → HomeFailure ───────────────────────
 
   blocTest<HomeCubit, HomeState>(

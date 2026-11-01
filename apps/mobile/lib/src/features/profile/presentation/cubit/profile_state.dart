@@ -40,6 +40,7 @@ final class ProfileLoaded extends ProfileState {
     required this.availability,
     required this.sports,
     this.leaderboard = const [],
+    this.leaderboardLoadFailed = false,
     this.myTournaments = const [],
     this.tournamentsLoadFailed = false,
   });
@@ -55,6 +56,7 @@ final class ProfileLoaded extends ProfileState {
   final List<UserAvailabilityDto> availability;
   final List<SportDto> sports;
   final List<LeaderboardEntryDto> leaderboard;
+  final bool leaderboardLoadFailed;
   final List<ViewerTournamentDto> myTournaments;
   final bool tournamentsLoadFailed;
 
@@ -71,6 +73,7 @@ final class ProfileLoaded extends ProfileState {
     availability,
     sports,
     leaderboard,
+    leaderboardLoadFailed,
     myTournaments,
     tournamentsLoadFailed,
   ];

@@ -69,9 +69,9 @@ final class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       label: 'Cerrar vista pública',
                       child: Material(
                         color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(11),
+                        borderRadius: BorderRadius.circular(12),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(11),
+                          borderRadius: BorderRadius.circular(12),
                           onTap: () => Navigator.of(context).pop(),
                           child: const SizedBox(
                             width: 36,
@@ -123,6 +123,8 @@ final class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     const SizedBox(height: 10),
                     Text(
                       vm.me.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -132,6 +134,8 @@ final class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       const SizedBox(height: 1),
                       Text(
                         vm.location!.label!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12.5,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -301,7 +305,7 @@ final class _Surface extends StatelessWidget {
     padding: padding,
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
     ),
     child: child,
@@ -317,7 +321,7 @@ final class _FormPill extends StatelessWidget {
     alignment: Alignment.center,
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(12),
       border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
     ),
     child: Text(
@@ -386,7 +390,7 @@ final class _Availability extends StatelessWidget {
                     color: active.contains('${day.name}:${row.$3.name}')
                         ? Theme.of(context).colorScheme.primary
                         : Theme.of(context).colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(7),
+                    borderRadius: BorderRadius.circular(12),
                     border: active.contains('${day.name}:${row.$3.name}')
                         ? null
                         : Border.all(

@@ -60,12 +60,14 @@ OpenMatchDto _makeOpenMatch({
 HomeLoaded _loadedState({
   List<OpenMatchDto> openMatches = const [],
   List<OpenMatchDto> myMatches = const [],
+  bool myMatchesLoadFailed = false,
 }) {
   return HomeLoaded(
     greetingName: 'Carlos',
     sportId: 'sport-1',
     openMatches: openMatches,
     myMatches: myMatches,
+    myMatchesLoadFailed: myMatchesLoadFailed,
   );
 }
 
@@ -237,6 +239,26 @@ void main() {
 
       expect(find.textContaining('No tenés partidas'), findsOneWidget);
     });
+
+    testWidgets(
+      'shows failure text instead of empty CTA when myMatchesLoadFailed is true',
+      (tester) async {
+        when(() => homeCubit.state).thenReturn(
+          _loadedState(myMatches: [], myMatchesLoadFailed: true),
+        );
+
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('No pudimos cargar tus partidas'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('No tenés partidas'), findsNothing);
+      },
+    );
 
     testWidgets('shows at most 2 items from myMatches', (tester) async {
       when(() => homeCubit.state).thenReturn(

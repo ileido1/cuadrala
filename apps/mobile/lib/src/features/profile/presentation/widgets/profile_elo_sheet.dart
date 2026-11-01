@@ -85,7 +85,9 @@ final class _ProfileEloSheet extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Center(
                       child: Text(
-                        'Sin datos de clasificación',
+                        vm.leaderboardLoadFailed
+                            ? 'No pudimos cargar la clasificación'
+                            : 'Sin datos de clasificación',
                         style: TextStyle(color: scheme.onSurfaceVariant),
                       ),
                     ),

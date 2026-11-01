@@ -53,12 +53,14 @@ class ProfileCubit extends Cubit<ProfileState> {
       final ratings = results[1] as List<UserRatingDto>;
 
       var leaderboard = <LeaderboardEntryDto>[];
+      var leaderboardLoadFailed = false;
       if (ratings.isNotEmpty) {
         try {
           leaderboard = await _profileRepository.getLeaderboard(
             ratings.first.categoryId,
           );
         } catch (e) {
+          leaderboardLoadFailed = true;
           debugPrint('[ProfileCubit] leaderboard fetch failed: $e');
         }
       }
@@ -96,6 +98,7 @@ class ProfileCubit extends Cubit<ProfileState> {
           availability: results[7] as List<UserAvailabilityDto>,
           sports: results[8] as List<SportDto>,
           leaderboard: leaderboard,
+          leaderboardLoadFailed: leaderboardLoadFailed,
           myTournaments: myTournaments,
           tournamentsLoadFailed: tournamentsLoadFailed,
         ),
