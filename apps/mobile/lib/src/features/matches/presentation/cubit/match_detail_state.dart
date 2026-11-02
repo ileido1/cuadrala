@@ -24,6 +24,7 @@ final class MatchDetailLoaded extends MatchDetailState {
     required this.viewerUserId,
     this.viewerHasConfirmedPayment = false,
     this.viewerHasPendingPayment = false,
+    this.participantsConfirmedPayment = const {},
     this.actionLoading = false,
     this.actionMessage,
     this.actionMessageIsError = false,
@@ -36,6 +37,11 @@ final class MatchDetailLoaded extends MatchDetailState {
 
   /// El viewer envió un comprobante que el staff aún no confirmó (en revisión).
   final bool viewerHasPendingPayment;
+
+  /// Pago confirmado real de cada participante que NO es el viewer, por
+  /// userId. Antes el layout de cancha asumía "pagado" para cualquiera que
+  /// no fuera el viewer; esto trae el dato real para evitarlo.
+  final Map<String, bool> participantsConfirmedPayment;
   final bool actionLoading;
   final String? actionMessage;
   final bool actionMessageIsError;
@@ -49,6 +55,7 @@ final class MatchDetailLoaded extends MatchDetailState {
         viewerUserId,
         viewerHasConfirmedPayment,
         viewerHasPendingPayment,
+        participantsConfirmedPayment,
         actionLoading,
         actionMessage,
         actionMessageIsError,

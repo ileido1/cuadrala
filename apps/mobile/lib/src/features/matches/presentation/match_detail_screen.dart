@@ -634,11 +634,12 @@ final class _CourtSection extends StatelessWidget {
       if (index < parts.length) {
         final p = parts[index];
         final isYou = p.userId == loaded.viewerUserId;
-        final status = isYou
-            ? (loaded.viewerHasConfirmedPayment
-                  ? CourtPlayerStatus.paid
-                  : CourtPlayerStatus.pending)
-            : CourtPlayerStatus.paid;
+        final confirmed = isYou
+            ? loaded.viewerHasConfirmedPayment
+            : (loaded.participantsConfirmedPayment[p.userId] ?? false);
+        final status = confirmed
+            ? CourtPlayerStatus.paid
+            : CourtPlayerStatus.pending;
         return CourtSpotData(
           player: CourtPlayer(
             name: p.displayName ?? 'Jugador #${idPreview(p.userId)}',
