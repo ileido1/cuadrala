@@ -456,7 +456,7 @@ void main() {
       );
       await tester.pump();
       expect(find.byKey(const Key('tournament.detail')), findsOneWidget);
-      expect(find.text('Calendario'), findsOneWidget);
+      expect(find.text('Mis partidos'), findsOneWidget);
     });
 
     testWidgets(
@@ -503,7 +503,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('tournament.detail')), findsOneWidget);
-        expect(find.text('Calendario'), findsOneWidget);
+        expect(find.text('Mis partidos'), findsOneWidget);
       },
     );
   });
@@ -1465,19 +1465,21 @@ void main() {
 
         expect(find.byType(TabBar), findsNothing);
         expect(find.text('Info'), findsOneWidget);
-        expect(find.text('Calendario'), findsOneWidget);
+        // Issue #133: jugador CONFIRMED ve "Mis partidos", no "Calendario"
+        // (ese label queda para el espectador no confirmado).
+        expect(find.text('Mis partidos'), findsOneWidget);
         expect(find.text('Tabla'), findsOneWidget);
         //? Info es la pestaña por defecto (índice 0).
         expect(find.text('Cómo se juega'), findsOneWidget);
       },
     );
 
-    testWidgets('tapping Calendar shows only the current player matches', (
+    testWidgets('tapping Mis partidos shows only the current player matches', (
       tester,
     ) async {
       await pumpPlayerTabs(tester);
 
-      await tester.tap(find.text('Calendario'));
+      await tester.tap(find.text('Mis partidos'));
       await tester.pumpAndSettle();
 
       expect(find.text('Todavía no hay partidos asignados.'), findsOneWidget);
