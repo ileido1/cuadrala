@@ -40,7 +40,13 @@ void main() {
     });
 
     blocTest<SessionCubit, SessionState>(
-      'bootstrap: loading → authenticated, luego authenticated(complete=true) tras refrescar onboarding',
+      // Antes emitía authenticated() (onboardingComplete: null) como paso
+      // intermedio: el router reacciona a CADA emit (GoRouterRefreshStream),
+      // y auth_redirect.dart manda onboardingComplete==null en ruta de auth
+      // a /home. Eso hacía rebotar /login → /home → /onboarding en cada
+      // login/registro con onboarding pendiente. Fix: resolver el estado
+      // real antes de emitir, un solo emit final.
+      'bootstrap: loading → authenticated(complete=true) sin estado intermedio con onboarding desconocido',
       build: () {
         when(() => authRepository.refresh()).thenAnswer(
           (_) async => const AuthTokens(accessToken: 'a', refreshToken: 'r'),
@@ -54,7 +60,28 @@ void main() {
       act: (cubit) => cubit.bootstrap(),
       expect: () => const <SessionState>[
         SessionState.loading(),
-        SessionState.authenticated(),
+        SessionState.authenticated(onboardingComplete: true),
+      ],
+      verify: (_) {
+        verify(() => pushTokenSyncService.syncTokenIfAuthenticated()).called(1);
+      },
+    );
+
+    blocTest<SessionCubit, SessionState>(
+      // Mismo bug que bootstrap, pero disparado por login/register:
+      // login_screen.dart y register_screen.dart llaman markAuthenticated()
+      // y navegan confiando en el redirect del router — un emit intermedio
+      // con onboardingComplete: null manda a /home antes de llegar a
+      // /onboarding, lo que el usuario percibe como un parpadeo/cierre de
+      // sesión.
+      'markAuthenticated: un solo emit con el onboarding ya resuelto, sin estado intermedio',
+      build: () => SessionCubit(
+        authRepository: authRepository,
+        onboardingRepository: onboardingRepository,
+        pushTokenSyncService: pushTokenSyncService,
+      ),
+      act: (cubit) => cubit.markAuthenticated(),
+      expect: () => const <SessionState>[
         SessionState.authenticated(onboardingComplete: true),
       ],
       verify: (_) {

@@ -23,9 +23,9 @@ class SessionCubit extends Cubit<SessionState> {
     emit(const SessionState.loading());
     try {
       await _authRepository.refresh();
-      emit(const SessionState.authenticated());
       await _pushTokenSyncService.syncTokenIfAuthenticated();
-      await _refreshOnboardingFlag();
+      final onboardingComplete = await _resolveOnboardingCompleteSV();
+      emit(SessionState.authenticated(onboardingComplete: onboardingComplete));
     } catch (_) {
       await _authRepository.logout();
       emit(const SessionState.unauthenticated(reason: 'Sesión expirada'));
@@ -40,24 +40,37 @@ class SessionCubit extends Cubit<SessionState> {
   }
 
   /// Útil después de login/register: los tokens ya se guardaron en storage.
+  ///
+  /// Resuelve el estado real de onboarding ANTES de emitir: GoRouter
+  /// (`GoRouterRefreshStream`) reacciona a cada emit del cubit, y
+  /// `auth_redirect.dart` manda `onboardingComplete == null` en una ruta de
+  /// auth a `/home`. Emitir `authenticated()` sin el dato real como paso
+  /// intermedio hacía rebotar /login → /home → /onboarding en cada
+  /// login/registro con onboarding pendiente.
   Future<void> markAuthenticated() async {
-    emit(const SessionState.authenticated());
     await _pushTokenSyncService.syncTokenIfAuthenticated();
-    await _refreshOnboardingFlag();
+    final onboardingComplete = await _resolveOnboardingCompleteSV();
+    emit(SessionState.authenticated(onboardingComplete: onboardingComplete));
   }
 
   /// Re-consulta el estado de onboarding (útil cuando el usuario completa el último paso).
   Future<void> refreshOnboardingStatus() async {
     if (state is! SessionAuthenticated) return;
-    await _refreshOnboardingFlag();
-  }
-
-  Future<void> _refreshOnboardingFlag() async {
     try {
       final status = await _onboardingRepository.getStatus();
       emit(SessionState.authenticated(onboardingComplete: status.isComplete));
     } catch (_) {
-      // Si falla la consulta, conservamos `null` (UI tratará como unknown).
+      // Si falla la consulta, conservamos el estado actual.
+    }
+  }
+
+  Future<bool?> _resolveOnboardingCompleteSV() async {
+    try {
+      final status = await _onboardingRepository.getStatus();
+      return status.isComplete;
+    } catch (_) {
+      // Si falla la consulta, la UI tratará `null` como "desconocido".
+      return null;
     }
   }
 }
