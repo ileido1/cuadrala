@@ -20,6 +20,10 @@ class AuthRepository {
 
   AuthTokens? get tokensInMemory => _tokensInMemory;
 
+  /// Request de refresh en vuelo, compartido entre llamadas concurrentes
+  /// (ver [refresh]).
+  Future<AuthTokens>? _inFlightRefresh;
+
   Future<AuthTokens> login(LoginRequest request) async {
     final tokens = await _authApi.login(request);
     await _secureTokenStorage.writeRefreshToken(tokens.refreshToken);
@@ -41,7 +45,25 @@ class AuthRepository {
     return tokens;
   }
 
-  Future<AuthTokens> refresh() async {
+  /// El backend rota el refresh token en cada uso (single-use): si dos
+  /// llamadores concurrentes (p. ej. dos requests 401 al mismo tiempo, vía
+  /// `AuthTokenInterceptor`) dispararan cada uno su propio request, el que
+  /// pierde la carrera usaría un token ya invalidado por el otro y fallaría,
+  /// forzando un logout aunque la sesión seguía siendo válida. Por eso todo
+  /// llamador mientras haya un refresh en curso espera ese MISMO Future en
+  /// vez de iniciar uno nuevo — el backend nunca ve más de un request real
+  /// por episodio de refresh.
+  Future<AuthTokens> refresh() {
+    final inFlight = _inFlightRefresh;
+    if (inFlight != null) return inFlight;
+
+    final request = _performRefreshSV();
+    _inFlightRefresh = request;
+    request.whenComplete(() => _inFlightRefresh = null);
+    return request;
+  }
+
+  Future<AuthTokens> _performRefreshSV() async {
     final refreshToken = await _secureTokenStorage.readRefreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
       throw const AppFailure(
