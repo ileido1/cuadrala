@@ -379,10 +379,20 @@ final class TournamentDetailBody extends StatelessWidget {
     final showPlayerTabs =
         currentRegistration?.status == 'CONFIRMED' ||
         const {'IN_PROGRESS', 'COMPLETED'}.contains(tournament?.status);
+    // Issue #133: el label de la segunda pestaña depende de qué contenido
+    // muestra realmente (ver más abajo, línea ~576): "Mis partidos" para un
+    // jugador CONFIRMED (muestra _MyMatchesTab), "Calendario" para el
+    // espectador no confirmado (muestra _ScheduleTab).
     final tabs = isOrganizer
         ? const <String>['Inscritos', 'Cuadro', 'Publicar']
         : showPlayerTabs
-        ? tournamentDetailTabLabels
+        ? [
+            tournamentDetailTabLabels[0],
+            currentRegistration?.status == 'CONFIRMED'
+                ? 'Mis partidos'
+                : tournamentDetailTabLabels[1],
+            tournamentDetailTabLabels[2],
+          ]
         : const <String>['Info'];
     final invited =
         registrationsState is TournamentRegistrationsLoaded &&
