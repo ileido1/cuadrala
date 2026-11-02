@@ -196,6 +196,115 @@ void main() {
     );
 
     blocTest<MatchDetailCubit, MatchDetailState>(
+      // Bug reportado en vivo: el layout de cancha mostraba "Pagado"
+      // hardcodeado para cualquier participante que no fuera el viewer
+      // (court_view.dart vía match_detail_screen.dart _CourtSection.spot()),
+      // sin consultar su pago real — por eso se veía invertido según quién
+      // mirara. Acá se prueba que el cubit SÍ consulta la transacción real
+      // de cada otro participante en vez de asumir que pagó.
+      'load no marca pagado a otro participante sin transacción confirmada',
+      build: () {
+        when(() => matchesRepository.getMatchById(matchId)).thenAnswer(
+          (_) async => buildMatch(
+            participants: [
+              MatchParticipantDto(
+                userId: viewerId,
+                joinedAt: DateTime.utc(2026, 5, 5),
+              ),
+              MatchParticipantDto(
+                userId: 'user-2',
+                joinedAt: DateTime.utc(2026, 5, 5),
+              ),
+            ],
+          ),
+        );
+        when(
+          () => monetizationRepository.listUserTransactions(
+            userId: 'user-2',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const UserTransactionsResult(userId: 'user-2', transactions: []),
+        );
+        return MatchDetailCubit(
+          matchesRepository: matchesRepository,
+          profileRepository: profileRepository,
+          monetizationRepository: monetizationRepository,
+          matchId: matchId,
+        );
+      },
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        const MatchDetailLoading(),
+        isA<MatchDetailLoaded>().having(
+          (s) => s.participantsConfirmedPayment['user-2'],
+          'user-2 confirmed',
+          false,
+        ),
+      ],
+    );
+
+    blocTest<MatchDetailCubit, MatchDetailState>(
+      'load marca pagado a otro participante con transacción confirmada real',
+      build: () {
+        when(() => matchesRepository.getMatchById(matchId)).thenAnswer(
+          (_) async => buildMatch(
+            participants: [
+              MatchParticipantDto(
+                userId: viewerId,
+                joinedAt: DateTime.utc(2026, 5, 5),
+              ),
+              MatchParticipantDto(
+                userId: 'user-2',
+                joinedAt: DateTime.utc(2026, 5, 5),
+              ),
+            ],
+          ),
+        );
+        when(
+          () => monetizationRepository.listUserTransactions(
+            userId: 'user-2',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => UserTransactionsResult(
+            userId: 'user-2',
+            transactions: [
+              TransactionDto(
+                id: 'tx-2',
+                matchId: matchId,
+                userId: 'user-2',
+                amountBase: '10',
+                feeAmount: '1',
+                amountTotal: '11',
+                status: 'CONFIRMED',
+                paymentMethod: 'MANUAL',
+                confirmedAt: DateTime.utc(2026, 5, 6),
+                createdAt: DateTime.utc(2026, 5, 5),
+              ),
+            ],
+          ),
+        );
+        return MatchDetailCubit(
+          matchesRepository: matchesRepository,
+          profileRepository: profileRepository,
+          monetizationRepository: monetizationRepository,
+          matchId: matchId,
+        );
+      },
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        const MatchDetailLoading(),
+        isA<MatchDetailLoaded>().having(
+          (s) => s.participantsConfirmedPayment['user-2'],
+          'user-2 confirmed',
+          true,
+        ),
+      ],
+    );
+
+    blocTest<MatchDetailCubit, MatchDetailState>(
       'join llama repo y re-carga el match',
       build: () {
         when(() => matchesRepository.getMatchById(matchId))

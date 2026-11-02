@@ -53,6 +53,35 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
     }
   }
 
+  /// Pago confirmado real de cada participante que NO es el viewer. El
+  /// layout de cancha (`_CourtSection` en match_detail_screen.dart) asumía
+  /// "pagado" para cualquiera que no fuera el viewer sin consultar nada —
+  /// por eso se veía invertido según quién mirara la partida.
+  Future<Map<String, bool>> _otherParticipantsConfirmedPayment(
+    MatchDetailDto match,
+    String viewerUserId,
+  ) async {
+    if (match.pricePerPlayerCents <= 0) return const {};
+    final others = match.participants.where((p) => p.userId != viewerUserId);
+    final entries = await Future.wait(
+      others.map((p) async {
+        try {
+          final txs = await _monetizationRepository.listUserTransactions(
+            userId: p.userId,
+            limit: 100,
+          );
+          final confirmed = txs.transactions.any(
+            (t) => t.matchId == _matchId && t.status == 'CONFIRMED',
+          );
+          return MapEntry(p.userId, confirmed);
+        } catch (_) {
+          return MapEntry(p.userId, false);
+        }
+      }),
+    );
+    return Map.fromEntries(entries);
+  }
+
   Future<MatchDetailLoaded> _loadedFromMatch(
     MatchDetailDto match,
     String viewerUserId, {
@@ -61,11 +90,16 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
     bool actionMessageIsError = false,
   }) async {
     final payment = await _viewerPaymentStatus(match, viewerUserId);
+    final othersPaid = await _otherParticipantsConfirmedPayment(
+      match,
+      viewerUserId,
+    );
     return MatchDetailLoaded(
       match: match,
       viewerUserId: viewerUserId,
       viewerHasConfirmedPayment: payment.confirmed,
       viewerHasPendingPayment: payment.pending,
+      participantsConfirmedPayment: othersPaid,
       actionLoading: actionLoading,
       actionMessage: actionMessage,
       actionMessageIsError: actionMessageIsError,
@@ -107,6 +141,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         viewerUserId: current.viewerUserId,
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         viewerHasPendingPayment: current.viewerHasPendingPayment,
+        participantsConfirmedPayment: current.participantsConfirmedPayment,
         actionLoading: true,
         exchangeRates: current.exchangeRates,
       ),
@@ -130,6 +165,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           viewerHasPendingPayment: current.viewerHasPendingPayment,
+          participantsConfirmedPayment: current.participantsConfirmedPayment,
           actionMessage: message,
           actionMessageIsError: true,
           exchangeRates: current.exchangeRates,
@@ -149,6 +185,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         viewerUserId: current.viewerUserId,
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         viewerHasPendingPayment: current.viewerHasPendingPayment,
+        participantsConfirmedPayment: current.participantsConfirmedPayment,
         actionLoading: true,
         exchangeRates: current.exchangeRates,
       ),
@@ -172,6 +209,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           viewerHasPendingPayment: current.viewerHasPendingPayment,
+          participantsConfirmedPayment: current.participantsConfirmedPayment,
           actionMessage: message,
           actionMessageIsError: true,
           exchangeRates: current.exchangeRates,
@@ -219,6 +257,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         viewerUserId: current.viewerUserId,
         viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
         viewerHasPendingPayment: current.viewerHasPendingPayment,
+        participantsConfirmedPayment: current.participantsConfirmedPayment,
         actionLoading: true,
         exchangeRates: current.exchangeRates,
       ),
@@ -242,6 +281,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           viewerUserId: current.viewerUserId,
           viewerHasConfirmedPayment: current.viewerHasConfirmedPayment,
           viewerHasPendingPayment: current.viewerHasPendingPayment,
+          participantsConfirmedPayment: current.participantsConfirmedPayment,
           actionMessage: message,
           actionMessageIsError: true,
           exchangeRates: current.exchangeRates,
