@@ -29,6 +29,7 @@ import '../../../shared/widgets/dual_price.dart';
 import '../../../shared/widgets/pill_toggle.dart';
 import '../../../shared/widgets/selectable_chip.dart';
 import '../../../shared/widgets/segmented_control.dart';
+import '../../../shared/widgets/app_header.dart';
 
 /// Values the parameters form starts with. Use explicit API defaults first,
 /// otherwise the schema's supported control default (boolean false, integer
@@ -396,497 +397,531 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         },
         child: Scaffold(
           key: const Key('tournaments.create'),
-          appBar: AppBar(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Crear torneo'),
-                Text(
-                  _publishOnCreate
-                      ? 'Se crea y se abre la inscripción'
-                      : 'Se crea en borrador: nadie lo ve todavía',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          body: Column(
             children: [
-              //? Error banner sticky en top si hay error
-              if (_submitError != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: scheme.errorContainer.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: scheme.error.withValues(alpha: 0.35),
+              AppHeader(
+                title: 'Crear torneo',
+                subtitle: _publishOnCreate
+                    ? 'Se crea y se abre la inscripción'
+                    : 'Se crea en borrador: nadie lo ve todavía',
+                showBack: true,
+                onBack: () => Navigator.of(context).maybePop(),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  children: [
+                    //? Error banner sticky en top si hay error
+                    if (_submitError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: scheme.errorContainer.withValues(
+                              alpha: 0.35,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: scheme.error.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            _submitError!,
+                            style: TextStyle(
+                              color: scheme.error,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    Text(
+                      'Nombre',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    child: Text(
-                      _submitError!,
-                      style: TextStyle(
-                        color: scheme.error,
-                        fontWeight: FontWeight.w800,
+                    const SizedBox(height: 8),
+                    TextField(
+                      key: const Key('create.tournament.name'),
+                      controller: _nameController,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) => setState(() {
+                        _nameFieldTouched = true;
+                      }), //? Rebuild para update _canSubmit
+                      decoration: InputDecoration(
+                        hintText: 'Ej: Torneo de Otoño',
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color:
+                                _nameFieldTouched &&
+                                    _nameController.text.isEmpty
+                                ? scheme.error
+                                : scheme.outline,
+                          ),
+                        ),
+                        errorText:
+                            _nameFieldTouched && _nameController.text.isEmpty
+                            ? 'Requerido'
+                            : null,
                       ),
                     ),
-                  ),
-                ),
-              Text(
-                'Nombre',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                key: const Key('create.tournament.name'),
-                controller: _nameController,
-                textInputAction: TextInputAction.next,
-                onChanged: (_) => setState(() {
-                  _nameFieldTouched = true;
-                }), //? Rebuild para update _canSubmit
-                decoration: InputDecoration(
-                  hintText: 'Ej: Torneo de Otoño',
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: _nameFieldTouched && _nameController.text.isEmpty
-                          ? scheme.error
-                          : scheme.outline,
+                    const SizedBox(height: 14),
+                    Text(
+                      'Cuándo',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  errorText: _nameFieldTouched && _nameController.text.isEmpty
-                      ? 'Requerido'
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Cuándo',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              DateStrip(
-                key: const Key('create.tournament.startDateStrip'),
-                days: _days,
-                value: _selectedDateKey,
-                horizontalPadding: 0,
-                onChanged: (value) => setState(() => _selectedDateKey = value),
-              ),
-              SwitchListTile.adaptive(
-                key: const Key('create.tournament.includeEndDate'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Dura más de un día'),
-                subtitle: Text(
-                  _hasEndDate ? 'Elegí cuándo termina' : 'Termina el mismo día',
-                ),
-                value: _hasEndDate,
-                onChanged: (value) => setState(() {
-                  _hasEndDate = value;
-                  _selectedEndDateKey = value
-                      ? (_selectedEndDateKey ?? _days[4].key)
-                      : null;
-                }),
-              ),
-              if (_hasEndDate) ...[
-                DateStrip(
-                  key: const Key('create.tournament.endDateStrip'),
-                  days: _days,
-                  value: _selectedEndDateKey,
-                  horizontalPadding: 0,
-                  onChanged: (value) =>
-                      setState(() => _selectedEndDateKey = value),
-                ),
-                if (_selectedEndDateKey != null &&
-                    _selectedEndDateKey!.compareTo(_selectedDateKey) < 0)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      'El fin no puede ser antes del inicio.',
-                      key: Key('create.tournament.endDateError'),
+                    const SizedBox(height: 8),
+                    DateStrip(
+                      key: const Key('create.tournament.startDateStrip'),
+                      days: _days,
+                      value: _selectedDateKey,
+                      horizontalPadding: 0,
+                      onChanged: (value) =>
+                          setState(() => _selectedDateKey = value),
                     ),
-                  ),
-              ],
-              const SizedBox(height: 14),
-              Text(
-                'Deporte',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              if (_isLoadingSports)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (_sportsError != null)
-                _ErrorBox(message: _sportsError!, onRetry: _loadSports)
-              else if (_sports.isEmpty)
-                _EmptyBox(message: 'No hay deportes disponibles.')
-              else
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: _sports
-                      .map(
-                        (s) => SelectableChip(
-                          selected: _selectedSportId == s.id,
-                          onTap: () => _onSelectSport(s.id),
-                          label: s.name,
+                    SwitchListTile.adaptive(
+                      key: const Key('create.tournament.includeEndDate'),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Dura más de un día'),
+                      subtitle: Text(
+                        _hasEndDate
+                            ? 'Elegí cuándo termina'
+                            : 'Termina el mismo día',
+                      ),
+                      value: _hasEndDate,
+                      onChanged: (value) => setState(() {
+                        _hasEndDate = value;
+                        _selectedEndDateKey = value
+                            ? (_selectedEndDateKey ?? _days[4].key)
+                            : null;
+                      }),
+                    ),
+                    if (_hasEndDate) ...[
+                      DateStrip(
+                        key: const Key('create.tournament.endDateStrip'),
+                        days: _days,
+                        value: _selectedEndDateKey,
+                        horizontalPadding: 0,
+                        onChanged: (value) =>
+                            setState(() => _selectedEndDateKey = value),
+                      ),
+                      if (_selectedEndDateKey != null &&
+                          _selectedEndDateKey!.compareTo(_selectedDateKey) < 0)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            'El fin no puede ser antes del inicio.',
+                            key: Key('create.tournament.endDateError'),
+                          ),
+                        ),
+                    ],
+                    const SizedBox(height: 14),
+                    Text(
+                      'Deporte',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_isLoadingSports)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(),
                         ),
                       )
-                      .toList(),
-                ),
-              const SizedBox(height: 14),
-              Text(
-                'Dónde',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              if (_isLoadingSports)
-                const Center(child: CircularProgressIndicator())
-              else if (_venuesForSport.isEmpty)
-                const _EmptyBox(
-                  message: 'No hay sedes disponibles para este deporte.',
-                )
-              else
-                InkWell(
-                  key: const Key('create.tournament.venue'),
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: _selectVenue,
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(AppIcons.pin),
-                      suffixIcon: Icon(AppIcons.chevronDown),
-                    ),
-                    isEmpty: _selectedVenueId == null,
-                    child: Text(
-                      _selectedVenueId == null
-                          ? 'Seleccioná una sede'
-                          : _selectedVenueName,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 14),
-              Text(
-                'Género (opcional)',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              SegmentedControl<String?>(
-                value: _gender,
-                onChanged: (value) =>
-                    setState(() => _gender = _gender == value ? null : value),
-                options: const [
-                  SegmentedOption(value: 'MALE', label: 'Masculino'),
-                  SegmentedOption(value: 'FEMALE', label: 'Femenino'),
-                  SegmentedOption(value: 'MIXED', label: 'Mixto'),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Limitar cupos',
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _hasCapacity
-                              ? 'Hasta ${_maxSlots ?? 16} inscripciones'
-                              : 'Sin tope',
-                          style: TextStyle(color: scheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch.adaptive(
-                    key: const Key('create.tournament.hasCapacity'),
-                    value: _hasCapacity,
-                    onChanged: (value) => setState(() {
-                      _hasCapacity = value;
-                      _maxSlots = value ? (_maxSlots ?? 16) : null;
-                    }),
-                  ),
-                ],
-              ),
-              if (_hasCapacity) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: CountStepper(
-                    value: _maxSlots ?? 16,
-                    min: 2,
-                    max: 64,
-                    onChanged: (value) => setState(() => _maxSlots = value),
-                  ),
-                ),
-              ] else ...[
-                Text(
-                  'Sin cupo máximo',
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              ],
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Precio de inscripción',
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 4),
-                        DualPrice(
-                          primaryLabel: !_chargeRegistration
-                              ? 'Sin precio'
-                              : _parsedRegistrationPrice == null
-                              ? 'Sin definir'
-                              : _parsedRegistrationPrice == 0
-                              ? 'Gratis'
-                              : 'US\$$_parsedRegistrationPrice',
-                          secondaryLabel:
-                              !_chargeRegistration ||
-                                  _parsedRegistrationPrice == null ||
-                                  _parsedRegistrationPrice == 0
-                              ? null
-                              : _registrationPriceBs,
-                          alignEnd: false,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch.adaptive(
-                    key: const Key('create.tournament.chargeRegistration'),
-                    value: _chargeRegistration,
-                    onChanged: (value) =>
-                        setState(() => _chargeRegistration = value),
-                  ),
-                ],
-              ),
-              if (_chargeRegistration)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SizedBox(
-                    width: 128,
-                    child: TextField(
-                      key: const Key('create.tournament.inscriptionPrice'),
-                      controller: _registrationPriceController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: false,
+                    else if (_sportsError != null)
+                      _ErrorBox(message: _sportsError!, onRetry: _loadSports)
+                    else if (_sports.isEmpty)
+                      _EmptyBox(message: 'No hay deportes disponibles.')
+                    else
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _sports
+                            .map(
+                              (s) => SelectableChip(
+                                selected: _selectedSportId == s.id,
+                                onTap: () => _onSelectSport(s.id),
+                                label: s.name,
+                              ),
+                            )
+                            .toList(),
                       ),
-                      textAlign: TextAlign.center,
-                      decoration: const InputDecoration(
-                        prefixText: 'US\$ ',
-                        hintText: '0',
+                    const SizedBox(height: 14),
+                    Text(
+                      'Dónde',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
                       ),
-                      onChanged: (_) => setState(() {}),
                     ),
-                  ),
-                ),
-              const SizedBox(height: 14),
-              Text(
-                'Visibilidad y estado',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              SegmentedControl<String>(
-                key: const Key('create.tournament.visibility'),
-                value: _visibility,
-                onChanged: (value) => setState(() => _visibility = value),
-                options: const [
-                  SegmentedOption(value: 'PUBLIC', label: 'Público'),
-                  SegmentedOption(value: 'PRIVATE', label: 'Sólo invitados'),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Modalidad',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              SegmentedControl<bool>(
-                value: _pairedRegistration,
-                onChanged: (value) =>
-                    setState(() => _pairedRegistration = value),
-                options: const [
-                  SegmentedOption(value: false, label: 'Singles'),
-                  SegmentedOption(value: true, label: 'Duplas'),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Categoría',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              if (_categoriesForSport.isEmpty)
-                _EmptyBox(
-                  message: 'No hay categorías disponibles para este deporte.',
-                )
-              else
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: _categoriesForSport
-                      .map(
-                        (c) => ChoiceChip(
-                          selected: _selectedCategoryId == c.id,
-                          onSelected: (_) =>
-                              setState(() => _selectedCategoryId = c.id),
-                          label: Text(c.name),
-                        ),
+                    const SizedBox(height: 8),
+                    if (_isLoadingSports)
+                      const Center(child: CircularProgressIndicator())
+                    else if (_venuesForSport.isEmpty)
+                      const _EmptyBox(
+                        message: 'No hay sedes disponibles para este deporte.',
                       )
-                      .toList(),
-                ),
-              const SizedBox(height: 14),
-              Text(
-                'Formato del torneo',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              BlocBuilder<TournamentPresetsCubit, TournamentPresetsState>(
-                builder: (context, state) {
-                  return switch (state) {
-                    TournamentPresetsInitial() => _EmptyBox(
-                      message: _selectedSportId == null
-                          ? 'Selecciona un deporte para ver formatos.'
-                          : 'Cargando formatos...',
-                    ),
-                    TournamentPresetsLoading() => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(12),
-                        child: CircularProgressIndicator(),
+                    else
+                      InkWell(
+                        key: const Key('create.tournament.venue'),
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: _selectVenue,
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(AppIcons.pin),
+                            suffixIcon: Icon(AppIcons.chevronDown),
+                          ),
+                          isEmpty: _selectedVenueId == null,
+                          child: Text(
+                            _selectedVenueId == null
+                                ? 'Seleccioná una sede'
+                                : _selectedVenueName,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Género (opcional)',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    TournamentPresetsEmpty() => _EmptyBox(
-                      message: 'No hay formatos disponibles para este deporte.',
+                    const SizedBox(height: 8),
+                    SegmentedControl<String?>(
+                      value: _gender,
+                      onChanged: (value) => setState(
+                        () => _gender = _gender == value ? null : value,
+                      ),
+                      options: const [
+                        SegmentedOption(value: 'MALE', label: 'Masculino'),
+                        SegmentedOption(value: 'FEMALE', label: 'Femenino'),
+                        SegmentedOption(value: 'MIXED', label: 'Mixto'),
+                      ],
                     ),
-                    TournamentPresetsError(:final message) => _ErrorBox(
-                      message: message,
-                      onRetry: () {
-                        final sportId = _selectedSportId;
-                        if (sportId != null) {
-                          context.read<TournamentPresetsCubit>().load(
-                            sportId: sportId,
-                          );
-                        }
-                      },
-                    ),
-                    TournamentPresetsSuccess(:final presets) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    const SizedBox(height: 14),
+                    Row(
                       children: [
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              for (final preset in presets)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: SelectableChip(
-                                    label: preset.name,
-                                    selected: _selectedPreset?.id == preset.id,
-                                    onTap: () => setState(() {
-                                      _selectedPreset = preset;
-                                      _formatParameterValues =
-                                          _initialParameterValues(preset);
-                                    }),
-                                  ),
+                              Text(
+                                'Limitar cupos',
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _hasCapacity
+                                    ? 'Hasta ${_maxSlots ?? 16} inscripciones'
+                                    : 'Sin tope',
+                                style: TextStyle(
+                                  color: scheme.onSurfaceVariant,
                                 ),
+                              ),
                             ],
                           ),
                         ),
-                        if (_selectedPreset?.description?.trim().isNotEmpty ??
-                            false) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            _selectedPreset!.description!,
-                            style: TextStyle(color: scheme.onSurfaceVariant),
-                          ),
-                        ],
-                        //? Los parámetros los define el schema del preset.
-                        if (_selectedPreset?.parametersSchema?.isNotEmpty ??
-                            false) ...[
-                          const SizedBox(height: 6),
-                          DynamicFormatParametersForm(
-                            fields: _selectedPreset!.parametersSchema!,
-                            values: _formatParameterValues,
-                            onChanged: (key, value) => setState(
-                              () => _formatParameterValues[key] = value,
-                            ),
-                          ),
-                        ],
+                        Switch.adaptive(
+                          key: const Key('create.tournament.hasCapacity'),
+                          value: _hasCapacity,
+                          onChanged: (value) => setState(() {
+                            _hasCapacity = value;
+                            _maxSlots = value ? (_maxSlots ?? 16) : null;
+                          }),
+                        ),
                       ],
                     ),
-                  };
-                },
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Publicación',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Publicar al crear',
-                              style: TextStyle(fontWeight: FontWeight.w700),
+                    if (_hasCapacity) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: CountStepper(
+                          value: _maxSlots ?? 16,
+                          min: 2,
+                          max: 64,
+                          onChanged: (value) =>
+                              setState(() => _maxSlots = value),
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        'Sin cupo máximo',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Precio de inscripción',
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 4),
+                              DualPrice(
+                                primaryLabel: !_chargeRegistration
+                                    ? 'Sin precio'
+                                    : _parsedRegistrationPrice == null
+                                    ? 'Sin definir'
+                                    : _parsedRegistrationPrice == 0
+                                    ? 'Gratis'
+                                    : 'US\$$_parsedRegistrationPrice',
+                                secondaryLabel:
+                                    !_chargeRegistration ||
+                                        _parsedRegistrationPrice == null ||
+                                        _parsedRegistrationPrice == 0
+                                    ? null
+                                    : _registrationPriceBs,
+                                alignEnd: false,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch.adaptive(
+                          key: const Key(
+                            'create.tournament.chargeRegistration',
+                          ),
+                          value: _chargeRegistration,
+                          onChanged: (value) =>
+                              setState(() => _chargeRegistration = value),
+                        ),
+                      ],
+                    ),
+                    if (_chargeRegistration)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: SizedBox(
+                          width: 128,
+                          child: TextField(
+                            key: const Key(
+                              'create.tournament.inscriptionPrice',
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _publishOnCreate
-                                  ? 'Queda Abierta: los jugadores se pueden anotar'
-                                  : 'Queda en Borrador: la abrís después',
-                              style: TextStyle(color: scheme.onSurfaceVariant),
+                            controller: _registrationPriceController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: false,
+                            ),
+                            textAlign: TextAlign.center,
+                            decoration: const InputDecoration(
+                              prefixText: 'US\$ ',
+                              hintText: '0',
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Visibilidad y estado',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedControl<String>(
+                      key: const Key('create.tournament.visibility'),
+                      value: _visibility,
+                      onChanged: (value) => setState(() => _visibility = value),
+                      options: const [
+                        SegmentedOption(value: 'PUBLIC', label: 'Público'),
+                        SegmentedOption(
+                          value: 'PRIVATE',
+                          label: 'Sólo invitados',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Modalidad',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedControl<bool>(
+                      value: _pairedRegistration,
+                      onChanged: (value) =>
+                          setState(() => _pairedRegistration = value),
+                      options: const [
+                        SegmentedOption(value: false, label: 'Singles'),
+                        SegmentedOption(value: true, label: 'Duplas'),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Categoría',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_categoriesForSport.isEmpty)
+                      _EmptyBox(
+                        message:
+                            'No hay categorías disponibles para este deporte.',
+                      )
+                    else
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _categoriesForSport
+                            .map(
+                              (c) => ChoiceChip(
+                                selected: _selectedCategoryId == c.id,
+                                onSelected: (_) =>
+                                    setState(() => _selectedCategoryId = c.id),
+                                label: Text(c.name),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Formato del torneo',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    BlocBuilder<TournamentPresetsCubit, TournamentPresetsState>(
+                      builder: (context, state) {
+                        return switch (state) {
+                          TournamentPresetsInitial() => _EmptyBox(
+                            message: _selectedSportId == null
+                                ? 'Selecciona un deporte para ver formatos.'
+                                : 'Cargando formatos...',
+                          ),
+                          TournamentPresetsLoading() => const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                          TournamentPresetsEmpty() => _EmptyBox(
+                            message:
+                                'No hay formatos disponibles para este deporte.',
+                          ),
+                          TournamentPresetsError(:final message) => _ErrorBox(
+                            message: message,
+                            onRetry: () {
+                              final sportId = _selectedSportId;
+                              if (sportId != null) {
+                                context.read<TournamentPresetsCubit>().load(
+                                  sportId: sportId,
+                                );
+                              }
+                            },
+                          ),
+                          TournamentPresetsSuccess(:final presets) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    for (final preset in presets)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 8,
+                                        ),
+                                        child: SelectableChip(
+                                          label: preset.name,
+                                          selected:
+                                              _selectedPreset?.id == preset.id,
+                                          onTap: () => setState(() {
+                                            _selectedPreset = preset;
+                                            _formatParameterValues =
+                                                _initialParameterValues(preset);
+                                          }),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (_selectedPreset?.description
+                                      ?.trim()
+                                      .isNotEmpty ??
+                                  false) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  _selectedPreset!.description!,
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                              //? Los parámetros los define el schema del preset.
+                              if (_selectedPreset
+                                      ?.parametersSchema
+                                      ?.isNotEmpty ??
+                                  false) ...[
+                                const SizedBox(height: 6),
+                                DynamicFormatParametersForm(
+                                  fields: _selectedPreset!.parametersSchema!,
+                                  values: _formatParameterValues,
+                                  onChanged: (key, value) => setState(
+                                    () => _formatParameterValues[key] = value,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        };
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Publicación',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Publicar al crear',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _publishOnCreate
+                                        ? 'Queda Abierta: los jugadores se pueden anotar'
+                                        : 'Queda en Borrador: la abrís después',
+                                    style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PillToggle(
+                              value: _publishOnCreate,
+                              onChanged: (value) =>
+                                  setState(() => _publishOnCreate = value),
                             ),
                           ],
                         ),
                       ),
-                      PillToggle(
-                        value: _publishOnCreate,
-                        onChanged: (value) =>
-                            setState(() => _publishOnCreate = value),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
@@ -13,6 +14,8 @@ import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_api.da
 import 'package:cuadrala_mobile/src/features/tournaments/data/tournaments_repository.dart';
 import 'package:cuadrala_mobile/src/features/tournaments/presentation/tournaments_home_screen.dart';
 import 'package:cuadrala_mobile/src/features/venues/data/venues_repository.dart';
+
+import '../handoff_copy.dart';
 
 class _MockTournamentsRepository extends Mock
     implements TournamentsRepository {}
@@ -399,5 +402,177 @@ void main() {
         expect(find.text('4 inscripciones por confirmar'), findsOneWidget);
       },
     );
+  });
+
+  //? Issue #132: the design handoff (`cuadrala-torneos.jsx:175-184`) shows a
+  //? dedicated, always-visible banner above the tournament list when the
+  //? viewer organizes at least one tournament with pending approvals — the
+  //? small per-card tag/row tested above is not enough on its own. This
+  //? banner must show on whichever tab is active, not just "Mis torneos".
+  group('Organizer pending-approvals banner (#132)', () {
+    const organizedWithPending = ViewerTournamentDto(
+      tournament: TournamentListItemDto(
+        id: 't-org-1',
+        name: 'Copa Cuádrala',
+        status: 'OPEN',
+        sportName: 'Padel',
+        categoryName: '6ta',
+        categoryId: 'cat-1',
+        startsAt: null,
+        registrationCount: 8,
+      ),
+      registrationStatus: null,
+      pendingInvitationId: null,
+      isOrganizer: true,
+      pendingRegistrationsCount: 4,
+    );
+    const organizedWithMorePending = ViewerTournamentDto(
+      tournament: TournamentListItemDto(
+        id: 't-org-2',
+        name: 'Nocturno Chacao',
+        status: 'OPEN',
+        sportName: 'Padel',
+        categoryName: '5ta',
+        categoryId: 'cat-2',
+        startsAt: null,
+        registrationCount: 4,
+      ),
+      registrationStatus: null,
+      pendingInvitationId: null,
+      isOrganizer: true,
+      pendingRegistrationsCount: 9,
+    );
+    const organizedWithoutPending = ViewerTournamentDto(
+      tournament: TournamentListItemDto(
+        id: 't-org-3',
+        name: 'Liga Sin Pendientes',
+        status: 'OPEN',
+        sportName: 'Padel',
+        categoryName: '4ta',
+        categoryId: 'cat-3',
+        startsAt: null,
+        registrationCount: 2,
+      ),
+      registrationStatus: null,
+      pendingInvitationId: null,
+      isOrganizer: true,
+      pendingRegistrationsCount: 0,
+    );
+    const registeredNotOrganizer = ViewerTournamentDto(
+      tournament: TournamentListItemDto(
+        id: 't-player-1',
+        name: 'Torneo Jugado',
+        status: 'OPEN',
+        sportName: 'Padel',
+        categoryName: '3ra',
+        categoryId: 'cat-4',
+        startsAt: null,
+        registrationCount: 10,
+      ),
+      registrationStatus: 'CONFIRMED',
+      pendingInvitationId: null,
+      isOrganizer: false,
+      pendingRegistrationsCount: null,
+    );
+
+    testWidgets(
+      'shows the banner with the handoff copy when the viewer organizes a tournament with pending approvals, even on the "Explorar" tab',
+      (tester) async {
+        when(
+          () => tournamentsRepository.listMyTournaments(),
+        ).thenAnswer((_) async => [organizedWithPending]);
+
+        await tester.pumpWidget(
+          const MaterialApp(home: TournamentsHomeScreen()),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explorar'), findsOneWidget);
+        expect(
+          find.text(organizerRowTitle('Copa Cuádrala')),
+          findsOneWidget,
+        );
+        expect(find.text(organizerPendingBannerBody(4)), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'picks the tournament with the most pending registrations when the viewer organizes several',
+      (tester) async {
+        when(() => tournamentsRepository.listMyTournaments()).thenAnswer(
+          (_) async => [organizedWithPending, organizedWithMorePending],
+        );
+
+        await tester.pumpWidget(
+          const MaterialApp(home: TournamentsHomeScreen()),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(organizerRowTitle('Nocturno Chacao')),
+          findsOneWidget,
+        );
+        expect(find.text(organizerPendingBannerBody(9)), findsOneWidget);
+        expect(
+          find.text(organizerRowTitle('Copa Cuádrala')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'hides the banner when the viewer organizes nothing with pending approvals',
+      (tester) async {
+        when(() => tournamentsRepository.listMyTournaments()).thenAnswer(
+          (_) async => [organizedWithoutPending, registeredNotOrganizer],
+        );
+
+        await tester.pumpWidget(
+          const MaterialApp(home: TournamentsHomeScreen()),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(organizerRowTitle('Liga Sin Pendientes')),
+          findsNothing,
+        );
+        expect(
+          find.textContaining('esperando que los aceptes'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('tapping the banner navigates to that tournament', (
+      tester,
+    ) async {
+      when(
+        () => tournamentsRepository.listMyTournaments(),
+      ).thenAnswer((_) async => [organizedWithPending]);
+
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) => const TournamentsHomeScreen(),
+          ),
+          GoRoute(
+            path: '/tournaments/:id',
+            builder: (context, state) => Scaffold(
+              body: Text('detail-${state.pathParameters['id']}'),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(organizerRowTitle('Copa Cuádrala')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('detail-t-org-1'), findsOneWidget);
+    });
   });
 }
