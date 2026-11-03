@@ -102,16 +102,15 @@ void main() {
 
       expect(find.byKey(const Key('login.social_google')), findsOneWidget);
       expect(find.text('Continuar con Google'), findsOneWidget);
-      expect(find.text('o'), findsOneWidget);
-      expect(find.text('o continuar con email'), findsNothing);
+      expect(find.text('o continuar con email'), findsOneWidget);
 
-      final fields = tester.getTopLeft(find.byKey(const Key('login.email')));
-      final submit = tester.getTopLeft(find.byKey(const Key('login.submit')));
       final google = tester.getTopLeft(
         find.byKey(const Key('login.social_google')),
       );
+      final fields = tester.getTopLeft(find.byKey(const Key('login.email')));
+      final submit = tester.getTopLeft(find.byKey(const Key('login.submit')));
+      expect(google.dy, lessThan(fields.dy));
       expect(fields.dy, lessThan(submit.dy));
-      expect(submit.dy, lessThan(google.dy));
     });
 
     testWidgets('no muestra botón de Apple (feature aún no habilitada)', (

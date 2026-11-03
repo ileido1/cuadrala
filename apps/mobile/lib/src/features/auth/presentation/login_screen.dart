@@ -277,7 +277,49 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (i == 1) context.go(Routes.register);
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
+              // Apple sigue comentado a pedido: se lanza después de Google.
+              // Web: GoogleSignIn.authenticate() no está soportado, Google
+              // exige su botón GIS renderizado (el sign-in llega por
+              // authenticationEvents, suscrito en initState).
+              if (kIsWeb)
+                Center(
+                  key: const Key('login.social_google_web'),
+                  child: googleWebSignInButton(),
+                )
+              else
+                SocialButton(
+                  key: const Key('login.social_google'),
+                  icon: const GoogleGLogo(size: 19),
+                  label: 'Continuar con Google',
+                  background: scheme.surface,
+                  foreground: scheme.onSurface,
+                  border: scheme.outlineVariant,
+                  onPressed: isBusy ? null : _socialLoginGoogle,
+                ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(color: scheme.outlineVariant, thickness: 1),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'o continuar con email',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(color: scheme.outlineVariant, thickness: 1),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
               TextField(
                 key: const Key('login.email'),
                 controller: _emailController,
@@ -392,48 +434,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 isLoading: isLoading,
                 onPressed: isBusy ? null : _submit,
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: Divider(color: scheme.outlineVariant, thickness: 1),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'o',
-                      style: TextStyle(
-                        color: scheme.onSurfaceVariant,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Divider(color: scheme.outlineVariant, thickness: 1),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Apple sigue comentado a pedido: se lanza después de Google.
-              // Web: GoogleSignIn.authenticate() no está soportado, Google
-              // exige su botón GIS renderizado (el sign-in llega por
-              // authenticationEvents, suscrito en initState).
-              if (kIsWeb)
-                Center(
-                  key: const Key('login.social_google_web'),
-                  child: googleWebSignInButton(),
-                )
-              else
-                SocialButton(
-                  key: const Key('login.social_google'),
-                  icon: const GoogleGLogo(size: 19),
-                  label: 'Continuar con Google',
-                  background: scheme.surface,
-                  foreground: scheme.onSurface,
-                  border: scheme.outlineVariant,
-                  onPressed: isBusy ? null : _socialLoginGoogle,
-                ),
               const SizedBox(height: 18),
               Wrap(
                 alignment: WrapAlignment.center,

@@ -93,6 +93,26 @@ void main() {
   });
 
   testWidgets(
+    'muestra el error de confirmación en vivo mientras se escribe, sin tocar submit',
+    (tester) async {
+      await tester.pumpWidget(wrap());
+
+      await tester.enterText(
+        find.byKey(const Key('register.password')),
+        '12345678',
+      );
+      await tester.enterText(
+        find.byKey(const Key('register.confirm_password')),
+        '1234',
+      );
+      await tester.pump();
+
+      expect(find.text('Las contraseñas no coinciden'), findsOneWidget);
+      verifyNever(() => registerCubit.submit(any()));
+    },
+  );
+
+  testWidgets(
     'los botones de mostrar/ocultar contraseña tienen tooltip accesible',
     (tester) async {
       await tester.pumpWidget(wrap());
