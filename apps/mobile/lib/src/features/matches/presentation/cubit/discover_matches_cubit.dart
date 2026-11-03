@@ -40,7 +40,7 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
         query: '',
         selectedDate: null,
         activeTimeBuckets: const {},
-        onlyAvailable: false,
+        onlyAvailable: true,
       );
       emit(
         DiscoverMatchesLoaded(
@@ -48,7 +48,7 @@ final class DiscoverMatchesCubit extends Cubit<DiscoverMatchesState> {
           query: '',
           selectedDate: null,
           activeTimeBuckets: const {},
-          onlyAvailable: false,
+          onlyAvailable: true,
           categoryId: null,
           gender: null,
           venueId: _venueId,
