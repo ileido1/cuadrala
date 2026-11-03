@@ -240,9 +240,13 @@ final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
   );
 
   QuickMatchSearchDto? _visibleSearch(QuickMatchSearchDto? search) {
-    if (search == null ||
-        search.status == 'CANCELLED' ||
-        search.status == 'CONFIRMED') {
+    if (search == null || search.status == 'CANCELLED') return null;
+    // Issue #122: CONFIRMED significa dos cosas distintas — "confirmé mi
+    // cupo, el grupo sigue formándose" (sin partido todavía) y "el grupo se
+    // completó, ya existe un partido". Solo la segunda debe ocultar el
+    // banner; la primera sigue siendo una búsqueda activa que el jugador
+    // necesita poder reabrir.
+    if (search.status == 'CONFIRMED' && search.proposal?.matchId != null) {
       return null;
     }
     return search;

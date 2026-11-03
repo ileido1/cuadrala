@@ -123,6 +123,7 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                   isNewGroup: search.proposal?.type == 'NEW_GROUP',
                   matchId: search.proposal?.matchId,
                   playerCount: search.proposal?.playerIds.length ?? 4,
+                  onCancel: () => context.read<QuickMatchCubit>().cancel(),
                 ),
               QuickMatchActive(:final search)
                   when search.status == 'EXPIRED' =>
@@ -2064,10 +2065,21 @@ final class _SurfaceMessage extends StatelessWidget {
 }
 
 final class _Confirmed extends StatelessWidget {
-  const _Confirmed({required this.isNewGroup, required this.matchId, this.playerCount = 4});
+  const _Confirmed({
+    required this.isNewGroup,
+    required this.matchId,
+    this.playerCount = 4,
+    required this.onCancel,
+  });
   final bool isNewGroup;
   final String? matchId;
   final int playerCount;
+
+  /// Cancela la búsqueda mientras el grupo sigue formándose (issue #121).
+  /// No se ofrece una vez que ya existe partido (`hasMatch`): a esa altura
+  /// "cancelar la búsqueda" ya no tiene sentido, lo que correspondería es
+  /// salir del partido desde su propia pantalla de detalle.
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -2135,6 +2147,11 @@ final class _Confirmed extends StatelessWidget {
                 child: const Text('Volver al inicio'),
               ),
             ),
+            if (!hasMatch)
+              TextButton(
+                onPressed: onCancel,
+                child: const Text('Salir de la cola'),
+              ),
           ],
         ),
       ],
