@@ -91,5 +91,24 @@ void main() {
         expect(dto.gender, isNull);
       });
     });
+
+    // Issue #126: el tag de superficie (Exterior/Cubierta) del handoff nunca
+    // llegaba a la UI porque el campo no existía end-to-end — ni en el DTO.
+    group('surfaceType', () {
+      test('parses surfaceType from JSON', () {
+        final json = Map<String, Object?>.from(baseJson)
+          ..['surfaceType'] = 'Exterior';
+
+        final dto = OpenMatchDto.fromJson(json);
+
+        expect(dto.surfaceType, 'Exterior');
+      });
+
+      test('surfaceType is null when absent from JSON', () {
+        final dto = OpenMatchDto.fromJson(baseJson);
+
+        expect(dto.surfaceType, isNull);
+      });
+    });
   });
 }

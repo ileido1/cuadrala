@@ -18,6 +18,7 @@ import 'package:cuadrala_mobile/src/features/quick_match/data/quick_match_reposi
 import 'package:cuadrala_mobile/src/features/shell/presentation/cubit/shell_cubit.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/empty_state.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/skeleton_list.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/surface_tag.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -39,6 +40,7 @@ OpenMatchDto _makeOpenMatch({
   String id = 'match-1',
   String status = 'OPEN',
   DateTime? scheduledAt,
+  String? surfaceType,
 }) {
   return OpenMatchDto(
     id: id,
@@ -53,6 +55,7 @@ OpenMatchDto _makeOpenMatch({
     openSpots: 2,
     clubName: 'Club Test',
     courtName: 'Cancha 1',
+    surfaceType: surfaceType,
     locationLabel: 'Buenos Aires',
   );
 }
@@ -312,6 +315,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(EmptyState), findsNothing);
+    });
+
+    // Issue #126: el badge de superficie del handoff nunca llegaba a la
+    // tarjeta — el dato no se pasaba de OpenMatchDto al MatchCard compartido.
+    testWidgets('shows the surface tag when the match has one', (
+      tester,
+    ) async {
+      when(() => homeCubit.state).thenReturn(
+        _loadedState(
+          openMatches: [_makeOpenMatch(surfaceType: 'Exterior')],
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Exterior'), findsOneWidget);
+    });
+
+    testWidgets('shows no surface tag when the match has none', (
+      tester,
+    ) async {
+      when(
+        () => homeCubit.state,
+      ).thenReturn(_loadedState(openMatches: [_makeOpenMatch()]));
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SurfaceTag), findsNothing);
     });
   });
 

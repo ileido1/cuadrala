@@ -25,6 +25,7 @@ function baseOpenMatchRow() {
     ],
     court: {
       name: 'Cancha 1',
+      surfaceType: 'Exterior' as string | null,
       venue: {
         name: 'Club X',
         pricingCurrency: 'USD',
@@ -150,6 +151,34 @@ describe('computeOpenMatchDTOSV — venueImageUrl', () => {
     const DTO = computeOpenMatchDTOSV(ROW);
 
     expect(DTO.venueImageUrl).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeOpenMatchDTOSV — surfaceType (issue #126: Home never showed the
+// court surface tag because it never reached the mobile client)
+// ---------------------------------------------------------------------------
+
+describe('computeOpenMatchDTOSV — surfaceType', () => {
+  it('includes surfaceType when the court has one', () => {
+    const DTO = computeOpenMatchDTOSV(baseOpenMatchRow());
+
+    expect(DTO.surfaceType).toBe('Exterior');
+  });
+
+  it('omits surfaceType when the court has none', () => {
+    const ROW = baseOpenMatchRow();
+    ROW.court!.surfaceType = null;
+    const DTO = computeOpenMatchDTOSV(ROW);
+
+    expect(DTO.surfaceType).toBeUndefined();
+  });
+
+  it('omits surfaceType when there is no court', () => {
+    const ROW = { ...baseOpenMatchRow(), court: null };
+    const DTO = computeOpenMatchDTOSV(ROW);
+
+    expect(DTO.surfaceType).toBeUndefined();
   });
 });
 

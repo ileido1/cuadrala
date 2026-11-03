@@ -42,6 +42,7 @@ export type MatchListItemDTO = {
   openSpots: number;
   clubName?: string | null | undefined;
   courtName?: string | null | undefined;
+  surfaceType?: string | null | undefined;
   locationLabel?: string | null | undefined;
   pricingCurrency?: string | undefined;
   displayCurrency?: string | undefined;

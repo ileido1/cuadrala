@@ -23,6 +23,7 @@ type MatchListRow = {
   _count: { participants: number };
   court?: null | {
     name: string;
+    surfaceType?: string | null;
     venue?: {
       name: string;
       pricingCurrency: string;
@@ -35,11 +36,12 @@ type MatchListRow = {
   };
 };
 
-function toListItemDTO(_row: MatchListRow): MatchListItemDTO {
+export function toListItemDTO(_row: MatchListRow): MatchListItemDTO {
   const PARTICIPANT_COUNT = _row._count.participants;
   const OPEN_SPOTS = Math.max(0, _row.maxParticipants - PARTICIPANT_COUNT);
   const CLUB_NAME = _row.court?.venue?.name;
   const COURT_NAME = _row.court?.name;
+  const SURFACE_TYPE = _row.court?.surfaceType ?? undefined;
   const LOCATION_LABEL =
     _row.court?.venue?.addressLine1 ??
     _row.court?.venue?.formattedAddress ??
@@ -61,6 +63,7 @@ function toListItemDTO(_row: MatchListRow): MatchListItemDTO {
     openSpots: OPEN_SPOTS,
     ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
     ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
+    ...(SURFACE_TYPE !== undefined ? { surfaceType: SURFACE_TYPE } : {}),
     ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
     ...(_row.court?.venue?.pricingCurrency !== undefined
       ? { pricingCurrency: _row.court.venue.pricingCurrency }
@@ -249,6 +252,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
           court: {
             select: {
               name: true,
+              surfaceType: true,
               venue: {
                 select: {
                   name: true,

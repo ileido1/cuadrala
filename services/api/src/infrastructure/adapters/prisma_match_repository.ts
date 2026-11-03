@@ -22,6 +22,7 @@ export function computeOpenMatchDTOSV(_row: {
   participants: { userId: string | null; user: { name: string } | null }[];
   court: null | {
     name: string;
+    surfaceType: string | null;
     venue: {
       name: string;
       pricingCurrency: string;
@@ -39,6 +40,7 @@ export function computeOpenMatchDTOSV(_row: {
 
   const CLUB_NAME = _row.court?.venue.name;
   const COURT_NAME = _row.court?.name;
+  const SURFACE_TYPE = _row.court?.surfaceType ?? undefined;
   const LOCATION_LABEL =
     _row.court?.venue.addressLine1 ??
     _row.court?.venue.formattedAddress ??
@@ -59,6 +61,7 @@ export function computeOpenMatchDTOSV(_row: {
     openSpots: OPEN_SPOTS,
     ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
     ...(COURT_NAME !== undefined ? { courtName: COURT_NAME } : {}),
+    ...(SURFACE_TYPE !== undefined ? { surfaceType: SURFACE_TYPE } : {}),
     ...(LOCATION_LABEL !== undefined ? { locationLabel: LOCATION_LABEL } : {}),
     pricingCurrency: _row.court?.venue.pricingCurrency,
     displayCurrency: _row.court?.venue.displayCurrency,
@@ -177,6 +180,7 @@ export class PrismaMatchRepository implements MatchRepository {
           court: {
             select: {
               name: true,
+              surfaceType: true,
               venue: {
                 select: {
                   name: true,
