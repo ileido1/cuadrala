@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/core/theme/app_theme.dart';
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
 import 'package:cuadrala_mobile/src/features/catalog/data/catalog_api.dart';
@@ -376,6 +377,61 @@ void main() {
       expect(find.text('Explorar partidas'), findsWidgets);
       expect(find.text('En vivo'), findsNothing);
     });
+  });
+
+  // ── 5b. Home section heading (issue #125) ─────────────────────────────────
+  //
+  // The handoff renders "Actividad cerca de ti" as the screen's main heading
+  // right after the app header and before the matchmaking hero card. The
+  // real screen had no heading widget there at all.
+  group('Home section heading (#125)', () {
+    testWidgets('shows "Actividad cerca de ti" heading when HomeLoaded', (
+      tester,
+    ) async {
+      when(() => homeCubit.state).thenReturn(_loadedState());
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Actividad cerca de ti'), findsOneWidget);
+    });
+  });
+
+  // ── 5c. Hero card icon tile (issue #127) ──────────────────────────────────
+  //
+  // The handoff shows a 46x46 accent-colored icon tile with a bolt icon next
+  // to the "¿Jugamos hoy?" title/subtitle. The real _HeroCard had no icon
+  // tile there — only the "Encontrar partida" button used AppIcons.bolt.
+  group('Hero card icon tile (#127)', () {
+    testWidgets(
+      'shows a bolt icon tile next to the "¿Jugamos hoy?" title',
+      (tester) async {
+        when(() => homeCubit.state).thenReturn(_loadedState());
+
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
+        await tester.pumpAndSettle();
+
+        // One bolt icon lives in the new title-adjacent tile, the other in
+        // the "Encontrar partida" primary button (no active search yet).
+        expect(find.byIcon(AppIcons.bolt), findsNWidgets(2));
+
+        final tileFinder = find.ancestor(
+          of: find.byIcon(AppIcons.bolt).first,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Container &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).borderRadius ==
+                    BorderRadius.circular(13),
+          ),
+        );
+        expect(tileFinder, findsOneWidget);
+      },
+    );
   });
 
   // ── 6. CTA hierarchy ──────────────────────────────────────────────────────

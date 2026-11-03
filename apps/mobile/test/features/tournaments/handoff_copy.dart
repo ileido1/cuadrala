@@ -31,6 +31,15 @@ const String invitationBannerAction = 'Ver invitación →';
 /// shield organizer row.
 String organizerRowTitle(String tournamentName) => 'Organizás $tournamentName';
 
+/// `cuadrala-torneos.jsx:180` — `` `${t.inscritos} inscriptos esperando que
+/// los aceptes` `` on the lime shield organizer row (always-visible banner
+/// above the tournament list, issue #132). Spelling corrected to "inscritos"
+/// per the copy-fidelity rule enforced by `tournaments_copy_audit_test.dart`
+/// — the handoff literal uses the "inscriptos" typo, never the project's
+/// canonical spelling.
+String organizerPendingBannerBody(int pending) =>
+    '$pending inscritos esperando que los aceptes';
+
 /// `cuadrala-torneos.jsx:281` — `` `${t.confirmed} confirmados` `` on the
 /// Inscritos summary row.
 String inscritosConfirmedLabel(int confirmed) => '$confirmed confirmados';

@@ -12,9 +12,11 @@ import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../../../shared/widgets/date_strip.dart';
 import '../../../shared/widgets/dual_price.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/match_card.dart';
 import '../../../shared/widgets/selectable_chip.dart';
+import '../../venues/presentation/create_match_panel.dart';
 import '../data/matches_repository.dart';
 import '../data/models/open_match_dto.dart';
 import 'open_match_display.dart';
@@ -299,15 +301,11 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
 
                   final loaded = state as DiscoverMatchesLoaded;
                   if (loaded.visibleItems.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          'No hay partidas que coincidan.',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                    return EmptyState(
+                      title: 'Nada con esos filtros',
+                      message: 'Prueba otro día o crea tu propia partida.',
+                      ctaLabel: 'Crear partida',
+                      onCtaPressed: () => showCreateMatchSheet(context),
                     );
                   }
 

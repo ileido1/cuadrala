@@ -54,6 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _Header(vm: vm),
                 const SizedBox(height: 16),
                 _Identity(vm: vm),
+                const SizedBox(height: 14),
+                const _EditProfileAction(),
                 if (!vm.onboardingStatus.isComplete) ...[
                   const SizedBox(height: 14),
                   _CompletionHint(
@@ -267,6 +269,68 @@ final class _Identity extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+final class _EditProfileAction extends StatelessWidget {
+  const _EditProfileAction();
+
+  //? Issue #136: acceso directo de un toque a "Editar perfil" desde la
+  //? pantalla principal de Perfil. Reutiliza el mismo destino
+  //? (Routes.onboarding) que la fila "Editar perfil" existente dentro de
+  //? Ajustes (profile_settings_screen.dart); esa fila sigue existiendo, esta
+  //? es una vía adicional, no un reemplazo.
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: Semantics(
+        button: true,
+        label: 'Editar perfil',
+        child: InkWell(
+          key: const ValueKey('profile-edit-action'),
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push(Routes.onboarding),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: .15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    AppIcons.person,
+                    size: 17,
+                    color: scheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Editar perfil',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Icon(
+                  AppIcons.chevronRight,
+                  size: 17,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

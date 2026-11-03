@@ -1085,9 +1085,9 @@ final class _Footer extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: _PrimaryCta(
-                icon: AppIcons.chat,
-                label: 'Compartir partida',
-                onPressed: () => _shareMatchInvite(context, m),
+                icon: AppIcons.target,
+                label: 'Cargar resultado',
+                onPressed: () => context.push(Routes.matchResult(m.id)),
               ),
             ),
           ],

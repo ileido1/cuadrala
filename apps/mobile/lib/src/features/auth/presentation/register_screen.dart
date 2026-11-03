@@ -71,7 +71,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _validateConfirm() {
     final pw = _passwordController.text;
     final cf = _confirmController.text;
-    if (!_showLocalErrors) return;
+    // La confirmación de contraseña se valida en vivo (sin esperar a
+    // _showLocalErrors): el usuario necesita saber de inmediato si
+    // escribió mal la repetición, no solo tras un primer submit fallido.
     setState(() {
       _confirmError = cf.isEmpty
           ? 'Confirmá tu contraseña'

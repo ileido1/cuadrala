@@ -131,5 +131,61 @@ void main() {
         expect(state.visibleItems.first.clubName, 'Otro Club');
       },
     );
+
+    blocTest<DiscoverMatchesCubit, DiscoverMatchesState>(
+      'should default onlyAvailable to true and hide full matches on load',
+      build: () {
+        when(() => matchesRepository.resolveDefaultSportId())
+            .thenAnswer((_) async => 'sport');
+        when(
+          () => matchesRepository.listOpenMatches(
+            sportId: any(named: 'sportId'),
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+            gender: any(named: 'gender'),
+            venueId: any(named: 'venueId'),
+            categoryId: any(named: 'categoryId'),
+          ),
+        ).thenAnswer(
+          (_) async => OpenMatchesPage(
+            items: [
+              _openMatch(),
+              OpenMatchDto(
+                id: 'match-full',
+                sportId: 'sport',
+                categoryId: 'cat',
+                status: 'SCHEDULED',
+                scheduledAt: DateTime(
+                  DateTime.now().year,
+                  DateTime.now().month,
+                  DateTime.now().day,
+                  19,
+                  0,
+                ),
+                pricePerPlayerCents: 1500,
+                maxParticipants: 4,
+                participantCount: 4,
+                openSpots: 0,
+                clubName: 'Club Lleno',
+                courtName: 'Cancha 3',
+                locationLabel: null,
+              ),
+            ],
+            page: 1,
+            limit: 20,
+            total: 2,
+          ),
+        );
+        return DiscoverMatchesCubit(matchesRepository: matchesRepository);
+      },
+      act: (cubit) => cubit.load(),
+      skip: 1,
+      verify: (cubit) {
+        final state = cubit.state as DiscoverMatchesLoaded;
+        expect(state.onlyAvailable, isTrue);
+        expect(state.visibleItems.length, 1);
+        expect(state.visibleItems.first.clubName, 'Club Test');
+      },
+    );
   });
 }

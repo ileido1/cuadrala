@@ -84,6 +84,27 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
     );
   }
 
+  /// Issue #132: the design handoff (`cuadrala-torneos.jsx:175-184`) shows a
+  /// dedicated, always-visible banner above the tournament list when the
+  /// viewer organizes at least one tournament with pending approvals — the
+  /// small per-card "Organizás" tag/row is not enough on its own. Client-side
+  /// aggregation over the already-loaded `myTournaments` (no new network
+  /// call): when several tournaments match, picks the one with the most
+  /// pending registrations; ties keep the first one found.
+  ViewerTournamentDto? _organizerPendingBanner(
+    List<ViewerTournamentDto> myTournaments,
+  ) {
+    ViewerTournamentDto? best;
+    for (final viewer in myTournaments) {
+      if (!viewer.isOrganizer) continue;
+      final pending = viewer.pendingRegistrationsCount ?? 0;
+      if (pending <= 0) continue;
+      final bestPending = best?.pendingRegistrationsCount ?? 0;
+      if (best == null || pending > bestPending) best = viewer;
+    }
+    return best;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -182,6 +203,9 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                         (t) => t.pendingInvitationId != null && !t.isOrganizer,
                       )
                       .firstOrNull;
+                  final organizerPending = _organizerPendingBanner(
+                    state.myTournaments,
+                  );
                   return Column(
                     children: [
                       if (!mine) _filters(state),
@@ -219,6 +243,14 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
                                           : '${invited.tournament.organizerName} te invitó. Revisá los datos y respondé.',
                                       action: 'Ver invitación',
                                       onAction: () => _open(invited),
+                                    ),
+                                  ),
+                                if (organizerPending != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: _OrganizerPendingBanner(
+                                      viewer: organizerPending,
+                                      onTap: () => _open(organizerPending),
                                     ),
                                   ),
                                 if (mine && state.myTournamentsError != null)
@@ -496,4 +528,80 @@ final class _TournamentsHomeViewState extends State<_TournamentsHomeView> {
           ),
         ),
       );
+}
+
+/// Issue #132: always-visible "organizás {torneo}" banner above the list,
+/// shown while the viewer organizes at least one tournament with pending
+/// approvals (`cuadrala-torneos.jsx:175-184`). Full-row tappable, same shield
+/// icon and lime tone used for the "Organizás" badge elsewhere in this
+/// feature (`TournamentViewerBadge`).
+final class _OrganizerPendingBanner extends StatelessWidget {
+  const _OrganizerPendingBanner({required this.viewer, required this.onTap});
+
+  final ViewerTournamentDto viewer;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final pending = viewer.pendingRegistrationsCount ?? 0;
+    return Material(
+      color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: scheme.outlineVariant, width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: scheme.tertiary,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(
+                  AppIcons.shield,
+                  size: 20,
+                  color: scheme.onTertiary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Organizás ${viewer.tournament.name}',
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      '$pending inscritos esperando que los aceptes',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                AppIcons.chevronRight,
+                size: 18,
+                color: TournamentTheme.of(context).muted2,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

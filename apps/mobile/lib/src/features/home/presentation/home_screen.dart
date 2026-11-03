@@ -80,6 +80,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     onBellTap: () => context.go(Routes.avisos),
                   ),
                   const SizedBox(height: 16),
+                  Text(
+                    'Actividad cerca de ti',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 27,
+                      letterSpacing: -0.5,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const _QuickMatchHomeBanner(),
                   const SizedBox(height: 20),
                   _MyMatchesSection(
@@ -291,23 +301,48 @@ final class _HeroCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '¿Jugamos hoy?',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontSize: 27,
-                letterSpacing: -0.6,
-                color: scheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Encontramos jugadores según tu horario y nivel.',
-              style: TextStyle(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-                fontSize: 14.5,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: scheme.primary,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(AppIcons.bolt, size: 24, color: scheme.onPrimary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '¿Jugamos hoy?',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 27,
+                              letterSpacing: -0.6,
+                              color: scheme.onSurface,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Encontramos jugadores según tu horario y nivel.',
+                        style: TextStyle(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             if (active == null)

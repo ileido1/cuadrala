@@ -24,6 +24,7 @@ import 'package:cuadrala_mobile/src/shared/widgets/count_stepper.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/date_strip.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/dual_price.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/pill_toggle.dart';
+import 'package:cuadrala_mobile/src/shared/widgets/app_header.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/selectable_chip.dart';
 import 'package:cuadrala_mobile/src/shared/widgets/segmented_control.dart';
 import '../goldens/tournament_golden.dart';
@@ -1129,6 +1130,61 @@ void main() {
                 ).captured.single
                 as CreateTournamentRequest;
         expect(request.publishOnCreate, isTrue);
+      },
+    );
+  });
+
+  //? Issue #134: every sibling tournament screen (detail, bracket) uses the
+  //? shared `AppHeader` for visual consistency with the handoff's
+  //? `SheetHeader`; this screen alone used a plain Material `AppBar`.
+  group('shared header (#134)', () {
+    testWidgets(
+      'uses the shared AppHeader instead of a plain Material AppBar',
+      (tester) async {
+        await _pumpScreen(tester);
+
+        expect(find.byType(AppHeader), findsOneWidget);
+        expect(find.byType(AppBar), findsNothing);
+        expect(find.text('Crear torneo'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'tapping the header back button pops like the previous AppBar back arrow did',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 4000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            CreateTournamentScreen(now: DateTime(2026, 9, 1)),
+                      ),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CreateTournamentScreen), findsOneWidget);
+
+        await tester.tap(find.byIcon(AppIcons.chevronLeft));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CreateTournamentScreen), findsNothing);
+        expect(find.text('open'), findsOneWidget);
       },
     );
   });
