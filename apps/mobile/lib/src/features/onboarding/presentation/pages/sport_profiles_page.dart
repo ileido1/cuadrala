@@ -70,9 +70,20 @@ class _PerSportSelection {
 }
 
 class OnboardingSportProfilesPage extends StatefulWidget {
-  const OnboardingSportProfilesPage({super.key, required this.onContinue});
+  const OnboardingSportProfilesPage({
+    super.key,
+    required this.onContinue,
+    this.isActive = true,
+  });
 
   final VoidCallback onContinue;
+
+  /// `false` mientras el `PageView` del onboarding la precarga sin que el
+  /// usuario haya llegado a este paso (ver `OnboardingLocationPage`, mismo
+  /// patrón): evita disparar `listSports()`/`listSportProfiles()`/
+  /// `getPlayerProfile()` de más, en paralelo con las llamadas que ya hace
+  /// la página activa real.
+  final bool isActive;
 
   @override
   State<OnboardingSportProfilesPage> createState() => _OnboardingSportProfilesPageState();
@@ -92,6 +103,19 @@ class _OnboardingSportProfilesPageState extends State<OnboardingSportProfilesPag
   @override
   void initState() {
     super.initState();
+    _loadSportsWhenActive();
+  }
+
+  @override
+  void didUpdateWidget(covariant OnboardingSportProfilesPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive && widget.isActive) {
+      _loadSportsWhenActive();
+    }
+  }
+
+  void _loadSportsWhenActive() {
+    if (!widget.isActive) return;
     _loadSports();
   }
 

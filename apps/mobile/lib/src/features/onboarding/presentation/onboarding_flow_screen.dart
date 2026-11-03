@@ -98,7 +98,10 @@ class _OnboardingFlowViewState extends State<_OnboardingFlowView> {
                   onPageChanged: (i) => setState(() => _currentPage = i),
                   children: [
                     OnboardingIdentityPage(onContinue: _next),
-                    OnboardingSportProfilesPage(onContinue: _next),
+                    OnboardingSportProfilesPage(
+                      onContinue: _next,
+                      isActive: _currentPage == 1,
+                    ),
                     OnboardingLocationPage(
                       onContinue: _next,
                       isActive: _currentPage == 2,
