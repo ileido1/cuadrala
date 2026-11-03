@@ -13,6 +13,7 @@ import 'package:cuadrala_mobile/src/features/home/presentation/cubit/home_state.
 import 'package:cuadrala_mobile/src/features/home/presentation/home_screen.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/open_match_dto.dart';
 import 'package:cuadrala_mobile/src/features/quick_match/presentation/cubit/quick_match_cubit.dart';
+import 'package:cuadrala_mobile/src/features/quick_match/data/models/quick_match_search_dto.dart';
 import 'package:cuadrala_mobile/src/features/quick_match/data/quick_match_api.dart';
 import 'package:cuadrala_mobile/src/features/quick_match/data/quick_match_repository.dart';
 import 'package:cuadrala_mobile/src/features/shell/presentation/cubit/shell_cubit.dart';
@@ -29,6 +30,8 @@ class _MockHomeCubit extends MockCubit<HomeState> implements HomeCubit {}
 class _MockShellCubit extends MockCubit<int> implements ShellCubit {}
 
 class _MockQuickMatchApi extends Mock implements QuickMatchApi {}
+
+class _MockQuickMatchRepository extends Mock implements QuickMatchRepository {}
 
 class _MockCatalogApi extends Mock implements CatalogApi {}
 
@@ -451,5 +454,78 @@ void main() {
       expect(find.text('Actividad en Cuádrala'), findsNothing);
       expect(find.text('¿Jugamos hoy?'), findsOneWidget);
     });
+  });
+
+  // ── 8. Quick Match home banner — CONFIRMED visibility (issue #122) ────────
+  //
+  // `status == 'CONFIRMED'` means two different things: "I confirmed my own
+  // slot, the group is still forming" (no match yet) and "the group is
+  // complete, a match was created". The banner used to hide both the same
+  // way, so a player who confirmed their slot lost the only way back into
+  // the group-forming screen. It should only disappear once a match exists.
+  group('Quick Match home banner — CONFIRMED visibility (#122)', () {
+    late _MockQuickMatchRepository quickMatchRepository;
+
+    QuickMatchSearchDto confirmedSearch({String? matchId}) =>
+        QuickMatchSearchDto(
+          id: 'search-1',
+          sportId: 'sport-1',
+          categoryId: 'category-1',
+          status: 'CONFIRMED',
+          noMatchYet: matchId == null,
+          slots: const ['EVENING'],
+          targetDate: DateTime(2030, 6, 1),
+          widenLevel: false,
+          zoneKm: 5,
+          includeOpenMatches: true,
+          proposal: QuickMatchProposalDto(
+            id: 'group-1',
+            type: 'NEW_GROUP',
+            status: 'CONFIRMED',
+            matchId: matchId,
+            playerIds: const ['player-1'],
+            expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+          ),
+        );
+
+    setUp(() {
+      quickMatchRepository = _MockQuickMatchRepository();
+      getIt.registerSingleton<QuickMatchRepository>(quickMatchRepository);
+    });
+
+    tearDown(() => getIt.unregister<QuickMatchRepository>());
+
+    testWidgets(
+      'keeps showing the active-search callout while the group is still forming',
+      (tester) async {
+        when(() => quickMatchRepository.current())
+            .thenAnswer((_) async => confirmedSearch());
+        when(() => homeCubit.state).thenReturn(_loadedState());
+
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tu búsqueda está activa'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'hides the callout once the group is complete and a match exists',
+      (tester) async {
+        when(() => quickMatchRepository.current())
+            .thenAnswer((_) async => confirmedSearch(matchId: 'match-1'));
+        when(() => homeCubit.state).thenReturn(_loadedState());
+
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tu búsqueda está activa'), findsNothing);
+        expect(find.text('Encontrar partida'), findsOneWidget);
+      },
+    );
   });
 }

@@ -192,6 +192,26 @@ void main() {
     expect(find.textContaining('1 de 4 jugadores confirmados'), findsOneWidget);
   });
 
+  // Issue #121: antes de este fix, la única acción disponible mientras el
+  // grupo se forma era "Volver al inicio" — navegación pura, no cancelaba
+  // nada. El jugador quedaba sin forma de salir de su propia búsqueda.
+  testWidgets('offers a way to leave the queue while the group is still forming', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => _waitingGroup());
+    when(() => repository.cancel()).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Salir de la cola'), findsOneWidget);
+
+    await tester.tap(find.text('Salir de la cola'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.cancel()).called(1);
+  });
+
   testWidgets('renders an open-match proposal with its explicit cup action', (
     tester,
   ) async {
