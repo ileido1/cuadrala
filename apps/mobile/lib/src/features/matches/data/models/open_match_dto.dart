@@ -29,6 +29,7 @@ final class OpenMatchDto {
     required this.openSpots,
     required this.clubName,
     required this.courtName,
+    this.surfaceType,
     required this.locationLabel,
     this.pricingCurrency,
     this.displayCurrency,
@@ -50,6 +51,7 @@ final class OpenMatchDto {
   final int openSpots;
   final String? clubName;
   final String? courtName;
+  final String? surfaceType;
   final String? locationLabel;
   final String? pricingCurrency;
   final String? displayCurrency;
@@ -78,6 +80,7 @@ final class OpenMatchDto {
       openSpots: (json['openSpots'] as num).toInt(),
       clubName: json['clubName'] as String?,
       courtName: json['courtName'] as String?,
+      surfaceType: json['surfaceType'] as String?,
       locationLabel: json['locationLabel'] as String?,
       pricingCurrency: json['pricingCurrency'] as String?,
       displayCurrency: json['displayCurrency'] as String?,

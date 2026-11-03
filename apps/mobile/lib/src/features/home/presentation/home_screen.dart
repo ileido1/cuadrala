@@ -174,6 +174,7 @@ final class _MatchCardFor extends StatelessWidget {
       subDateLabel: scheduled == null ? '—' : compactCalendarDate(scheduled),
       title: openMatchTitleLine(match),
       category: match.categoryName ?? 'Cat. ${idPreview(match.categoryId)}',
+      surfaceTag: match.surfaceType,
       locationLabel: match.locationLabel,
       participantInitials: match.participantPreview
           .map((p) => _initialsFrom(p.displayName))

@@ -31,6 +31,7 @@ export type OpenMatchDTO = {
   openSpots: number;
   clubName?: string | undefined;
   courtName?: string | undefined;
+  surfaceType?: string | undefined;
   locationLabel?: string | undefined;
   pricingCurrency?: string | undefined;
   displayCurrency?: string | undefined;
