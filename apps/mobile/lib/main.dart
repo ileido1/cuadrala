@@ -19,12 +19,13 @@ Future<void> main() async {
       // Tracing: lower sample rate in production to control event volume.
       options.tracesSampleRate = isProduction ? 0.2 : 1.0;
 
-      // Session Replay (iOS/Android only, experimental in sentry_flutter
-      // 8.x): sample normal sessions lightly, always replay error sessions.
-      options.experimental.replay.sessionSampleRate = isProduction
-          ? 0.05
-          : 0.1;
-      options.experimental.replay.onErrorSampleRate = 1.0;
+      // Session Replay (iOS/Android only): sample normal sessions lightly,
+      // always replay error sessions.
+      options.replay.sessionSampleRate = isProduction ? 0.05 : 0.1;
+      options.replay.onErrorSampleRate = 1.0;
+
+      // Structured logging (Sentry.logger.*) — requires sentry_flutter >=9.5.0.
+      options.enableLogs = true;
     },
     appRunner: () async {
       WidgetsFlutterBinding.ensureInitialized();
