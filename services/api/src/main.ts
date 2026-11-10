@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './instrument.js';
 
 import { createApp } from './app.js';
 import { ENV_CONST } from './config/env.js';

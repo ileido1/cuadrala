@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/core/network/auth_token_interceptor.dart';
 import 'package:cuadrala_mobile/src/core/push/push_token_sync_service.dart';
 import 'package:cuadrala_mobile/src/features/auth/data/auth_repository.dart';
@@ -32,8 +33,15 @@ class _SingleUseRotatingBackend {
     // calls have already snapshotted their version before either resolves.
     await Future<void>.delayed(const Duration(milliseconds: 20));
     if (readVersion != _currentTokenVersion) {
-      throw Exception(
-        'TOKEN_INVALIDO: refresh token already rotated by a concurrent call',
+      // Matches what the real backend returns for an already-rotated
+      // refresh token: a clean 401 -> AppFailure(AUTH_UNAUTHORIZED), not a
+      // generic/network error. That is what makes this race indistinguishable
+      // from a genuinely dead session (see the AUTH_UNAUTHORIZED-only test
+      // below) and is why this specific scenario stays a known limitation
+      // rather than something #137's fix can tell apart.
+      throw const AppFailure(
+        code: 'AUTH_UNAUTHORIZED',
+        message: 'Sesión expirada. Inicia sesión nuevamente.',
       );
     }
     _currentTokenVersion++;
@@ -41,7 +49,10 @@ class _SingleUseRotatingBackend {
 }
 
 void main() {
-  test('refresh failure invalidates the active session instance', () async {
+  test(
+    'a definitive AUTH_UNAUTHORIZED refresh failure invalidates the active '
+    'session instance',
+    () async {
     final authRepository = _MockAuthRepository();
     final onboardingRepository = _MockOnboardingRepository();
     final pushTokenSyncService = _MockPushTokenSyncService();
@@ -52,7 +63,10 @@ void main() {
     );
     final interceptor = AuthTokenInterceptor(
       authRepository: authRepository,
-      refreshSession: () async => throw Exception('refresh failed'),
+      refreshSession: () async => throw const AppFailure(
+        code: 'AUTH_UNAUTHORIZED',
+        message: 'Sesión expirada. Inicia sesión nuevamente.',
+      ),
       onRefreshFailure: activeSession.logout,
     );
     final request = RequestOptions(path: '/api/v1/profile');
@@ -144,6 +158,49 @@ void main() {
       // moments earlier — this is a false logout, not an expired session.
       expect(backend._currentTokenVersion, 1);
 
+      await activeSession.close();
+    },
+  );
+
+  test(
+    'an ambiguous refresh failure (network/timeout/5xx) propagates the '
+    'request error WITHOUT logging out — issue #137: onboarding fires '
+    'several concurrent authenticated calls right after register, and a '
+    'merely transient refresh failure on one of them must not kill a '
+    'session that is otherwise still valid',
+    () async {
+      final authRepository = _MockAuthRepository();
+      final onboardingRepository = _MockOnboardingRepository();
+      final pushTokenSyncService = _MockPushTokenSyncService();
+      final activeSession = SessionCubit(
+        authRepository: authRepository,
+        onboardingRepository: onboardingRepository,
+        pushTokenSyncService: pushTokenSyncService,
+      );
+      final interceptor = AuthTokenInterceptor(
+        authRepository: authRepository,
+        refreshSession: () async => throw const AppFailure(
+          code: 'NETWORK_TIMEOUT',
+          message: 'La conexión tardó demasiado. Inténtalo de nuevo.',
+        ),
+        onRefreshFailure: activeSession.logout,
+      );
+      final request = RequestOptions(path: '/api/v1/onboarding/sport-profiles');
+      final error = DioException(
+        requestOptions: request,
+        response: Response<dynamic>(requestOptions: request, statusCode: 401),
+      );
+
+      DioException? forwardedError;
+      await interceptor.onError(
+        error,
+        _CapturingErrorInterceptorHandler(
+          onNext: (value) => forwardedError = value,
+        ),
+      );
+
+      expect(forwardedError, same(error));
+      verifyNever(() => authRepository.logout());
       await activeSession.close();
     },
   );

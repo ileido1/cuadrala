@@ -62,6 +62,9 @@ jobs:
         # apuntar a otro entorno sin tocar el workflow.
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL || 'https://cuadrala-api.onrender.com' }}
+          # DSN de Sentry (proyecto cuadrala-mobile, org uma-ax): no es secreto,
+          # es la clave pública que usa el SDK para enviar eventos.
+          SENTRY_DSN: ${{ vars.SENTRY_DSN || 'https://433d0c6001593f52435df876d98ed5b0@o4512408230166528.ingest.us.sentry.io/4512408308023296' }}
           # Opcional: sin esto la app funciona, pero el login con Google no.
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           # Firebase Web/VAPID are public browser configuration, never service-account credentials.
@@ -73,8 +76,9 @@ jobs:
           FIREBASE_WEB_STORAGE_BUCKET: ${{ vars.FIREBASE_WEB_STORAGE_BUCKET }}
           FIREBASE_WEB_VAPID_KEY: ${{ vars.FIREBASE_WEB_VAPID_KEY }}
         run: |
-          flutter build web --release \
+          flutter build web --release --source-maps \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=SENTRY_DSN="$SENTRY_DSN" \
             --dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID" \
             --dart-define=FIREBASE_WEB_API_KEY="$FIREBASE_WEB_API_KEY" \
             --dart-define=FIREBASE_WEB_APP_ID="$FIREBASE_WEB_APP_ID" \
@@ -100,6 +104,15 @@ jobs:
             : '';
           fs.writeFileSync('build/web/firebase-messaging-sw.js', `${prefix}${worker}`);
           NODE
+
+      - name: Subir source maps a Sentry
+        # `SENTRY_AUTH_TOKEN` NO está en pubspec.yaml: el plugin invoca
+        # sentry-cli, que lee esta variable del entorno solo. Si falta, el
+        # upload se salta en silencio (ver auth-token.md) — por eso el paso
+        # explícito, en el mismo job que el build, en ese orden.
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: dart run sentry_dart_plugin
 
       - name: Armar la salida para Vercel
         # Build Output API v3: Vercel publica `.vercel/output` tal cual, sin

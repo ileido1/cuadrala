@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../features/auth/data/auth_repository.dart';
+import '../failures/app_failure.dart';
 
 typedef AuthTokenRefresher = Future<void> Function();
 typedef AuthRefreshFailureHandler = Future<void> Function();
@@ -57,8 +58,16 @@ final class AuthTokenInterceptor extends Interceptor {
 
     try {
       await _refreshSession();
-    } catch (_) {
-      await _notifyRefreshFailure();
+    } catch (error) {
+      // Solo un rechazo DEFINITIVO del backend (o la ausencia local del
+      // refresh token) significa que la sesión está realmente muerta. Un
+      // fallo ambiguo (red, timeout, 5xx, error desconocido) no lo prueba:
+      // tratarlo igual mataba sesiones válidas cuando varias llamadas
+      // autenticadas concurrentes (p. ej. al entrar a onboarding) pisaban
+      // un refresh que solo falló de forma transitoria (issue #137).
+      if (_isDefinitiveSessionFailure(error)) {
+        await _notifyRefreshFailure();
+      }
       return handler.next(err);
     }
 
@@ -90,6 +99,11 @@ final class AuthTokenInterceptor extends Interceptor {
       }
       return handler.next(err);
     }
+  }
+
+  bool _isDefinitiveSessionFailure(Object error) {
+    return error is AppFailure &&
+        (error.code == 'AUTH_UNAUTHORIZED' || error.code == 'AUTH_NO_REFRESH_TOKEN');
   }
 
   Future<void> _notifyRefreshFailure() async {

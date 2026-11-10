@@ -44,7 +44,11 @@ final _perfilNavigatorKey = GlobalKey<NavigatorState>(
 final _homeBranch = StatefulShellBranch(
   navigatorKey: _homeNavigatorKey,
   routes: [
-    GoRoute(path: Routes.home, builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      name: 'home',
+      path: Routes.home,
+      builder: (context, state) => const HomeScreen(),
+    ),
   ],
 );
 
@@ -52,6 +56,7 @@ final _partidasBranch = StatefulShellBranch(
   navigatorKey: _partidasNavigatorKey,
   routes: [
     GoRoute(
+      name: 'partidas',
       path: Routes.partidas,
       builder: (context, state) => const OpenMatchesScreen(),
     ),
@@ -62,6 +67,7 @@ final _torneosBranch = StatefulShellBranch(
   navigatorKey: _torneosNavigatorKey,
   routes: [
     GoRoute(
+      name: 'torneos',
       path: Routes.torneos,
       builder: (context, state) => const TournamentsHomeScreen(),
     ),
@@ -72,6 +78,7 @@ final _descubrirBranch = StatefulShellBranch(
   navigatorKey: _descubrirNavigatorKey,
   routes: [
     GoRoute(
+      name: 'descubrir',
       path: Routes.descubrir,
       builder: (context, state) => BlocProvider<VenueMapCubit>(
         create: (_) => getIt<VenueMapCubit>(),
@@ -85,6 +92,7 @@ final _avisosBranch = StatefulShellBranch(
   navigatorKey: _avisosNavigatorKey,
   routes: [
     GoRoute(
+      name: 'avisos',
       path: Routes.avisos,
       builder: (context, state) => const NotificationsScreen(),
     ),
@@ -95,6 +103,7 @@ final _perfilBranch = StatefulShellBranch(
   navigatorKey: _perfilNavigatorKey,
   routes: [
     GoRoute(
+      name: 'perfil',
       path: Routes.perfil,
       builder: (context, state) => const ProfileScreen(),
     ),

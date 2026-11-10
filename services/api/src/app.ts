@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
@@ -20,6 +21,10 @@ export function createApp(): express.Express {
   APP.use(morgan('dev'));
   APP.use(DOCS_ROUTER);
   APP.use('/api/v1', API_V1_ROUTER);
+  // Después de todas las rutas, antes del error middleware propio: captura
+  // el error en Sentry y lo propaga con next(err) para que errorMiddleware
+  // siga armando la respuesta de siempre.
+  Sentry.setupExpressErrorHandler(APP);
   APP.use(errorMiddleware);
 
   return APP;
