@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 // ignore_for_file: deprecated_member_use
 
 import '../../../core/data/exchange_rates_repository.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../core/failures/app_failure.dart';
-import '../../../core/formatting/money_conversion.dart';
 import '../../../core/formatting/money_format.dart';
 import '../../../core/models/currency_code.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../matches/data/matches_repository.dart';
-import '../../matches/presentation/open_match_display.dart';
 import '../../profile/data/profile_repository.dart';
-import '../../venues/data/venues_repository.dart';
-import '../data/monetization_repository.dart';
 import '../data/models/match_payment_info_dto.dart';
-import '../data/models/transaction_dto.dart';
 import '../data/models/venue_payment_method_dto.dart';
-import '../domain/payment_selection_ref.dart';
+import '../data/monetization_repository.dart';
+import 'cubit/pay_method_cubit.dart';
+import 'cubit/pay_method_state.dart';
 import 'upload_receipt_screen.dart';
 import 'waiting_confirmation_screen.dart';
 
@@ -34,7 +31,7 @@ String _currencyLabel(CurrencyCode currency) {
   }
 }
 
-final class PayMethodScreen extends StatefulWidget {
+final class PayMethodScreen extends StatelessWidget {
   const PayMethodScreen({
     super.key,
     required this.matchId,
@@ -77,364 +74,72 @@ final class PayMethodScreen extends StatefulWidget {
   }
 
   @override
-  State<PayMethodScreen> createState() => _PayMethodScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider<PayMethodCubit>(
+      create: (_) => PayMethodCubit(
+        monetizationRepository: getIt<MonetizationRepository>(),
+        matchesRepository: getIt<MatchesRepository>(),
+        profileRepository: getIt<ProfileRepository>(),
+        exchangeRatesRepository: getIt<ExchangeRatesRepository>(),
+        matchId: matchId,
+        amountPerPlayerCents: amountPerPlayerCents,
+        venueId: venueId,
+        pricingCurrency: pricingCurrency,
+        displayCurrency: displayCurrency,
+        scheduledAt: scheduledAt,
+      )..bootstrap(),
+      child: BlocListener<PayMethodCubit, PayMethodState>(
+        listenWhen: (prev, curr) =>
+            prev.navigationIntent != curr.navigationIntent &&
+            curr.navigationIntent != null,
+        listener: (context, state) {
+          final intent = state.navigationIntent!;
+          switch (intent.destination) {
+            case PayMethodDestination.waiting:
+              context.push(
+                WaitingConfirmationScreen.route(
+                  matchId: matchId,
+                  amountPerPersonCents: intent.amountPerPersonCents,
+                  matchTitle: matchTitle,
+                  pricingCurrency: intent.pricingCurrency,
+                  transactionId: intent.transactionId,
+                  venueId: venueId,
+                ),
+              );
+            case PayMethodDestination.uploadReceipt:
+              context.push(
+                UploadReceiptScreen.route(
+                  matchId: matchId,
+                  transactionId: intent.transactionId,
+                  method: intent.method,
+                  amountPerPersonCents: intent.amountPerPersonCents,
+                  matchTitle: matchTitle,
+                  pricingCurrency: intent.pricingCurrency,
+                  venueId: venueId,
+                ),
+              );
+          }
+        },
+        child: BlocListener<PayMethodCubit, PayMethodState>(
+          listenWhen: (prev, curr) =>
+              curr.submitErrorMessage != null &&
+              prev.submitErrorMessage != curr.submitErrorMessage,
+          listener: (context, state) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.submitErrorMessage!)),
+            );
+          },
+          child: _PayMethodView(matchTitle: matchTitle),
+        ),
+      ),
+    );
+  }
 }
 
-class _PayMethodScreenState extends State<PayMethodScreen> {
-  bool _loading = true;
-  bool _submitting = false;
-  String? _error;
-  String? _transactionId;
-  String? _selectedMethodId;
-  List<VenuePaymentMethodDto> _methods = const [];
-  MatchPaymentInfoDto? _legacyPaymentInfo;
-  String? _resolvedPricingCurrency;
-  String? _resolvedDisplayCurrency;
-  DateTime? _matchScheduledAt;
-  List<ExchangeRateRow> _exchangeRates = const [];
-  bool _fxMissingRate = false;
-  TransactionDto? _loadedTransaction;
-  int? _settlementMinorCents;
-  CurrencyCode? _obligationCurrency;
-  CurrencyCode? _settlementCurrency;
+final class _PayMethodView extends StatelessWidget {
+  const _PayMethodView({required this.matchTitle});
 
-  CurrencyCode get _displayCurrencyCode => venueDisplayCurrency(
-    displayCurrency: _resolvedDisplayCurrency ?? widget.displayCurrency,
-    pricingCurrency: _resolvedPricingCurrency ?? widget.pricingCurrency,
-  );
-
-  CurrencyCode get _currentObligationCurrency => CurrencyCode.fromApiValue(
-    _resolvedPricingCurrency ?? widget.pricingCurrency ?? 'BS',
-  );
-
-  CurrencyCode get _currentAmountCurrency => _settlementMinorCents != null
-      ? (_settlementCurrency ?? _currentObligationCurrency)
-      : _currentObligationCurrency;
-
-  int get _currentAmountMinor =>
-      _settlementMinorCents ?? _obligationMinorForFx();
-
-  bool get _isCash => _methodRouteValue == 'CASH';
-
-  VenuePaymentMethodDto? get _selectedMethod {
-    if (_selectedMethodId == null) return null;
-    for (final m in _methods) {
-      if (m.id == _selectedMethodId) return m;
-    }
-    return null;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _bootstrap();
-  }
-
-  Future<void> _bootstrap() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final repo = getIt<MonetizationRepository>();
-      final venueId = widget.venueId;
-
-      var pricingCurrency = widget.pricingCurrency;
-      var displayCurrency = widget.displayCurrency;
-      var countryCode = 'VE';
-      if (venueId != null && venueId.isNotEmpty) {
-        try {
-          final venue = await getIt<VenuesRepository>().getVenueDetail(
-            venueId: venueId,
-          );
-          pricingCurrency ??= venue.pricingCurrency ?? venue.displayCurrency;
-          displayCurrency ??= venue.displayCurrency ?? venue.pricingCurrency;
-          countryCode = venue.countryCode ?? 'VE';
-        } catch (_) {}
-      }
-
-      DateTime? scheduledAt = widget.scheduledAt;
-      try {
-        final match = await getIt<MatchesRepository>().getMatchById(
-          widget.matchId,
-        );
-        scheduledAt ??= match.scheduledAt;
-      } catch (_) {}
-
-      var exchangeRates = const <ExchangeRateRow>[];
-      try {
-        exchangeRates = await getIt<ExchangeRatesRepository>().listByCountry(
-          countryCode: countryCode,
-        );
-      } catch (_) {
-        exchangeRates = const [];
-      }
-
-      List<VenuePaymentMethodDto> methods = const [];
-      if (venueId != null && venueId.isNotEmpty) {
-        try {
-          methods = await repo.listVenuePaymentMethods(venueId: venueId);
-        } catch (_) {
-          methods = const [];
-        }
-      }
-
-      MatchPaymentInfoDto? legacyInfo;
-      if (methods.isEmpty) {
-        try {
-          legacyInfo = await repo.getMatchPaymentInfo(matchId: widget.matchId);
-        } catch (_) {
-          legacyInfo = null;
-        }
-      }
-
-      final me = await getIt<ProfileRepository>().getMe();
-      final txs = await repo.listMyTransactions(limit: 100);
-      final existing =
-          txs.transactions.where((t) => t.matchId == widget.matchId).toList()
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      TransactionDto? pendingTx;
-      for (final t in existing) {
-        if (t.status == 'PENDING') {
-          pendingTx = t;
-          break;
-        }
-      }
-
-      if (pendingTx != null) {
-        if (!mounted) return;
-        setState(() {
-          _transactionId = pendingTx!.id;
-          _loadedTransaction = pendingTx;
-          _methods = methods;
-          _legacyPaymentInfo = legacyInfo;
-          _resolvedPricingCurrency = pricingCurrency;
-          _resolvedDisplayCurrency = displayCurrency;
-          _matchScheduledAt = scheduledAt;
-          _exchangeRates = exchangeRates;
-          _selectedMethodId = methods.isNotEmpty
-              ? methods.first.id
-              : 'TRANSFER';
-          _loading = false;
-        });
-        _recomputeFx();
-        return;
-      }
-
-      final amount = widget.amountPerPlayerCents / 100.0;
-      final created = await repo.createMatchObligations(
-        matchId: widget.matchId,
-        amountBasePerPerson: amount,
-        participantUserIds: [me.id],
-      );
-      final createdList = created['created'];
-      if (createdList is List && createdList.isNotEmpty) {
-        final first = createdList.first;
-        if (first is Map<String, Object?> && first['id'] is String) {
-          if (!mounted) return;
-          setState(() {
-            _transactionId = first['id'] as String;
-            _loadedTransaction = TransactionDto(
-              id: first['id'] as String,
-              matchId: widget.matchId,
-              userId: me.id,
-              amountBase: (first['amountBase'] as String?) ?? '0',
-              feeAmount: (first['feeAmount'] as String?) ?? '0',
-              amountTotal: (first['amountTotal'] as String?) ?? '0',
-              status: (first['status'] as String?) ?? 'PENDING',
-              paymentMethod: 'MANUAL',
-              confirmedAt: null,
-              createdAt: DateTime.now(),
-            );
-            _methods = methods;
-            _legacyPaymentInfo = legacyInfo;
-            _resolvedPricingCurrency = pricingCurrency;
-            _resolvedDisplayCurrency = displayCurrency;
-            _matchScheduledAt = scheduledAt;
-            _exchangeRates = exchangeRates;
-            _selectedMethodId = methods.isNotEmpty
-                ? methods.first.id
-                : 'TRANSFER';
-            _loading = false;
-          });
-          _recomputeFx();
-          return;
-        }
-      }
-
-      throw Exception('No se pudo crear la obligación.');
-    } catch (e) {
-      if (!mounted) return;
-      final msg = e is AppFailure ? e.message : e.toString();
-      setState(() {
-        _error = msg.isNotEmpty ? msg : 'No se pudo preparar el pago.';
-        _loading = false;
-      });
-    }
-  }
-
-  String get _methodRouteValue {
-    final selected = _selectedMethod;
-    if (selected != null) return selected.type;
-    return _selectedMethodId ?? 'TRANSFER';
-  }
-
-  /// Obligación en minor: total con comisión (`amountTotal`), no solo precio p/p.
-  int _obligationMinorForFx() {
-    final tx = _loadedTransaction;
-    if (tx != null) {
-      final total = double.tryParse(tx.amountTotal);
-      if (total != null && total > 0) {
-        return (total * 100).round();
-      }
-    }
-    return widget.amountPerPlayerCents;
-  }
-
-  void _recomputeFx() {
-    final obligationMinor = _obligationMinorForFx();
-    final obligation = CurrencyCode.fromApiValue(
-      _resolvedPricingCurrency ?? widget.pricingCurrency ?? 'BS',
-    );
-    final method = _selectedMethod;
-    final settlement = CurrencyCode.fromApiValue(
-      method?.settlementCurrency ?? obligation.apiValue,
-    );
-
-    _obligationCurrency = obligation;
-    _settlementCurrency = settlement;
-
-    if (obligation == settlement) {
-      setState(() {
-        _fxMissingRate = false;
-        _settlementMinorCents = obligationMinor;
-      });
-      return;
-    }
-
-    final scheduled = _matchScheduledAt ?? DateTime.now();
-    final dateIso = localCalendarDateIsoSV(scheduled);
-    final oblRate = pickExchangeRateForDateSV(
-      _exchangeRates,
-      obligation,
-      dateIso,
-    );
-    final setRate = pickExchangeRateForDateSV(
-      _exchangeRates,
-      settlement,
-      dateIso,
-    );
-
-    if (oblRate == null || setRate == null) {
-      setState(() {
-        _fxMissingRate = true;
-        _settlementMinorCents = null;
-      });
-      return;
-    }
-
-    final settlementMinor = convertMinorBetweenCurrenciesSV(
-      obligationMinor,
-      obligation,
-      settlement,
-      oblRate.rateToBs,
-      setRate.rateToBs,
-    );
-    setState(() {
-      _fxMissingRate = false;
-      _settlementMinorCents = settlementMinor;
-    });
-  }
-
-  Future<void> _continue() async {
-    final txId = _transactionId;
-    if (txId == null || txId.isEmpty) return;
-
-    if (!_isCash && _fxMissingRate) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No hay tasa de cambio para la fecha del partido. '
-            'Contacta al club.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      final repo = getIt<MonetizationRepository>();
-      final methodId = _selectedMethodId;
-      final pricing = _resolvedPricingCurrency ?? widget.pricingCurrency;
-      final reportedMinor = _isCash
-          ? _obligationMinorForFx()
-          : (_settlementMinorCents ?? _obligationMinorForFx());
-      final reportedCurrency =
-          (_isCash ? _obligationCurrency : _settlementCurrency)?.apiValue ??
-          pricing ??
-          widget.pricingCurrency ??
-          'BS';
-
-      final selectionRef = resolvePaymentSelectionRefSV(methodId);
-      if (selectionRef != null) {
-        await repo.recordPlayerPaymentSelection(
-          transactionId: txId,
-          venuePaymentMethodId: selectionRef.venuePaymentMethodId,
-          paymentMethodType: selectionRef.paymentMethodType,
-          reportedSettlementMinor: reportedMinor,
-          reportedSettlementCurrency: reportedCurrency,
-        );
-      }
-      if (!mounted) return;
-
-      if (_isCash) {
-        context.push(
-          WaitingConfirmationScreen.route(
-            matchId: widget.matchId,
-            amountPerPersonCents: reportedMinor,
-            matchTitle: widget.matchTitle,
-            pricingCurrency: reportedCurrency,
-            transactionId: txId,
-            venueId: widget.venueId,
-          ),
-        );
-        return;
-      }
-
-      final amountForUpload =
-          _settlementMinorCents ?? widget.amountPerPlayerCents;
-      final currencyForUpload = _settlementCurrency?.apiValue ?? pricing;
-
-      context.push(
-        UploadReceiptScreen.route(
-          matchId: widget.matchId,
-          transactionId: txId,
-          method: _methodRouteValue,
-          amountPerPersonCents: amountForUpload,
-          matchTitle: widget.matchTitle,
-          pricingCurrency: currencyForUpload,
-          venueId: widget.venueId,
-        ),
-      );
-    } catch (e) {
-      //? Sin este catch la excepción subía sin que nadie la mostrara: el
-      //? spinner se apagaba y la pantalla quedaba igual. La API manda el
-      //? detalle del campo que falló, así que se muestra su mensaje.
-      if (!mounted) return;
-      final msg = e is AppFailure ? e.message : '';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            msg.isNotEmpty ? msg : 'No se pudo registrar el medio de pago.',
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
+  final String matchTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -442,155 +147,155 @@ class _PayMethodScreenState extends State<PayMethodScreen> {
     return Scaffold(
       key: const Key('pay.method.screen'),
       appBar: AppBar(title: const Text('Elegir método de pago')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? ErrorState(message: _error!, onRetry: _bootstrap)
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _MatchHeaderCard(
-                  title: widget.matchTitle,
-                  amount: formatMoneyCents(
-                    widget.amountPerPlayerCents,
-                    _displayCurrencyCode,
-                  ),
+      body: BlocBuilder<PayMethodCubit, PayMethodState>(
+        builder: (context, state) {
+          final cubit = context.read<PayMethodCubit>();
+
+          if (state.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state.error != null) {
+            return ErrorState(message: state.error!, onRetry: cubit.bootstrap);
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _MatchHeaderCard(
+                title: matchTitle,
+                amount: formatMoneyCents(
+                  state.amountPerPlayerCents,
+                  state.displayCurrencyCode,
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  'SELECCIONA UNA OPCIÓN',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                    color: scheme.onSurfaceVariant,
-                  ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'SELECCIONA UNA OPCIÓN',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (state.methods.isNotEmpty)
+                ...state.methods.map((m) {
+                  //? Mostrar banco si hay múltiples transferencias bancarias
+                  final sameTypeCount =
+                      state.methods.where((x) => x.type == m.type).length;
+                  final bank = m.type == 'BANK_TRANSFER' && sameTypeCount > 1
+                      ? (m.config?['bank'] as String?) ?? ''
+                      : '';
+                  final settlementLabel = _currencyLabel(
+                    CurrencyCode.fromApiValue(m.settlementCurrency),
+                  );
+                  final subtitle = bank.isNotEmpty
+                      ? '$bank · $settlementLabel'
+                      : '${m.name} · $settlementLabel';
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _MethodOption(
+                      selected: state.selectedMethodId == m.id,
+                      title: m.displayLabel,
+                      subtitle: subtitle,
+                      onTap: () => cubit.selectMethod(m.id),
+                    ),
+                  );
+                })
+              else ...[
+                _MethodOption(
+                  selected: state.selectedMethodId == 'TRANSFER',
+                  title: 'Transferencia bancaria',
+                  subtitle: 'Recomendado',
+                  onTap: () => cubit.selectMethod('TRANSFER'),
                 ),
                 const SizedBox(height: 10),
-                if (_methods.isNotEmpty)
-                  ..._methods.map((m) {
-                    //? Mostrar banco si hay múltiples transferencias bancarias
-                    final sameTypeCount = _methods
-                        .where((x) => x.type == m.type)
-                        .length;
-                    final bank = m.type == 'BANK_TRANSFER' && sameTypeCount > 1
-                        ? (m.config?['bank'] as String?) ?? ''
-                        : '';
-                    final settlementLabel = _currencyLabel(
-                      CurrencyCode.fromApiValue(m.settlementCurrency),
-                    );
-                    final subtitle = bank.isNotEmpty
-                        ? '$bank · $settlementLabel'
-                        : '${m.name} · $settlementLabel';
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _MethodOption(
-                        selected: _selectedMethodId == m.id,
-                        title: m.displayLabel,
-                        subtitle: subtitle,
-                        onTap: () {
-                          setState(() => _selectedMethodId = m.id);
-                          _recomputeFx();
-                        },
-                      ),
-                    );
-                  })
-                else ...[
-                  _MethodOption(
-                    selected: _selectedMethodId == 'TRANSFER',
-                    title: 'Transferencia bancaria',
-                    subtitle: 'Recomendado',
-                    onTap: () {
-                      setState(() => _selectedMethodId = 'TRANSFER');
-                      _recomputeFx();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _MethodOption(
-                    selected: _selectedMethodId == 'CASH',
-                    title: 'Efectivo',
-                    subtitle: 'Coordina con el organizador',
-                    onTap: () {
-                      setState(() => _selectedMethodId = 'CASH');
-                      _recomputeFx();
-                    },
-                  ),
-                ],
-                if (_selectedMethod != null)
-                  _PaymentMethodDetailsCard(
-                    method: _selectedMethod!,
-                    amountMinor: _currentAmountMinor,
-                    amountCurrency: _currentAmountCurrency,
-                    obligationMinor: _obligationMinorForFx(),
-                    obligationCurrency: _currentObligationCurrency,
-                  )
-                else if (_selectedMethodId == 'TRANSFER' &&
-                    _legacyPaymentInfo != null)
-                  _BankInfoCard(
-                    paymentInfo: _legacyPaymentInfo!,
-                    amountMinor: _currentAmountMinor,
-                    amountCurrency: _currentAmountCurrency,
-                  ),
-                if (!_isCash && _fxMissingRate)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      'Falta la tasa de cambio para esta fecha. '
-                      'No puedes continuar hasta que el club la cargue.',
-                      style: TextStyle(
-                        color: scheme.error,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                if (_isCash)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      'Pagarás en efectivo en el club. No necesitas subir '
-                      'comprobante; el staff confirmará tu pago.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: FilledButton(
-                    onPressed: (_submitting || (!_isCash && _fxMissingRate))
-                        ? null
-                        : _continue,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: scheme.primary,
-                      elevation: 8,
-                      shadowColor: scheme.primary.withValues(alpha: 0.4),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _submitting
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            _isCash
-                                ? 'Confirmar inscripción'
-                                : 'Ya pagué · Enviar comprobante',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
-                  ),
+                _MethodOption(
+                  selected: state.selectedMethodId == 'CASH',
+                  title: 'Efectivo',
+                  subtitle: 'Coordina con el organizador',
+                  onTap: () => cubit.selectMethod('CASH'),
                 ),
               ],
-            ),
+              if (state.selectedMethod != null)
+                _PaymentMethodDetailsCard(
+                  method: state.selectedMethod!,
+                  amountMinor: state.currentAmountMinor,
+                  amountCurrency: state.currentAmountCurrency,
+                  obligationMinor: state.obligationMinorForFx,
+                  obligationCurrency: state.currentObligationCurrency,
+                )
+              else if (state.selectedMethodId == 'TRANSFER' &&
+                  state.legacyPaymentInfo != null)
+                _BankInfoCard(
+                  paymentInfo: state.legacyPaymentInfo!,
+                  amountMinor: state.currentAmountMinor,
+                  amountCurrency: state.currentAmountCurrency,
+                ),
+              if (!state.isCash && state.fxMissingRate)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    'Falta la tasa de cambio para esta fecha. '
+                    'No puedes continuar hasta que el club la cargue.',
+                    style: TextStyle(
+                      color: scheme.error,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              if (state.isCash)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    'Pagarás en efectivo en el club. No necesitas subir '
+                    'comprobante; el staff confirmará tu pago.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: FilledButton(
+                  onPressed:
+                      (state.submitting || (!state.isCash && state.fxMissingRate))
+                          ? null
+                          : cubit.continue_,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: scheme.primary,
+                    elevation: 8,
+                    shadowColor: scheme.primary.withValues(alpha: 0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: state.submitting
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          state.isCash
+                              ? 'Confirmar inscripción'
+                              : 'Ya pagué · Enviar comprobante',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
