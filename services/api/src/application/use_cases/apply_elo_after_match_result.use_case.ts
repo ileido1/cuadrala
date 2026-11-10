@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/node';
+
 import { AppError } from '../../domain/errors/app_error.js';
 import { applyEloForFreeForAllPerPlayerKSV } from '../../domain/elo/elo_rating.js';
 import type { MatchResultReadRepository } from '../../domain/ports/match_result_read_repository.js';
@@ -43,6 +45,10 @@ export class ApplyEloAfterMatchResultUseCase {
       throw new AppError('RESULTADO_NO_ENCONTRADO', 'El resultado indicado no existe.', 404);
     }
     if (!RESULT.affectsElo) {
+      Sentry.logger.info('Resultado finalizado sin afectar ELO (partido amistoso)', {
+        'cuadrala.elo.match_id': RESULT.matchId,
+        'cuadrala.elo.result_id': RESULT.resultId,
+      });
       return { updated: 0 };
     }
 
@@ -101,6 +107,16 @@ export class ApplyEloAfterMatchResultUseCase {
     );
 
     await this._rankingRepository.recalculateByCategoryIdSV(RESULT.categoryId);
+
+    Sentry.logger.info(
+      Sentry.logger.fmt`ELO aplicado para el match ${RESULT.matchId}: ${OUT.length} jugadores actualizados`,
+      {
+        'cuadrala.elo.match_id': RESULT.matchId,
+        'cuadrala.elo.result_id': RESULT.resultId,
+        'cuadrala.elo.category_id': RESULT.categoryId,
+        'cuadrala.elo.players_updated': OUT.length,
+      },
+    );
 
     return { updated: OUT.length };
   }
