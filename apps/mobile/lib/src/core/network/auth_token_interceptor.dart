@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../../features/auth/data/auth_repository.dart';
 import '../failures/app_failure.dart';
@@ -66,7 +67,27 @@ final class AuthTokenInterceptor extends Interceptor {
       // autenticadas concurrentes (p. ej. al entrar a onboarding) pisaban
       // un refresh que solo falló de forma transitoria (issue #137).
       if (_isDefinitiveSessionFailure(error)) {
+        Sentry.logger.warn(
+          'Refresh rechazado: sesión muerta, se dispara logout global',
+          attributes: {
+            'cuadrala.auth.refresh_rejected_reason': SentryAttribute.string(
+              error is AppFailure ? error.code : 'unknown',
+            ),
+          },
+        );
         await _notifyRefreshFailure();
+      } else {
+        // Fallo ambiguo (red, timeout, 5xx): se trata como transitorio y NO
+        // mata la sesión (issue #137). Queda en INFO para poder auditar si
+        // este swallow está ocultando un problema real del backend.
+        Sentry.logger.info(
+          'Refresh falló de forma ambigua, sesión se mantiene',
+          attributes: {
+            'cuadrala.auth.refresh_ambiguous_error': SentryAttribute.string(
+              error.runtimeType.toString(),
+            ),
+          },
+        );
       }
       return handler.next(err);
     }
