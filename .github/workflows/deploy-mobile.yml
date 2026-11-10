@@ -33,6 +33,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Clone completo: sentry-cli necesita el historial real para ubicar
+          # el commit del release anterior y armar los "suspect commits".
+          # Con el shallow clone default (depth=1) tira "Could not find the
+          # SHA of the previous release in the git history" apenas hay más
+          # de un release registrado.
+          fetch-depth: 0
 
       - uses: subosito/flutter-action@v2
         with:
