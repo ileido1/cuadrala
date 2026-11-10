@@ -1175,6 +1175,7 @@ final class _DisabledCta extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: 54,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
@@ -1185,12 +1186,20 @@ final class _DisabledCta extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: scheme.onSurfaceVariant),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: scheme.onSurfaceVariant,
+          // ponytail: labels largos (ej. "Toca un lugar para unirte")
+          // desbordaban este Row en pantallas angostas — el Text no tenía
+          // límite de ancho porque Row da constraints infinitos a hijos sin
+          // Flexible/Expanded.
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
