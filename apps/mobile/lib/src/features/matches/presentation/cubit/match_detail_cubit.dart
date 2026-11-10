@@ -5,6 +5,7 @@ import '../../../../core/formatting/fx_price_labels.dart';
 import '../../../../core/formatting/money_conversion.dart';
 import '../../../monetization/data/monetization_repository.dart';
 import '../../../profile/data/models/user_me_dto.dart';
+import '../../../profile/data/models/user_rating_dto.dart';
 import '../../../profile/data/profile_repository.dart';
 import '../../data/matches_repository.dart';
 import '../../data/models/match_detail_dto.dart';
@@ -82,6 +83,29 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
     return Map.fromEntries(entries);
   }
 
+  /// Cambio de ELO del viewer para este match (issue #129): el resultado se
+  /// cierra recién cuando las 4 confirmaciones llegan — ninguna pantalla del
+  /// flujo de propuesta/confirmación puede saber el número al momento de su
+  /// propia acción, así que se consulta el historial de ELO del viewer (ya
+  /// expuesto por GET /users/:id/ratings/history) y se busca la fila de
+  /// este matchId. `null` mientras el resultado sigue sin confirmarse.
+  Future<UserRatingHistoryItemDto?> _viewerEloChange(
+    MatchDetailDto match,
+    String viewerUserId,
+  ) async {
+    if (match.status != 'FINISHED' || !match.affectsElo) return null;
+    try {
+      final history = await _profileRepository.getUserRatingHistory(
+        userId: viewerUserId,
+        categoryId: match.categoryId,
+        limit: 5,
+      );
+      return history.where((item) => item.matchId == _matchId).firstOrNull;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<MatchDetailLoaded> _loadedFromMatch(
     MatchDetailDto match,
     String viewerUserId, {
@@ -94,6 +118,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       match,
       viewerUserId,
     );
+    final eloChange = await _viewerEloChange(match, viewerUserId);
     return MatchDetailLoaded(
       match: match,
       viewerUserId: viewerUserId,
@@ -104,6 +129,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
       actionMessage: actionMessage,
       actionMessageIsError: actionMessageIsError,
       exchangeRates: _exchangeRates,
+      viewerEloChange: eloChange,
     );
   }
 
@@ -144,6 +170,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         participantsConfirmedPayment: current.participantsConfirmedPayment,
         actionLoading: true,
         exchangeRates: current.exchangeRates,
+        viewerEloChange: current.viewerEloChange,
       ),
     );
 
@@ -169,6 +196,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           actionMessage: message,
           actionMessageIsError: true,
           exchangeRates: current.exchangeRates,
+          viewerEloChange: current.viewerEloChange,
         ),
       );
     }
@@ -188,6 +216,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         participantsConfirmedPayment: current.participantsConfirmedPayment,
         actionLoading: true,
         exchangeRates: current.exchangeRates,
+        viewerEloChange: current.viewerEloChange,
       ),
     );
 
@@ -213,6 +242,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           actionMessage: message,
           actionMessageIsError: true,
           exchangeRates: current.exchangeRates,
+          viewerEloChange: current.viewerEloChange,
         ),
       );
     }
@@ -260,6 +290,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
         participantsConfirmedPayment: current.participantsConfirmedPayment,
         actionLoading: true,
         exchangeRates: current.exchangeRates,
+        viewerEloChange: current.viewerEloChange,
       ),
     );
 
@@ -285,6 +316,7 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
           actionMessage: message,
           actionMessageIsError: true,
           exchangeRates: current.exchangeRates,
+          viewerEloChange: current.viewerEloChange,
         ),
       );
     }

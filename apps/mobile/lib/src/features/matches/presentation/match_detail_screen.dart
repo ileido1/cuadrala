@@ -23,6 +23,7 @@ import '../data/matches_repository.dart';
 import '../data/models/match_detail_dto.dart';
 import '../../monetization/data/monetization_repository.dart';
 import '../../monetization/presentation/pay_method_screen.dart';
+import '../../profile/data/models/user_rating_dto.dart';
 import '../../profile/data/profile_repository.dart';
 import 'cubit/match_detail_cubit.dart';
 import 'cubit/match_detail_state.dart';
@@ -142,7 +143,7 @@ final class _MatchDetailView extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         _LocationRow(match: m),
-                        _Banner(phase: phase),
+                        _Banner(phase: phase, eloChange: loaded.viewerEloChange),
                         const SizedBox(height: 14),
                         _InfoTilesRow(
                           match: m,
@@ -291,9 +292,14 @@ final class _LocationRow extends StatelessWidget {
 // ─── Phase banner ─────────────────────────────────────────────────────────────
 
 final class _Banner extends StatelessWidget {
-  const _Banner({required this.phase});
+  const _Banner({required this.phase, this.eloChange});
 
   final _Phase phase;
+
+  /// Cambio de ELO del viewer para este match, si el resultado ya quedó
+  /// finalizado (issue #129). `null` mientras sigue pendiente de
+  /// confirmación por los 4 jugadores, o si el partido no afecta ELO.
+  final UserRatingHistoryItemDto? eloChange;
 
   @override
   Widget build(BuildContext context) {
@@ -333,7 +339,9 @@ final class _Banner extends StatelessWidget {
         AppIcons.target,
         scheme.primary,
         'Partida finalizada',
-        'Resultado y ELO actualizados',
+        eloChange == null
+            ? 'Resultado y ELO actualizados'
+            : _eloChangeLabel(eloChange!),
       ),
     };
     final neutral = phase == _Phase.browse;
@@ -381,6 +389,14 @@ final class _Banner extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _eloChangeLabel(UserRatingHistoryItemDto change) {
+    final previous = change.previousRating.round();
+    final next = change.newRating.round();
+    final delta = next - previous;
+    final sign = delta >= 0 ? '+' : '';
+    return 'Tu ELO: $previous → $next ($sign$delta)';
   }
 }
 

@@ -13,6 +13,7 @@ import 'package:cuadrala_mobile/src/features/monetization/data/models/transactio
 import 'package:cuadrala_mobile/src/features/matches/presentation/cubit/match_detail_cubit.dart';
 import 'package:cuadrala_mobile/src/features/matches/presentation/cubit/match_detail_state.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/models/user_rating_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
 
 class _MockMatchesRepository extends Mock implements MatchesRepository {}
@@ -38,6 +39,7 @@ void main() {
       List<MatchParticipantDto> participants = const [],
       int openSpots = 4,
       String status = 'SCHEDULED',
+      bool affectsElo = true,
     }) {
       final now = DateTime.utc(2026, 5, 5, 12);
       return MatchDetailDto(
@@ -59,6 +61,7 @@ void main() {
         participants: participants,
         createdAt: now,
         updatedAt: now,
+        affectsElo: affectsElo,
       );
     }
 
@@ -380,6 +383,140 @@ void main() {
             .having((s) => s.actionMessageIsError, 'actionMessageIsError', true),
       ],
     );
+
+    group('cambio de ELO del viewer (issue #129)', () {
+      blocTest<MatchDetailCubit, MatchDetailState>(
+        'load expone el cambio de ELO del viewer cuando el partido ya '
+        'finalizó, afecta ELO y su historial ya tiene una fila para este '
+        'match (las 4 confirmaciones ya cerraron el resultado)',
+        build: () {
+          when(() => matchesRepository.getMatchById(matchId)).thenAnswer(
+            (_) async => buildMatch(status: 'FINISHED'),
+          );
+          when(
+            () => profileRepository.getUserRatingHistory(
+              userId: viewerId,
+              categoryId: 'cat',
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              // Fila más reciente pero de OTRO match: probar que no se
+              // toma a ciegas la primera, sino la que matchea matchId.
+              UserRatingHistoryItemDto(
+                matchId: 'otro-match',
+                resultId: 'r-0',
+                previousRating: 1300,
+                newRating: 1310,
+                kFactor: 20,
+                createdAt: DateTime.utc(2026, 5, 7),
+              ),
+              UserRatingHistoryItemDto(
+                matchId: matchId,
+                resultId: 'r-1',
+                previousRating: 1240,
+                newRating: 1254,
+                kFactor: 20,
+                createdAt: DateTime.utc(2026, 5, 6),
+              ),
+            ],
+          );
+          return MatchDetailCubit(
+            matchesRepository: matchesRepository,
+            profileRepository: profileRepository,
+            monetizationRepository: monetizationRepository,
+            matchId: matchId,
+          );
+        },
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const MatchDetailLoading(),
+          isA<MatchDetailLoaded>().having(
+            (s) => s.viewerEloChange,
+            'viewerEloChange',
+            isA<UserRatingHistoryItemDto>()
+                .having((e) => e.previousRating, 'previousRating', 1240)
+                .having((e) => e.newRating, 'newRating', 1254),
+          ),
+        ],
+      );
+
+      blocTest<MatchDetailCubit, MatchDetailState>(
+        'load deja viewerEloChange en null cuando el partido finalizó pero '
+        'las confirmaciones todavía no cerraron el resultado (sin fila en '
+        'el historial para este match)',
+        build: () {
+          when(() => matchesRepository.getMatchById(matchId)).thenAnswer(
+            (_) async => buildMatch(status: 'FINISHED'),
+          );
+          when(
+            () => profileRepository.getUserRatingHistory(
+              userId: viewerId,
+              categoryId: 'cat',
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) async => const []);
+          return MatchDetailCubit(
+            matchesRepository: matchesRepository,
+            profileRepository: profileRepository,
+            monetizationRepository: monetizationRepository,
+            matchId: matchId,
+          );
+        },
+        act: (cubit) => cubit.load(),
+        expect: () => [
+          const MatchDetailLoading(),
+          isA<MatchDetailLoaded>()
+              .having((s) => s.viewerEloChange, 'viewerEloChange', isNull),
+        ],
+      );
+
+      blocTest<MatchDetailCubit, MatchDetailState>(
+        'load no consulta el historial de ELO si el partido no finalizó',
+        build: () {
+          when(() => matchesRepository.getMatchById(matchId))
+              .thenAnswer((_) async => buildMatch(status: 'SCHEDULED'));
+          return MatchDetailCubit(
+            matchesRepository: matchesRepository,
+            profileRepository: profileRepository,
+            monetizationRepository: monetizationRepository,
+            matchId: matchId,
+          );
+        },
+        act: (cubit) => cubit.load(),
+        verify: (_) {
+          verifyNever(() => profileRepository.getUserRatingHistory(
+                userId: any(named: 'userId'),
+                categoryId: any(named: 'categoryId'),
+                limit: any(named: 'limit'),
+              ));
+        },
+      );
+
+      blocTest<MatchDetailCubit, MatchDetailState>(
+        'load no consulta el historial de ELO si el partido no afecta ELO '
+        '(amistoso)',
+        build: () {
+          when(() => matchesRepository.getMatchById(matchId)).thenAnswer(
+            (_) async => buildMatch(status: 'FINISHED', affectsElo: false),
+          );
+          return MatchDetailCubit(
+            matchesRepository: matchesRepository,
+            profileRepository: profileRepository,
+            monetizationRepository: monetizationRepository,
+            matchId: matchId,
+          );
+        },
+        act: (cubit) => cubit.load(),
+        verify: (_) {
+          verifyNever(() => profileRepository.getUserRatingHistory(
+                userId: any(named: 'userId'),
+                categoryId: any(named: 'categoryId'),
+                limit: any(named: 'limit'),
+              ));
+        },
+      );
+    });
   });
 }
 
