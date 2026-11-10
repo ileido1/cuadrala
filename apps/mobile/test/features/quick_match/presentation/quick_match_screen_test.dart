@@ -14,6 +14,7 @@ import 'package:cuadrala_mobile/src/features/quick_match/presentation/quick_matc
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockQuickMatchRepository extends Mock implements QuickMatchRepository {}
@@ -100,13 +101,25 @@ MatchDetailDto _matchDetail() => MatchDetailDto(
   displayCurrency: 'USD',
 );
 
-Widget _wrap(QuickMatchCubit cubit) => MaterialApp(
-  theme: AppTheme.dark(),
-  home: BlocProvider<QuickMatchCubit>.value(
-    value: cubit,
-    child: const QuickMatchScreen(),
-  ),
-);
+Widget _wrap(QuickMatchCubit cubit) {
+  final router = GoRouter(
+    initialLocation: '/quick-match',
+    routes: [
+      GoRoute(
+        path: '/quick-match',
+        builder: (_, _) => BlocProvider<QuickMatchCubit>.value(
+          value: cubit,
+          child: const QuickMatchScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (_, _) => const Scaffold(body: Text('home.stub')),
+      ),
+    ],
+  );
+  return MaterialApp.router(theme: AppTheme.dark(), routerConfig: router);
+}
 
 
 QuickMatchSearchDto _waitingGroup() => QuickMatchSearchDto(
@@ -210,6 +223,27 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => repository.cancel()).called(1);
+    // Bug reportado en vivo: cancelar SÍ llamaba al repo, pero la pantalla
+    // se quedaba mostrando el flujo de quick-match (que, sin búsqueda
+    // activa, cae en el formulario para crear una cola nueva) en vez de
+    // volver al inicio.
+    expect(find.text('home.stub'), findsOneWidget);
+  });
+
+  testWidgets('leaving the queue while actively searching cancels and goes home', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => _searching());
+    when(() => repository.cancel()).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Salir de la cola'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.cancel()).called(1);
+    expect(find.text('home.stub'), findsOneWidget);
   });
 
   testWidgets('renders an open-match proposal with its explicit cup action', (
@@ -348,6 +382,24 @@ void main() {
 
     expect(find.text('La propuesta expiró'), findsOneWidget);
     expect(find.text('Se liberó el cupo'), findsNothing);
+  });
+
+  testWidgets('leaving the queue after an expired proposal cancels and goes home', (
+    tester,
+  ) async {
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _expired(proposalType: 'NEW_GROUP'));
+    when(() => repository.cancel()).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Salir de la cola'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.cancel()).called(1);
+    expect(find.text('home.stub'), findsOneWidget);
   });
 
   testWidgets('shows the Bs secondary price once exchange rates are available', (
