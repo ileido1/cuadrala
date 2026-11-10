@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../../core/formatting/money_conversion.dart';
+import '../../../profile/data/models/user_rating_dto.dart';
 import '../../data/models/match_detail_dto.dart';
 
 sealed class MatchDetailState extends Equatable {
@@ -29,6 +30,7 @@ final class MatchDetailLoaded extends MatchDetailState {
     this.actionMessage,
     this.actionMessageIsError = false,
     this.exchangeRates = const [],
+    this.viewerEloChange,
   });
 
   final MatchDetailDto match;
@@ -47,6 +49,12 @@ final class MatchDetailLoaded extends MatchDetailState {
   final bool actionMessageIsError;
   final List<ExchangeRateRow> exchangeRates;
 
+  /// Cambio de ELO del viewer para este match, si el resultado ya quedó
+  /// finalizado (las 4 confirmaciones cerraron y el historial tiene una
+  /// fila para este matchId). `null` mientras el resultado sigue pendiente
+  /// de confirmación, o si el partido no afecta ELO.
+  final UserRatingHistoryItemDto? viewerEloChange;
+
   bool get isParticipant => match.participants.any((p) => p.userId == viewerUserId);
 
   @override
@@ -60,6 +68,7 @@ final class MatchDetailLoaded extends MatchDetailState {
         actionMessage,
         actionMessageIsError,
         exchangeRates,
+        viewerEloChange,
       ];
 }
 

@@ -10,6 +10,7 @@ import 'package:cuadrala_mobile/src/features/matches/data/models/match_detail_dt
 import 'package:cuadrala_mobile/src/features/matches/presentation/match_detail_screen.dart';
 import 'package:cuadrala_mobile/src/features/monetization/data/monetization_repository.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/models/user_me_dto.dart';
+import 'package:cuadrala_mobile/src/features/profile/data/models/user_rating_dto.dart';
 import 'package:cuadrala_mobile/src/features/profile/data/profile_repository.dart';
 
 class _MockMatchesRepository extends Mock implements MatchesRepository {}
@@ -148,6 +149,64 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Result entry: $_matchId'), findsOneWidget);
+      },
+    );
+  });
+
+  group('banner de ELO en partida finalizada (issue #129)', () {
+    testWidgets(
+      'muestra el número real de ELO cuando el historial ya tiene una fila '
+      'para este match',
+      (tester) async {
+        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
+          (_) async => _buildMatch(status: 'FINISHED'),
+        );
+        when(
+          () => profileRepository.getUserRatingHistory(
+            userId: _viewerId,
+            categoryId: 'cat',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            UserRatingHistoryItemDto(
+              matchId: _matchId,
+              resultId: 'r-1',
+              previousRating: 1240,
+              newRating: 1254,
+              kFactor: 20,
+              createdAt: DateTime.utc(2026, 5, 6),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(_buildTestApp());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tu ELO: 1240 → 1254 (+14)'), findsOneWidget);
+        expect(find.text('Resultado y ELO actualizados'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'mantiene el texto genérico mientras el resultado sigue sin las 4 '
+      'confirmaciones (sin fila en el historial para este match)',
+      (tester) async {
+        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
+          (_) async => _buildMatch(status: 'FINISHED'),
+        );
+        when(
+          () => profileRepository.getUserRatingHistory(
+            userId: _viewerId,
+            categoryId: 'cat',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        await tester.pumpWidget(_buildTestApp());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Resultado y ELO actualizados'), findsOneWidget);
       },
     );
   });
