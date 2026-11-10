@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../core/di/service_locator.dart';
 import '../features/auth/presentation/cubit/login_cubit.dart';
@@ -56,16 +57,19 @@ final class AppRouter {
         initialLocation: Routes.home,
         refreshListenable: GoRouterRefreshStream(sessionCubit.stream),
         redirect: (context, state) => authRedirect(sessionCubit.state, state),
+        observers: [SentryNavigatorObserver()],
         routes: [
           // ------------------------------------------------------------------
           // Auth / onboarding routes — outside the shell, no bottom nav
           // ------------------------------------------------------------------
           GoRoute(path: '/', redirect: (_, _) => Routes.home),
           GoRoute(
+            name: 'welcome',
             path: Routes.welcome,
             builder: (context, state) => const WelcomeScreen(),
           ),
           GoRoute(
+            name: 'login',
             path: Routes.login,
             builder: (context, state) => BlocProvider<LoginCubit>(
               create: (_) => getIt<LoginCubit>(),
@@ -73,6 +77,7 @@ final class AppRouter {
             ),
           ),
           GoRoute(
+            name: 'register',
             path: Routes.register,
             builder: (context, state) => BlocProvider<RegisterCubit>(
               create: (_) => getIt<RegisterCubit>(),
@@ -80,14 +85,17 @@ final class AppRouter {
             ),
           ),
           GoRoute(
+            name: 'onboarding',
             path: Routes.onboarding,
             builder: (context, state) => const OnboardingFlowScreen(),
           ),
           GoRoute(
+            name: 'profileSettings',
             path: Routes.settings,
             builder: (context, state) => const ProfileSettingsScreen(),
           ),
           GoRoute(
+            name: 'publicProfile',
             path: Routes.publicProfile,
             builder: (context, state) => const PublicProfileScreen(),
           ),
@@ -110,6 +118,7 @@ final class AppRouter {
           // Deep links to these routes work without going through the shell.
           // ------------------------------------------------------------------
           GoRoute(
+            name: 'quickMatch',
             path: Routes.quickMatch,
             builder: (context, state) => BlocProvider<QuickMatchCubit>(
               create: (_) => getIt<QuickMatchCubit>(),
@@ -117,10 +126,12 @@ final class AppRouter {
             ),
           ),
           GoRoute(
+            name: 'createMatch',
             path: Routes.createMatch,
             builder: (context, state) => const CreateMatchRouteScreen(),
           ),
           GoRoute(
+            name: 'discoverMatches',
             path: Routes.discoverMatches,
             builder: (context, state) => BlocProvider<DiscoverMatchesCubit>(
               create: (_) => getIt<DiscoverMatchesCubit>(),
@@ -128,6 +139,7 @@ final class AppRouter {
             ),
           ),
           GoRoute(
+            name: 'matchResult',
             path: '/matches/:matchId/result',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -135,6 +147,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchLifecycle',
             path: '/matches/:matchId/lifecycle',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -142,6 +155,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchChat',
             path: '/matches/:matchId/chat',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -149,6 +163,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchChatReadOnly',
             path: '/matches/:matchId/chat/readonly',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -156,6 +171,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchPayMethod',
             path: '/matches/:matchId/pay/method',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -185,6 +201,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchPayUploadReceipt',
             path: '/matches/:matchId/pay/upload-receipt',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -210,6 +227,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchPayWaiting',
             path: '/matches/:matchId/pay/waiting',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -233,6 +251,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchSuggestions',
             path: '/matches/:matchId/suggestions',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -240,6 +259,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchLive',
             path: '/matches/:matchId/live',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -247,6 +267,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'matchConfirmResult',
             path: '/matches/:matchId/confirm-result',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -256,6 +277,7 @@ final class AppRouter {
           // IMPORTANT: /matches/:matchId MUST be registered AFTER all
           // /matches/:matchId/* sub-routes so GoRouter matches sub-paths first.
           GoRoute(
+            name: 'matchDetail',
             path: '/matches/:matchId',
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
@@ -267,10 +289,12 @@ final class AppRouter {
           // Tournament routes — full-screen overlays outside the shell
           // ------------------------------------------------------------------
           GoRoute(
+            name: 'createTournament',
             path: Routes.createTournament,
             builder: (context, state) => const CreateTournamentScreen(),
           ),
           GoRoute(
+            name: 'tournamentChat',
             path: '/tournaments/:tournamentId/chat',
             builder: (context, state) {
               final tournamentId = state.pathParameters['tournamentId'] ?? '';
@@ -278,6 +302,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'tournamentChatReadOnly',
             path: '/tournaments/:tournamentId/chat/readonly',
             builder: (context, state) {
               final tournamentId = state.pathParameters['tournamentId'] ?? '';
@@ -292,6 +317,7 @@ final class AppRouter {
           // (same reasoning as the /matches/:matchId sub-routes above) so
           // GoRouter matches this sub-path first.
           GoRoute(
+            name: 'tournamentInviteLinks',
             path: '/tournaments/:tournamentId/invite-links',
             builder: (context, state) {
               final tournamentId = state.pathParameters['tournamentId'] ?? '';
@@ -299,6 +325,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'tournamentDetail',
             path: '/tournaments/:tournamentId',
             builder: (context, state) {
               final tournamentId = state.pathParameters['tournamentId'] ?? '';
@@ -315,6 +342,7 @@ final class AppRouter {
           // Notification routes — outside the shell (full-screen detail)
           // ------------------------------------------------------------------
           GoRoute(
+            name: 'notificationDetail',
             path: '/notifications/:notificationId',
             builder: (context, state) {
               final notificationId =
@@ -323,6 +351,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'notificationPrefs',
             path: Routes.notificationPrefs,
             builder: (context, state) => const NotificationPrefsScreen(),
           ),
@@ -336,6 +365,7 @@ final class AppRouter {
           // does not start with any protected prefix in auth_redirect.dart,
           // so no change was needed there.
           GoRoute(
+            name: 'tournamentInviteLinkRegister',
             path: '/invite/:token',
             builder: (context, state) {
               final token = state.pathParameters['token'] ?? '';
@@ -343,6 +373,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'availability',
             path: Routes.availability,
             builder: (context, state) => BlocProvider<AvailabilityCubit>(
               create: (_) => getIt<AvailabilityCubit>(),
@@ -352,10 +383,12 @@ final class AppRouter {
             ),
           ),
           GoRoute(
+            name: 'mySports',
             path: Routes.mySports,
             builder: (context, state) => const MySportsScreen(),
           ),
           GoRoute(
+            name: 'venueCreateMatch',
             path: '/venues/:venueId/create-match',
             builder: (context, state) {
               final venue = state.extra as VenueDto?;
@@ -377,6 +410,7 @@ final class AppRouter {
             },
           ),
           GoRoute(
+            name: 'venueDetail',
             path: '/descubrir/:venueId',
             builder: (context, state) {
               final venueId = state.pathParameters['venueId'] ?? '';

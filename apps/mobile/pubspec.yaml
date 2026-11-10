@@ -60,6 +60,8 @@ dependencies:
   phosphor_flutter: ^2.1.0
   intl: ^0.20.2
   app_links: ^6.4.1
+  sentry_flutter: ^8.14.2
+  sentry_dio: ^8.14.2
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +80,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  sentry_dart_plugin: ^3.4.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -164,3 +167,13 @@ flutter_native_splash:
     color_dark: "#12203A"
     image: assets/brand/splash-mark.png
     image_dark: assets/brand/splash-mark.png
+
+# sentry_dart_plugin: sube source maps del build web a Sentry (org uma-ax,
+# proyecto cuadrala-mobile) para que los stack traces de producción no
+# lleguen minificados. auth_token NO va acá — sentry-cli lo lee solo de la
+# variable de entorno SENTRY_AUTH_TOKEN (ver deploy-mobile.yml).
+sentry:
+  org: uma-ax
+  project: cuadrala-mobile
+  upload_source_maps: true
+  upload_sources: true

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 
 import '../env/app_env.dart';
 import '../failures/app_failure_mapper.dart';
@@ -136,6 +137,9 @@ Future<void> setupDependencies() async {
       onRefreshFailure: () => getIt<SessionCubit>().logout(),
     ),
   ]);
+  // addSentry() must be the LAST step in Dio setup — it wraps whatever
+  // interceptor chain is already in place to capture failed requests/spans.
+  getIt<Dio>().addSentry(captureFailedRequests: true);
 
   getIt.registerLazySingleton<CatalogApi>(
     () => DioCatalogApi(apiClient: getIt<ApiClient>()),

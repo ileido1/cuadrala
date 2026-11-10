@@ -50,3 +50,7 @@ services:
         sync: false
       - key: EMAIL_FROM
         value: noreply@mail.cuadrala.app
+      # DSN de Sentry (proyecto cuadrala-api, org uma-ax): no es secreto, es
+      # la clave pública que usa el SDK para enviar eventos.
+      - key: SENTRY_DSN
+        value: https://3a3fb44c6f9fdfb46ef8e5225b476ccc@o4512408230166528.ingest.us.sentry.io/4512408308154368
