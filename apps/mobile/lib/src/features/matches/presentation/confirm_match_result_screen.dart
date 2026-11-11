@@ -48,39 +48,48 @@ final class _ConfirmResultView extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
+          //? Margen lateral en los estados vacío y de falla: el botón del tema
+          //? ocupa todo el ancho y sin este padding quedaba pegado (y con el
+          //? borde recortado) contra los bordes de la pantalla.
           if (state is ConfirmResultStateNotFound) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(AppIcons.info, size: 48, color: scheme.onSurfaceVariant),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay resultado pendiente',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () => context.pop(),
-                    child: const Text('Volver'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(AppIcons.info, size: 48, color: scheme.onSurfaceVariant),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No hay resultado pendiente',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: () => context.pop(),
+                      child: const Text('Volver'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
 
           if (state is ConfirmResultStateFailure) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(state.message),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.read<ConfirmResultCubit>().load(),
-                    child: const Text('Reintentar'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(state.message),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => context.read<ConfirmResultCubit>().load(),
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
