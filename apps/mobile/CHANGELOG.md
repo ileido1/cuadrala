@@ -12,6 +12,10 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
 - **Login con Google en web**: al volver a abrir la pantalla de login, el
   botón de Google dejaba de responder (el plugin se inicializaba dos veces y
   fallaba). Ahora se inicializa una sola vez por sesión de la app.
+- **Login que rebotaba al inicio**: tras iniciar sesión la app mostraba el
+  esqueleto del inicio y volvía al login. Un cierre de sesión anterior quedaba
+  en bucle (cada intento de limpiar las notificaciones disparaba otro cierre)
+  y terminaba borrando la sesión nueva.
 
 ## [1.7.26] - 2026-11-11
 
