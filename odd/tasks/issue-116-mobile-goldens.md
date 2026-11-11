@@ -22,7 +22,7 @@ Delivery: one commit per module (ask-on-risk). Runner: `flutter test` in `apps/m
 - T7 matches results: confirm_match_result + result_draft tests/goldens — S4 — delegated — done 7b24fce
 - T8 matches live: match_lifecycle + match_live tests/goldens — S4 — delegated — done 624dd6a
 - T9 venues: create_match_panel + venue_booking_form tests/goldens, CUÁNDO indent, GPS button — S4, S5 — delegated — done 7052f6a
-- T10 quick_match `now` seam — S5 — inline — skipped (see L9)
+- T10 quick_match time seam via package:clock — S5 — inline — done 6cccfbb
 
 ## Log
 
@@ -37,3 +37,6 @@ Delivery: one commit per module (ask-on-risk). Runner: `flutter test` in `apps/m
 - L9: T10 skipped — quick_match goldens generated 2026-11-01 still pass 11/11 on 2026-11-11, so none captures now-derived content; the seam would thread `now` through 6 DateTime.now() sites in private widgets for no current golden. Add it when a golden of the configuration/schedule sheet is written.
 - L10: new bugs found by the T7-T9 tests, fixed TDD in own commits: confirm result gave no feedback after success (aa42cee); live screen pushed a result page per timer tick, RED showed 5 stacked (7dc134b); timer monospace font (ce56283); confirm empty/error padding (0dfe88d); Cuándo header (b1fc57c); GPS button (976d723); panel date strip double padding (fd04b16).
 - L11: full suite 1751 pass / 0 fail, analyze clean. Not fixed: match_lifecycle_screen has hardcoded mockup content but no screen navigates to it (route only) — deletion candidate, user decision. Light-theme confirm cards invisible (surfaceContainer == surfaceContainerLowest) — theme decision.
+- L12 (2026-11-11): "agregalo ademas de que corrigue esto" — user asked for CHANGELOG + bump and to fix the three deferred items.
+- L13: confirm cards outlined in light theme (dc74401); match_lifecycle_screen + route removed, no API/web/app reference to the URL and match_detail already has start/finish/cancel (2980049); quick_match + buildDateStripDays read time via package:clock, RED "Hoy · noche" under withClock then GREEN (6cccfbb); CHANGELOG 1.7.26 + pubspec 1.7.26+49 (2e8e23d).
+- L14: full suite 1734 pass / 0 fail (1751 + 1 new − 18 removed lifecycle tests), analyze clean.
