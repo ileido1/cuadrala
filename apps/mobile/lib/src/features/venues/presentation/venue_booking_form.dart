@@ -121,7 +121,12 @@ class _VenueBookingFormState extends State<VenueBookingForm> {
                 padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
                 children: [
                   // ── Cuándo ───────────────────────────────────────────────
-                  const _SectionLabel('Cuándo'),
+                  //? La tira de fechas trae su propio padding lateral de 20,
+                  //? pero la cabecera no: se sangra igual que las demás.
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: _SectionLabel('Cuándo'),
+                  ),
                   const SizedBox(height: 10),
                   DateStrip(
                     days: _days,
