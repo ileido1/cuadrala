@@ -18,9 +18,13 @@ import 'widgets/court_picker.dart';
 /// [VenueBookingCubit] debe estar provisto por encima de este widget.
 /// [onMatchCreated] se dispara con el ID del partido al crearlo con éxito.
 final class VenueBookingForm extends StatefulWidget {
-  const VenueBookingForm({super.key, required this.onMatchCreated});
+  const VenueBookingForm({super.key, required this.onMatchCreated, this.now});
 
   final void Function(String matchId) onMatchCreated;
+
+  /// Fecha base de la tira de días; los tests la fijan para que los goldens
+  /// no cambien con el día.
+  final DateTime? now;
 
   @override
   State<VenueBookingForm> createState() => _VenueBookingFormState();
@@ -28,7 +32,10 @@ final class VenueBookingForm extends StatefulWidget {
 
 class _VenueBookingFormState extends State<VenueBookingForm> {
   /// Días disponibles para la tira de fecha (3 semanas desde hoy).
-  late final List<DateStripDay> _days = buildDateStripDays(21);
+  late final List<DateStripDay> _days = buildDateStripDays(
+    21,
+    from: widget.now,
+  );
   final _scrollController = ScrollController();
   List<ExchangeRateRow> _exchangeRates = const [];
 
