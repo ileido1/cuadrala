@@ -15,6 +15,7 @@ import 'cubit/login_cubit.dart';
 import 'cubit/login_state.dart';
 import 'cubit/session_cubit.dart';
 import 'cubit/session_state.dart';
+import 'google_sign_in_init.dart';
 import 'widgets/auth_header.dart';
 import 'widgets/auth_tabs.dart';
 import 'widgets/google_g_logo.dart';
@@ -38,7 +39,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _socialLoading = false;
-  Future<void>? _googleInit;
   StreamSubscription<GoogleSignInAuthenticationEvent>? _googleAuthSub;
 
   @override
@@ -66,15 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _ensureGoogleInitialized() {
-    final init = _googleInit;
-    if (init != null) return init;
     final env = getIt<AppEnv>();
-    final future = GoogleSignIn.instance.initialize(
-      clientId: env.googleWebClientId,
-      serverClientId: env.googleWebClientId,
+    return ensureGoogleSignInInitialized(
+      () => GoogleSignIn.instance.initialize(
+        clientId: env.googleWebClientId,
+        serverClientId: env.googleWebClientId,
+      ),
     );
-    _googleInit = future;
-    return future;
   }
 
   @override
