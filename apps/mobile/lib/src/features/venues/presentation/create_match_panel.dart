@@ -334,7 +334,13 @@ class _UnifiedScroll extends StatelessWidget {
       children: [
         const _SectionLabel('Cuándo', required: true),
         const SizedBox(height: 10),
-        DateStrip(days: days, value: dateKey, onChanged: onDateChanged),
+        // La lista ya aplica 20px laterales; sin esto la tira quedaba a 40px.
+        DateStrip(
+          days: days,
+          value: dateKey,
+          onChanged: onDateChanged,
+          horizontalPadding: 0,
+        ),
         const SizedBox(height: 24),
         const _SectionLabel('Dónde', required: true),
         const SizedBox(height: 10),
