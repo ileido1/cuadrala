@@ -1009,7 +1009,11 @@ final class _AvailabilityGrid extends StatelessWidget {
                 ),
               ),
               for (final row in rows) ...[
-                Align(
+                //? La celda de etiqueta mide 1/8 del ancho (~40px en 402px):
+                //? "icono + Mañana" no cabe y desbordaba el Row. Se escala
+                //? hacia abajo en vez de desbordar.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
