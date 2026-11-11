@@ -439,6 +439,36 @@ void main() {
     verify(() => cubit.recenterToCurrentLocation()).called(1);
   });
 
+  //? Issue #116: con una sede elegida, la mini hoja (~265px) tapaba el botón
+  //? GPS fijo a 160px del borde; el toque caía en la hoja y no recentraba.
+  testWidgets(
+      'should keep the GPS button tappable above the mini sheet when a venue '
+      'is selected', (tester) async {
+    //? Hoja completa (deportes, distancia y rating), la más alta posible.
+    final venue = _venue(
+      id: 'v1',
+      name: 'Club Norte',
+      distanceKm: 3.2,
+      averageRating: 4.7,
+      sports: ['PADEL', 'TENNIS'],
+    );
+    when(() => cubit.state).thenReturn(
+      VenueMapState(
+        status: VenueMapStatus.loaded,
+        venues: [venue],
+        filtered: [venue],
+        selectedVenue: venue,
+      ),
+    );
+    whenListen(cubit, const Stream<VenueMapState>.empty());
+
+    await tester.pumpWidget(_buildTestApp(state: cubit.state, cubit: cubit));
+    await tester.pump();
+
+    await tester.tap(find.byType(FloatingActionButton), warnIfMissed: false);
+    verify(() => cubit.recenterToCurrentLocation()).called(1);
+  });
+
   // ──────────────────────────────────────────────────────────────────────────
   // 12. mini sheet close button has a tooltip (#113)
   // ──────────────────────────────────────────────────────────────────────────

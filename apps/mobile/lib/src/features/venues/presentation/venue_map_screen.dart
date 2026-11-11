@@ -190,27 +190,39 @@ class _MapView extends StatelessWidget {
               ],
             ),
           ),
+          //? El botón GPS y la mini hoja van en la misma columna anclada abajo:
+          //? así el botón siempre queda encima de la hoja, sin importar su
+          //? alto (con un offset fijo quedaba tapado por la hoja).
           Positioned(
-            right: 16,
-            bottom: (state.selectedVenue != null ? 160 : 24),
-            child: FloatingActionButton.small(
-              heroTag: 'gps-recenter',
-              onPressed: cubit.recenterToCurrentLocation,
-              child: const Icon(AppIcons.myLocation),
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    right: 16,
+                    bottom: state.selectedVenue != null ? 12 : 24,
+                  ),
+                  child: FloatingActionButton.small(
+                    heroTag: 'gps-recenter',
+                    onPressed: cubit.recenterToCurrentLocation,
+                    child: const Icon(AppIcons.myLocation),
+                  ),
+                ),
+                if (state.selectedVenue != null)
+                  _VenueMiniSheet(
+                    venue: state.selectedVenue!,
+                    onClose: () => cubit.selectVenue(null),
+                    onViewDetails: () => context.push(
+                      Routes.venueDetail(state.selectedVenue!.id),
+                    ),
+                  ),
+              ],
             ),
           ),
-          if (state.selectedVenue != null)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _VenueMiniSheet(
-                venue: state.selectedVenue!,
-                onClose: () => cubit.selectVenue(null),
-                onViewDetails: () =>
-                    context.push(Routes.venueDetail(state.selectedVenue!.id)),
-              ),
-            ),
         ],
       ),
     );
