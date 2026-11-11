@@ -13,7 +13,10 @@ import 'venue_booking_form.dart';
 // ---------------------------------------------------------------------------
 
 final class VenueBookingScreen extends StatelessWidget {
-  const VenueBookingScreen({super.key});
+  const VenueBookingScreen({super.key, this.now});
+
+  /// Se pasa a [VenueBookingForm]; los tests la fijan para goldens estables.
+  final DateTime? now;
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +24,7 @@ final class VenueBookingScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(venueName)),
       body: VenueBookingForm(
+        now: now,
         onMatchCreated: (matchId) => context.go('/matches/$matchId'),
       ),
     );

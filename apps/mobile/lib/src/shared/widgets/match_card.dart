@@ -334,13 +334,19 @@ class _DateBlock extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Text(
-            timeLabel,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-              color: scheme.onSurface,
-              height: 1.1,
+          // "20:00" a 18px es más ancho que los 50px útiles; se reduce en vez
+          // de partirse en dos líneas.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              timeLabel,
+              maxLines: 1,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: scheme.onSurface,
+                height: 1.1,
+              ),
             ),
           ),
           const SizedBox(height: 1),

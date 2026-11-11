@@ -34,8 +34,12 @@ final class _MatchLiveView extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return BlocListener<MatchLiveCubit, MatchLiveState>(
+      // Solo en la transición false -> true: el timer emite cada segundo con
+      // el flag aún activo y antes apilaba una página de resultado por tick.
       listenWhen: (prev, curr) =>
-          curr is MatchLiveStateLoaded && curr.shouldNavigateToResult,
+          curr is MatchLiveStateLoaded &&
+          curr.shouldNavigateToResult &&
+          !(prev is MatchLiveStateLoaded && prev.shouldNavigateToResult),
       listener: (context, state) {
         if (state is MatchLiveStateLoaded) {
           context.push(Routes.matchResult(state.match.id));
@@ -111,7 +115,10 @@ final class _MatchLiveView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.w900,
-                            fontFamily: 'monospace',
+                            //? Dígitos tabulares de la fuente del tema en vez
+                            //? de 'monospace' fijo: ese fontFamily descartaba
+                            //? Plus Jakarta y en el golden salía como bloques.
+                            fontFeatures: const [FontFeature.tabularFigures()],
                             color: scheme.onPrimaryContainer,
                           ),
                         ),

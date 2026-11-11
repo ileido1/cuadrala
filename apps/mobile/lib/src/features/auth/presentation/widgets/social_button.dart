@@ -28,7 +28,11 @@ class SocialButton extends StatelessWidget {
           backgroundColor: background,
           foregroundColor: foreground,
           side: BorderSide(color: border, width: 1.5),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          // Deriva del tema para que la etiqueta conserve la fuente de la app.
+          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -36,7 +40,11 @@ class SocialButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [icon, const SizedBox(width: 10), Text(label)],
+          children: [
+            icon,
+            const SizedBox(width: 10),
+            Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+          ],
         ),
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:cuadrala_mobile/src/core/data/exchange_rates_repository.dart';
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
 import 'package:cuadrala_mobile/src/core/formatting/money_conversion.dart';
@@ -180,6 +181,20 @@ void main() {
     expect(find.text('Revisando partidas abiertas'), findsOneWidget);
     expect(find.text('Editar preferencias'), findsOneWidget);
     expect(find.text('Salir de la cola'), findsOneWidget);
+  });
+
+  testWidgets('should label the search as Hoy when its target date is today', (
+    tester,
+  ) async {
+    //? La pantalla lee la hora vía `clock`, así que el test puede fijarla.
+    await withClock(Clock.fixed(DateTime(2030, 6, 1, 10)), () async {
+      when(() => repository.current()).thenAnswer((_) async => _searching());
+
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Hoy · noche'), findsOneWidget);
+    });
   });
 
   testWidgets('shows that an incremental group keeps filling after joining', (tester) async {

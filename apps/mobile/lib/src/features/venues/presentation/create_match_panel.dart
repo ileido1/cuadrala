@@ -103,17 +103,21 @@ class _CreateMatchRouteScreenState extends State<CreateMatchRouteScreen> {
 enum _VenueView { lista, mapa }
 
 final class CreateMatchPanel extends StatefulWidget {
-  const CreateMatchPanel({super.key, required this.onMatchCreated});
+  const CreateMatchPanel({super.key, required this.onMatchCreated, this.now});
 
   final void Function(String matchId) onMatchCreated;
+
+  /// Fecha base de la tira de días y de la fecha inicial; los tests la fijan
+  /// para que los goldens no cambien con el día.
+  final DateTime? now;
 
   @override
   State<CreateMatchPanel> createState() => _CreateMatchPanelState();
 }
 
 class _CreateMatchPanelState extends State<CreateMatchPanel> {
-  final _days = buildDateStripDays(21);
-  late DateTime _selectedDate = _normalize(DateTime.now());
+  late final _days = buildDateStripDays(21, from: widget.now);
+  late DateTime _selectedDate = _normalize(widget.now ?? DateTime.now());
   VenueDto? _selectedVenue;
   VenueBookingCubit? _bookingCubit;
   _VenueView _view = _VenueView.lista;
@@ -334,7 +338,13 @@ class _UnifiedScroll extends StatelessWidget {
       children: [
         const _SectionLabel('Cuándo', required: true),
         const SizedBox(height: 10),
-        DateStrip(days: days, value: dateKey, onChanged: onDateChanged),
+        // La lista ya aplica 20px laterales; sin esto la tira quedaba a 40px.
+        DateStrip(
+          days: days,
+          value: dateKey,
+          onChanged: onDateChanged,
+          horizontalPadding: 0,
+        ),
         const SizedBox(height: 24),
         const _SectionLabel('Dónde', required: true),
         const SizedBox(height: 10),

@@ -5,6 +5,30 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.26] - 2026-11-11
+
+### Corregido
+
+- **Partido en vivo**: "Terminar partido" abría una pantalla de carga de
+  resultado por cada segundo del cronómetro; ahora abre una sola. El
+  cronómetro usa la tipografía de la app.
+- **Confirmar resultado**: al confirmar, la pantalla ahora avisa
+  "Resultado confirmado." y vuelve atrás (antes no daba ninguna señal). Las
+  tarjetas se ven en tema claro y el botón "Volver" ya no toca los bordes.
+- **Tarjetas de partida**: la hora ("20:00") ya no se parte en dos líneas.
+- **Botón "Continuar con Google"**: usa la tipografía de la app.
+- **Perfil**: las etiquetas de la grilla de disponibilidad ya no desbordan.
+- **Reserva de sede**: el encabezado "Cuándo" queda alineado con el resto.
+- **Mapa de sedes**: el botón de ubicación queda visible encima de la ficha
+  de la sede seleccionada.
+- **Crear partida**: la tira de días ya no tiene doble margen lateral.
+
+### Eliminado
+
+- Pantalla interna de ciclo de vida de partida (`/matches/:id/lifecycle`):
+  no era accesible desde la app; iniciar, finalizar y cancelar siguen en el
+  detalle de la partida.
+
 ## [1.7.25] - 2026-09-14
 
 ### Agregado
