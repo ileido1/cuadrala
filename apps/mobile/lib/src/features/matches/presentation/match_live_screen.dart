@@ -115,7 +115,10 @@ final class _MatchLiveView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.w900,
-                            fontFamily: 'monospace',
+                            //? Dígitos tabulares de la fuente del tema en vez
+                            //? de 'monospace' fijo: ese fontFamily descartaba
+                            //? Plus Jakarta y en el golden salía como bloques.
+                            fontFeatures: const [FontFeature.tabularFigures()],
                             color: scheme.onPrimaryContainer,
                           ),
                         ),
