@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -1303,7 +1304,7 @@ final class _ProposalHold extends StatelessWidget {
     stream: Stream.periodic(const Duration(seconds: 1), (value) => value),
     builder: (context, _) {
       final seconds = expiresAt
-          .difference(DateTime.now())
+          .difference(clock.now())
           .inSeconds
           .clamp(0, 120);
       final scheme = Theme.of(context).colorScheme;
@@ -1495,7 +1496,7 @@ String _formatOptionDate(DateTime value) {
 
 String _formatProposalDate(DateTime value) {
   final local = value.toLocal();
-  final now = DateTime.now();
+  final now = clock.now();
   final today = DateTime(now.year, now.month, now.day);
   final date = DateTime(local.year, local.month, local.day);
   final day = date == today
@@ -1516,7 +1517,7 @@ final class _Countdown extends StatelessWidget {
     stream: Stream.periodic(const Duration(seconds: 1), (value) => value),
     builder: (context, _) {
       final seconds = expiresAt
-          .difference(DateTime.now())
+          .difference(clock.now())
           .inSeconds
           .clamp(0, 120);
       return Container(
@@ -1658,7 +1659,7 @@ final class _SearchingState extends State<_Searching> {
 
 String _searchSummary(QuickMatchSearchDto search) {
   final date = search.targetDate.toLocal();
-  final now = DateTime.now();
+  final now = clock.now();
   final today = DateTime(now.year, now.month, now.day);
   final target = DateTime(date.year, date.month, date.day);
   final day = switch (target.difference(today).inDays) {
@@ -1913,7 +1914,7 @@ final class _ScheduleSheetState extends State<_ScheduleSheet> {
   void initState() {
     super.initState();
     final date = widget.search.targetDate.toLocal();
-    final now = DateTime.now();
+    final now = clock.now();
     final target = DateTime(date.year, date.month, date.day);
     final today = DateTime(now.year, now.month, now.day);
     _day = target.difference(today).inDays == 1 ? 'TOMORROW' : 'TODAY';

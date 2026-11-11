@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/brand_colors.dart';
@@ -57,7 +58,7 @@ class DateStripDay {
 
 /// Construye [count] días consecutivos a partir de [from] (por defecto hoy).
 List<DateStripDay> buildDateStripDays(int count, {DateTime? from}) {
-  final base = from ?? DateTime.now();
+  final base = from ?? clock.now();
   final start = DateTime(base.year, base.month, base.day);
   return List<DateStripDay>.generate(
     count,
