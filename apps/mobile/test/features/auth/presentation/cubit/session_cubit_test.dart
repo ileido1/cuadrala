@@ -110,5 +110,32 @@ void main() {
         verifyNever(() => pushTokenSyncService.syncTokenIfAuthenticated());
       },
     );
+
+    //? Bucle de producción: logout → clearOnLogout pide device-push-tokens →
+    //? 401 → el interceptor no puede refrescar → logout otra vez → ... Cada
+    //? nivel pendiente terminaba borrando los tokens de un login nuevo.
+    test(
+      'should run a single logout when clearing push tokens triggers logout again',
+      () async {
+        when(() => authRepository.logout()).thenAnswer((_) async {});
+        final cubit = SessionCubit(
+          authRepository: authRepository,
+          onboardingRepository: onboardingRepository,
+          pushTokenSyncService: pushTokenSyncService,
+        );
+        var nested = 0;
+        when(() => pushTokenSyncService.clearOnLogout()).thenAnswer((_) async {
+          //? Simula el 401 que vuelve a disparar el logout global.
+          if (nested++ < 5) await cubit.logout();
+        });
+
+        await cubit.logout();
+
+        expect(nested, 1);
+        verify(() => authRepository.logout()).called(1);
+        expect(cubit.state, const SessionState.unauthenticated());
+        await cubit.close();
+      },
+    );
   });
 }
