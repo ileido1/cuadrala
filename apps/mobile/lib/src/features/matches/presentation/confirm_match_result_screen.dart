@@ -121,6 +121,8 @@ final class _ConfirmResultView extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: scheme.surfaceContainer,
                       borderRadius: BorderRadius.circular(12),
+                      // En tema claro fondo y tarjeta son blancos; el borde las separa.
+                      border: Border.all(color: scheme.outlineVariant, width: 1.5),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,6 +266,7 @@ class _ResultTeamCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant, width: 1.5),
       ),
       child: Column(
         children: [
