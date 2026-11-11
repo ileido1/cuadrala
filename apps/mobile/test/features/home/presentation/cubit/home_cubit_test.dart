@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -329,4 +331,18 @@ void main() {
       isA<HomeLoaded>().having((s) => s.greetingName, 'greetingName', 'María'),
     ],
   );
+
+  //? CUADRALA-MOBILE-6: si la pantalla se cierra mientras carga, el emit
+  //? posterior lanzaba "Cannot emit new states after calling close".
+  test('should not throw when the cubit is closed before load finishes', () async {
+    final me = Completer<UserMeDto>();
+    when(() => profileRepo.getMe()).thenAnswer((_) => me.future);
+    final cubit = makeCubit();
+
+    final loading = cubit.load();
+    await cubit.close();
+    me.completeError(const AppFailure(code: 'X', message: 'boom'));
+
+    await expectLater(loading, completes);
+  });
 }

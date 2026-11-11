@@ -44,6 +44,8 @@ class HomeCubit extends Cubit<HomeState> {
 
       final rating = me.primaryRating;
 
+      // La pantalla puede cerrarse mientras se carga (CUADRALA-MOBILE-6).
+      if (isClosed) return;
       emit(
         HomeLoaded(
           greetingName: _firstName(me.name),
@@ -57,6 +59,7 @@ class HomeCubit extends Cubit<HomeState> {
         ),
       );
     } catch (e) {
+      if (isClosed) return;
       final message = e is AppFailure ? e.message : 'No se pudo cargar el inicio.';
       emit(HomeFailure(message: message));
     }

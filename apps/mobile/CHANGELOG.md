@@ -5,6 +5,14 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.27] - 2026-11-11
+
+### Corregido
+
+- **Login con Google en web**: al volver a abrir la pantalla de login, el
+  botón de Google dejaba de responder (el plugin se inicializaba dos veces y
+  fallaba). Ahora se inicializa una sola vez por sesión de la app.
+
 ## [1.7.26] - 2026-11-11
 
 ### Corregido

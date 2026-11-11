@@ -59,7 +59,10 @@ class AuthRepository {
 
     final request = _performRefreshSV();
     _inFlightRefresh = request;
-    request.whenComplete(() => _inFlightRefresh = null);
+    // `whenComplete` devuelve otro future que hereda el error; sin `ignore()`
+    // ese derivado quedaba sin escuchar y llegaba a Sentry como no capturado
+    // aunque el llamador sí manejara el fallo (CUADRALA-MOBILE-4).
+    request.whenComplete(() => _inFlightRefresh = null).ignore();
     return request;
   }
 
