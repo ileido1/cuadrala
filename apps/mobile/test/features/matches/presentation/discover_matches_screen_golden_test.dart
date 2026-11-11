@@ -108,7 +108,7 @@ void main() {
       brightness: brightness,
       child: BlocProvider<DiscoverMatchesCubit>.value(
         value: cubit,
-        child: const DiscoverMatchesScreen(),
+        child: DiscoverMatchesScreen(now: DateTime(2030, 6, 1)),
       ),
     );
     await tester.pumpAndSettle();

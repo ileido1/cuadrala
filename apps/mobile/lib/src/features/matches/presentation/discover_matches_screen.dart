@@ -24,7 +24,11 @@ import 'cubit/discover_matches_cubit.dart';
 import 'cubit/discover_matches_state.dart';
 
 final class DiscoverMatchesScreen extends StatefulWidget {
-  const DiscoverMatchesScreen({super.key});
+  const DiscoverMatchesScreen({super.key, this.now});
+
+  /// Fecha base de la tira de días; los tests la fijan para que los goldens
+  /// no cambien con el día.
+  final DateTime? now;
 
   @override
   State<DiscoverMatchesScreen> createState() => _DiscoverMatchesScreenState();
@@ -38,7 +42,7 @@ class _DiscoverMatchesScreenState extends State<DiscoverMatchesScreen> {
   @override
   void initState() {
     super.initState();
-    _days = buildDateStripDays(14);
+    _days = buildDateStripDays(14, from: widget.now);
     context.read<DiscoverMatchesCubit>().load();
     _scrollController.addListener(_onScroll);
   }
