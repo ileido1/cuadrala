@@ -22,6 +22,16 @@ import '../../../shared/widgets/dual_price.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/segmented_control.dart';
 
+/// Cancela la búsqueda y vuelve al inicio. Antes "Salir de la cola" solo
+/// llamaba a `cancel()`: la búsqueda SÍ se cancelaba, pero la pantalla
+/// seguía mostrando este mismo flujo — que al quedar sin búsqueda activa
+/// cae en `QuickMatchIdle` y renderiza el formulario para crear una nueva
+/// cola. Al jugador le parecía que "salir" no hacía nada.
+Future<void> _leaveQueue(BuildContext context) async {
+  await context.read<QuickMatchCubit>().cancel();
+  if (context.mounted) context.go(Routes.home);
+}
+
 final class QuickMatchScreen extends StatefulWidget {
   const QuickMatchScreen({super.key});
 
@@ -124,7 +134,7 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                   isNewGroup: search.proposal?.type == 'NEW_GROUP',
                   matchId: search.proposal?.matchId,
                   playerCount: search.proposal?.playerIds.length ?? 4,
-                  onCancel: () => context.read<QuickMatchCubit>().cancel(),
+                  onCancel: () => _leaveQueue(context),
                 ),
               QuickMatchActive(:final search)
                   when search.status == 'EXPIRED' =>
@@ -1639,7 +1649,7 @@ final class _SearchingState extends State<_Searching> {
         ),
         _QueueFooter(
           onEdit: () => _showScheduleSheet(context),
-          onLeave: () => context.read<QuickMatchCubit>().cancel(),
+          onLeave: () => _leaveQueue(context),
         ),
       ],
     );
@@ -2017,7 +2027,7 @@ final class _Expired extends StatelessWidget {
         child: const Text('Seguir buscando'),
       ),
       OutlinedButton(
-        onPressed: () => context.read<QuickMatchCubit>().cancel(),
+        onPressed: () => _leaveQueue(context),
         child: const Text('Salir de la cola'),
       ),
     ],
