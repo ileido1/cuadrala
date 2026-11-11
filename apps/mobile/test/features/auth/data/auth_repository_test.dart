@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -127,5 +129,26 @@ void main() {
       verify(() => authApi.logout(refreshToken: 'refresh')).called(1);
       verify(() => secureTokenStorage.deleteRefreshToken()).called(1);
     });
+
+    //? CUADRALA-MOBILE-4: el future derivado de `whenComplete` heredaba el
+    //? error y nadie lo escuchaba, así que llegaba como no capturado aunque
+    //? el llamador sí capturara el fallo.
+    test(
+      'should not leak an uncaught error when refresh fails and the caller handles it',
+      () async {
+        when(
+          () => secureTokenStorage.readRefreshToken(),
+        ).thenAnswer((_) async => null);
+        final uncaught = <Object>[];
+
+        await runZonedGuarded(() async {
+          final failure = await repository.refreshOrFailure();
+          expect(failure.code, 'AUTH_NO_REFRESH_TOKEN');
+          await Future<void>.delayed(Duration.zero);
+        }, (e, _) => uncaught.add(e));
+
+        expect(uncaught, isEmpty);
+      },
+    );
   });
 }
