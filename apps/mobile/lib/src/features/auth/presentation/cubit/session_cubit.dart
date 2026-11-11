@@ -32,11 +32,23 @@ class SessionCubit extends Cubit<SessionState> {
     }
   }
 
+  /// Evita logouts anidados: `clearOnLogout` hace requests autenticados; sin
+  /// sesión responden 401, el interceptor no puede refrescar y vuelve a
+  /// llamar a `logout()`. Eso formaba un bucle infinito y, si el usuario
+  /// iniciaba sesión en medio, cada nivel pendiente borraba sus tokens nuevos.
+  bool _loggingOut = false;
+
   Future<void> logout() async {
-    emit(const SessionState.loading());
-    await _pushTokenSyncService.clearOnLogout();
-    await _authRepository.logout();
-    emit(const SessionState.unauthenticated());
+    if (_loggingOut) return;
+    _loggingOut = true;
+    try {
+      emit(const SessionState.loading());
+      await _pushTokenSyncService.clearOnLogout();
+      await _authRepository.logout();
+      emit(const SessionState.unauthenticated());
+    } finally {
+      _loggingOut = false;
+    }
   }
 
   /// Útil después de login/register: los tokens ya se guardaron en storage.

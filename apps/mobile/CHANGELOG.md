@@ -5,6 +5,15 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.28] - 2026-11-11
+
+### Corregido
+
+- **Login que rebotaba al inicio**: tras iniciar sesión la app mostraba el
+  esqueleto del inicio y volvía al login. Un cierre de sesión anterior quedaba
+  en bucle (cada intento de limpiar las notificaciones disparaba otro cierre)
+  y terminaba borrando la sesión nueva.
+
 ## [1.7.27] - 2026-11-11
 
 ### Corregido
