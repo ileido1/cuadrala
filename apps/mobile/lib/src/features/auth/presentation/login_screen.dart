@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 // Apple login sigue comentado a pedido: se lanza después de Google.
 // import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -49,10 +50,15 @@ class _LoginScreenState extends State<LoginScreen> {
     if (kIsWeb) {
       _ensureGoogleInitialized().then((_) {
         if (!mounted) return;
+        // Rastro en Sentry del login web con Google: en iOS el popup
+        // termina pero la app no reacciona, y sin esto no se sabe en qué
+        // paso se pierde. Sin email ni tokens.
+        Sentry.logger.info('Google web: listener registrado');
         _googleAuthSub = GoogleSignIn.instance.authenticationEvents.listen(
           (event) {
             if (event is GoogleSignInAuthenticationEventSignIn) {
               debugPrint('[Google Auth] Web button sign-in event received');
+              Sentry.logger.info('Google web: evento de sign-in recibido');
               _completeGoogleSignIn(event.user);
             }
           },
@@ -125,6 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
       debugPrint('[Google Auth] 7. Backend response OK');
+      Sentry.logger.info('Google: backend /auth/social OK');
 
       if (!mounted) return;
       debugPrint('[Google Auth] 8. Marking session as authenticated...');
@@ -162,6 +169,14 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showGoogleError(Object e) {
     final message = _describeGoogleError(e);
     debugPrint('[Google Auth] ❌ ERROR: $message (raw: $e)');
+    Sentry.logger.warn(
+      'Google: login falló',
+      attributes: {
+        'cuadrala.auth.google_error': SentryAttribute.string(
+          e is GoogleSignInException ? e.code.name : e.runtimeType.toString(),
+        ),
+      },
+    );
     debugPrintStack(label: '[Google Auth] Stack trace:');
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
