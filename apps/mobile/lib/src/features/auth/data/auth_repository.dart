@@ -6,12 +6,21 @@ import 'models/register_request.dart';
 import 'models/social_login_request.dart';
 import 'secure_token_storage.dart';
 
+/// `true` solo cuando la sesión está realmente muerta: el backend rechazó el
+/// refresh (`AUTH_UNAUTHORIZED`) o no hay refresh token guardado. Red, timeout
+/// o 5xx son ambiguos y no prueban nada (issue #137).
+bool isDefinitiveSessionFailure(Object error) {
+  return error is AppFailure &&
+      (error.code == 'AUTH_UNAUTHORIZED' ||
+          error.code == 'AUTH_NO_REFRESH_TOKEN');
+}
+
 class AuthRepository {
   AuthRepository({
     required AuthApi authApi,
     required SecureTokenStorage secureTokenStorage,
-  })  : _authApi = authApi,
-        _secureTokenStorage = secureTokenStorage;
+  }) : _authApi = authApi,
+       _secureTokenStorage = secureTokenStorage;
 
   final AuthApi _authApi;
   final SecureTokenStorage _secureTokenStorage;

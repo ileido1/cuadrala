@@ -10,10 +10,10 @@ class SessionCubit extends Cubit<SessionState> {
     required AuthRepository authRepository,
     required OnboardingRepository onboardingRepository,
     required PushTokenSyncService pushTokenSyncService,
-  })  : _authRepository = authRepository,
-        _onboardingRepository = onboardingRepository,
-        _pushTokenSyncService = pushTokenSyncService,
-        super(const SessionState.unauthenticated());
+  }) : _authRepository = authRepository,
+       _onboardingRepository = onboardingRepository,
+       _pushTokenSyncService = pushTokenSyncService,
+       super(const SessionState.unauthenticated());
 
   final AuthRepository _authRepository;
   final OnboardingRepository _onboardingRepository;
@@ -23,13 +23,33 @@ class SessionCubit extends Cubit<SessionState> {
     emit(const SessionState.loading());
     try {
       await _authRepository.refresh();
-      await _pushTokenSyncService.syncTokenIfAuthenticated();
-      final onboardingComplete = await _resolveOnboardingCompleteSV();
-      emit(SessionState.authenticated(onboardingComplete: onboardingComplete));
-    } catch (_) {
-      await _authRepository.logout();
-      emit(const SessionState.unauthenticated(reason: 'Sesión expirada'));
+    } catch (error) {
+      //? Solo un rechazo definitivo borra la sesión guardada. Sin red, un
+      //? timeout o un 5xx no prueban nada: borrar el refresh token ahí
+      //? perdía para siempre una sesión válida.
+      if (isDefinitiveSessionFailure(error)) {
+        await _authRepository.logout();
+        emit(const SessionState.unauthenticated(reason: 'Sesión expirada'));
+      } else {
+        emit(
+          const SessionState.unauthenticated(
+            reason:
+                'No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.',
+          ),
+        );
+      }
+      return;
     }
+    _syncPushTokenInBackground();
+    final onboardingComplete = await _resolveOnboardingCompleteSV();
+    emit(SessionState.authenticated(onboardingComplete: onboardingComplete));
+  }
+
+  /// El push es accesorio a la sesión: no se espera (en mobile pide permiso
+  /// con un diálogo) y su fallo (p. ej. Firebase no soportado en el
+  /// navegador) no debe cerrar ni frenar el login.
+  void _syncPushTokenInBackground() {
+    _pushTokenSyncService.syncTokenIfAuthenticated().catchError((Object _) {});
   }
 
   /// Evita logouts anidados: `clearOnLogout` hace requests autenticados; sin
@@ -63,7 +83,7 @@ class SessionCubit extends Cubit<SessionState> {
   /// intermedio hacía rebotar /login → /home → /onboarding en cada
   /// login/registro con onboarding pendiente.
   Future<void> markAuthenticated() async {
-    await _pushTokenSyncService.syncTokenIfAuthenticated();
+    _syncPushTokenInBackground();
     final onboardingComplete = await _resolveOnboardingCompleteSV();
     emit(SessionState.authenticated(onboardingComplete: onboardingComplete));
   }

@@ -66,7 +66,10 @@ final class AuthTokenInterceptor extends Interceptor {
       // tratarlo igual mataba sesiones válidas cuando varias llamadas
       // autenticadas concurrentes (p. ej. al entrar a onboarding) pisaban
       // un refresh que solo falló de forma transitoria (issue #137).
-      if (_isDefinitiveSessionFailure(error)) {
+      //? Un request que salió sin token no prueba que haya una sesión que
+      //? cerrar: cerrarla igual formaba el bucle de logout de 1.7.28.
+      final hadSession = requestOptions.headers['authorization'] is String;
+      if (hadSession && isDefinitiveSessionFailure(error)) {
         Sentry.logger.warn(
           'Refresh rechazado: sesión muerta, se dispara logout global',
           attributes: {
@@ -120,11 +123,6 @@ final class AuthTokenInterceptor extends Interceptor {
       }
       return handler.next(err);
     }
-  }
-
-  bool _isDefinitiveSessionFailure(Object error) {
-    return error is AppFailure &&
-        (error.code == 'AUTH_UNAUTHORIZED' || error.code == 'AUTH_NO_REFRESH_TOKEN');
   }
 
   Future<void> _notifyRefreshFailure() async {
