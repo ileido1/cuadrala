@@ -244,6 +244,8 @@ enum QuickMatchProposalStatus {
   DECLINED
   EXPIRED
   DISMISSED
+  /// Miembro de un lobby que se va llenando de a uno (todavía sin ready check).
+  LOBBY
 }
 
 enum CourtStatus {
