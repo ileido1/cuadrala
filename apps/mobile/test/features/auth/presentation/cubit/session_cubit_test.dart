@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:cuadrala_mobile/src/core/failures/app_failure.dart';
 import 'package:cuadrala_mobile/src/core/push/push_token_sync_service.dart';
 import 'package:cuadrala_mobile/src/features/auth/data/auth_repository.dart';
 import 'package:cuadrala_mobile/src/features/auth/data/models/auth_tokens.dart';
@@ -92,7 +93,9 @@ void main() {
     blocTest<SessionCubit, SessionState>(
       'bootstrap: loading → unauthenticated y limpia sesión cuando refresh falla',
       build: () {
-        when(() => authRepository.refresh()).thenThrow(Exception('401'));
+        when(() => authRepository.refresh()).thenThrow(
+          const AppFailure(code: 'AUTH_UNAUTHORIZED', message: 'expirada'),
+        );
         when(() => authRepository.logout()).thenAnswer((_) async {});
         return SessionCubit(
           authRepository: authRepository,
@@ -123,6 +126,7 @@ void main() {
           onboardingRepository: onboardingRepository,
           pushTokenSyncService: pushTokenSyncService,
         );
+        await cubit.markAuthenticated();
         var nested = 0;
         when(() => pushTokenSyncService.clearOnLogout()).thenAnswer((_) async {
           //? Simula el 401 que vuelve a disparar el logout global.
@@ -136,6 +140,97 @@ void main() {
         expect(cubit.state, const SessionState.unauthenticated());
         await cubit.close();
       },
+    );
+
+    //? Bucle de producción en 1.7.28 (797 "Refresh rechazado" en una traza):
+    //? sin sesión, cada 401 rezagado volvía a correr un logout completo, que
+    //? emitía loading → unauthenticated, el router remontaba pantallas y
+    //? estas disparaban nuevos 401.
+    test(
+      'should do nothing when logout is called while already unauthenticated',
+      () async {
+        final cubit = SessionCubit(
+          authRepository: authRepository,
+          onboardingRepository: onboardingRepository,
+          pushTokenSyncService: pushTokenSyncService,
+        );
+        final states = <SessionState>[];
+        final sub = cubit.stream.listen(states.add);
+
+        await cubit.logout();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(states, isEmpty);
+        verifyNever(() => pushTokenSyncService.clearOnLogout());
+        verifyNever(() => authRepository.logout());
+        await sub.cancel();
+        await cubit.close();
+      },
+    );
+
+    //? Abrir la app sin red (timeout/5xx) borraba el refresh token y la
+    //? sesión se perdía para siempre aunque seguía siendo válida.
+    blocTest<SessionCubit, SessionState>(
+      'should keep the stored session when bootstrap refresh fails ambiguously',
+      build: () {
+        when(() => authRepository.refresh()).thenThrow(
+          const AppFailure(code: 'NETWORK_TIMEOUT', message: 'timeout'),
+        );
+        return SessionCubit(
+          authRepository: authRepository,
+          onboardingRepository: onboardingRepository,
+          pushTokenSyncService: pushTokenSyncService,
+        );
+      },
+      act: (cubit) => cubit.bootstrap(),
+      expect: () => const <SessionState>[
+        SessionState.loading(),
+        SessionState.unauthenticated(
+          reason: 'No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.',
+        ),
+      ],
+      verify: (_) => verifyNever(() => authRepository.logout()),
+    );
+
+    //? Un fallo de Firebase al sincronizar el token push no debe cerrar ni
+    //? bloquear la sesión: el push es accesorio al login.
+    blocTest<SessionCubit, SessionState>(
+      'should authenticate on bootstrap even when push sync fails',
+      build: () {
+        when(() => authRepository.refresh()).thenAnswer(
+          (_) async => const AuthTokens(accessToken: 'a', refreshToken: 'r'),
+        );
+        when(() => pushTokenSyncService.syncTokenIfAuthenticated())
+            .thenAnswer((_) async => throw Exception('messaging/unsupported-browser'));
+        return SessionCubit(
+          authRepository: authRepository,
+          onboardingRepository: onboardingRepository,
+          pushTokenSyncService: pushTokenSyncService,
+        );
+      },
+      act: (cubit) => cubit.bootstrap(),
+      expect: () => const <SessionState>[
+        SessionState.loading(),
+        SessionState.authenticated(onboardingComplete: true),
+      ],
+      verify: (_) => verifyNever(() => authRepository.logout()),
+    );
+
+    blocTest<SessionCubit, SessionState>(
+      'should authenticate after login even when push sync fails',
+      build: () {
+        when(() => pushTokenSyncService.syncTokenIfAuthenticated())
+            .thenAnswer((_) async => throw Exception('getToken failed'));
+        return SessionCubit(
+          authRepository: authRepository,
+          onboardingRepository: onboardingRepository,
+          pushTokenSyncService: pushTokenSyncService,
+        );
+      },
+      act: (cubit) => cubit.markAuthenticated(),
+      expect: () => const <SessionState>[
+        SessionState.authenticated(onboardingComplete: true),
+      ],
     );
   });
 }

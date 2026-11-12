@@ -69,7 +69,11 @@ void main() {
       ),
       onRefreshFailure: activeSession.logout,
     );
-    final request = RequestOptions(path: '/api/v1/profile');
+    //? El request llevaba token: hay una sesión real que invalidar.
+    final request = RequestOptions(
+      path: '/api/v1/profile',
+      headers: {'authorization': 'Bearer expired-access'},
+    );
     final error = DioException(
       requestOptions: request,
       response: Response<dynamic>(requestOptions: request, statusCode: 401),
@@ -77,6 +81,10 @@ void main() {
 
     when(() => pushTokenSyncService.clearOnLogout()).thenAnswer((_) async {});
     when(() => authRepository.logout()).thenAnswer((_) async {});
+    //? Sesión activa real: logout() ignora llamadas sin sesión.
+    when(() => pushTokenSyncService.syncTokenIfAuthenticated())
+        .thenAnswer((_) async {});
+    await activeSession.markAuthenticated();
 
     DioException? forwardedError;
     await interceptor.onError(
@@ -120,6 +128,10 @@ void main() {
       );
       when(() => pushTokenSyncService.clearOnLogout()).thenAnswer((_) async {});
       when(() => authRepository.logout()).thenAnswer((_) async {});
+      //? Sesión activa real: logout() ignora llamadas sin sesión.
+      when(() => pushTokenSyncService.syncTokenIfAuthenticated())
+          .thenAnswer((_) async {});
+      await activeSession.markAuthenticated();
 
       final interceptor = AuthTokenInterceptor(
         authRepository: authRepository,
@@ -128,7 +140,11 @@ void main() {
       );
 
       DioException makeError(String path) {
-        final request = RequestOptions(path: path);
+        //? Requests de una sesión real: salieron con el access token.
+        final request = RequestOptions(
+          path: path,
+          headers: {'authorization': 'Bearer access-1'},
+        );
         return DioException(
           requestOptions: request,
           response: Response<dynamic>(requestOptions: request, statusCode: 401),
@@ -202,6 +218,40 @@ void main() {
       expect(forwardedError, same(error));
       verifyNever(() => authRepository.logout());
       await activeSession.close();
+    },
+  );
+
+  //? Origen del bucle de logout: requests que salían sin token (no había
+  //? sesión) devolvían 401 y el interceptor cerraba una sesión inexistente.
+  test(
+    'should not trigger logout when a request without token gets a 401',
+    () async {
+      final authRepository = _MockAuthRepository();
+      var logoutCalls = 0;
+      final interceptor = AuthTokenInterceptor(
+        authRepository: authRepository,
+        refreshSession: () async => throw const AppFailure(
+          code: 'AUTH_NO_REFRESH_TOKEN',
+          message: 'No hay sesión guardada. Inicia sesión nuevamente.',
+        ),
+        onRefreshFailure: () async => logoutCalls++,
+      );
+      final request = RequestOptions(path: '/api/v1/users/me');
+      final error = DioException(
+        requestOptions: request,
+        response: Response<dynamic>(requestOptions: request, statusCode: 401),
+      );
+
+      DioException? forwardedError;
+      await interceptor.onError(
+        error,
+        _CapturingErrorInterceptorHandler(
+          onNext: (value) => forwardedError = value,
+        ),
+      );
+
+      expect(forwardedError, same(error));
+      expect(logoutCalls, 0);
     },
   );
 }
