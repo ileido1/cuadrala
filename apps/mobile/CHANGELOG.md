@@ -5,6 +5,15 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.29] - 2026-11-12
+
+### Corregido
+
+- **Errores de notificaciones al cerrar sesión**: si la sesión ya no existía,
+  la app igual intentaba desactivar las notificaciones del dispositivo, el
+  servidor respondía "Se requiere un token de acceso" y eso disparaba otro
+  cierre de sesión. Ahora, sin sesión activa, no se hacen esas llamadas.
+
 ## [1.7.28] - 2026-11-11
 
 ### Corregido

@@ -211,18 +211,25 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
 
   @override
   Future<void> clearOnLogout() async {
-    try {
-      await _notificationsRepository.unregisterPushTokens();
-    } catch (e, st) {
-      developer.log(
-        'No se pudieron desregistrar tokens push',
-        name: 'FcmPushTokenSyncService',
-        error: e,
-        stackTrace: st,
-      );
+    //? Sin access token en memoria toda llamada responde 401 ("Se requiere un
+    //? token de acceso") y ese 401 vuelve a disparar el logout global.
+    final accessToken = _authRepository.tokensInMemory?.accessToken;
+    final hasSession = accessToken != null && accessToken.isNotEmpty;
+    if (hasSession) {
+      try {
+        await _notificationsRepository.unregisterPushTokens();
+      } catch (e, st) {
+        developer.log(
+          'No se pudieron desregistrar tokens push',
+          name: 'FcmPushTokenSyncService',
+          error: e,
+          stackTrace: st,
+        );
+      }
     }
     if (_isWeb) {
-      final userId = await _currentUserId() ?? _webPushUserId;
+      final userId =
+          (hasSession ? await _currentUserId() : null) ?? _webPushUserId;
       if (userId != null) {
         try {
           await _secureTokenStorage.deleteWebPushOptIn(userId);
