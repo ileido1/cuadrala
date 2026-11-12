@@ -14,18 +14,33 @@ import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/cubit/session_cubit.dart';
 import '../router/app_router.dart';
 
-final class App extends StatelessWidget {
+final class App extends StatefulWidget {
   const App({super.key});
 
   @override
+  State<App> createState() => _AppState();
+}
+
+final class _AppState extends State<App> {
+  //? Arranque una sola vez: dentro de build() cada rebuild repetía bootstrap
+  //? (que rota el refresh token, de un solo uso) y creaba otro router.
+  late final SessionCubit _sessionCubit = getIt<SessionCubit>()..bootstrap();
+  late final AppRouter _router = AppRouter(sessionCubit: _sessionCubit);
+
+  @override
+  void initState() {
+    super.initState();
+    setupPushNotificationTapHandler(_router.router);
+    setupTournamentInviteLinkDeepLinkHandler(_router.router);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final router = _router;
     return BlocProvider<SessionCubit>.value(
-      value: getIt<SessionCubit>()..bootstrap(),
+      value: _sessionCubit,
       child: Builder(
         builder: (context) {
-          final router = AppRouter(sessionCubit: context.read<SessionCubit>());
-          setupPushNotificationTapHandler(router.router);
-          setupTournamentInviteLinkDeepLinkHandler(router.router);
           return PushTokenSyncLifecycle(
             //? Issue #100: ForegroundNotificationHandler se queda por fuera de
             //? MaterialApp.router — no importa, porque ya no depende de
