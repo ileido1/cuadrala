@@ -95,6 +95,35 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match correctness (HTTP + DB)'
     expect(MATCH!.participants.map((_p) => _p.userId).sort()).toEqual([P0!.id, P2!.id, P3!.id, P4!.id].sort());
   });
 
+  //? "Salir de la cola" no hacía nada si la búsqueda ya no estaba en
+  //? SEARCHING/PROPOSAL: el banner de inicio quedaba "activo" para siempre.
+  it('should cancel a search whose proposal expired when the player leaves the queue', async () => {
+    const [P0] = await createPlayersSV(1, 'qmexp');
+    expect((await start(P0!, '2026-11-05')).status).toBe(201);
+    await PRISMA.quickMatchSearch.update({ where: { userId: P0!.id }, data: { status: 'EXPIRED', noMatchYet: true } });
+
+    expect((await cancel(P0!)).status).toBe(204);
+
+    const SEARCH = await PRISMA.quickMatchSearch.findUniqueOrThrow({ where: { userId: P0!.id } });
+    expect(SEARCH.status).toBe('CANCELLED');
+  });
+
+  it('should cancel a confirmed search whose group has no match yet and free the slot', async () => {
+    const [P0, P1] = await createPlayersSV(2, 'qmconf');
+    const DATE = '2026-11-06';
+    expect((await start(P0!, DATE)).status).toBe(201);
+    expect((await start(P1!, DATE)).status).toBe(201);
+    expect((await confirm(P0!)).status).toBe(200);
+    const GROUP_KEY = (await PRISMA.quickMatchProposal.findFirstOrThrow({ where: { search: { userId: P0!.id } }, select: { groupKey: true } })).groupKey!;
+
+    expect((await cancel(P0!)).status).toBe(204);
+
+    const SEARCH = await PRISMA.quickMatchSearch.findUniqueOrThrow({ where: { userId: P0!.id } });
+    expect(SEARCH.status).toBe('CANCELLED');
+    const REMAINING = await PRISMA.quickMatchProposal.findMany({ where: { groupKey: GROUP_KEY, status: 'PENDING' } });
+    expect(REMAINING.every((_p) => !_p.playerIds.includes(P0!.id))).toBe(true);
+  });
+
   it('#92: confirming after a prior join already succeeded (partial failure retry) does not get stuck on YA_UNIDO', async () => {
     const [ORGANIZER, SEARCHER] = await createPlayersSV(2, 'qm92');
     const DATE = '2026-11-04';
