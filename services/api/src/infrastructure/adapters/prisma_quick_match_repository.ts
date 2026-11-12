@@ -324,8 +324,10 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
    * compatibles con el miembro más antiguo: primero quienes buscan (por
    * `queuedAt`), después invitados por disponibilidad. Los que entran reciben
    * PENDING con vencimiento nuevo; los miembros actuales no cambian.
-   * Locks en el mismo orden que la formación de grupos (alcance → usuario →
-   * groupKey), así un jugador nunca queda en dos grupos ni un grupo pasa de 4.
+   * Locks: alcance → groupKey → usuario. Sin deadlock porque el único otro
+   * camino que toma locks de usuario (`createGroupProposalsSV`) después solo
+   * toma un groupKey recién generado. Así un jugador nunca queda en dos grupos
+   * ni un grupo pasa de 4.
    */
   async refillGroupSV(_groupKey: string, _expiresAt: Date): Promise<QuickMatchRefillDTO | null> {
     //? 1. Chequeo barato sin locks: nada que hacer si el grupo está lleno o vacío

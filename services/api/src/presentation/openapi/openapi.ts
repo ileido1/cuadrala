@@ -842,7 +842,7 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Matchmaking'],
         summary: 'Consultar la búsqueda automática de partida del usuario',
-        description: 'El grupo nuevo se forma solo con 4 jugadores y abre un ready check: los 4 aceptan o rechazan antes de `proposal.expiresAt`. `acceptedCount` indica cuántos miembros del grupo ya aceptaron (0 para partida abierta o sin propuesta). Si alguien rechaza o vence el plazo, el grupo se disuelve y quien había aceptado vuelve a la cola conservando su posición.',
+        description: 'El grupo nuevo se forma solo con 4 jugadores y abre un ready check: los 4 aceptan o rechazan antes de `proposal.expiresAt`. `acceptedCount` indica cuántos miembros del grupo ya aceptaron (0 para partida abierta o sin propuesta). Si alguien rechaza, sale o vence su plazo, solo esa persona sale de la cola: quienes aceptaron siguen en el grupo y el lugar libre se ofrece al siguiente jugador compatible.',
         security: [{ bearerAuth: [] }],
         responses: { '200': { description: 'Estado de búsqueda (incluye `acceptedCount`)' }, '401': { description: 'No autorizado' } },
       },
@@ -888,7 +888,7 @@ const OPENAPI_CONST = {
       post: {
         tags: ['Matchmaking'],
         summary: 'Descartar una propuesta de Quick Match',
-        description: 'Grupo nuevo: rechaza el ready check, el jugador sale de la cola (`CANCELLED`) y el resto vuelve a buscar. Partida abierta: se descarta y se sigue buscando.',
+        description: 'Grupo nuevo: rechaza el ready check y el jugador sale de la cola (`CANCELLED`); el resto sigue en el grupo y su lugar se ofrece a otro jugador. Partida abierta: se descarta y se sigue buscando.',
         security: [{ bearerAuth: [] }],
         responses: { '200': { description: 'Propuesta descartada' }, '401': { description: 'No autorizado' }, '409': { description: 'Propuesta no disponible' } },
       },
