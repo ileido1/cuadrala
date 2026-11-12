@@ -5,6 +5,35 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.14.0] - 2026-11-12
+
+### Cambiado
+
+- **Partida rápida con "ready check" (como la cola de League of Legends)**: el
+  grupo se arma solo cuando hay 4 jugadores (los que buscan partida más los
+  que guardaron disponibilidad compatible, solo los que faltan) y los 4 reciben
+  a la vez la propuesta con 2 minutos para aceptar o rechazar. Con menos de 4
+  la búsqueda sigue en cola; ya no se arman grupos incompletos.
+- **Todos reciben la notificación**: los jugadores que ya estaban en cola
+  también reciben el aviso de partida encontrada, no solo los invitados.
+- **La cancha se reserva sola**: cuando acepta el cuarto jugador se crea el
+  partido y se reserva la primera sede y horario libres; si no hay ninguno, el
+  partido se crea sin cancha. Elegir sede al confirmar sigue funcionando, pero
+  ya no es obligatorio.
+- **Prioridad por orden de llegada**: quien lleva más tiempo en la cola entra
+  primero, y conserva su lugar si el grupo se cae.
+- **Nuevo campo `acceptedCount`** en `GET/POST /quick-match`: cuántos
+  jugadores del grupo aceptaron de verdad.
+
+### Corregido
+
+- **La app mostraba aceptaciones que no ocurrieron**: un jugador solo cuenta
+  como aceptado cuando confirma. Si alguien rechaza, sale de la cola y vuelven
+  a buscar quienes aceptaron o habían iniciado la búsqueda; si el plazo vence,
+  quien no aceptó sale de la cola y quien aceptó vuelve a buscar. Un jugador
+  invitado por su disponibilidad que no aceptó nunca queda en la cola sin
+  haberlo pedido, y no se lo vuelve a invitar ese día.
+
 ## [1.13.2] - 2026-11-12
 
 ### Corregido

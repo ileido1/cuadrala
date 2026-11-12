@@ -7,6 +7,7 @@ const SEARCH: QuickMatchSearchDTO = {
   id: 'search', sportId: 'sport', categoryId: 'category', targetDate: new Date(), slots: ['EVENING'] as ('MORNING' | 'AFTERNOON' | 'EVENING')[],
   widenLevel: false, zoneKm: 10, includeOpenMatches: true, status: 'PROPOSAL' as const, noMatchYet: false,
   dismissedMatchIds: [], proposal: { id: 'proposal', type: 'OPEN_MATCH' as const, status: 'PENDING' as const, matchId: 'match', playerIds: [], venueOptions: null, expiresAt: new Date(Date.now() + 60_000) },
+  acceptedCount: 0,
 };
 
 describe('ConfirmMyQuickMatchProposalUseCase', () => {

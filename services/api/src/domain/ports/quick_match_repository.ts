@@ -32,24 +32,25 @@ export type QuickMatchSearchDTO = {
   noMatchYet: boolean;
   dismissedMatchIds: string[];
   proposal: QuickMatchProposalDTO | null;
+  /** Miembros del grupo NEW_GROUP que ya aceptaron el ready check; 0 para OPEN_MATCH o sin propuesta. */
+  acceptedCount: number;
 };
 
-export type StartQuickMatchInput = Omit<QuickMatchSearchDTO, 'id' | 'status' | 'noMatchYet' | 'dismissedMatchIds' | 'proposal'>;
+export type StartQuickMatchInput = Omit<QuickMatchSearchDTO, 'id' | 'status' | 'noMatchYet' | 'dismissedMatchIds' | 'proposal' | 'acceptedCount'>;
 
 export type QuickMatchOpenCandidateDTO = {
   matchId: string;
   participantIds: string[];
 };
 
+/** Grupo completo de 4 jugadores listo para el ready check. */
 export type QuickMatchGroupCandidateDTO = {
+  /** Búsquedas en SEARCHING que entran al grupo (incluye la del buscador). */
   searchIds: string[];
+  /** Los 4 jugadores del grupo. */
   userIds: string[];
-  groupKey?: string;
-  confirmedUserIds?: string[];
-  invitationUserIds?: string[];
-  excludedGroupKeys?: string[];
-  /** #93: miembros que ya estaban PENDING/CONFIRMED en el grupo antes de esta llamada — deben ser notificados de que se sumó alguien nuevo. */
-  existingMemberUserIds?: string[];
+  /** Jugadores sin búsqueda activa cuya disponibilidad guardada coincide. */
+  invitationUserIds: string[];
 };
 
 export interface QuickMatchRepository {

@@ -22,10 +22,10 @@ export class MatchQuickMatchUseCase {
     if (GROUP === null) return this._repository.markNoMatchYetSV(_search.id);
     const PROPOSAL = await this._repository.createGroupProposalsSV(_search, GROUP, new Date(Date.now() + HOLD_MS));
     if (PROPOSAL === null) return this._repository.markNoMatchYetSV(_search.id);
-    //? #93: los miembros que ya estaban en el grupo (no solo los recién
-    //? invitados) deben enterarse de que se sumó alguien nuevo — antes solo
-    //? dependían de volver a pedir GET /quick-match por su cuenta.
-    await this.notifySV(PROPOSAL, _userId, [...(GROUP.invitationUserIds ?? []), ...(GROUP.existingMemberUserIds ?? [])]);
+    //? Ready check (S2): avisa a los 4 miembros salvo a quien disparó el match,
+    //? que ya ve la propuesta en la respuesta. Incluye a los buscadores que
+    //? estaban en cola (antes no se enteraban) y a los invitados por disponibilidad.
+    await this.notifySV(PROPOSAL, _userId, GROUP.userIds.filter((_id) => _id !== _userId));
     return PROPOSAL;
   }
 
