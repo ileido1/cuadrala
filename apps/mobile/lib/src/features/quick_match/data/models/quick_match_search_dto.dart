@@ -23,7 +23,9 @@ final class QuickMatchProposalDto {
         type: json['type'] as String,
         status: json['status'] as String,
         matchId: json['matchId'] as String?,
-        playerIds: (json['playerIds'] as List? ?? const []).whereType<String>().toList(),
+        playerIds: (json['playerIds'] as List? ?? const [])
+            .whereType<String>()
+            .toList(),
         venueOptions: (json['venueOptions'] as List? ?? const [])
             .whereType<Map>()
             .map(
@@ -80,6 +82,7 @@ final class QuickMatchSearchDto {
     required this.zoneKm,
     required this.includeOpenMatches,
     required this.proposal,
+    this.acceptedCount = 0,
   });
 
   final String id;
@@ -93,6 +96,11 @@ final class QuickMatchSearchDto {
   final int zoneKm;
   final bool includeOpenMatches;
   final QuickMatchProposalDto? proposal;
+
+  /// Miembros del grupo NEW_GROUP que aceptaron de verdad el ready check
+  /// (0 para OPEN_MATCH o sin propuesta). Default 0 si una API vieja no lo
+  /// envía, para no romper.
+  final int acceptedCount;
 
   factory QuickMatchSearchDto.fromJson(Map<String, Object?> json) =>
       QuickMatchSearchDto(
@@ -113,5 +121,6 @@ final class QuickMatchSearchDto {
                 json['proposal'] as Map<String, Object?>,
               )
             : null,
+        acceptedCount: (json['acceptedCount'] as num?)?.toInt() ?? 0,
       );
 }

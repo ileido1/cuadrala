@@ -5,6 +5,42 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.14.0] - 2026-11-12
+
+### Cambiado
+
+- **Partida rápida con "ready check" (como la cola de League of Legends)**: el
+  grupo se arma solo cuando hay 4 jugadores (los que buscan partida más los
+  que guardaron disponibilidad compatible, solo los que faltan) y los 4 reciben
+  a la vez la propuesta con 2 minutos para aceptar o rechazar. Con menos de 4
+  la búsqueda sigue en cola; ya no se arman grupos incompletos.
+- **Todos reciben la notificación**: los jugadores que ya estaban en cola
+  también reciben el aviso de partida encontrada, no solo los invitados.
+- **La cancha se reserva sola**: cuando acepta el cuarto jugador se crea el
+  partido y se reserva la primera sede y horario libres; si no hay ninguno, el
+  partido se crea sin cancha. Elegir sede al confirmar sigue funcionando, pero
+  ya no es obligatorio.
+- **Si alguien no acepta, se busca reemplazo**: quien rechaza, sale de la cola
+  o deja vencer su tiempo sale de la cola, pero el grupo no se cae: quienes ya
+  aceptaron siguen aceptados y su lugar lo ocupa el siguiente jugador
+  compatible, que recibe el aviso y su propio tiempo para aceptar. Si todavía
+  no hay nadie, el grupo espera y se completa apenas alguien compatible busca
+  partida (un grupo con lugar libre tiene prioridad sobre armar uno nuevo).
+- **Prioridad por orden de llegada**: quien lleva más tiempo en la cola entra
+  primero.
+- **Nuevo campo `acceptedCount`** en `GET/POST /quick-match`: cuántos
+  jugadores del grupo aceptaron de verdad. `proposal.playerIds` muestra los
+  miembros actuales; con menos de 4 el grupo está buscando reemplazo.
+
+### Corregido
+
+- **La app mostraba aceptaciones que no ocurrieron**: un jugador solo cuenta
+  como aceptado cuando confirma. Quien rechazó o dejó vencer su tiempo no
+  vuelve a ser invitado por su disponibilidad ese mismo día.
+- **Grupos de partida rápida atascados**: los grupos incompletos armados por la
+  versión anterior, que podían quedar esperando para siempre, ahora se
+  completan con el siguiente jugador compatible.
+
 ## [1.13.2] - 2026-11-12
 
 ### Corregido

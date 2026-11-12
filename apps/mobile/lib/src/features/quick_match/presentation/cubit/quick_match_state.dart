@@ -29,7 +29,18 @@ final class QuickMatchActive extends QuickMatchState {
   final List<ExchangeRateRow> exchangeRates;
 
   @override
-  List<Object?> get props => [search.id, search.status, search.noMatchYet];
+  //? Incluye el avance del ready check: sin `acceptedCount` ni el estado de
+  //? la propuesta, el polling traía "2 de 4" pero Equatable lo descartaba
+  //? por igual al estado anterior y la pantalla seguía en "1 de 4".
+  List<Object?> get props => [
+    search.id,
+    search.status,
+    search.noMatchYet,
+    search.acceptedCount,
+    search.proposal?.id,
+    search.proposal?.status,
+    search.proposal?.matchId,
+  ];
 }
 
 final class QuickMatchFailure extends QuickMatchState {

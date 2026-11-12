@@ -616,4 +616,125 @@ void main() {
       },
     );
   });
+
+  // ── 9. Quick Match home banner — ready check sin push (S11) ───────────────
+  //
+  // En la PC no llegaba la notificación para aceptar: el banner solo se
+  // actualizaba al cambiar la búsqueda desde este mismo dispositivo. Ahora
+  // consulta periódicamente mientras hay una búsqueda activa.
+  group('Quick Match home banner — polling (S11)', () {
+    late _MockQuickMatchRepository quickMatchRepository;
+
+    QuickMatchSearchDto search({
+      required String status,
+      String? proposalType,
+      String proposalStatus = 'PENDING',
+    }) => QuickMatchSearchDto(
+      id: 'search-1',
+      sportId: 'sport-1',
+      categoryId: 'category-1',
+      status: status,
+      noMatchYet: false,
+      slots: const ['EVENING'],
+      targetDate: DateTime(2030, 6, 1),
+      widenLevel: false,
+      zoneKm: 5,
+      includeOpenMatches: true,
+      proposal: proposalType == null
+          ? null
+          : QuickMatchProposalDto(
+              id: 'group-1',
+              type: proposalType,
+              status: proposalStatus,
+              matchId: null,
+              expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+            ),
+    );
+
+    setUp(() {
+      quickMatchRepository = _MockQuickMatchRepository();
+      when(
+        () => quickMatchRepository.changes,
+      ).thenAnswer((_) => const Stream<void>.empty());
+      getIt.registerSingleton<QuickMatchRepository>(quickMatchRepository);
+    });
+
+    tearDown(() => getIt.unregister<QuickMatchRepository>());
+
+    testWidgets('should show a found match when a ready check is pending', (
+      tester,
+    ) async {
+      when(() => quickMatchRepository.current()).thenAnswer(
+        (_) async => search(status: 'PROPOSAL', proposalType: 'NEW_GROUP'),
+      );
+      when(() => homeCubit.state).thenReturn(_loadedState());
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('¡Partida encontrada!'), findsOneWidget);
+    });
+
+    testWidgets('should pick up a ready check by polling an active search', (
+      tester,
+    ) async {
+      var found = false;
+      when(() => quickMatchRepository.current()).thenAnswer(
+        (_) async => found
+            ? search(status: 'PROPOSAL', proposalType: 'NEW_GROUP')
+            : search(status: 'SEARCHING'),
+      );
+      when(() => homeCubit.state).thenReturn(_loadedState());
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Tu búsqueda está activa'), findsOneWidget);
+
+      found = true;
+      await tester.pump(const Duration(seconds: 15));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¡Partida encontrada!'), findsOneWidget);
+    });
+
+    testWidgets('should not poll when there is no active search', (
+      tester,
+    ) async {
+      when(() => quickMatchRepository.current()).thenAnswer((_) async => null);
+      when(() => homeCubit.state).thenReturn(_loadedState());
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 30));
+      await tester.pumpAndSettle();
+
+      verify(() => quickMatchRepository.current()).called(1);
+    });
+
+    //? S5: EXPIRED significa que el jugador ya salió de la cola.
+    testWidgets('should not show an expired search as active', (tester) async {
+      when(() => quickMatchRepository.current()).thenAnswer(
+        (_) async => search(
+          status: 'EXPIRED',
+          proposalType: 'NEW_GROUP',
+          proposalStatus: 'EXPIRED',
+        ),
+      );
+      when(() => homeCubit.state).thenReturn(_loadedState());
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tu búsqueda está activa'), findsNothing);
+      expect(find.text('Encontrar partida'), findsOneWidget);
+    });
+  });
 }

@@ -842,8 +842,9 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Matchmaking'],
         summary: 'Consultar la búsqueda automática de partida del usuario',
+        description: 'El grupo nuevo se forma solo con 4 jugadores y abre un ready check: los 4 aceptan o rechazan antes de `proposal.expiresAt`. `acceptedCount` indica cuántos miembros del grupo ya aceptaron (0 para partida abierta o sin propuesta). Si alguien rechaza, sale o vence su plazo, solo esa persona sale de la cola: quienes aceptaron siguen en el grupo y el lugar libre se ofrece al siguiente jugador compatible.',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Estado de búsqueda' }, '401': { description: 'No autorizado' } },
+        responses: { '200': { description: 'Estado de búsqueda (incluye `acceptedCount`)' }, '401': { description: 'No autorizado' } },
       },
       post: {
         tags: ['Matchmaking'],
@@ -875,7 +876,7 @@ const OPENAPI_CONST = {
                   courtId: { type: 'string', format: 'uuid' },
                   scheduledAt: { type: 'string', format: 'date-time' },
                 },
-                description: 'Obligatorio para finalizar una propuesta de grupo nuevo; omitido para un partido abierto.',
+                description: 'Opcional. Sin body, al aceptar el 4º jugador se reserva la primera sede/horario libre de `venueOptions` (o el partido queda sin cancha). Si se envía, se reserva esa opción.',
               },
             },
           },
@@ -887,6 +888,7 @@ const OPENAPI_CONST = {
       post: {
         tags: ['Matchmaking'],
         summary: 'Descartar una propuesta de Quick Match',
+        description: 'Grupo nuevo: rechaza el ready check y el jugador sale de la cola (`CANCELLED`); el resto sigue en el grupo y su lugar se ofrece a otro jugador. Partida abierta: se descarta y se sigue buscando.',
         security: [{ bearerAuth: [] }],
         responses: { '200': { description: 'Propuesta descartada' }, '401': { description: 'No autorizado' }, '409': { description: 'Propuesta no disponible' } },
       },

@@ -487,6 +487,10 @@ model QuickMatchSearch {
   includeOpenMatches Boolean                  @default(true)
   status             QuickMatchSearchStatus   @default(SEARCHING)
   noMatchYet         Boolean                  @default(false)
+  /// Momento en que el jugador entró a la cola; se conserva al volver a la cola tras un ready check fallido.
+  queuedAt           DateTime                 @default(now())
+  /// true si entró al ready check solo por su disponibilidad guardada (no tocó "buscar"); pasa a false al aceptar.
+  invitedByAvailability Boolean               @default(false)
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
 
@@ -495,6 +499,7 @@ model QuickMatchSearch {
 
   @@index([sportId, status, targetDate])
   @@index([status, updatedAt])
+  @@index([status, queuedAt])
 }
 
 model QuickMatchProposal {

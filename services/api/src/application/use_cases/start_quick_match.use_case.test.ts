@@ -8,7 +8,7 @@ describe('StartQuickMatchUseCase', () => {
     const UC = new StartQuickMatchUseCase({
       startForUserSV: async (_userId, _input) => {
         CALLS.push(_input);
-        return { id: 'search', ..._input, status: 'SEARCHING', noMatchYet: false, dismissedMatchIds: [], proposal: null };
+        return { id: 'search', ..._input, status: 'SEARCHING', noMatchYet: false, dismissedMatchIds: [], proposal: null, acceptedCount: 0 };
       },
       findByUserIdSV: async () => null,
       cancelForUserSV: async () => undefined,
@@ -19,6 +19,8 @@ describe('StartQuickMatchUseCase', () => {
       confirmProposalForUserSV: async () => { throw new Error('not used'); },
       findCompatibleGroupSV: async () => null,
       createGroupProposalsSV: async () => null,
+      findOpenGroupKeySV: async () => null,
+      refillGroupSV: async () => null,
     });
 
     await UC.executeSV('user', {

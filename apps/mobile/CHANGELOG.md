@@ -5,6 +5,32 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.33] - 2026-11-12
+
+### Cambiado
+
+- **Partida rápida con aceptación simultánea**: cuando se arma un grupo de 4
+  jugadores, todos ven "¡Partida encontrada!" con un contador y cuántos
+  aceptaron ("X de 4 aceptaron"). La partida se crea solo si aceptan los 4, y
+  la cancha se reserva sola: ya no hay que elegir sede ni horario.
+- **Rechazar sale de la cola**: rechazar la partida (o no aceptar a tiempo) te
+  saca de la cola, y la pantalla ofrece "Volver a buscar" o "Volver al
+  inicio".
+- **Si otro no acepta, no pierdes el grupo**: quienes ya aceptaron siguen en
+  el grupo y la pantalla avisa que se está buscando un jugador más para
+  reemplazarlo.
+
+### Corregido
+
+- **"Salir de la cola" abría "¿Cuándo quieres jugar?"**: ahora vuelve al
+  inicio sin abrir nada. La pantalla de partida rápida ya no abre la
+  configuración sola; muestra un botón para buscar.
+- **Aceptaciones que no existían**: la propuesta decía que otros jugadores
+  querían jugar aunque nadie hubiera aceptado. Ahora muestra el conteo real.
+- **La propuesta no llegaba sin notificación**: la pantalla de partida rápida y
+  el inicio se actualizan solos mientras hay una búsqueda activa, aunque no
+  llegue el push.
+
 ## [1.7.32] - 2026-11-12
 
 ### Corregido

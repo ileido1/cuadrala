@@ -31,7 +31,8 @@ export class ConfirmMyQuickMatchProposalUseCase {
         if (!(_error instanceof AppError) || _error.code !== 'YA_UNIDO') throw _error;
       }
     }
-    // Un grupo nuevo no aparta cancha ni genera pagos: cada jugador solo confirma interés.
+    //? Grupo nuevo: cada jugador acepta el ready check; al aceptar el 4º, el
+    //? repositorio crea el partido y reserva la primera cancha libre (S4).
     return this._repository.confirmProposalForUserSV(_userId, _venueSelection);
   }
 }
