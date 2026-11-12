@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clock/clock.dart';
 import 'package:cuadrala_mobile/src/core/data/exchange_rates_repository.dart';
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
@@ -27,19 +29,20 @@ class _MockExchangeRatesRepository extends Mock
 
 class _MockMatchesRepository extends Mock implements MatchesRepository {}
 
-QuickMatchSearchDto _searching({bool noMatchYet = false}) => QuickMatchSearchDto(
-  id: 'search-1',
-  sportId: 'sport-1',
-  categoryId: 'category-1',
-  status: 'SEARCHING',
-  noMatchYet: noMatchYet,
-  slots: const ['EVENING'],
-  targetDate: DateTime(2030, 6, 1),
-  widenLevel: false,
-  zoneKm: 5,
-  includeOpenMatches: true,
-  proposal: null,
-);
+QuickMatchSearchDto _searching({bool noMatchYet = false}) =>
+    QuickMatchSearchDto(
+      id: 'search-1',
+      sportId: 'sport-1',
+      categoryId: 'category-1',
+      status: 'SEARCHING',
+      noMatchYet: noMatchYet,
+      slots: const ['EVENING'],
+      targetDate: DateTime(2030, 6, 1),
+      widenLevel: false,
+      zoneKm: 5,
+      includeOpenMatches: true,
+      proposal: null,
+    );
 
 QuickMatchSearchDto _openMatchProposal() => QuickMatchSearchDto(
   id: 'search-1',
@@ -122,16 +125,80 @@ Widget _wrap(QuickMatchCubit cubit) {
   return MaterialApp.router(theme: AppTheme.dark(), routerConfig: router);
 }
 
-
 QuickMatchSearchDto _waitingGroup() => QuickMatchSearchDto(
-  id: 'search-1', sportId: 'sport-1', categoryId: 'category-1',
-  status: 'CONFIRMED', noMatchYet: false, slots: const ['EVENING'],
-  targetDate: DateTime(2030, 6, 1), widenLevel: false, zoneKm: 5,
+  id: 'search-1',
+  sportId: 'sport-1',
+  categoryId: 'category-1',
+  status: 'CONFIRMED',
+  noMatchYet: false,
+  slots: const ['EVENING'],
+  targetDate: DateTime(2030, 6, 1),
+  widenLevel: false,
+  zoneKm: 5,
   includeOpenMatches: true,
   proposal: QuickMatchProposalDto(
-    id: 'group-1', type: 'NEW_GROUP', status: 'CONFIRMED', matchId: null,
-    playerIds: const ['player-1'], expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+    id: 'group-1',
+    type: 'NEW_GROUP',
+    status: 'CONFIRMED',
+    matchId: null,
+    playerIds: const ['player-1'],
+    expiresAt: DateTime.now().add(const Duration(minutes: 2)),
   ),
+);
+
+//? Ready check NEW_GROUP: el grupo siempre nace con 4 jugadores (S1) y
+//? `acceptedCount` cuenta solo los que aceptaron de verdad (S7).
+QuickMatchSearchDto _readyCheck({
+  int acceptedCount = 0,
+  String status = 'PROPOSAL',
+  String proposalStatus = 'PENDING',
+  String? matchId,
+  DateTime? expiresAt,
+}) => QuickMatchSearchDto(
+  id: 'search-1',
+  sportId: 'sport-1',
+  categoryId: 'category-1',
+  status: status,
+  noMatchYet: false,
+  slots: const ['EVENING'],
+  targetDate: DateTime(2030, 6, 1),
+  widenLevel: false,
+  zoneKm: 5,
+  includeOpenMatches: true,
+  acceptedCount: acceptedCount,
+  proposal: QuickMatchProposalDto(
+    id: 'group-1',
+    type: 'NEW_GROUP',
+    status: proposalStatus,
+    matchId: matchId,
+    playerIds: const ['player-1', 'player-2', 'player-3', 'player-4'],
+    venueOptions: [
+      QuickMatchVenueOptionDto(
+        id: 'option-1',
+        venueId: 'venue-1',
+        venueName: 'Club Las Mercedes',
+        courtId: 'court-1',
+        courtName: 'Cancha 1',
+        scheduledAt: DateTime(2030, 6, 1, 20),
+        pricePerPlayerCents: 900,
+      ),
+    ],
+    expiresAt: expiresAt ?? DateTime.now().add(const Duration(minutes: 2)),
+  ),
+);
+
+QuickMatchSearchDto _cancelled() => QuickMatchSearchDto(
+  id: 'search-1',
+  sportId: 'sport-1',
+  categoryId: 'category-1',
+  status: 'CANCELLED',
+  noMatchYet: false,
+  slots: const ['EVENING'],
+  targetDate: DateTime(2030, 6, 1),
+  widenLevel: false,
+  zoneKm: 5,
+  includeOpenMatches: true,
+  proposal: null,
 );
 
 QuickMatchSearchDto _expired({required String proposalType}) =>
@@ -210,56 +277,72 @@ void main() {
     });
   });
 
-  testWidgets('shows that an incremental group keeps filling after joining', (tester) async {
-    when(() => repository.current()).thenAnswer((_) async => _waitingGroup());
+  //? S10: tras aceptar, la pantalla espera a los demás y muestra cuántos
+  //? aceptaron según `acceptedCount` (antes leía `playerIds.length` con un
+  //? `?? 4` por defecto y decía "jugadores confirmados" sin serlo).
+  testWidgets(
+    'should show the real accepted count while waiting for the others',
+    (tester) async {
+      when(() => repository.current()).thenAnswer(
+        (_) async => _readyCheck(
+          status: 'CONFIRMED',
+          proposalStatus: 'CONFIRMED',
+          acceptedCount: 2,
+        ),
+      );
 
-    await tester.pumpWidget(_wrap(cubit));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Estamos formando el grupo'), findsOneWidget);
-    expect(find.textContaining('1 de 4 jugadores confirmados'), findsOneWidget);
-  });
+      expect(find.text('Esperando a los demás jugadores'), findsOneWidget);
+      expect(find.text('2 de 4 aceptaron'), findsOneWidget);
+      expect(find.textContaining('jugadores confirmados'), findsNothing);
+    },
+  );
 
   // Issue #121: antes de este fix, la única acción disponible mientras el
   // grupo se forma era "Volver al inicio" — navegación pura, no cancelaba
   // nada. El jugador quedaba sin forma de salir de su propia búsqueda.
-  testWidgets('offers a way to leave the queue while the group is still forming', (
-    tester,
-  ) async {
-    when(() => repository.current()).thenAnswer((_) async => _waitingGroup());
-    when(() => repository.cancel()).thenAnswer((_) async {});
+  testWidgets(
+    'offers a way to leave the queue while the group is still forming',
+    (tester) async {
+      when(() => repository.current()).thenAnswer((_) async => _waitingGroup());
+      when(() => repository.cancel()).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(cubit));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Salir de la cola'), findsOneWidget);
+      expect(find.text('Salir de la cola'), findsOneWidget);
 
-    await tester.tap(find.text('Salir de la cola'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Salir de la cola'));
+      await tester.pumpAndSettle();
 
-    verify(() => repository.cancel()).called(1);
-    // Bug reportado en vivo: cancelar SÍ llamaba al repo, pero la pantalla
-    // se quedaba mostrando el flujo de quick-match (que, sin búsqueda
-    // activa, cae en el formulario para crear una cola nueva) en vez de
-    // volver al inicio.
-    expect(find.text('home.stub'), findsOneWidget);
-  });
+      verify(() => repository.cancel()).called(1);
+      // Bug reportado en vivo: cancelar SÍ llamaba al repo, pero la pantalla
+      // se quedaba mostrando el flujo de quick-match (que, sin búsqueda
+      // activa, cae en el formulario para crear una cola nueva) en vez de
+      // volver al inicio.
+      expect(find.text('home.stub'), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+    },
+  );
 
-  testWidgets('leaving the queue while actively searching cancels and goes home', (
-    tester,
-  ) async {
-    when(() => repository.current()).thenAnswer((_) async => _searching());
-    when(() => repository.cancel()).thenAnswer((_) async {});
+  testWidgets(
+    'leaving the queue while actively searching cancels and goes home',
+    (tester) async {
+      when(() => repository.current()).thenAnswer((_) async => _searching());
+      when(() => repository.cancel()).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(cubit));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Salir de la cola'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Salir de la cola'));
+      await tester.pumpAndSettle();
 
-    verify(() => repository.cancel()).called(1);
-    expect(find.text('home.stub'), findsOneWidget);
-  });
+      verify(() => repository.cancel()).called(1);
+      expect(find.text('home.stub'), findsOneWidget);
+    },
+  );
 
   testWidgets('renders an open-match proposal with its explicit cup action', (
     tester,
@@ -357,6 +440,10 @@ void main() {
     await tester.pumpWidget(_wrap(cubit));
     await tester.pumpAndSettle();
 
+    //? S9: la pantalla ya no abre la hoja sola; se abre con el botón.
+    await tester.tap(find.byKey(const Key('quick-match.idle.start')));
+    await tester.pumpAndSettle();
+
     expect(find.text('Jugá hoy sin armar grupo'), findsNothing);
     expect(find.text('¿Cuándo quieres jugar?'), findsOneWidget);
     await tester.tap(find.text('Tenis'));
@@ -371,73 +458,78 @@ void main() {
     expect(captured['categoryId'], 'tennis-6');
   });
 
-  testWidgets('shows that the slot was freed, not a generic expiry, when an open-match hold expires', (
-    tester,
-  ) async {
-    when(
-      () => repository.current(),
-    ).thenAnswer((_) async => _expired(proposalType: 'OPEN_MATCH'));
+  testWidgets(
+    'shows that the slot was freed, not a generic expiry, when an open-match hold expires',
+    (tester) async {
+      when(
+        () => repository.current(),
+      ).thenAnswer((_) async => _expired(proposalType: 'OPEN_MATCH'));
 
-    await tester.pumpWidget(_wrap(cubit));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Se liberó el cupo'), findsOneWidget);
-    expect(find.text('La propuesta expiró'), findsNothing);
-  });
+      expect(find.text('Se liberó el cupo'), findsOneWidget);
+      expect(find.text('La propuesta expiró'), findsNothing);
+    },
+  );
 
-  testWidgets('shows the generic expiry copy when a new-group proposal expires', (
-    tester,
-  ) async {
-    when(
-      () => repository.current(),
-    ).thenAnswer((_) async => _expired(proposalType: 'NEW_GROUP'));
+  testWidgets(
+    'shows the generic expiry copy when a new-group proposal expires',
+    (tester) async {
+      when(
+        () => repository.current(),
+      ).thenAnswer((_) async => _expired(proposalType: 'NEW_GROUP'));
 
-    await tester.pumpWidget(_wrap(cubit));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
 
-    expect(find.text('La propuesta expiró'), findsOneWidget);
-    expect(find.text('Se liberó el cupo'), findsNothing);
-  });
+      expect(find.text('La propuesta expiró'), findsOneWidget);
+      expect(find.text('Se liberó el cupo'), findsNothing);
+    },
+  );
 
-  testWidgets('leaving the queue after an expired proposal cancels and goes home', (
-    tester,
-  ) async {
-    when(
-      () => repository.current(),
-    ).thenAnswer((_) async => _expired(proposalType: 'NEW_GROUP'));
-    when(() => repository.cancel()).thenAnswer((_) async {});
+  testWidgets(
+    'leaving the queue after an expired proposal cancels and goes home',
+    (tester) async {
+      when(
+        () => repository.current(),
+      ).thenAnswer((_) async => _expired(proposalType: 'NEW_GROUP'));
+      when(() => repository.cancel()).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(cubit));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Salir de la cola'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Salir de la cola'));
+      await tester.pumpAndSettle();
 
-    verify(() => repository.cancel()).called(1);
-    expect(find.text('home.stub'), findsOneWidget);
-  });
+      verify(() => repository.cancel()).called(1);
+      expect(find.text('home.stub'), findsOneWidget);
+    },
+  );
 
-  testWidgets('shows the Bs secondary price once exchange rates are available', (
-    tester,
-  ) async {
-    when(
-      () => exchangeRates.listByCountry(countryCode: any(named: 'countryCode')),
-    ).thenAnswer(
-      (_) async => const [ExchangeRateRow(currency: 'USD', rateToBs: 50)],
-    );
-    when(
-      () => repository.current(),
-    ).thenAnswer((_) async => _openMatchProposal());
-    when(
-      () => matches.getMatchDetail('match-1'),
-    ).thenAnswer((_) async => _matchDetail());
+  testWidgets(
+    'shows the Bs secondary price once exchange rates are available',
+    (tester) async {
+      when(
+        () =>
+            exchangeRates.listByCountry(countryCode: any(named: 'countryCode')),
+      ).thenAnswer(
+        (_) async => const [ExchangeRateRow(currency: 'USD', rateToBs: 50)],
+      );
+      when(
+        () => repository.current(),
+      ).thenAnswer((_) async => _openMatchProposal());
+      when(
+        () => matches.getMatchDetail('match-1'),
+      ).thenAnswer((_) async => _matchDetail());
 
-    await tester.pumpWidget(_wrap(cubit));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
 
-    expect(find.text('US\$ 9.00 p/p'), findsOneWidget);
-    expect(find.textContaining('Bs. 450.00'), findsOneWidget);
-  });
+      expect(find.text('US\$ 9.00 p/p'), findsOneWidget);
+      expect(find.textContaining('Bs. 450.00'), findsOneWidget);
+    },
+  );
 
   testWidgets('shows the shared ErrorState with a retry action on failure', (
     tester,
@@ -451,5 +543,308 @@ void main() {
 
     expect(find.text('No pudimos cargar tu búsqueda.'), findsOneWidget);
     expect(find.text('Reintentar'), findsOneWidget);
+  });
+
+  // ── S9: salir de la cola ─────────────────────────────────────────────────
+
+  //? En la app, /quick-match se abre con push encima del inicio. Al salir,
+  //? cancel() emitía Idle y la pantalla abría "¿Cuándo quieres jugar?" sola
+  //? mientras navegaba al inicio: la hoja quedaba encima del inicio.
+  testWidgets(
+    'should land on home without opening the configuration sheet when leaving a pushed queue',
+    (tester) async {
+      when(() => repository.current()).thenAnswer((_) async => _searching());
+      when(() => repository.cancel()).thenAnswer((_) async {});
+      when(() => catalog.listSports()).thenAnswer(
+        (_) async => const [
+          SportDto(id: 'padel', code: 'PADEL', name: 'Pádel'),
+        ],
+      );
+      when(() => catalog.listCategories(sportId: 'padel')).thenAnswer(
+        (_) async => const [
+          CategoryDto(
+            id: 'padel-7',
+            sportId: 'padel',
+            name: '7ma',
+            slug: '7ma',
+            scheme: 'ORDINAL',
+            sortOrder: 1,
+          ),
+        ],
+      );
+      final router = GoRouter(
+        initialLocation: '/home',
+        routes: [
+          GoRoute(
+            path: '/home',
+            builder: (_, _) => const Scaffold(body: Text('home.stub')),
+          ),
+          GoRoute(
+            path: '/quick-match',
+            builder: (_, _) => BlocProvider<QuickMatchCubit>.value(
+              value: cubit,
+              child: const QuickMatchScreen(),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(theme: AppTheme.dark(), routerConfig: router),
+      );
+      unawaited(router.push('/quick-match'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Salir de la cola'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('home.stub'), findsOneWidget);
+      expect(find.text('¿Cuándo quieres jugar?'), findsNothing);
+      expect(find.byType(BottomSheet), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'should show a start button instead of opening the sheet when there is no search',
+    (tester) async {
+      when(() => repository.current()).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byKey(const Key('quick-match.idle.start')), findsOneWidget);
+    },
+  );
+
+  // ── S10: ready check NEW_GROUP ───────────────────────────────────────────
+
+  testWidgets(
+    'should show the ready check with the real accepted count and no venue picker',
+    (tester) async {
+      when(
+        () => repository.current(),
+      ).thenAnswer((_) async => _readyCheck(acceptedCount: 1));
+
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¡Partida encontrada!'), findsOneWidget);
+      expect(find.text('1 de 4 aceptaron'), findsOneWidget);
+      expect(find.text('Aceptar'), findsOneWidget);
+      expect(find.text('Rechazar'), findsOneWidget);
+      expect(find.text('¡Encontramos jugadores!'), findsNothing);
+      expect(find.textContaining('quieren jugar'), findsNothing);
+      expect(find.text('Elegí sede y horario'), findsNothing);
+      expect(find.text('Club Las Mercedes'), findsNothing);
+    },
+  );
+
+  testWidgets('should count down to the ready check deadline', (tester) async {
+    var now = DateTime(2030, 6, 1, 18);
+    await withClock(Clock(() => now), () async {
+      when(() => repository.current()).thenAnswer(
+        (_) async =>
+            _readyCheck(expiresAt: now.add(const Duration(minutes: 2))),
+      );
+
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('2:00'), findsOneWidget);
+
+      now = now.add(const Duration(seconds: 30));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.textContaining('1:30'), findsOneWidget);
+    });
+  });
+
+  testWidgets('should accept without a venue and then wait for the others', (
+    tester,
+  ) async {
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _readyCheck(acceptedCount: 1));
+    when(() => repository.confirmProposal()).thenAnswer(
+      (_) async => _readyCheck(
+        status: 'CONFIRMED',
+        proposalStatus: 'CONFIRMED',
+        acceptedCount: 2,
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Aceptar'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.confirmProposal()).called(1);
+    expect(find.text('Esperando a los demás jugadores'), findsOneWidget);
+    expect(find.text('2 de 4 aceptaron'), findsOneWidget);
+  });
+
+  //? S5: rechazar saca al jugador de la cola (búsqueda CANCELLED), así que
+  //? la pantalla vuelve al inicio en vez de quedarse "buscando".
+  testWidgets('should leave the queue and go home when declining', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => _readyCheck());
+    when(
+      () => repository.dismissProposal(),
+    ).thenAnswer((_) async => _cancelled());
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rechazar'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.dismissProposal()).called(1);
+    expect(find.text('home.stub'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('should show the match once the group is complete', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer(
+      (_) async => _readyCheck(
+        status: 'CONFIRMED',
+        proposalStatus: 'CONFIRMED',
+        acceptedCount: 4,
+        matchId: 'match-9',
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('quick-match.open-match')), findsOneWidget);
+    expect(find.text('Salir de la cola'), findsNothing);
+  });
+
+  // ── S11: polling sin push ────────────────────────────────────────────────
+
+  testWidgets('should refresh the ready check while it stays open', (
+    tester,
+  ) async {
+    var accepted = 1;
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _readyCheck(acceptedCount: accepted));
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+    expect(find.text('1 de 4 aceptaron'), findsOneWidget);
+
+    accepted = 3;
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 de 4 aceptaron'), findsOneWidget);
+  });
+
+  testWidgets(
+    'should show the match when polling finds it while waiting for the others',
+    (tester) async {
+      String? matchId;
+      when(() => repository.current()).thenAnswer(
+        (_) async => _readyCheck(
+          status: 'CONFIRMED',
+          proposalStatus: 'CONFIRMED',
+          acceptedCount: matchId == null ? 2 : 4,
+          matchId: matchId,
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
+      expect(find.text('Esperando a los demás jugadores'), findsOneWidget);
+
+      matchId = 'match-9';
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('quick-match.open-match')), findsOneWidget);
+    },
+  );
+
+  //? S5: si otro rechaza o no acepta a tiempo, quien ya había aceptado
+  //? vuelve a SEARCHING; el polling lo refleja sin push.
+  testWidgets('should go back to searching when the ready check dissolves', (
+    tester,
+  ) async {
+    var dissolved = false;
+    when(() => repository.current()).thenAnswer(
+      (_) async => dissolved
+          ? _searching()
+          : _readyCheck(
+              status: 'CONFIRMED',
+              proposalStatus: 'CONFIRMED',
+              acceptedCount: 1,
+            ),
+    );
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    dissolved = true;
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Buscando jugadores'), findsOneWidget);
+  });
+
+  testWidgets('cancels the ready-check polling when the screen is removed', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => _readyCheck());
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
+  // ── S8: OPEN_MATCH sin cambios ───────────────────────────────────────────
+
+  testWidgets('should confirm an open-match slot with its own button', (
+    tester,
+  ) async {
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _openMatchProposal());
+    when(
+      () => matches.getMatchDetail('match-1'),
+    ).thenAnswer((_) async => _matchDetail());
+    when(() => repository.confirmProposal()).thenAnswer(
+      (_) async => QuickMatchSearchDto(
+        id: 'search-1',
+        sportId: 'sport-1',
+        categoryId: 'category-1',
+        status: 'CONFIRMED',
+        noMatchYet: false,
+        slots: const ['EVENING'],
+        targetDate: DateTime(2030, 6, 1),
+        widenLevel: false,
+        zoneKm: 5,
+        includeOpenMatches: true,
+        proposal: QuickMatchProposalDto(
+          id: 'proposal-1',
+          type: 'OPEN_MATCH',
+          status: 'CONFIRMED',
+          matchId: 'match-1',
+          expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar cupo'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.confirmProposal()).called(1);
+    expect(find.text('¡Cupo confirmado!'), findsOneWidget);
   });
 }

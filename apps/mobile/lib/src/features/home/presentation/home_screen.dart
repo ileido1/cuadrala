@@ -230,13 +230,34 @@ final class _QuickMatchHomeBanner extends StatefulWidget {
 }
 
 final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
+  /// Cada cuánto se re-consulta mientras hay una búsqueda activa.
+  static const _pollInterval = Duration(seconds: 15);
+
   late Future<QuickMatchSearchDto?> _search = _fetchSearch();
   StreamSubscription<void>? _changesSub;
+  Timer? _pollTimer;
 
-  Future<QuickMatchSearchDto?> _fetchSearch() =>
-      getIt.isRegistered<QuickMatchRepository>()
-      ? getIt<QuickMatchRepository>().current()
-      : Future<QuickMatchSearchDto?>.value(null);
+  //? El push no siempre llega (p. ej. la sesión web sin permiso de
+  //? notificaciones): mientras haya búsqueda activa se consulta cada
+  //? [_pollInterval] para que el ready check aparezca igual. Sin búsqueda
+  //? activa no se programa nada.
+  Future<QuickMatchSearchDto?> _fetchSearch() async {
+    _pollTimer?.cancel();
+    final search = getIt.isRegistered<QuickMatchRepository>()
+        ? await getIt<QuickMatchRepository>().current()
+        : null;
+    if (mounted && _visibleSearch(search) != null) {
+      _pollTimer = Timer(_pollInterval, _refresh);
+    }
+    return search;
+  }
+
+  void _refresh() {
+    if (!mounted) return;
+    setState(() {
+      _search = _fetchSearch();
+    });
+  }
 
   @override
   void initState() {
@@ -244,18 +265,16 @@ final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
     //? El inicio sigue montado al volver de la cola con go(home): sin
     //? re-consultar, mostraba la búsqueda vieja como "activa".
     if (getIt.isRegistered<QuickMatchRepository>()) {
-      _changesSub = getIt<QuickMatchRepository>().changes.listen((_) {
-        if (!mounted) return;
-        setState(() {
-          _search = _fetchSearch();
-        });
-      });
+      _changesSub = getIt<QuickMatchRepository>().changes.listen(
+        (_) => _refresh(),
+      );
     }
   }
 
   @override
   void dispose() {
     _changesSub?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -276,7 +295,12 @@ final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
   );
 
   QuickMatchSearchDto? _visibleSearch(QuickMatchSearchDto? search) {
-    if (search == null || search.status == 'CANCELLED') return null;
+    //? EXPIRED: el jugador no aceptó a tiempo y salió de la cola (S5).
+    if (search == null ||
+        search.status == 'CANCELLED' ||
+        search.status == 'EXPIRED') {
+      return null;
+    }
     // Issue #122: CONFIRMED significa dos cosas distintas — "confirmé mi
     // cupo, el grupo sigue formándose" (sin partido todavía) y "el grupo se
     // completó, ya existe un partido". Solo la segunda debe ocultar el
@@ -307,6 +331,10 @@ final class _HeroCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final active = activeSearch;
     final proposalReady = active?.status == 'PROPOSAL';
+    final readyCheck =
+        proposalReady &&
+        active?.proposal?.type == 'NEW_GROUP' &&
+        active?.proposal?.status == 'PENDING';
 
     return Container(
       decoration: BoxDecoration(
@@ -392,7 +420,11 @@ final class _HeroCard extends StatelessWidget {
                 ),
               )
             else
-              _ActiveSearchCallout(proposalReady: proposalReady, onTap: onFind),
+              _ActiveSearchCallout(
+                proposalReady: proposalReady,
+                readyCheck: readyCheck,
+                onTap: onFind,
+              ),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -457,10 +489,14 @@ final class _HeroCard extends StatelessWidget {
 final class _ActiveSearchCallout extends StatelessWidget {
   const _ActiveSearchCallout({
     required this.proposalReady,
+    required this.readyCheck,
     required this.onTap,
   });
 
   final bool proposalReady;
+
+  /// Ready check NEW_GROUP pendiente de aceptar.
+  final bool readyCheck;
   final VoidCallback onTap;
 
   @override
@@ -491,7 +527,9 @@ final class _ActiveSearchCallout extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      proposalReady
+                      readyCheck
+                          ? '¡Partida encontrada!'
+                          : proposalReady
                           ? '¡Tu propuesta está lista!'
                           : 'Tu búsqueda está activa',
                       style: TextStyle(
@@ -500,7 +538,9 @@ final class _ActiveSearchCallout extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      proposalReady
+                      readyCheck
+                          ? 'Acepta antes de que termine el tiempo.'
+                          : proposalReady
                           ? 'Tenés tiempo limitado para confirmar.'
                           : 'Te avisamos cuando encontremos una opción.',
                       style: TextStyle(color: foreground, fontSize: 12),
