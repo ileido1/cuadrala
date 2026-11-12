@@ -23,6 +23,7 @@ import 'widgets/google_g_logo.dart';
 import 'widgets/google_web_signin_button.dart';
 import 'widgets/social_button.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/failures/app_failure.dart';
 import '../../../core/env/app_env.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
@@ -133,14 +134,16 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('[Google Auth] 7. Backend response OK');
       Sentry.logger.info('Google: backend /auth/social OK');
 
-      if (!mounted) return;
+      //? Sin `if (!mounted) return`: si la pantalla se desmontó, el backend
+      //? ya aceptó el login y los tokens están guardados; cortar acá dejaba
+      //? al usuario logueado a medias hasta recargar.
       debugPrint('[Google Auth] 8. Marking session as authenticated...');
       // No manual navigation here: GoRouter's redirect already reacts to
       // SessionCubit's stream (refreshListenable in app_router.dart) and
       // routes to onboarding or home on its own. Navigating manually too
       // raced with the router's own redirects for new users (two GoRouter
       // navigations firing almost simultaneously) and crashed.
-      await context.read<SessionCubit>().markAuthenticated();
+      await getIt<SessionCubit>().markAuthenticated();
       debugPrint(
         '[Google Auth] 9. Session authenticated — router will redirect',
       );
@@ -158,6 +161,13 @@ class _LoginScreenState extends State<LoginScreen> {
   /// (e.g. "minified:bt") -- `code`/`description` stay readable, so those
   /// are used instead of interpolating the exception as a whole.
   String _describeGoogleError(Object e) {
+    //? El mapper convierte todo 401 en "Sesión expirada", que acá no aplica:
+    //? en /auth/social un 401 significa que el backend no aceptó la cuenta.
+    if (e is AppFailure) {
+      return e.code == 'AUTH_UNAUTHORIZED'
+          ? 'No pudimos validar tu cuenta de Google. Inténtalo de nuevo.'
+          : e.message;
+    }
     if (e is GoogleSignInException) {
       final desc = e.description;
       return 'GoogleSignInException: ${e.code}'

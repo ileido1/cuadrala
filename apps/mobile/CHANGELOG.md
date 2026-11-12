@@ -5,6 +5,26 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.31] - 2026-11-12
+
+### Corregido
+
+- **Abrir la app sin conexión cerraba la sesión**: si al arrancar no había red
+  o el servidor fallaba, la app borraba la sesión guardada. Ahora solo la
+  borra si el servidor la rechaza; si es un problema de conexión, la conserva.
+- **Un fallo de notificaciones ya no rompe el login**: si el registro de
+  notificaciones push fallaba (p. ej. navegador no compatible), el login por
+  email quedaba trabado o la sesión se cerraba al abrir la app. El registro
+  ahora corre aparte y además ya no frena el ingreso con el pedido de permisos.
+- **Cierres de sesión por pedidos sin sesión**: un pedido que salió sin
+  sesión y fue rechazado ya no dispara un cierre de sesión.
+- **Login con Google a medias**: si la pantalla se cerraba justo al responder
+  el servidor, el usuario quedaba sin entrar hasta recargar.
+- **Mensaje de error de Google**: un rechazo del servidor ahora muestra "No
+  pudimos validar tu cuenta de Google" en lugar de "Sesión expirada".
+- **Arranque de la sesión una sola vez**: la sesión y el enrutador se crean al
+  iniciar la app y ya no se repiten si la pantalla raíz se reconstruye.
+
 ## [1.7.30] - 2026-11-12
 
 ### Corregido
