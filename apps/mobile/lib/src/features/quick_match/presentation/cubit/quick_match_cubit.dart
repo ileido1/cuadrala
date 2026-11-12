@@ -106,8 +106,14 @@ final class QuickMatchCubit extends Cubit<QuickMatchState> {
   }
 
   Future<void> cancel() async {
-    await _repository.cancel();
-    emit(const QuickMatchIdle());
+    try {
+      await _repository.cancel();
+      emit(const QuickMatchIdle());
+    } on AppFailure catch (e) {
+      emit(QuickMatchFailure(e.message));
+    } catch (_) {
+      emit(const QuickMatchFailure('No pudimos salir de la cola.'));
+    }
   }
 
   Future<void> continueSearching() async {

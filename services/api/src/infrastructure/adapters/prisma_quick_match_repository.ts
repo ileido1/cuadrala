@@ -376,7 +376,12 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
   async cancelForUserSV(_userId: string): Promise<void> {
     await PRISMA.$transaction(async (_tx) => {
       const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { userId: _userId }, include: SEARCH_INCLUDE });
-      if (CURRENT === null || !['SEARCHING', 'PROPOSAL'].includes(CURRENT.status)) return;
+      if (CURRENT === null) return;
+      //? Se puede salir mientras no exista el partido: también una búsqueda
+      //? EXPIRED o CONFIRMED con el grupo todavía formándose. Antes solo
+      //? SEARCHING/PROPOSAL, y "salir de la cola" no hacía nada en esos casos.
+      const MATCH_CREATED = CURRENT.status === 'CONFIRMED' && CURRENT.proposal?.matchId != null;
+      if (!['SEARCHING', 'PROPOSAL', 'EXPIRED', 'CONFIRMED'].includes(CURRENT.status) || MATCH_CREATED) return;
       //? #91: si hay una propuesta grupal PENDING/CONFIRMED, libera el cupo igual
       //? que `dismissProposalForUserSV` — sin esto el grupo queda con un cupo
       //? fantasma que nunca puede completar los 4 confirmados (el cancelado no

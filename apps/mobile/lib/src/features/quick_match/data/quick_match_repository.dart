@@ -1,9 +1,23 @@
+import 'dart:async';
+
 import 'models/quick_match_search_dto.dart';
 import 'quick_match_api.dart';
 
 class QuickMatchRepository {
-  const QuickMatchRepository(this._api);
+  QuickMatchRepository(this._api);
   final QuickMatchApi _api;
+
+  //? Avisa cuando la búsqueda cambió (iniciar, confirmar, descartar, salir).
+  //? El banner de inicio sigue montado al volver con go(home) y, sin esto,
+  //? mostraba la búsqueda vieja como "activa" indefinidamente.
+  final _changes = StreamController<void>.broadcast();
+  Stream<void> get changes => _changes.stream;
+
+  Future<T> _notifying<T>(Future<T> request) async {
+    final result = await request;
+    _changes.add(null);
+    return result;
+  }
 
   Future<QuickMatchSearchDto?> current() async {
     final payload = await _api.getCurrent();
@@ -14,7 +28,7 @@ class QuickMatchRepository {
   }
 
   Future<QuickMatchSearchDto> start(Map<String, Object?> preferences) =>
-      _fromEnvelope(_api.start(preferences));
+      _notifying(_fromEnvelope(_api.start(preferences)));
   Future<QuickMatchSearchDto> confirmProposal({
     QuickMatchVenueOptionDto? option,
   }) {
@@ -25,12 +39,12 @@ class QuickMatchRepository {
             'courtId': option.courtId,
             'scheduledAt': option.scheduledAt.toUtc().toIso8601String(),
           };
-    return _fromEnvelope(_api.confirmProposal(body: body));
+    return _notifying(_fromEnvelope(_api.confirmProposal(body: body)));
   }
 
   Future<QuickMatchSearchDto> dismissProposal() =>
-      _fromEnvelope(_api.dismissProposal());
-  Future<void> cancel() => _api.cancel();
+      _notifying(_fromEnvelope(_api.dismissProposal()));
+  Future<void> cancel() => _notifying(_api.cancel());
 
   Future<QuickMatchSearchDto> _fromEnvelope(
     Future<Map<String, Object?>> request,

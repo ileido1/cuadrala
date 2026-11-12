@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -228,10 +230,34 @@ final class _QuickMatchHomeBanner extends StatefulWidget {
 }
 
 final class _QuickMatchHomeBannerState extends State<_QuickMatchHomeBanner> {
-  late final Future<QuickMatchSearchDto?> _search =
+  late Future<QuickMatchSearchDto?> _search = _fetchSearch();
+  StreamSubscription<void>? _changesSub;
+
+  Future<QuickMatchSearchDto?> _fetchSearch() =>
       getIt.isRegistered<QuickMatchRepository>()
       ? getIt<QuickMatchRepository>().current()
       : Future<QuickMatchSearchDto?>.value(null);
+
+  @override
+  void initState() {
+    super.initState();
+    //? El inicio sigue montado al volver de la cola con go(home): sin
+    //? re-consultar, mostraba la búsqueda vieja como "activa".
+    if (getIt.isRegistered<QuickMatchRepository>()) {
+      _changesSub = getIt<QuickMatchRepository>().changes.listen((_) {
+        if (!mounted) return;
+        setState(() {
+          _search = _fetchSearch();
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _changesSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<QuickMatchSearchDto?>(

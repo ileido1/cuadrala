@@ -545,6 +545,21 @@ void main() {
       },
     );
 
+    //? En web, volver del popup de Google dispara `resumed` → sync antes de
+    //? tener sesión: getMe() salía sin token y devolvía 401.
+    test(
+      'should skip push sync when there is no session in memory',
+      () async {
+        final dynamic webService = createWebService(appEnv: createWebEnv());
+        await webService.initialize();
+        when(() => authRepository.tokensInMemory).thenReturn(null);
+
+        await webService.syncTokenIfAuthenticated();
+
+        verifyNever(() => profileRepository.getMe());
+      },
+    );
+
     test('disables backend tokens and clears web opt-in on logout', () async {
       final dynamic webService = createWebService(appEnv: createWebEnv());
       await webService.initialize();

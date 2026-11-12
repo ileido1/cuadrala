@@ -5,6 +5,15 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.13.2] - 2026-11-12
+
+### Corregido
+
+- **Salir de la cola de partida rápida no hacía nada**: `DELETE /quick-match`
+  ahora también cancela búsquedas vencidas (`EXPIRED`) y confirmadas cuyo
+  grupo todavía no formó partido (`CONFIRMED` sin partido), liberando el cupo.
+  Antes solo cancelaba `SEARCHING`/`PROPOSAL` y la búsqueda seguía "activa".
+
 ## [1.13.1] - 2026-11-12
 
 ### Seguridad
