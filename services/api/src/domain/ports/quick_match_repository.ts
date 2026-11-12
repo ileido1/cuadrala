@@ -14,7 +14,10 @@ export type QuickMatchProposalDTO = {
   type: QuickMatchProposalType;
   status: QuickMatchProposalStatus;
   matchId: string | null;
+  /** Miembros actuales del grupo; menos de 4 mientras se busca reemplazo. */
   playerIds: string[];
+  /** Identifica el grupo NEW_GROUP; null en OPEN_MATCH. */
+  groupKey?: string | null;
   venueOptions: unknown | null;
   expiresAt: Date;
 };
@@ -53,6 +56,16 @@ export type QuickMatchGroupCandidateDTO = {
   invitationUserIds: string[];
 };
 
+/** Resultado de reponer cupos libres de un grupo NEW_GROUP. */
+export type QuickMatchRefillDTO = {
+  groupKey: string;
+  categoryId: string;
+  /** Jugadores que entraron al grupo en esta reposición (PENDING con vencimiento nuevo). */
+  addedUserIds: string[];
+  /** Búsqueda a la que se asocia la notificación de la reposición. */
+  notifySearchId: string | null;
+};
+
 export interface QuickMatchRepository {
   startForUserSV(_userId: string, _input: StartQuickMatchInput): Promise<QuickMatchSearchDTO>;
   findByUserIdSV(_userId: string): Promise<QuickMatchSearchDTO | null>;
@@ -64,4 +77,8 @@ export interface QuickMatchRepository {
   markNoMatchYetSV(_searchId: string): Promise<QuickMatchSearchDTO>;
   dismissProposalForUserSV(_userId: string): Promise<QuickMatchSearchDTO>;
   confirmProposalForUserSV(_userId: string, _venueSelection?: QuickMatchVenueSelectionDTO): Promise<QuickMatchSearchDTO>;
+  /** Grupo con cupos libres compatible con la búsqueda (el más antiguo), o null. */
+  findOpenGroupKeySV(_search: QuickMatchSearchDTO): Promise<string | null>;
+  /** Repone los cupos libres del grupo con los siguientes jugadores compatibles; null si no hay cupos. */
+  refillGroupSV(_groupKey: string, _expiresAt: Date): Promise<QuickMatchRefillDTO | null>;
 }

@@ -20,19 +20,26 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
   partido y se reserva la primera sede y horario libres; si no hay ninguno, el
   partido se crea sin cancha. Elegir sede al confirmar sigue funcionando, pero
   ya no es obligatorio.
+- **Si alguien no acepta, se busca reemplazo**: quien rechaza, sale de la cola
+  o deja vencer su tiempo sale de la cola, pero el grupo no se cae: quienes ya
+  aceptaron siguen aceptados y su lugar lo ocupa el siguiente jugador
+  compatible, que recibe el aviso y su propio tiempo para aceptar. Si todavía
+  no hay nadie, el grupo espera y se completa apenas alguien compatible busca
+  partida (un grupo con lugar libre tiene prioridad sobre armar uno nuevo).
 - **Prioridad por orden de llegada**: quien lleva más tiempo en la cola entra
-  primero, y conserva su lugar si el grupo se cae.
+  primero.
 - **Nuevo campo `acceptedCount`** en `GET/POST /quick-match`: cuántos
-  jugadores del grupo aceptaron de verdad.
+  jugadores del grupo aceptaron de verdad. `proposal.playerIds` muestra los
+  miembros actuales; con menos de 4 el grupo está buscando reemplazo.
 
 ### Corregido
 
 - **La app mostraba aceptaciones que no ocurrieron**: un jugador solo cuenta
-  como aceptado cuando confirma. Si alguien rechaza, sale de la cola y vuelven
-  a buscar quienes aceptaron o habían iniciado la búsqueda; si el plazo vence,
-  quien no aceptó sale de la cola y quien aceptó vuelve a buscar. Un jugador
-  invitado por su disponibilidad que no aceptó nunca queda en la cola sin
-  haberlo pedido, y no se lo vuelve a invitar ese día.
+  como aceptado cuando confirma. Quien rechazó o dejó vencer su tiempo no
+  vuelve a ser invitado por su disponibilidad ese mismo día.
+- **Grupos de partida rápida atascados**: los grupos incompletos armados por la
+  versión anterior, que podían quedar esperando para siempre, ahora se
+  completan con el siguiente jugador compatible.
 
 ## [1.13.2] - 2026-11-12
 

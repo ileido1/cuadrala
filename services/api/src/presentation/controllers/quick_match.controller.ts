@@ -20,7 +20,8 @@ function actorUserIdSV(_req: Request): string {
 export async function getMyQuickMatchCON(_req: Request, _res: Response): Promise<void> {
   const USER_ID = actorUserIdSV(_req);
   const SEARCH = await GET_MY_QUICK_MATCH_UC.executeSV(USER_ID);
-  const MATCHED = SEARCH?.status === 'SEARCHING' ? await MATCH_QUICK_MATCH_UC.executeSV(SEARCH, USER_ID) : SEARCH;
+  //? Corre en todo estado: busca si está en cola y repone cupos si está en un grupo (S5).
+  const MATCHED = SEARCH === null ? null : await MATCH_QUICK_MATCH_UC.executeSV(SEARCH, USER_ID);
   _res.status(200).json({
     success: true,
     message: 'Estado de búsqueda obtenido correctamente.',
@@ -48,9 +49,11 @@ export async function deleteMyQuickMatchCON(_req: Request, _res: Response): Prom
 export async function postDismissMyQuickMatchProposalCON(_req: Request, _res: Response): Promise<void> {
   const USER_ID = actorUserIdSV(_req);
   const SEARCH = await DISMISS_MY_QUICK_MATCH_PROPOSAL_UC.executeSV(USER_ID);
-  //? NEW_GROUP: rechazar el ready check saca al jugador de la cola (S5).
+  //? NEW_GROUP: rechazar saca solo a este jugador de la cola y su cupo se repone
+  //? en el acto con el siguiente jugador compatible (S5).
   //? OPEN_MATCH: sigue buscando otra partida (S8).
   if (SEARCH.proposal?.type === 'NEW_GROUP') {
+    if (typeof SEARCH.proposal.groupKey === 'string') await MATCH_QUICK_MATCH_UC.refillGroupSV(SEARCH.proposal.groupKey, USER_ID);
     _res.status(200).json({ success: true, message: 'Partida rechazada; saliste de la cola.', data: SEARCH });
     return;
   }

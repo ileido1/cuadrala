@@ -74,8 +74,8 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match correctness (HTTP + DB)'
     expect(await PRISMA.quickMatchProposal.count({ where: { groupKey: GROUP_KEY } })).toBe(4);
   });
 
-  //? #91 con ready check: salir de la cola durante el ready check lo disuelve;
-  //? el resto vuelve a la cola y forma un grupo nuevo con el siguiente buscador.
+  //? #91 con ready check (S5, L7): salir de la cola durante el ready check saca
+  //? solo a ese jugador; el grupo sigue y el siguiente buscador ocupa el cupo.
   it('#91: cancelling with a pending group proposal frees the slot instead of leaving it permanently occupied', async () => {
     const [P0, P1, P2, P3, P4] = await createPlayersSV(5, 'qm91');
     const DATE = '2026-11-03';
@@ -83,12 +83,14 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match correctness (HTTP + DB)'
     const GROUP_KEY = (await PRISMA.quickMatchProposal.findFirstOrThrow({ where: { search: { userId: P0!.id } }, select: { groupKey: true } })).groupKey!;
 
     expect((await cancel(P1!)).status).toBe(204);
-    expect(await PRISMA.quickMatchProposal.count({ where: { groupKey: GROUP_KEY, status: { in: ['PENDING', 'CONFIRMED'] } } })).toBe(0);
-    for (const PLAYER of [P0!, P2!, P3!]) expect((await PRISMA.quickMatchSearch.findUniqueOrThrow({ where: { userId: PLAYER.id } })).status).toBe('SEARCHING');
+    expect((await PRISMA.quickMatchSearch.findUniqueOrThrow({ where: { userId: P1!.id } })).status).toBe('CANCELLED');
+    const AFTER_CANCEL = await PRISMA.quickMatchProposal.findMany({ where: { groupKey: GROUP_KEY, status: 'PENDING' } });
+    expect(AFTER_CANCEL).toHaveLength(3);
+    expect(AFTER_CANCEL.every((_p) => _p.playerIds.length === 3 && !_p.playerIds.includes(P1!.id))).toBe(true);
 
     const REFILL = await start(P4!, DATE);
     expect(REFILL.status).toBe(201);
-    expect(REFILL.body.data.proposal.groupKey).not.toBe(GROUP_KEY);
+    expect(REFILL.body.data.proposal.groupKey).toBe(GROUP_KEY);
     expect([...REFILL.body.data.proposal.playerIds].sort()).toEqual([P0!.id, P2!.id, P3!.id, P4!.id].sort());
 
     for (const PLAYER of [P0!, P2!, P3!, P4!]) expect((await confirm(PLAYER)).status).toBe(200);
@@ -122,8 +124,10 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match correctness (HTTP + DB)'
 
     const SEARCH = await PRISMA.quickMatchSearch.findUniqueOrThrow({ where: { userId: P0!.id } });
     expect(SEARCH.status).toBe('CANCELLED');
-    expect(await PRISMA.quickMatchProposal.count({ where: { groupKey: GROUP_KEY, status: { in: ['PENDING', 'CONFIRMED'] } } })).toBe(0);
-    for (const PLAYER of [P1!, P2!, P3!]) expect((await PRISMA.quickMatchSearch.findUniqueOrThrow({ where: { userId: PLAYER.id } })).status).toBe('SEARCHING');
+    //? S5: los demás siguen en el grupo, PENDING, con un cupo libre a reponer.
+    const REMAINING = await PRISMA.quickMatchProposal.findMany({ where: { groupKey: GROUP_KEY, status: { in: ['PENDING', 'CONFIRMED'] } }, include: { search: { select: { userId: true, status: true } } } });
+    expect(REMAINING.map((_p) => _p.search.userId).sort()).toEqual([P1!.id, P2!.id, P3!.id].sort());
+    expect(REMAINING.every((_p) => _p.status === 'PENDING' && _p.search.status === 'PROPOSAL' && !_p.playerIds.includes(P0!.id))).toBe(true);
   });
 
   it('#92: confirming after a prior join already succeeded (partial failure retry) does not get stuck on YA_UNIDO', async () => {

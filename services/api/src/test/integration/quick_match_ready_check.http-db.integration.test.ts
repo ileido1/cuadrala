@@ -191,44 +191,6 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match ready check (HTTP + DB)'
     expect(MATCH.reservation).toBeNull();
   });
 
-  it('S5/S6: should take the decliner out of the queue and return the others to searching keeping their queue position', async () => {
-    const { players: PLAYERS, groupKey: GROUP_KEY } = await formGroupSV('rc-s5a', '2026-12-05');
-    const QUEUED_BEFORE = await Promise.all(PLAYERS.map(async (_p) => (await searchOf(_p)).queuedAt.getTime()));
-    expect((await confirm(PLAYERS[0]!)).status).toBe(200);
-
-    const DECLINE = await dismiss(PLAYERS[1]!);
-    expect(DECLINE.status).toBe(200);
-    expect(DECLINE.body.data).toMatchObject({ status: 'CANCELLED', acceptedCount: 0, proposal: { status: 'DISMISSED' } });
-
-    for (const INDEX of [0, 2, 3]) {
-      const SEARCH = await searchOf(PLAYERS[INDEX]!);
-      expect(SEARCH.status).toBe('SEARCHING');
-      expect(SEARCH.proposal).toBeNull();
-      expect(SEARCH.queuedAt.getTime()).toBe(QUEUED_BEFORE[INDEX]);
-    }
-    expect(await PRISMA.quickMatchProposal.count({ where: { groupKey: GROUP_KEY, status: { in: ['PENDING', 'CONFIRMED'] } } })).toBe(0);
-  });
-
-  it('S5: should expire the whole group on timeout, requeue who accepted and drop who did not accept', async () => {
-    const { categoryId: CATEGORY_ID, players: PLAYERS, invitees: INVITEES } = await setupSV('rc-s5b', 3, 1, '2026-12-07');
-    for (const PLAYER of PLAYERS) expect((await start(PLAYER, CATEGORY_ID, '2026-12-07')).status).toBe(201);
-    const GROUP_KEY = (await searchOf(PLAYERS[0]!)).proposal!.groupKey!;
-    const QUEUED_0 = (await searchOf(PLAYERS[0]!)).queuedAt.getTime();
-    expect((await confirm(PLAYERS[0]!)).status).toBe(200);
-    expect((await confirm(PLAYERS[1]!)).status).toBe(200);
-    await PRISMA.quickMatchProposal.updateMany({ where: { groupKey: GROUP_KEY }, data: { expiresAt: new Date(Date.now() - 1_000) } });
-
-    //? Lo lee un miembro que ya había aceptado: igual se resuelve todo el grupo.
-    const READ = await get(PLAYERS[0]!);
-    expect(READ.status).toBe(200);
-    expect(READ.body.data).toMatchObject({ status: 'SEARCHING', proposal: null, acceptedCount: 0 });
-
-    expect((await searchOf(PLAYERS[0]!)).queuedAt.getTime()).toBe(QUEUED_0);
-    expect((await searchOf(PLAYERS[1]!)).status).toBe('SEARCHING');
-    expect((await searchOf(PLAYERS[2]!))).toMatchObject({ status: 'EXPIRED', proposal: { status: 'EXPIRED' } });
-    expect((await searchOf(INVITEES[0]!))).toMatchObject({ status: 'EXPIRED', proposal: { status: 'EXPIRED' } });
-  });
-
   it('S5: should leave an availability invitee who declined out of the queue', async () => {
     const { categoryId: CATEGORY_ID, players: PLAYERS, invitees: INVITEES } = await setupSV('rc-s5c', 3, 1, '2026-12-08');
     for (const PLAYER of PLAYERS) expect((await start(PLAYER, CATEGORY_ID, '2026-12-08')).status).toBe(201);
@@ -239,39 +201,157 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match ready check (HTTP + DB)'
     expect((await searchOf(INVITEES[0]!)).status).toBe('CANCELLED');
   });
 
-  //? Decisión 2 (coordinador): al disolverse el ready check solo vuelven a la cola
-  //? quienes buscaron de verdad o ya aceptaron; el invitado por disponibilidad
-  //? que no aceptó sale de la cola.
-  it('S5: should drop a pending availability invitee and requeue real searchers when another member declines', async () => {
-    const { categoryId: CATEGORY_ID, players: PLAYERS, invitees: INVITEES } = await setupSV('rc-s5d', 3, 1, '2026-12-14');
-    for (const PLAYER of PLAYERS) expect((await start(PLAYER, CATEGORY_ID, '2026-12-14')).status).toBe(201);
-    const QUEUED_2 = (await searchOf(PLAYERS[2]!)).queuedAt.getTime();
+  //? S5 (L7): vencer o rechazar solo saca a ese jugador; el grupo NO se disuelve
+  //? y el cupo libre se repone con el siguiente jugador compatible.
+  async function createLateInviteeSV(_categoryId: string, _date: string): Promise<Player> {
+    const EMAIL = `late-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.local`;
+    const USER = await PRISMA.user.create({ data: { email: EMAIL, name: 'Late invitee' } });
+    const DAY_OF_WEEK = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][new Date(`${_date}T00:00:00.000Z`).getUTCDay()]!;
+    await PRISMA.userSportCategory.create({ data: { userId: USER.id, sportId, categoryId: _categoryId } });
+    await PRISMA.userAvailability.create({ data: { userId: USER.id, dayOfWeek: DAY_OF_WEEK as never, slot: 'EVENING' } });
+    return { id: USER.id, token: signAccessTokenSV(USER.id, EMAIL) };
+  }
+  const deliveriesTo = (_player: Player) => PRISMA.notificationDelivery.count({ where: { userId: _player.id, event: { type: 'QUICK_MATCH_PROPOSAL' } } });
+  const activeIn = (_groupKey: string) => PRISMA.quickMatchProposal.findMany({ where: { groupKey: _groupKey, status: { in: ['PENDING', 'CONFIRMED'] } }, include: { search: { select: { userId: true } } } });
+
+  it('S5: should expire only the players who did not accept on timeout and refill their slots from the queue', async () => {
+    const DATE = '2026-12-16';
+    const { categoryId: CATEGORY_ID, players: PLAYERS } = await setupSV('rc-t-out', 5, 0, DATE);
+    for (const PLAYER of PLAYERS.slice(0, 4)) expect((await start(PLAYER, CATEGORY_ID, DATE)).status).toBe(201);
+    expect((await start(PLAYERS[4]!, CATEGORY_ID, DATE)).body.data).toMatchObject({ status: 'SEARCHING', proposal: null });
+    const GROUP_KEY = (await searchOf(PLAYERS[0]!)).proposal!.groupKey!;
     expect((await confirm(PLAYERS[0]!)).status).toBe(200);
+    expect((await confirm(PLAYERS[1]!)).status).toBe(200);
+    await PRISMA.quickMatchProposal.updateMany({ where: { groupKey: GROUP_KEY, status: 'PENDING' }, data: { expiresAt: new Date(Date.now() - 1_000) } });
+
+    const READ = await get(PLAYERS[0]!);
+    expect(READ.status).toBe(200);
+    expect(READ.body.data).toMatchObject({ status: 'CONFIRMED', acceptedCount: 2, proposal: { status: 'CONFIRMED', matchId: null, groupKey: GROUP_KEY } });
+    expect([...READ.body.data.proposal.playerIds].sort()).toEqual([PLAYERS[0]!.id, PLAYERS[1]!.id, PLAYERS[4]!.id].sort());
+
+    for (const INDEX of [2, 3]) expect(await searchOf(PLAYERS[INDEX]!)).toMatchObject({ status: 'EXPIRED', proposal: { status: 'EXPIRED' } });
+    expect(await searchOf(PLAYERS[1]!)).toMatchObject({ status: 'CONFIRMED', proposal: { status: 'CONFIRMED', groupKey: GROUP_KEY } });
+    const REFILLED = await searchOf(PLAYERS[4]!);
+    expect(REFILLED).toMatchObject({ status: 'PROPOSAL', proposal: { status: 'PENDING', groupKey: GROUP_KEY } });
+    expect(REFILLED.proposal!.expiresAt.getTime()).toBeGreaterThan(Date.now() + 60_000);
+    expect(await deliveriesTo(PLAYERS[4]!)).toBe(1);
+  });
+
+  it('S5: should cancel only the decliner, keep the rest of the group as it was and refill the slot right away', async () => {
+    const DATE = '2026-12-17';
+    const { categoryId: CATEGORY_ID, players: PLAYERS } = await setupSV('rc-dec', 5, 0, DATE);
+    for (const PLAYER of PLAYERS.slice(0, 4)) expect((await start(PLAYER, CATEGORY_ID, DATE)).status).toBe(201);
+    expect((await start(PLAYERS[4]!, CATEGORY_ID, DATE)).status).toBe(201);
+    const GROUP_KEY = (await searchOf(PLAYERS[0]!)).proposal!.groupKey!;
+    const EXPIRES_2 = (await searchOf(PLAYERS[2]!)).proposal!.expiresAt.getTime();
+    expect((await confirm(PLAYERS[0]!)).status).toBe(200);
+
+    const DECLINE = await dismiss(PLAYERS[1]!);
+    expect(DECLINE.status).toBe(200);
+    expect(DECLINE.body.data).toMatchObject({ status: 'CANCELLED', acceptedCount: 0, proposal: { status: 'DISMISSED' } });
+
+    expect(await searchOf(PLAYERS[0]!)).toMatchObject({ status: 'CONFIRMED', proposal: { status: 'CONFIRMED', groupKey: GROUP_KEY } });
+    for (const INDEX of [2, 3]) {
+      const SEARCH = await searchOf(PLAYERS[INDEX]!);
+      expect(SEARCH).toMatchObject({ status: 'PROPOSAL', proposal: { status: 'PENDING', groupKey: GROUP_KEY } });
+      expect(SEARCH.proposal!.expiresAt.getTime()).toBe(EXPIRES_2);
+    }
+    expect(await searchOf(PLAYERS[4]!)).toMatchObject({ status: 'PROPOSAL', proposal: { status: 'PENDING', groupKey: GROUP_KEY } });
+    const ACTIVE = await activeIn(GROUP_KEY);
+    expect(ACTIVE.map((_p) => _p.search.userId).sort()).toEqual([0, 2, 3, 4].map((_i) => PLAYERS[_i]!.id).sort());
+    expect(ACTIVE.every((_p) => [..._p.playerIds].sort().join() === ACTIVE.map((_a) => _a.search.userId).sort().join())).toBe(true);
+    expect(await deliveriesTo(PLAYERS[4]!)).toBe(1);
+  });
+
+  it('S5: should refill a freed slot with an availability player when nobody is searching', async () => {
+    const DATE = '2026-12-18';
+    const { categoryId: CATEGORY_ID, players: PLAYERS } = await setupSV('rc-fill-av', 4, 0, DATE);
+    for (const PLAYER of PLAYERS) expect((await start(PLAYER, CATEGORY_ID, DATE)).status).toBe(201);
+    const GROUP_KEY = (await searchOf(PLAYERS[0]!)).proposal!.groupKey!;
+    const INVITEE = await createLateInviteeSV(CATEGORY_ID, DATE);
 
     expect((await dismiss(PLAYERS[1]!)).status).toBe(200);
 
-    expect(await searchOf(PLAYERS[0]!)).toMatchObject({ status: 'SEARCHING', proposal: null });
-    const PENDING_SEARCHER = await searchOf(PLAYERS[2]!);
-    expect(PENDING_SEARCHER).toMatchObject({ status: 'SEARCHING', proposal: null });
-    expect(PENDING_SEARCHER.queuedAt.getTime()).toBe(QUEUED_2);
-    expect((await searchOf(INVITEES[0]!)).status).toBe('CANCELLED');
-    //? Tampoco vuelve a ser invitado ese día cuando los que siguen en cola leen su búsqueda.
-    for (const INDEX of [0, 2]) await get(PLAYERS[INDEX]!);
-    expect((await searchOf(INVITEES[0]!)).status).toBe('CANCELLED');
+    const INVITED = await searchOf(INVITEE);
+    expect(INVITED).toMatchObject({ status: 'PROPOSAL', invitedByAvailability: true, proposal: { status: 'PENDING', groupKey: GROUP_KEY } });
+    expect(await deliveriesTo(INVITEE)).toBe(1);
   });
 
-  it('S5: should expire a pending availability invitee and requeue an invitee who accepted on timeout', async () => {
-    const { categoryId: CATEGORY_ID, players: PLAYERS, invitees: INVITEES } = await setupSV('rc-s5e', 2, 2, '2026-12-15');
-    for (const PLAYER of PLAYERS) expect((await start(PLAYER, CATEGORY_ID, '2026-12-15')).status).toBe(201);
-    const GROUP_KEY = (await searchOf(PLAYERS[1]!)).proposal!.groupKey!;
-    expect((await confirm(INVITEES[0]!)).status).toBe(200);
-    await PRISMA.quickMatchProposal.updateMany({ where: { groupKey: GROUP_KEY }, data: { expiresAt: new Date(Date.now() - 1_000) } });
+  it('S5: should keep the group waiting with an open slot and fill it when a compatible player starts searching', async () => {
+    const DATE = '2026-12-19';
+    const { categoryId: CATEGORY_ID, players: PLAYERS } = await setupSV('rc-wait', 5, 0, DATE);
+    for (const PLAYER of PLAYERS.slice(0, 4)) expect((await start(PLAYER, CATEGORY_ID, DATE)).status).toBe(201);
+    const GROUP_KEY = (await searchOf(PLAYERS[0]!)).proposal!.groupKey!;
+    expect((await dismiss(PLAYERS[1]!)).status).toBe(200);
 
-    expect((await get(PLAYERS[0]!)).status).toBe(200);
+    const WAITING = await get(PLAYERS[0]!);
+    expect(WAITING.body.data).toMatchObject({ status: 'PROPOSAL', acceptedCount: 0, proposal: { status: 'PENDING', groupKey: GROUP_KEY } });
+    expect(WAITING.body.data.proposal.playerIds).toHaveLength(3);
 
-    expect(await searchOf(INVITEES[0]!)).toMatchObject({ status: 'SEARCHING', proposal: null });
-    expect(await searchOf(INVITEES[1]!)).toMatchObject({ status: 'EXPIRED', proposal: { status: 'EXPIRED' } });
-    expect((await searchOf(PLAYERS[1]!)).status).toBe('EXPIRED');
+    const JOIN = await start(PLAYERS[4]!, CATEGORY_ID, DATE);
+    expect(JOIN.status).toBe(201);
+    expect(JOIN.body.data).toMatchObject({ status: 'PROPOSAL', proposal: { status: 'PENDING', groupKey: GROUP_KEY } });
+    expect(JOIN.body.data.proposal.playerIds).toHaveLength(4);
+
+    for (const INDEX of [0, 2, 3]) expect((await confirm(PLAYERS[INDEX]!)).status).toBe(200);
+    const LAST = await confirm(PLAYERS[4]!);
+    expect(LAST.body.data).toMatchObject({ status: 'CONFIRMED', acceptedCount: 4 });
+    const MATCH = await PRISMA.match.findUniqueOrThrow({ where: { id: LAST.body.data.proposal.matchId }, include: { participants: true } });
+    expect(MATCH.participants.map((_p) => _p.userId).sort()).toEqual([0, 2, 3, 4].map((_i) => PLAYERS[_i]!.id).sort());
+  });
+
+  //? A1 (verificador): un grupo heredado de la lógica incremental, con 3 miembros
+  //? CONFIRMED y vencido, quedaba atascado para siempre.
+  it('S5/A1: should refill a legacy group of 3 confirmed members whose proposals already expired', async () => {
+    const DATE = '2026-12-20';
+    const { categoryId: CATEGORY_ID, players: PLAYERS } = await setupSV('rc-a1', 4, 0, DATE);
+    const LEGACY = PLAYERS.slice(0, 3);
+    const GROUP_KEY = `legacy-${Date.now()}`;
+    for (const PLAYER of LEGACY) {
+      await PRISMA.quickMatchSearch.create({
+        data: {
+          userId: PLAYER.id, sportId, categoryId: CATEGORY_ID, targetDate: new Date(`${DATE}T00:00:00.000Z`), slots: ['EVENING'], includeOpenMatches: false, status: 'CONFIRMED',
+          proposal: { create: { type: 'NEW_GROUP', status: 'CONFIRMED', groupKey: GROUP_KEY, playerIds: LEGACY.map((_p) => _p.id), venueOptions: [], expiresAt: new Date(Date.now() - 10 * 60_000) } },
+        },
+      });
+    }
+
+    const STUCK = await get(LEGACY[0]!);
+    expect(STUCK.status).toBe(200);
+    expect(STUCK.body.data).toMatchObject({ status: 'CONFIRMED', acceptedCount: 3, proposal: { status: 'CONFIRMED', matchId: null, groupKey: GROUP_KEY } });
+    expect(STUCK.body.data.proposal.playerIds).toHaveLength(3);
+
+    const JOIN = await start(PLAYERS[3]!, CATEGORY_ID, DATE);
+    expect(JOIN.body.data).toMatchObject({ status: 'PROPOSAL', acceptedCount: 3, proposal: { status: 'PENDING', groupKey: GROUP_KEY } });
+    const LAST = await confirm(PLAYERS[3]!);
+    expect(LAST.status).toBe(200);
+    expect(LAST.body.data).toMatchObject({ status: 'CONFIRMED', acceptedCount: 4 });
+    const MATCH = await PRISMA.match.findUniqueOrThrow({ where: { id: LAST.body.data.proposal.matchId }, include: { participants: true } });
+    expect(MATCH.participants.map((_p) => _p.userId).sort()).toEqual(PLAYERS.map((_p) => _p.id).sort());
+  });
+
+  it('S5: should never assign a player twice or exceed 4 members when refills run concurrently', async () => {
+    const DATE = '2026-12-21';
+    const { categoryId: CATEGORY_ID, players: PLAYERS } = await setupSV('rc-conc', 6, 0, DATE);
+    for (const PLAYER of PLAYERS.slice(0, 4)) expect((await start(PLAYER, CATEGORY_ID, DATE)).status).toBe(201);
+    const GROUP_KEY = (await searchOf(PLAYERS[0]!)).proposal!.groupKey!;
+    expect((await dismiss(PLAYERS[1]!)).status).toBe(200);
+    //? Dos jugadores entran a la cola sin pasar por el matching, para que los
+    //? refills concurrentes compitan por ellos.
+    for (const INDEX of [4, 5]) {
+      await PRISMA.quickMatchSearch.create({ data: { userId: PLAYERS[INDEX]!.id, sportId, categoryId: CATEGORY_ID, targetDate: new Date(`${DATE}T00:00:00.000Z`), slots: ['EVENING'], includeOpenMatches: false, status: 'SEARCHING' } });
+    }
+
+    const RESPONSES = await Promise.all([0, 2, 3, 4, 5].map((_i) => get(PLAYERS[_i]!)));
+    expect(RESPONSES.every((_res) => _res.status === 200)).toBe(true);
+
+    const ACTIVE = await activeIn(GROUP_KEY);
+    expect(ACTIVE).toHaveLength(4);
+    const NEWCOMERS = [PLAYERS[4]!, PLAYERS[5]!].filter((_p) => ACTIVE.some((_a) => _a.search.userId === _p.id));
+    expect(NEWCOMERS).toHaveLength(1);
+    const LEFT_OUT = [PLAYERS[4]!, PLAYERS[5]!].find((_p) => !NEWCOMERS.includes(_p))!;
+    expect(await searchOf(LEFT_OUT)).toMatchObject({ status: 'SEARCHING' });
+    expect(await PRISMA.quickMatchProposal.count({ where: { search: { userId: LEFT_OUT.id }, status: { in: ['PENDING', 'CONFIRMED'] } } })).toBe(0);
   });
 
   it('S6: should match the oldest searchers in the queue first', async () => {

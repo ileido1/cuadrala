@@ -26,16 +26,16 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match group departure', () => 
   });
   afterAll(async () => { await PRISMA.$disconnect(); });
   const start = (player: Player, slots = ['EVENING']) => request(APP).post('/api/v1/quick-match').set('Authorization', `Bearer ${player.token}`).send({ sportId, categoryId, day: 'CUSTOM', date, slots, widenLevel: false, zoneKm: 10, includeOpenMatches: false });
-  //? Ready check: el grupo se arma con 4, el que rechaza sale de la cola, el resto
-  //? vuelve a buscar y forma otro grupo; el último confirma con una sede explícita
-  //? (body opcional, compatibilidad hacia atrás) y el partido queda listo para cobrar.
-  it('dissolves on decline, regroups the remaining players with the next searcher, and finalizes with an explicit venue selection', async () => {
+  //? Ready check (S5, L7): el que rechaza sale de la cola, el grupo sigue y el
+  //? siguiente buscador compatible ocupa su cupo; el último confirma con una sede
+  //? explícita (body opcional, compatibilidad hacia atrás) y el partido queda listo para cobrar.
+  it('replaces only the decliner with the next searcher, and finalizes with an explicit venue selection', async () => {
     for (const player of players.slice(0, 4)) expect((await start(player)).status).toBe(201);
     expect((await start(players[5]!, ['MORNING'])).status).toBe(201);
     const initial = await PRISMA.quickMatchProposal.findFirstOrThrow({ where: { search: { userId: players[0]!.id } }, select: { groupKey: true } });
     const leave = await request(APP).post('/api/v1/quick-match/proposal/dismiss').set('Authorization', `Bearer ${players[1]!.token}`).send({}); expect(leave.status).toBe(200); expect(leave.body.data).toMatchObject({ status: 'CANCELLED', proposal: { status: 'DISMISSED' } });
-    expect(await PRISMA.quickMatchProposal.count({ where: { groupKey: initial.groupKey, status: { in: ['PENDING', 'CONFIRMED'] } } })).toBe(0);
-    const refill = await start(players[4]!); expect(refill.status).toBe(201); expect(refill.body.data.proposal.groupKey).not.toBe(initial.groupKey);
+    expect(await PRISMA.quickMatchProposal.count({ where: { groupKey: initial.groupKey, status: 'PENDING' } })).toBe(3);
+    const refill = await start(players[4]!); expect(refill.status).toBe(201); expect(refill.body.data.proposal.groupKey).toBe(initial.groupKey);
     const active = await PRISMA.quickMatchProposal.findMany({ where: { groupKey: refill.body.data.proposal.groupKey, status: 'PENDING' }, include: { search: { select: { userId: true } } } }); expect(active).toHaveLength(4); expect(active.map((p) => p.search.userId)).not.toContain(players[5]!.id); expect(active.map((p) => p.search.userId)).not.toContain(players[1]!.id);
     for (const player of [players[0]!, players[2]!, players[3]!]) expect((await request(APP).post('/api/v1/quick-match/proposal/confirm').set('Authorization', `Bearer ${player.token}`).send({})).status).toBe(200);
     const option = refill.body.data.proposal.venueOptions[0]; const done = await request(APP).post('/api/v1/quick-match/proposal/confirm').set('Authorization', `Bearer ${players[4]!.token}`).send({ venueId: option.venueId, courtId: option.courtId, scheduledAt: option.scheduledAt }); expect(done.status).toBe(200); expect(done.body.data.acceptedCount).toBe(4);

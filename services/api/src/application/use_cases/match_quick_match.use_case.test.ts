@@ -4,7 +4,7 @@ import type { QuickMatchSearchDTO } from '../../domain/ports/quick_match_reposit
 import { MatchQuickMatchUseCase } from './match_quick_match.use_case.js';
 
 const SEARCH: QuickMatchSearchDTO = { id: 's', sportId: 'sport', categoryId: 'cat', targetDate: new Date(), slots: ['EVENING'], widenLevel: false, zoneKm: 10, includeOpenMatches: true, status: 'SEARCHING', noMatchYet: false, dismissedMatchIds: [], proposal: null, acceptedCount: 0 };
-const NOOP = { dismissProposalForUserSV: async () => { throw new Error('not used'); }, confirmProposalForUserSV: async () => { throw new Error('not used'); } };
+const NOOP = { dismissProposalForUserSV: async () => { throw new Error('not used'); }, confirmProposalForUserSV: async () => { throw new Error('not used'); }, findOpenGroupKeySV: async () => null, refillGroupSV: async () => null };
 const FULL_GROUP_PROPOSAL: QuickMatchSearchDTO = { ...SEARCH, status: 'PROPOSAL', proposal: { id: 'group', type: 'NEW_GROUP', status: 'PENDING', matchId: null, playerIds: ['older', 'searcher', 'invitee-1', 'invitee-2'], venueOptions: null, expiresAt: new Date() } };
 
 describe('MatchQuickMatchUseCase', () => {
@@ -69,5 +69,24 @@ describe('MatchQuickMatchUseCase', () => {
 
     await UC.executeSV(SEARCH, 'searcher');
     expect(notified).toEqual([['older', 'invitee-1', 'invitee-2']]);
+  });
+
+  //? S5: un hueco en un grupo existente tiene prioridad sobre formar uno nuevo,
+  //? y solo se avisa a quienes entraron (no a quien disparó la reposición).
+  it('should join an open group before forming a new one and notify only the other newcomers', async () => {
+    const notified: string[][] = [];
+    const JOINED: QuickMatchSearchDTO = { ...FULL_GROUP_PROPOSAL, acceptedCount: 2 };
+    const UC = new MatchQuickMatchUseCase({
+      startForUserSV: async () => SEARCH, findByUserIdSV: async () => JOINED, cancelForUserSV: async () => undefined,
+      findOpenCandidateSV: async () => null, createOpenProposalSV: async () => null,
+      findCompatibleGroupSV: async () => { throw new Error('must not form a new group'); },
+      createGroupProposalsSV: async () => { throw new Error('must not form a new group'); },
+      markNoMatchYetSV: async () => { throw new Error('must not mark no match'); }, ...NOOP,
+      findOpenGroupKeySV: async () => 'g1',
+      refillGroupSV: async () => ({ groupKey: 'g1', categoryId: 'cat', addedUserIds: ['searcher', 'other'], notifySearchId: 's' }),
+    }, { executeSV: async (_dto: { userIds: string[] }) => { notified.push(_dto.userIds); } } as never);
+
+    expect(await UC.executeSV(SEARCH, 'searcher')).toBe(JOINED);
+    expect(notified).toEqual([['other']]);
   });
 });

@@ -19,6 +19,8 @@ describe('StartQuickMatchUseCase', () => {
       confirmProposalForUserSV: async () => { throw new Error('not used'); },
       findCompatibleGroupSV: async () => null,
       createGroupProposalsSV: async () => null,
+      findOpenGroupKeySV: async () => null,
+      refillGroupSV: async () => null,
     });
 
     await UC.executeSV('user', {
