@@ -529,6 +529,22 @@ void main() {
       },
     );
 
+    //? Sin access token en memoria la API responde 401 "Se requiere un token
+    //? de acceso", y ese 401 vuelve a disparar el logout global.
+    test(
+      'should skip backend calls on logout when there is no session in memory',
+      () async {
+        final dynamic webService = createWebService(appEnv: createWebEnv());
+        await webService.initialize();
+        when(() => authRepository.tokensInMemory).thenReturn(null);
+
+        await webService.clearOnLogout();
+
+        verifyNever(() => notificationsRepository.unregisterPushTokens());
+        verifyNever(() => profileRepository.getMe());
+      },
+    );
+
     test('disables backend tokens and clears web opt-in on logout', () async {
       final dynamic webService = createWebService(appEnv: createWebEnv());
       await webService.initialize();
