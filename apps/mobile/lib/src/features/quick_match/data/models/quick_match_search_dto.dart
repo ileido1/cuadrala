@@ -83,6 +83,7 @@ final class QuickMatchSearchDto {
     required this.includeOpenMatches,
     required this.proposal,
     this.acceptedCount = 0,
+    this.invitedByAvailability = false,
   });
 
   final String id;
@@ -101,6 +102,12 @@ final class QuickMatchSearchDto {
   /// (0 para OPEN_MATCH o sin propuesta). Default 0 si una API vieja no lo
   /// envía, para no romper.
   final int acceptedCount;
+
+  /// `true` si esta búsqueda es una invitación por disponibilidad guardada
+  /// (S12): el jugador no tocó "buscar". Distingue una invitación de un
+  /// miembro del ready check cuyo grupo perdió a alguien (ambos PENDING con
+  /// menos de 4 jugadores). Default `false` si una API vieja no lo envía.
+  final bool invitedByAvailability;
 
   factory QuickMatchSearchDto.fromJson(Map<String, Object?> json) =>
       QuickMatchSearchDto(
@@ -122,5 +129,6 @@ final class QuickMatchSearchDto {
               )
             : null,
         acceptedCount: (json['acceptedCount'] as num?)?.toInt() ?? 0,
+        invitedByAvailability: json['invitedByAvailability'] as bool? ?? false,
       );
 }

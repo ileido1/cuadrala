@@ -40,6 +40,9 @@ final class QuickMatchActive extends QuickMatchState {
     search.proposal?.id,
     search.proposal?.status,
     search.proposal?.matchId,
+    //? El lobby crece de a un jugador (S1): sin esto, el polling traía
+    //? "3 de 4" y Equatable lo descartaba por igual al estado anterior.
+    search.proposal?.playerIds.length,
   ];
 }
 

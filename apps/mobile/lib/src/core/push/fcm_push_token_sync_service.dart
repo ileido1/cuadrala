@@ -40,8 +40,12 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
   bool _webPushEnabled = false;
   String? _webPushUserId;
 
+  /// `false` cuando el navegador no soporta Firebase Messaging (S15).
+  bool _messagingSupported = true;
+
   @override
-  bool get isWebPushAvailable => _isWeb && _appEnv.hasWebPushConfiguration;
+  bool get isWebPushAvailable =>
+      _isWeb && _appEnv.hasWebPushConfiguration && _messagingSupported;
 
   @override
   Future<void> initialize() async {
@@ -53,7 +57,6 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(options: _isWeb ? _webOptions() : null);
       }
-      _firebaseReady = true;
     } catch (e, st) {
       developer.log(
         'Firebase no disponible; push desactivado. '
@@ -65,11 +68,37 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
       return;
     }
 
+    //? S15 / Sentry CUADRALA-MOBILE-5: en navegadores sin soporte (iOS
+    //? Safari sin instalar la app, navegadores in-app) el primer uso de
+    //? messaging terminaba en una promesa rechazada sin manejar
+    //? (`messaging/unsupported-browser`). Se consulta el soporte antes de
+    //? tocar messaging y, si falta, push queda como no disponible.
+    if (_isWeb && !await _isMessagingSupported()) {
+      _messagingSupported = false;
+      return;
+    }
+    _firebaseReady = true;
+
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     FirebaseMessaging.instance.onTokenRefresh.listen((token) {
       if (_isWeb && !_webPushEnabled) return;
       _registerTokenIfAuthenticated(token: token);
     });
+  }
+
+  Future<bool> _isMessagingSupported() async {
+    try {
+      return await FirebaseMessaging.instance.isSupported();
+    } catch (e, st) {
+      developer.log(
+        'No se pudo verificar el soporte de Firebase Messaging; push web '
+        'desactivado.',
+        name: 'FcmPushTokenSyncService',
+        error: e,
+        stackTrace: st,
+      );
+      return false;
+    }
   }
 
   @override

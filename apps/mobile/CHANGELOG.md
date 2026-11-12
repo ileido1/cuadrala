@@ -5,6 +5,27 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.34] - 2026-11-12
+
+### Cambiado
+
+- **El grupo se arma de a uno**: al buscar partida, si hay otros jugadores con
+  tu horario y nivel, entras con ellos a un grupo al instante. La pantalla
+  muestra "Grupo armándose" y cuántos jugadores ya están ("N de 4"), y se
+  actualiza sola cuando se suma alguien. Al completarse los 4, todos confirman
+  la partida como hasta ahora.
+- **Invitaciones por disponibilidad**: si tu disponibilidad coincide con un
+  grupo que se está armando, recibes "Hay un grupo armándose a tu horario" con
+  un tiempo para responder. Puedes "Sumarme" o "No, gracias".
+- **Inicio**: el aviso de partida rápida muestra "Grupo armándose (N de 4)" o
+  "Te invitaron a un grupo" según corresponda.
+
+### Corregido
+
+- **Error de notificaciones en navegadores sin soporte**: en navegadores donde
+  las notificaciones web no funcionan (p. ej. Safari en iPhone sin instalar la
+  app), la app ahora las marca como no disponibles en vez de fallar.
+
 ## [1.7.33] - 2026-11-12
 
 ### Cambiado

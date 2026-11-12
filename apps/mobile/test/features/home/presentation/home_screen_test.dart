@@ -629,11 +629,14 @@ void main() {
       required String status,
       String? proposalType,
       String proposalStatus = 'PENDING',
+      List<String> playerIds = const ['p1', 'p2', 'p3', 'p4'],
+      bool invitedByAvailability = false,
     }) => QuickMatchSearchDto(
       id: 'search-1',
       sportId: 'sport-1',
       categoryId: 'category-1',
       status: status,
+      invitedByAvailability: invitedByAvailability,
       noMatchYet: false,
       slots: const ['EVENING'],
       targetDate: DateTime(2030, 6, 1),
@@ -647,8 +650,77 @@ void main() {
               type: proposalType,
               status: proposalStatus,
               matchId: null,
+              playerIds: playerIds,
               expiresAt: DateTime.now().add(const Duration(minutes: 2)),
             ),
+    );
+
+    //? S1: el lobby muestra cuántos jugadores ya están.
+    testWidgets('should show the lobby size in the banner', (tester) async {
+      when(() => quickMatchRepository.current()).thenAnswer(
+        (_) async => search(
+          status: 'SEARCHING',
+          proposalType: 'NEW_GROUP',
+          proposalStatus: 'LOBBY',
+          playerIds: const ['p1', 'p2'],
+        ),
+      );
+      when(() => homeCubit.state).thenReturn(_loadedState());
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Grupo armándose (2 de 4)'), findsOneWidget);
+      expect(find.text('Tu búsqueda está activa'), findsNothing);
+    });
+
+    //? S12: una invitación no es un ready check: no dice "Partida encontrada".
+    testWidgets('should show an availability invitation in the banner', (
+      tester,
+    ) async {
+      when(() => quickMatchRepository.current()).thenAnswer(
+        (_) async => search(
+          status: 'PROPOSAL',
+          proposalType: 'NEW_GROUP',
+          playerIds: const ['p1', 'p2'],
+          invitedByAvailability: true,
+        ),
+      );
+      when(() => homeCubit.state).thenReturn(_loadedState());
+
+      await tester.pumpWidget(
+        _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Te invitaron a un grupo'), findsOneWidget);
+      expect(find.text('¡Partida encontrada!'), findsNothing);
+    });
+
+    //? Ready check con un lugar libre (alguien no aceptó): sigue siendo
+    //? "Partida encontrada", no una invitación.
+    testWidgets(
+      'should keep the ready-check banner when the group lost a member',
+      (tester) async {
+        when(() => quickMatchRepository.current()).thenAnswer(
+          (_) async => search(
+            status: 'PROPOSAL',
+            proposalType: 'NEW_GROUP',
+            playerIds: const ['p1', 'p2', 'p3'],
+          ),
+        );
+        when(() => homeCubit.state).thenReturn(_loadedState());
+
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('¡Partida encontrada!'), findsOneWidget);
+        expect(find.text('Te invitaron a un grupo'), findsNothing);
+      },
     );
 
     setUp(() {

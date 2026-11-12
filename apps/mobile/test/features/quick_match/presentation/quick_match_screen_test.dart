@@ -193,6 +193,55 @@ QuickMatchSearchDto _readyCheck({
   ),
 );
 
+//? S1: lobby que se llena de a uno. El miembro sigue SEARCHING y la
+//? propuesta LOBBY lista a los jugadores que ya están (2–3).
+QuickMatchSearchDto _lobby({
+  List<String> playerIds = const ['player-1', 'player-2'],
+}) => QuickMatchSearchDto(
+  id: 'search-1',
+  sportId: 'sport-1',
+  categoryId: 'category-1',
+  status: 'SEARCHING',
+  noMatchYet: false,
+  slots: const ['EVENING'],
+  targetDate: DateTime(2030, 6, 1),
+  widenLevel: false,
+  zoneKm: 5,
+  includeOpenMatches: true,
+  proposal: QuickMatchProposalDto(
+    id: 'group-1',
+    type: 'NEW_GROUP',
+    status: 'LOBBY',
+    matchId: null,
+    playerIds: playerIds,
+    expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+  ),
+);
+
+//? S12: invitación por disponibilidad. Se distingue del ready check por
+//? `invitedByAvailability`, no por la cantidad de jugadores.
+QuickMatchSearchDto _invitation({DateTime? expiresAt}) => QuickMatchSearchDto(
+  id: 'search-1',
+  sportId: 'sport-1',
+  categoryId: 'category-1',
+  status: 'PROPOSAL',
+  invitedByAvailability: true,
+  noMatchYet: false,
+  slots: const ['EVENING'],
+  targetDate: DateTime(2030, 6, 1),
+  widenLevel: false,
+  zoneKm: 5,
+  includeOpenMatches: true,
+  proposal: QuickMatchProposalDto(
+    id: 'group-1',
+    type: 'NEW_GROUP',
+    status: 'PENDING',
+    matchId: null,
+    playerIds: const ['player-1', 'player-2'],
+    expiresAt: expiresAt ?? DateTime.now().add(const Duration(minutes: 2)),
+  ),
+);
+
 QuickMatchSearchDto _cancelled() => QuickMatchSearchDto(
   id: 'search-1',
   sportId: 'sport-1',
@@ -924,5 +973,139 @@ void main() {
 
     verify(() => repository.confirmProposal()).called(1);
     expect(find.text('¡Cupo confirmado!'), findsOneWidget);
+  });
+
+  // ── S1: lobby ────────────────────────────────────────────────────────────
+
+  testWidgets('should show the lobby with how many players joined', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => _lobby());
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Grupo armándose'), findsOneWidget);
+    expect(find.text('2 de 4 jugadores'), findsOneWidget);
+    expect(find.text('Salir de la cola'), findsOneWidget);
+    expect(find.text('Buscando jugadores'), findsNothing);
+  });
+
+  testWidgets('should show new lobby members by polling', (tester) async {
+    var players = const ['player-1', 'player-2'];
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _lobby(playerIds: players));
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    players = const ['player-1', 'player-2', 'player-3'];
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 de 4 jugadores'), findsOneWidget);
+  });
+
+  testWidgets('should leave the lobby and land on home', (tester) async {
+    when(() => repository.current()).thenAnswer((_) async => _lobby());
+    when(() => repository.cancel()).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salir de la cola'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.cancel()).called(1);
+    expect(find.text('home.stub'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  // ── S12: invitación por disponibilidad ───────────────────────────────────
+
+  testWidgets(
+    'should show an availability invitation without ready-check copy',
+    (tester) async {
+      var now = DateTime(2030, 6, 1, 18);
+      await withClock(Clock(() => now), () async {
+        when(() => repository.current()).thenAnswer(
+          (_) async =>
+              _invitation(expiresAt: now.add(const Duration(minutes: 2))),
+        );
+
+        await tester.pumpWidget(_wrap(cubit));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Hay un grupo armándose a tu horario'),
+          findsOneWidget,
+        );
+        expect(find.text('2 de 4 jugadores'), findsOneWidget);
+        expect(find.textContaining('2:00'), findsOneWidget);
+        expect(find.text('Sumarme'), findsOneWidget);
+        expect(find.text('No, gracias'), findsOneWidget);
+        expect(find.text('¡Partida encontrada!'), findsNothing);
+        expect(find.text('Aceptar'), findsNothing);
+
+        now = now.add(const Duration(seconds: 30));
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.textContaining('1:30'), findsOneWidget);
+      });
+    },
+  );
+
+  //? Un miembro del ready check cuyo grupo perdió a alguien sigue PENDING con
+  //? 3 jugadores: no es una invitación y no debe ver "Sumarme".
+  testWidgets(
+    'should show the ready check, not an invitation, when a group lost a member',
+    (tester) async {
+      when(() => repository.current()).thenAnswer(
+        (_) async => _readyCheck(
+          playerIds: const ['player-1', 'player-2', 'player-3'],
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¡Partida encontrada!'), findsOneWidget);
+      expect(find.text('Sumarme'), findsNothing);
+    },
+  );
+
+  testWidgets('should join the lobby when accepting an invitation', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => _invitation());
+    when(
+      () => repository.confirmProposal(),
+    ).thenAnswer((_) async => _lobby(playerIds: const ['a', 'b', 'c']));
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sumarme'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.confirmProposal()).called(1);
+    expect(find.text('Grupo armándose'), findsOneWidget);
+    expect(find.text('3 de 4 jugadores'), findsOneWidget);
+  });
+
+  testWidgets('should offer to search again after declining an invitation', (
+    tester,
+  ) async {
+    when(() => repository.current()).thenAnswer((_) async => _invitation());
+    when(
+      () => repository.dismissProposal(),
+    ).thenAnswer((_) async => _cancelled());
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('No, gracias'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.dismissProposal()).called(1);
+    expect(find.text('Volver a buscar'), findsOneWidget);
+    expect(find.text('Volver al inicio'), findsOneWidget);
   });
 }
