@@ -123,6 +123,7 @@ void main() {
           onboardingRepository: onboardingRepository,
           pushTokenSyncService: pushTokenSyncService,
         );
+        await cubit.markAuthenticated();
         var nested = 0;
         when(() => pushTokenSyncService.clearOnLogout()).thenAnswer((_) async {
           //? Simula el 401 que vuelve a disparar el logout global.
@@ -134,6 +135,32 @@ void main() {
         expect(nested, 1);
         verify(() => authRepository.logout()).called(1);
         expect(cubit.state, const SessionState.unauthenticated());
+        await cubit.close();
+      },
+    );
+
+    //? Bucle de producción en 1.7.28 (797 "Refresh rechazado" en una traza):
+    //? sin sesión, cada 401 rezagado volvía a correr un logout completo, que
+    //? emitía loading → unauthenticated, el router remontaba pantallas y
+    //? estas disparaban nuevos 401.
+    test(
+      'should do nothing when logout is called while already unauthenticated',
+      () async {
+        final cubit = SessionCubit(
+          authRepository: authRepository,
+          onboardingRepository: onboardingRepository,
+          pushTokenSyncService: pushTokenSyncService,
+        );
+        final states = <SessionState>[];
+        final sub = cubit.stream.listen(states.add);
+
+        await cubit.logout();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(states, isEmpty);
+        verifyNever(() => pushTokenSyncService.clearOnLogout());
+        verifyNever(() => authRepository.logout());
+        await sub.cancel();
         await cubit.close();
       },
     );

@@ -77,6 +77,10 @@ void main() {
 
     when(() => pushTokenSyncService.clearOnLogout()).thenAnswer((_) async {});
     when(() => authRepository.logout()).thenAnswer((_) async {});
+    //? Sesión activa real: logout() ignora llamadas sin sesión.
+    when(() => pushTokenSyncService.syncTokenIfAuthenticated())
+        .thenAnswer((_) async {});
+    await activeSession.markAuthenticated();
 
     DioException? forwardedError;
     await interceptor.onError(
@@ -120,6 +124,10 @@ void main() {
       );
       when(() => pushTokenSyncService.clearOnLogout()).thenAnswer((_) async {});
       when(() => authRepository.logout()).thenAnswer((_) async {});
+      //? Sesión activa real: logout() ignora llamadas sin sesión.
+      when(() => pushTokenSyncService.syncTokenIfAuthenticated())
+          .thenAnswer((_) async {});
+      await activeSession.markAuthenticated();
 
       final interceptor = AuthTokenInterceptor(
         authRepository: authRepository,

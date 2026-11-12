@@ -5,6 +5,15 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.30] - 2026-11-12
+
+### Corregido
+
+- **Cierre de sesión en bucle sin sesión activa**: con la sesión ya cerrada,
+  cada pedido rechazado por el servidor volvía a cerrar la sesión, la pantalla
+  se recargaba y eso generaba nuevos pedidos rechazados (cientos por minuto).
+  Ahora cerrar sesión cuando no hay sesión no hace nada.
+
 ## [1.7.29] - 2026-11-12
 
 ### Corregido

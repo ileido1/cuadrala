@@ -39,7 +39,10 @@ class SessionCubit extends Cubit<SessionState> {
   bool _loggingOut = false;
 
   Future<void> logout() async {
-    if (_loggingOut) return;
+    //? Sin sesión no hay nada que cerrar. Re-emitir loading → unauthenticated
+    //? hacía que el router remontara pantallas cuyos requests sin token
+    //? devolvían 401 y volvían a llamar a logout (bucle en 1.7.28).
+    if (_loggingOut || state is SessionUnauthenticated) return;
     _loggingOut = true;
     try {
       emit(const SessionState.loading());
