@@ -154,6 +154,12 @@ QuickMatchSearchDto _readyCheck({
   String proposalStatus = 'PENDING',
   String? matchId,
   DateTime? expiresAt,
+  List<String> playerIds = const [
+    'player-1',
+    'player-2',
+    'player-3',
+    'player-4',
+  ],
 }) => QuickMatchSearchDto(
   id: 'search-1',
   sportId: 'sport-1',
@@ -171,7 +177,7 @@ QuickMatchSearchDto _readyCheck({
     type: 'NEW_GROUP',
     status: proposalStatus,
     matchId: matchId,
-    playerIds: const ['player-1', 'player-2', 'player-3', 'player-4'],
+    playerIds: playerIds,
     venueOptions: [
       QuickMatchVenueOptionDto(
         id: 'option-1',
@@ -488,24 +494,77 @@ void main() {
     },
   );
 
+  //? L7: quien no aceptó a tiempo ya salió de la cola. "Volver al inicio"
+  //? solo navega: cancelar una búsqueda que ya terminó no tiene sentido.
   testWidgets(
-    'leaving the queue after an expired proposal cancels and goes home',
+    'should go home without cancelling after a ready check timed out',
     (tester) async {
       when(
         () => repository.current(),
       ).thenAnswer((_) async => _expired(proposalType: 'NEW_GROUP'));
-      when(() => repository.cancel()).thenAnswer((_) async {});
 
       await tester.pumpWidget(_wrap(cubit));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Salir de la cola'));
+      expect(find.text('Volver a buscar'), findsOneWidget);
+      expect(find.text('Salir de la cola'), findsNothing);
+      expect(find.text('Seguir buscando'), findsNothing);
+
+      await tester.tap(find.text('Volver al inicio'));
       await tester.pumpAndSettle();
 
-      verify(() => repository.cancel()).called(1);
+      verifyNever(() => repository.cancel());
       expect(find.text('home.stub'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'should open the configuration to search again after a ready check timed out',
+    (tester) async {
+      when(
+        () => repository.current(),
+      ).thenAnswer((_) async => _expired(proposalType: 'NEW_GROUP'));
+      when(() => catalog.listSports()).thenAnswer(
+        (_) async => const [
+          SportDto(id: 'padel', code: 'PADEL', name: 'Pádel'),
+        ],
+      );
+      when(() => catalog.listCategories(sportId: 'padel')).thenAnswer(
+        (_) async => const [
+          CategoryDto(
+            id: 'padel-7',
+            sportId: 'padel',
+            name: '7ma',
+            slug: '7ma',
+            scheme: 'ORDINAL',
+            sortOrder: 1,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Volver a buscar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¿Cuándo quieres jugar?'), findsOneWidget);
+      verifyNever(() => repository.cancel());
+    },
+  );
+
+  //? S8: la expiración de OPEN_MATCH conserva sus acciones.
+  testWidgets('should keep the open-match expiry actions', (tester) async {
+    when(
+      () => repository.current(),
+    ).thenAnswer((_) async => _expired(proposalType: 'OPEN_MATCH'));
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seguir buscando'), findsOneWidget);
+    expect(find.text('Salir de la cola'), findsOneWidget);
+    expect(find.text('Volver a buscar'), findsNothing);
+  });
 
   testWidgets(
     'shows the Bs secondary price once exchange rates are available',
@@ -683,9 +742,10 @@ void main() {
     expect(find.text('2 de 4 aceptaron'), findsOneWidget);
   });
 
-  //? S5: rechazar saca al jugador de la cola (búsqueda CANCELLED), así que
-  //? la pantalla vuelve al inicio en vez de quedarse "buscando".
-  testWidgets('should leave the queue and go home when declining', (
+  //? S5/L7: rechazar saca al jugador de la cola (búsqueda CANCELLED). La
+  //? pantalla lo dice y ofrece volver a buscar o volver al inicio, sin
+  //? volver a cancelar una búsqueda que ya terminó.
+  testWidgets('should offer to search again or go home after declining', (
     tester,
   ) async {
     when(() => repository.current()).thenAnswer((_) async => _readyCheck());
@@ -699,9 +759,53 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => repository.dismissProposal()).called(1);
-    expect(find.text('home.stub'), findsOneWidget);
+    expect(find.text('Rechazaste la partida'), findsOneWidget);
+    expect(find.text('Volver a buscar'), findsOneWidget);
     expect(find.byType(BottomSheet), findsNothing);
+
+    await tester.tap(find.text('Volver al inicio'));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => repository.cancel());
+    expect(find.text('home.stub'), findsOneWidget);
   });
+
+  //? L7: si alguien no acepta, el grupo no se disuelve: se busca un
+  //? reemplazo y quien aceptó sigue esperando, con el conteo real.
+  testWidgets(
+    'should say a replacement is being searched while the group has an open slot',
+    (tester) async {
+      String? matchId;
+      when(() => repository.current()).thenAnswer(
+        (_) async => matchId == null
+            ? _readyCheck(
+                status: 'CONFIRMED',
+                proposalStatus: 'CONFIRMED',
+                acceptedCount: 2,
+                playerIds: const ['player-1', 'player-2', 'player-3'],
+              )
+            : _readyCheck(
+                status: 'CONFIRMED',
+                proposalStatus: 'CONFIRMED',
+                acceptedCount: 4,
+                matchId: matchId,
+              ),
+      );
+
+      await tester.pumpWidget(_wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Buscando un jugador más'), findsOneWidget);
+      expect(find.text('2 de 4 aceptaron'), findsOneWidget);
+      expect(find.text('Tiempo para que acepten'), findsNothing);
+
+      matchId = 'match-9';
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('quick-match.open-match')), findsOneWidget);
+    },
+  );
 
   testWidgets('should show the match once the group is complete', (
     tester,
@@ -767,32 +871,6 @@ void main() {
       expect(find.byKey(const Key('quick-match.open-match')), findsOneWidget);
     },
   );
-
-  //? S5: si otro rechaza o no acepta a tiempo, quien ya había aceptado
-  //? vuelve a SEARCHING; el polling lo refleja sin push.
-  testWidgets('should go back to searching when the ready check dissolves', (
-    tester,
-  ) async {
-    var dissolved = false;
-    when(() => repository.current()).thenAnswer(
-      (_) async => dissolved
-          ? _searching()
-          : _readyCheck(
-              status: 'CONFIRMED',
-              proposalStatus: 'CONFIRMED',
-              acceptedCount: 1,
-            ),
-    );
-
-    await tester.pumpWidget(_wrap(cubit));
-    await tester.pumpAndSettle();
-
-    dissolved = true;
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Buscando jugadores'), findsOneWidget);
-  });
 
   testWidgets('cancels the ready-check polling when the screen is removed', (
     tester,

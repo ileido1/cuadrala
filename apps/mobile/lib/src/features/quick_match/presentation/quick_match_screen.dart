@@ -34,19 +34,6 @@ Future<void> _leaveQueue(BuildContext context) async {
   if (context.mounted && cubit.state is QuickMatchIdle) context.go(Routes.home);
 }
 
-/// Rechaza el ready check. Rechazar saca al jugador de la cola (la API deja
-/// la búsqueda en CANCELLED), así que se vuelve al inicio igual que al salir.
-Future<void> _declineReadyCheck(BuildContext context) async {
-  final cubit = context.read<QuickMatchCubit>();
-  await cubit.dismissProposal();
-  final state = cubit.state;
-  if (context.mounted &&
-      state is QuickMatchActive &&
-      state.search.status == 'CANCELLED') {
-    context.go(Routes.home);
-  }
-}
-
 /// Tamaño fijo del grupo NEW_GROUP: la API solo lo crea con 4 jugadores.
 const _groupSize = 4;
 
@@ -58,6 +45,18 @@ final class QuickMatchScreen extends StatefulWidget {
 }
 
 final class _QuickMatchScreenState extends State<QuickMatchScreen> {
+  //? La búsqueda que devuelve la API al rechazar queda CANCELLED y puede no
+  //? traer la propuesta: este flag distingue "rechacé el ready check" de una
+  //? búsqueda cancelada cualquiera, que muestra el estado idle.
+  var _declined = false;
+
+  /// Rechaza el ready check. Rechazar saca al jugador de la cola (S5): la
+  /// pantalla lo dice y ofrece volver a buscar o volver al inicio (L7).
+  Future<void> _declineReadyCheck() async {
+    setState(() => _declined = true);
+    await context.read<QuickMatchCubit>().dismissProposal();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -148,6 +147,12 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
               QuickMatchIdle() => _IdleQuickMatch(
                 onStart: _showInitialConfiguration,
               ),
+              QuickMatchActive(:final search)
+                  when search.status == 'CANCELLED' && _declined =>
+                _QueueEnded(
+                  declined: true,
+                  onSearchAgain: _showInitialConfiguration,
+                ),
               //? Una búsqueda cancelada ya no está en la cola: se ofrece
               //? empezar otra en vez de mostrarla como "buscando".
               QuickMatchActive(:final search)
@@ -156,7 +161,11 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
               QuickMatchActive(:final search, :final exchangeRates)
                   when search.status == 'PROPOSAL' &&
                       search.proposal?.status == 'PENDING' =>
-                _Proposal(search: search, exchangeRates: exchangeRates),
+                _Proposal(
+                  search: search,
+                  exchangeRates: exchangeRates,
+                  onDecline: _declineReadyCheck,
+                ),
               QuickMatchActive(:final search)
                   when search.status == 'CONFIRMED' && !_hasMatch(search) =>
                 _Polling(
@@ -165,6 +174,11 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                     matchId: null,
                     acceptedCount: search.acceptedCount,
                     expiresAt: search.proposal?.expiresAt,
+                    //? L7: si alguien no aceptó, el grupo sigue con un
+                    //? lugar libre mientras la API busca un reemplazo.
+                    hasOpenSlot:
+                        (search.proposal?.playerIds.length ?? _groupSize) <
+                        _groupSize,
                     onCancel: () => _leaveQueue(context),
                   ),
                 ),
@@ -177,7 +191,12 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                   onCancel: () => _leaveQueue(context),
                 ),
               QuickMatchActive(:final search) when search.status == 'EXPIRED' =>
-                _Expired(wasOpenMatch: search.proposal?.type == 'OPEN_MATCH'),
+                search.proposal?.type == 'OPEN_MATCH'
+                    ? const _Expired()
+                    : _QueueEnded(
+                        declined: false,
+                        onSearchAgain: _showInitialConfiguration,
+                      ),
               QuickMatchActive(:final search) => _Searching(search: search),
             },
           ),
@@ -194,6 +213,9 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
     QuickMatchInitial() || QuickMatchLoading() => 'loading',
     QuickMatchFailure() => 'failure',
     QuickMatchIdle() => 'idle',
+    QuickMatchActive(:final search)
+        when search.status == 'CANCELLED' && _declined =>
+      'declined',
     QuickMatchActive(:final search) when search.status == 'CANCELLED' => 'idle',
     QuickMatchActive(:final search)
         when search.status == 'PROPOSAL' &&
@@ -940,10 +962,15 @@ final class _TimeSlot extends StatelessWidget {
 }
 
 final class _Proposal extends StatelessWidget {
-  const _Proposal({required this.search, required this.exchangeRates});
+  const _Proposal({
+    required this.search,
+    required this.exchangeRates,
+    required this.onDecline,
+  });
 
   final QuickMatchSearchDto search;
   final List<ExchangeRateRow> exchangeRates;
+  final Future<void> Function() onDecline;
 
   @override
   Widget build(BuildContext context) {
@@ -959,6 +986,7 @@ final class _Proposal extends StatelessWidget {
       child: _ReadyCheck(
         proposal: proposal,
         acceptedCount: search.acceptedCount,
+        onDecline: onDecline,
       ),
     );
   }
@@ -1503,10 +1531,15 @@ final class _ProposalFooter extends StatelessWidget {
 /// El conteo sale de `acceptedCount`; antes el texto decía que "tres
 /// jugadores quieren jugar" aunque nadie hubiera aceptado.
 final class _ReadyCheck extends StatelessWidget {
-  const _ReadyCheck({required this.proposal, required this.acceptedCount});
+  const _ReadyCheck({
+    required this.proposal,
+    required this.acceptedCount,
+    required this.onDecline,
+  });
 
   final QuickMatchProposalDto proposal;
   final int acceptedCount;
+  final Future<void> Function() onDecline;
 
   @override
   Widget build(BuildContext context) {
@@ -1544,7 +1577,7 @@ final class _ReadyCheck extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Si alguien rechaza o no acepta a tiempo, vuelves a la cola sin perder tu lugar.',
+                      'Si alguien rechaza o no acepta a tiempo, buscamos a otro jugador y tu lugar en el grupo se mantiene.',
                       style: TextStyle(
                         color: scheme.onSurfaceVariant,
                         fontSize: 12.5,
@@ -1559,7 +1592,7 @@ final class _ReadyCheck extends StatelessWidget {
         ),
         _ReadyCheckFooter(
           onAccept: () => context.read<QuickMatchCubit>().confirmProposal(),
-          onDecline: () => _declineReadyCheck(context),
+          onDecline: onDecline,
         ),
       ],
     );
@@ -2109,10 +2142,9 @@ final class _ScheduleSheetState extends State<_ScheduleSheet> {
   );
 }
 
+/// Expiración de una propuesta OPEN_MATCH: la búsqueda sigue activa (S8).
 final class _Expired extends StatelessWidget {
-  const _Expired({required this.wasOpenMatch});
-
-  final bool wasOpenMatch;
+  const _Expired();
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -2121,26 +2153,21 @@ final class _Expired extends StatelessWidget {
       _PulseIcon(icon: AppIcons.clock),
       const SizedBox(height: 20),
       Text(
-        wasOpenMatch ? 'Se liberó el cupo' : 'La propuesta expiró',
+        'Se liberó el cupo',
         textAlign: TextAlign.center,
         style: Theme.of(
           context,
         ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
       ),
       const SizedBox(height: 10),
-      //? En NEW_GROUP, no aceptar a tiempo saca al jugador de la cola (S5):
-      //? no se puede decir que la búsqueda "sigue activa".
-      Text(
-        wasOpenMatch
-            ? 'Pasaron los 2 minutos y el cupo se liberó. No se cobró nada.'
-            : 'No aceptaste a tiempo y saliste de la cola. No se cobró nada.',
+      const Text(
+        'Pasaron los 2 minutos y el cupo se liberó. No se cobró nada.',
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 20),
-      _SurfaceMessage(
-        text: wasOpenMatch
-            ? 'Tu búsqueda sigue activa y podés volver a intentarlo cuando quieras.'
-            : 'Puedes volver a la cola cuando quieras.',
+      const _SurfaceMessage(
+        text:
+            'Tu búsqueda sigue activa y podés volver a intentarlo cuando quieras.',
       ),
       const SizedBox(height: 24),
       FilledButton(
@@ -2150,6 +2177,50 @@ final class _Expired extends StatelessWidget {
       OutlinedButton(
         onPressed: () => _leaveQueue(context),
         child: const Text('Salir de la cola'),
+      ),
+    ],
+  );
+}
+
+/// El jugador salió de la cola de un ready check NEW_GROUP: no aceptó a
+/// tiempo (EXPIRED) o rechazó (CANCELLED). Su búsqueda ya terminó, así que
+/// "Volver al inicio" solo navega, sin cancelar nada (L7).
+final class _QueueEnded extends StatelessWidget {
+  const _QueueEnded({required this.declined, required this.onSearchAgain});
+
+  final bool declined;
+  final Future<void> Function() onSearchAgain;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.fromLTRB(20, 36, 20, 28),
+    children: [
+      _PulseIcon(icon: declined ? AppIcons.close : AppIcons.clock),
+      const SizedBox(height: 20),
+      Text(
+        declined ? 'Rechazaste la partida' : 'La propuesta expiró',
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 10),
+      Text(
+        declined
+            ? 'Saliste de la cola. No se cobró nada.'
+            : 'No aceptaste a tiempo y saliste de la cola. No se cobró nada.',
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 20),
+      const _SurfaceMessage(text: 'Puedes volver a la cola cuando quieras.'),
+      const SizedBox(height: 24),
+      FilledButton(
+        onPressed: onSearchAgain,
+        child: const Text('Volver a buscar'),
+      ),
+      OutlinedButton(
+        onPressed: () => context.go(Routes.home),
+        child: const Text('Volver al inicio'),
       ),
     ],
   );
@@ -2202,6 +2273,7 @@ final class _Confirmed extends StatelessWidget {
     required this.matchId,
     required this.acceptedCount,
     this.expiresAt,
+    this.hasOpenSlot = false,
     required this.onCancel,
   });
   final bool isNewGroup;
@@ -2212,6 +2284,10 @@ final class _Confirmed extends StatelessWidget {
 
   /// Límite del ready check; se muestra mientras se espera a los demás.
   final DateTime? expiresAt;
+
+  /// El grupo tiene menos de 4 miembros: alguien no aceptó y la API busca
+  /// un reemplazo. No hay a quién esperar, así que no se muestra el contador.
+  final bool hasOpenSlot;
 
   /// Cancela la búsqueda mientras el grupo sigue formándose (issue #121).
   /// No se ofrece una vez que ya existe partido (`hasMatch`): a esa altura
@@ -2253,7 +2329,9 @@ final class _Confirmed extends StatelessWidget {
             const SizedBox(height: 18),
             Text(
               isNewGroup && !hasMatch
-                  ? 'Esperando a los demás jugadores'
+                  ? hasOpenSlot
+                        ? 'Buscando un jugador más'
+                        : 'Esperando a los demás jugadores'
                   : (isNewGroup
                         ? '¡Participación confirmada!'
                         : '¡Cupo confirmado!'),
@@ -2267,6 +2345,8 @@ final class _Confirmed extends StatelessWidget {
               isNewGroup
                   ? hasMatch
                         ? 'La partida ya está lista. Consultá la sede y los próximos pasos.'
+                        : hasOpenSlot
+                        ? 'Alguien no aceptó y salió del grupo. Tu lugar se mantiene mientras buscamos un reemplazo.'
                         : 'Aceptaste la partida. Cuando acepten todos, reservamos la cancha y armamos la partida.'
                   : 'Ya estás dentro. Consultá los detalles y pagá tu parte desde la partida.',
               textAlign: TextAlign.center,
@@ -2274,7 +2354,7 @@ final class _Confirmed extends StatelessWidget {
             if (isNewGroup && !hasMatch) ...[
               const SizedBox(height: 18),
               _AcceptedProgress(acceptedCount: acceptedCount),
-              if (expiresAt != null) ...[
+              if (expiresAt != null && !hasOpenSlot) ...[
                 const SizedBox(height: 12),
                 _ProposalHold(
                   expiresAt: expiresAt!,

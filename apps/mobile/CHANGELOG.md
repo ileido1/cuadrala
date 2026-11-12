@@ -14,8 +14,11 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
   aceptaron ("X de 4 aceptaron"). La partida se crea solo si aceptan los 4, y
   la cancha se reserva sola: ya no hay que elegir sede ni horario.
 - **Rechazar sale de la cola**: rechazar la partida (o no aceptar a tiempo) te
-  saca de la cola. Si otro jugador rechaza, vuelves a buscar sin perder tu
-  lugar.
+  saca de la cola, y la pantalla ofrece "Volver a buscar" o "Volver al
+  inicio".
+- **Si otro no acepta, no pierdes el grupo**: quienes ya aceptaron siguen en
+  el grupo y la pantalla avisa que se está buscando un jugador más para
+  reemplazarlo.
 
 ### Corregido
 
