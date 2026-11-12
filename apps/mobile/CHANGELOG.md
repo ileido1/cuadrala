@@ -5,6 +5,18 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.32] - 2026-11-12
+
+### Corregido
+
+- **"Tu búsqueda está activa" no desaparecía**: al salir de la cola, el inicio
+  seguía mostrando la búsqueda vieja. Ahora se actualiza al volver.
+- **Salir de la cola sin respuesta**: si salir fallaba, no se mostraba nada;
+  ahora aparece el error y la pantalla no se cierra.
+- **Pedidos rechazados antes de iniciar sesión**: al volver del popup de
+  Google, la app ya no consulta el perfil sin sesión (respondía "Se requiere un
+  token de acceso").
+
 ## [1.7.31] - 2026-11-12
 
 ### Corregido

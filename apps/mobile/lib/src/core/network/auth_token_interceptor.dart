@@ -79,6 +79,10 @@ final class AuthTokenInterceptor extends Interceptor {
           },
         );
         await _notifyRefreshFailure();
+      } else if (!hadSession) {
+        //? Request sin token (todavía no hay sesión): no hubo fallo ambiguo,
+        //? simplemente no había sesión que refrescar.
+        Sentry.logger.info('401 sin sesión: no hay sesión que refrescar');
       } else {
         // Fallo ambiguo (red, timeout, 5xx): se trata como transitorio y NO
         // mata la sesión (issue #137). Queda en INFO para poder auditar si

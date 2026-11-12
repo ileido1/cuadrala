@@ -121,9 +121,18 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
     }
   }
 
+  /// Sin access token en memoria cualquier llamada responde 401 ("Se requiere
+  /// un token de acceso").
+  bool get _hasSessionInMemory {
+    final accessToken = _authRepository.tokensInMemory?.accessToken;
+    return accessToken != null && accessToken.isNotEmpty;
+  }
+
   @override
   Future<void> syncTokenIfAuthenticated() async {
-    if (!_firebaseReady) return;
+    //? En web, volver del popup de Google dispara `resumed` antes del login:
+    //? sin esta guarda, getMe() salía sin token y devolvía 401.
+    if (!_firebaseReady || !_hasSessionInMemory) return;
     if (_isWeb) {
       if (!await _hasWebPushOptIn()) return;
       final token = await FirebaseMessaging.instance.getToken(
@@ -211,10 +220,8 @@ final class FcmPushTokenSyncService implements PushTokenSyncService {
 
   @override
   Future<void> clearOnLogout() async {
-    //? Sin access token en memoria toda llamada responde 401 ("Se requiere un
-    //? token de acceso") y ese 401 vuelve a disparar el logout global.
-    final accessToken = _authRepository.tokensInMemory?.accessToken;
-    final hasSession = accessToken != null && accessToken.isNotEmpty;
+    //? Sin sesión, esas llamadas responden 401 y vuelven a disparar el logout.
+    final hasSession = _hasSessionInMemory;
     if (hasSession) {
       try {
         await _notificationsRepository.unregisterPushTokens();
