@@ -37,6 +37,15 @@ function normalizeEmailSV(_email: unknown): string {
   return EMAIL;
 }
 
+//? El login social vincula por email con cuentas existentes: aceptar un email
+//? no verificado por el proveedor permitiría entrar a la cuenta de otro.
+//? Apple manda `email_verified` como string ("true") o booleano.
+function assertEmailVerifiedSV(_emailVerified: unknown): void {
+  if (_emailVerified !== true && _emailVerified !== 'true') {
+    throw new AppError('TOKEN_INVALIDO', 'Token inválido o expirado.', 401);
+  }
+}
+
 export class DefaultSocialIdTokenVerifier implements SocialIdTokenVerifier {
   private readonly _googleClient: OAuth2ClientType;
 
@@ -51,14 +60,18 @@ export class DefaultSocialIdTokenVerifier implements SocialIdTokenVerifier {
 
     if (_provider === 'google') {
       const CLIENT_ID = requireEnvSV(ENV_CONST.GOOGLE_OAUTH_CLIENT_ID, 'GOOGLE_OAUTH_CLIENT_ID');
-      const TICKET = await this._googleClient.verifyIdToken({
-        idToken: _idToken,
-        audience: CLIENT_ID,
-      });
+      //? google-auth-library lanza Error genérico (firma, audiencia, vencido):
+      //? sin envolverlo salía como 500 en lugar de 401.
+      const TICKET = await this._googleClient
+        .verifyIdToken({ idToken: _idToken, audience: CLIENT_ID })
+        .catch(() => {
+          throw new AppError('TOKEN_INVALIDO', 'Token inválido o expirado.', 401, { provider: 'google' });
+        });
       const PAYLOAD = TICKET.getPayload();
       if (PAYLOAD === undefined || PAYLOAD.sub === undefined) {
         throw new AppError('TOKEN_INVALIDO', 'Token inválido o expirado.', 401);
       }
+      assertEmailVerifiedSV(PAYLOAD.email_verified);
       const EMAIL = normalizeEmailSV(PAYLOAD.email);
       return {
         providerUserId: PAYLOAD.sub,
@@ -89,6 +102,7 @@ export class DefaultSocialIdTokenVerifier implements SocialIdTokenVerifier {
         throw new AppError('TOKEN_INVALIDO', 'Token inválido o expirado.', 401);
       }
 
+      assertEmailVerifiedSV((CLAIMS as { email_verified?: unknown }).email_verified);
       const EMAIL = normalizeEmailSV(EMAIL_RAW);
       return { providerUserId: SUB, email: EMAIL };
     }

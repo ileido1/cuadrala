@@ -5,6 +5,20 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.13.1] - 2026-11-12
+
+### Seguridad
+
+- **Login social exige email verificado**: `POST /auth/social` rechaza con
+  401 los tokens de Google o Apple cuyo email no está verificado por el
+  proveedor. Antes, una cuenta con un email ajeno sin verificar podía entrar a
+  la cuenta de Cuádrala de ese email.
+
+### Corregido
+
+- **Token de Google inválido devolvía 500**: ahora responde 401
+  `TOKEN_INVALIDO`, igual que Apple.
+
 ## [1.13.0] - 2026-09-13
 
 ### Agregado
