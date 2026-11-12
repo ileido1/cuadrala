@@ -28,8 +28,10 @@ import '../../../shared/widgets/segmented_control.dart';
 /// cae en `QuickMatchIdle` y renderiza el formulario para crear una nueva
 /// cola. Al jugador le parecía que "salir" no hacía nada.
 Future<void> _leaveQueue(BuildContext context) async {
-  await context.read<QuickMatchCubit>().cancel();
-  if (context.mounted) context.go(Routes.home);
+  final cubit = context.read<QuickMatchCubit>();
+  await cubit.cancel();
+  //? Si falló, el cubit muestra el error en esta pantalla: no se navega.
+  if (context.mounted && cubit.state is QuickMatchIdle) context.go(Routes.home);
 }
 
 final class QuickMatchScreen extends StatefulWidget {

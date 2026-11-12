@@ -60,6 +60,19 @@ void main() {
     expect: () => [isA<QuickMatchIdle>()],
   );
 
+  //? Antes la excepción escapaba sin manejar: "Salir de la cola" no hacía
+  //? nada visible y el jugador no sabía que había fallado.
+  blocTest<QuickMatchCubit, QuickMatchState>(
+    'should report a failure when cancellation fails',
+    build: build,
+    seed: () => QuickMatchActive(_search),
+    setUp: () => when(repository.cancel).thenThrow(
+      const AppFailure(code: 'NETWORK_TIMEOUT', message: 'timeout'),
+    ),
+    act: (cubit) => cubit.cancel(),
+    expect: () => [const QuickMatchFailure('timeout')],
+  );
+
   blocTest<QuickMatchCubit, QuickMatchState>(
     'should restart the queue with the selected schedule',
     build: build,

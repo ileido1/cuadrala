@@ -24,7 +24,7 @@ class _QuickMatchApiStub implements QuickMatchApi {
   Future<Map<String, Object?>> dismissProposal() => throw UnimplementedError();
 
   @override
-  Future<void> cancel() => throw UnimplementedError();
+  Future<void> cancel() async {}
 }
 
 void main() {
@@ -32,5 +32,16 @@ void main() {
     final repository = QuickMatchRepository(_QuickMatchApiStub(null));
 
     expect(await repository.current(), isNull);
+  });
+
+  //? El banner de inicio escucha `changes` para no mostrar una búsqueda vieja
+  //? al volver de la cola.
+  test('should notify changes when the search is cancelled', () async {
+    final repository = QuickMatchRepository(_QuickMatchApiStub(null));
+    final notified = expectLater(repository.changes, emits(anything));
+
+    await repository.cancel();
+
+    await notified;
   });
 }

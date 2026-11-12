@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -546,6 +548,8 @@ void main() {
 
     setUp(() {
       quickMatchRepository = _MockQuickMatchRepository();
+      when(() => quickMatchRepository.changes)
+          .thenAnswer((_) => const Stream<void>.empty());
       getIt.registerSingleton<QuickMatchRepository>(quickMatchRepository);
     });
 
@@ -581,6 +585,34 @@ void main() {
 
         expect(find.text('Tu búsqueda está activa'), findsNothing);
         expect(find.text('Encontrar partida'), findsOneWidget);
+      },
+    );
+
+    //? Bug: al salir de la cola y volver con go(home), el inicio seguía
+    //? montado y mostraba la búsqueda vieja como "activa" indefinidamente.
+    testWidgets(
+      'should hide the callout when the search changes after leaving the queue',
+      (tester) async {
+        final changes = StreamController<void>.broadcast();
+        addTearDown(changes.close);
+        when(() => quickMatchRepository.changes)
+            .thenAnswer((_) => changes.stream);
+        when(() => quickMatchRepository.current())
+            .thenAnswer((_) async => confirmedSearch());
+        when(() => homeCubit.state).thenReturn(_loadedState());
+
+        await tester.pumpWidget(
+          _wrap(homeCubit: homeCubit, shellCubit: shellCubit),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Tu búsqueda está activa'), findsOneWidget);
+
+        when(() => quickMatchRepository.current())
+            .thenAnswer((_) async => null);
+        changes.add(null);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tu búsqueda está activa'), findsNothing);
       },
     );
   });
