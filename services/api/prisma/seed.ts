@@ -486,7 +486,8 @@ async function seedPaymentMethodsForSeedVenuesSV(): Promise<void> {
     { id: 'pm-cash-', type: 'CASH', name: 'Efectivo' },
     { id: 'pm-bank-banesco-', type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Banesco', accountNumber: '01234567890123456789', idType: 'V', idNumber: 'V12345678' } },
     { id: 'pm-bank-mercantil-', type: 'BANK_TRANSFER', name: 'Transferencia Bancaria', config: { bank: 'Mercantil', accountNumber: '98765432109876543210', idType: 'V', idNumber: 'V87654321' } },
-    { id: 'pm-pago-banesco-', type: 'PAGO_MOVIL', name: 'Pago Móvil', config: { bank: 'Banesco', phoneNumber: '+584121234567', idType: 'V', idNumber: 'V12345678' } },
+    //? Pago Móvil siempre liquida en bolívares, sin importar la moneda de la sede.
+    { id: 'pm-pago-banesco-', type: 'PAGO_MOVIL', name: 'Pago Móvil', config: { bank: 'Banesco', phoneNumber: '+584121234567', idType: 'V', idNumber: 'V12345678' }, settlementCurrency: 'BS' as const },
   ];
 
   for (const VENUE of ALL_VENUES) {
@@ -504,13 +505,15 @@ async function seedPaymentMethodsForSeedVenuesSV(): Promise<void> {
           type: PAYMENT_METHOD.type,
           name: PAYMENT_METHOD.name,
           config: (PAYMENT_METHOD.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
-          settlementCurrency: VENUE_CURRENCY,
+          settlementCurrency: PAYMENT_METHOD.settlementCurrency ?? VENUE_CURRENCY,
           position: i,
         },
         update: {
           type: PAYMENT_METHOD.type,
           name: PAYMENT_METHOD.name,
           config: (PAYMENT_METHOD.config as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+          //? Corrige filas de corridas anteriores que dejaban Pago Móvil en USD.
+          ...(PAYMENT_METHOD.settlementCurrency !== undefined ? { settlementCurrency: PAYMENT_METHOD.settlementCurrency } : {}),
           position: i,
         },
       });

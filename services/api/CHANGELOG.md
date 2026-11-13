@@ -23,6 +23,8 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
   - Los torneos de pádel pasan a 5ta e inscriben solo jugadores de 5ta
     (`player3` a `player10`; se agregan `player9` y `player10`). Las categorías
     de tenis se asignan en cada corrida, no solo la primera vez.
+- **Pago Móvil del seed en bolívares**: se crea liquidando en BS (y corrige
+  las filas que corridas anteriores dejaron en USD).
 - **Documentación del seed**: README y `AGENTS.md` reflejan los 14 usuarios,
   los 7 torneos y el preset extra de tenis; el email de Canchas del Sur
   corrige un error de tipeo.

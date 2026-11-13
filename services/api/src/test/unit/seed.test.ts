@@ -213,3 +213,16 @@ it('should register only players who hold the tournament category, on every run'
     }
   }
 });
+
+//? Pago Móvil liquida en bolívares: el seed lo dejaba en USD como el resto.
+it('should seed Pago Móvil methods settling in BS, also fixing rows from older runs', async () => {
+  vi.stubEnv('DATABASE_URL', 'postgresql://unused:unused@localhost:1/unused');
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  await runSeedSV();
+  const PAGO_MOVIL = () => DATABASE.tables.get('venuePaymentMethod')!.filter((_m) => _m.type === 'PAGO_MOVIL');
+  for (const METHOD of PAGO_MOVIL()) METHOD.settlementCurrency = 'USD';
+  await runSeedSV();
+  expect(PAGO_MOVIL().length).toBeGreaterThan(0);
+  expect(PAGO_MOVIL().every((_m) => _m.settlementCurrency === 'BS')).toBe(true);
+  expect(DATABASE.tables.get('venuePaymentMethod')!.filter((_m) => _m.type === 'CASH').every((_m) => _m.settlementCurrency === 'USD')).toBe(true);
+});
