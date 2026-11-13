@@ -226,10 +226,13 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                         declined: false,
                         onSearchAgain: _showInitialConfiguration,
                       ),
-              QuickMatchActive(:final search) when _isLobby(search) => _Polling(
-                child: _Lobby(proposal: search.proposal!),
+              //? Una sola pantalla de espera, solo o en un grupo armándose
+              //? (antes eran tres: "Buscando", "Seguimos buscando" y "Grupo
+              //? armándose"). Refresca cada pocos segundos para mostrar quién
+              //? se suma sin depender del push.
+              QuickMatchActive(:final search) => _Polling(
+                child: _Searching(search: search),
               ),
-              QuickMatchActive(:final search) => _Searching(search: search),
             },
           ),
         ),
@@ -1760,49 +1763,6 @@ final class _ReadyCheckFooter extends StatelessWidget {
 
 /// Lobby que se llena de a uno (S1). Se consulta cada pocos segundos para
 /// que cada jugador que se suma aparezca sin depender del push.
-final class _Lobby extends StatelessWidget {
-  const _Lobby({required this.proposal});
-
-  final QuickMatchProposalDto proposal;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 32, 20, 28),
-      children: [
-        _PulseIcon(icon: AppIcons.people),
-        const SizedBox(height: 22),
-        Text(
-          'Grupo armándose',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w900,
-            letterSpacing: -.5,
-          ),
-        ),
-        const SizedBox(height: 7),
-        Text(
-          'Otros jugadores con tu horario y nivel ya están en el grupo. Te avisamos cuando se complete para confirmar la partida.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: scheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 20),
-        _GroupProgress(
-          filled: proposal.playerIds.length,
-          label: (count) => '$count de $_groupSize jugadores',
-        ),
-        const WebPushQueuePrompt(),
-        const SizedBox(height: 24),
-        OutlinedButton(
-          onPressed: () => _leaveQueue(context),
-          child: const Text('Salir de la cola'),
-        ),
-      ],
-    );
-  }
-}
-
 /// Invitación por disponibilidad (S12): el jugador no buscó, pero su
 /// disponibilidad coincide con un lobby abierto. Se suma solo si acepta.
 /// No usa el texto del ready check: el grupo todavía no está completo.
@@ -1872,52 +1832,24 @@ String _formatProposalDate(DateTime value) {
   return '$day · $hour:${local.minute.toString().padLeft(2, '0')} $suffix';
 }
 
-final class _Searching extends StatefulWidget {
+final class _Searching extends StatelessWidget {
   const _Searching({required this.search});
 
   final QuickMatchSearchDto search;
 
   @override
-  State<_Searching> createState() => _SearchingState();
-}
-
-final class _SearchingState extends State<_Searching> {
-  /// How often the waiting screen silently re-fetches the search while it
-  /// stays open, so a proposal/group update surfaces without the player
-  /// needing to leave and reopen the screen.
-  static const _pollInterval = Duration(seconds: 5);
-
-  Timer? _pollTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _pollTimer = Timer.periodic(
-      _pollInterval,
-      (_) => context.read<QuickMatchCubit>().refreshSilently(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final search = widget.search;
-    final noMatch = search.noMatchYet;
+    final inLobby = _isLobby(search);
     return Column(
       children: [
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 32, 20, 20),
             children: [
-              _PulseIcon(icon: noMatch ? AppIcons.bell : AppIcons.search),
+              _PulseIcon(icon: inLobby ? AppIcons.people : AppIcons.search),
               const SizedBox(height: 22),
               Text(
-                noMatch ? 'Seguimos buscando' : 'Buscando jugadores',
+                inLobby ? 'Grupo armándose' : 'Buscando jugadores',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w900,
@@ -1942,6 +1874,12 @@ final class _SearchingState extends State<_Searching> {
                 ),
               ),
               const SizedBox(height: 22),
+              //? Solo, el grupo arranca con el jugador: 1 de 4.
+              _GroupProgress(
+                filled: inLobby ? search.proposal!.playerIds.length : 1,
+                label: (count) => '$count de $_groupSize jugadores',
+              ),
+              const SizedBox(height: 14),
               _QueueProgressCard(search: search),
               const WebPushQueuePrompt(),
               const SizedBox(height: 14),
@@ -1965,15 +1903,15 @@ final class _SearchingState extends State<_Searching> {
                   ),
                 ],
               ),
-              if (noMatch) ...[
-                const SizedBox(height: 20),
-                _NoMatchActions(search: search),
-              ],
+              const SizedBox(height: 20),
+              _NoMatchActions(search: search, inLobby: inLobby),
             ],
           ),
         ),
+        //? En un grupo, editar preferencias reinicia la búsqueda y saca al
+        //? jugador del grupo: solo queda "Salir de la cola".
         _QueueFooter(
-          onEdit: () => _showScheduleSheet(context),
+          onEdit: inLobby ? null : () => _showScheduleSheet(context),
           onLeave: () => _leaveQueue(context),
         ),
       ],
@@ -1987,7 +1925,7 @@ final class _SearchingState extends State<_Searching> {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) =>
-          _QuickMatchSheetFrame(child: _ScheduleSheet(search: widget.search)),
+          _QuickMatchSheetFrame(child: _ScheduleSheet(search: search)),
     );
   }
 }
@@ -2148,7 +2086,7 @@ final class _QueueProgressStep extends StatelessWidget {
 final class _QueueFooter extends StatelessWidget {
   const _QueueFooter({required this.onEdit, required this.onLeave});
 
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
   final VoidCallback onLeave;
 
   @override
@@ -2165,14 +2103,15 @@ final class _QueueFooter extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
         child: Column(
           children: [
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(AppIcons.sliders),
-                label: const Text('Editar preferencias'),
+            if (onEdit != null)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(AppIcons.sliders),
+                  label: const Text('Editar preferencias'),
+                ),
               ),
-            ),
             TextButton(
               onPressed: onLeave,
               child: const Text('Salir de la cola'),
@@ -2185,9 +2124,13 @@ final class _QueueFooter extends StatelessWidget {
 }
 
 final class _NoMatchActions extends StatelessWidget {
-  const _NoMatchActions({required this.search});
+  const _NoMatchActions({required this.search, this.inLobby = false});
 
   final QuickMatchSearchDto search;
+
+  /// En un grupo, cambiar horario o zona reinicia la búsqueda y saca al
+  /// jugador del grupo: solo se ofrece ver partidas abiertas.
+  final bool inLobby;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -2198,31 +2141,33 @@ final class _NoMatchActions extends StatelessWidget {
     ),
     child: Column(
       children: [
-        ListTile(
-          leading: const Icon(AppIcons.clock),
-          title: const Text('Cambiar horario'),
-          subtitle: const Text('Suma la tarde o prueba mañana'),
-          onTap: () => showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) =>
-                _QuickMatchSheetFrame(child: _ScheduleSheet(search: search)),
+        if (!inLobby) ...[
+          ListTile(
+            leading: const Icon(AppIcons.clock),
+            title: const Text('Cambiar horario'),
+            subtitle: const Text('Suma la tarde o prueba mañana'),
+            onTap: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) =>
+                  _QuickMatchSheetFrame(child: _ScheduleSheet(search: search)),
+            ),
           ),
-        ),
-        ListTile(
-          leading: const Icon(AppIcons.pin),
-          title: const Text('Ampliar zona'),
-          subtitle: Text(
-            search.zoneKm >= 100
-                ? 'Ya buscas en toda Caracas'
-                : 'Busca más lejos para encontrar antes',
+          ListTile(
+            leading: const Icon(AppIcons.pin),
+            title: const Text('Ampliar zona'),
+            subtitle: Text(
+              search.zoneKm >= 100
+                  ? 'Ya buscas en toda Caracas'
+                  : 'Busca más lejos para encontrar antes',
+            ),
+            onTap: search.zoneKm >= 100
+                ? null
+                : () => context.read<QuickMatchCubit>().expandZone(),
           ),
-          onTap: search.zoneKm >= 100
-              ? null
-              : () => context.read<QuickMatchCubit>().expandZone(),
-        ),
+        ],
         ListTile(
           leading: const Icon(AppIcons.list),
           title: const Text('Ver partidas abiertas'),
