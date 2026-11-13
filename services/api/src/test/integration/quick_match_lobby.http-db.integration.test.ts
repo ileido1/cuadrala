@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
 import { signAccessTokenSV } from '../../infrastructure/jwt_tokens.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
+import { PrismaQuickMatchRepository } from '../../infrastructure/adapters/prisma_quick_match_repository.js';
 import { ensureTestCatalogSV } from '../helpers/catalog-seed.js';
 import { HAS_INTEGRATION_DATABASE } from '../helpers/integration-env.js';
 import { resetDatabaseForTestsSV } from '../helpers/reset-db.js';
@@ -333,5 +334,53 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match lobby (HTTP + DB)', () =
     expect([...BY_GROUP.values()].map((_statuses) => _statuses.length).sort()).toEqual([2, 4]);
     expect([...BY_GROUP.values()].find((_statuses) => _statuses.length === 4)!.every((_status) => _status === 'PENDING')).toBe(true);
     expect([...BY_GROUP.values()].find((_statuses) => _statuses.length === 2)!.every((_status) => _status === 'LOBBY')).toBe(true);
+  });
+
+  //? B1 (verificador): un lobby anclado en MORNING no puede bloquear a quienes buscan
+  //? solo EVENING; deben poder armar su propio lobby.
+  function startSlots(_player: Player, _categoryId: string, _date: string, _slots: string[]) {
+    return request(APP).post('/api/v1/quick-match').set('Authorization', `Bearer ${_player.token}`)
+      .send({ sportId, categoryId: _categoryId, day: 'CUSTOM', date: _date, slots: _slots, widenLevel: false, zoneKm: 10, includeOpenMatches: false });
+  }
+
+  it('S1/S2: should group four EVENING searchers even when an older lobby is anchored on MORNING', async () => {
+    const DATE = '2027-02-03';
+    const { categoryId: C, players: P } = await setupSV('lb-slots4', 6, 0, DATE);
+    expect((await startSlots(P[0]!, C, DATE, ['MORNING'])).status).toBe(201);
+    expect((await startSlots(P[1]!, C, DATE, ['MORNING', 'EVENING'])).status).toBe(201);
+    for (const X of P.slice(2)) expect((await startSlots(X, C, DATE, ['EVENING'])).status).toBe(201);
+    for (let i = 0; i < 2; i++) for (const X of P) await get(X);
+    const EVENING = await Promise.all(P.slice(2).map((_p) => searchOf(_p)));
+    expect(EVENING.every((_s) => _s.proposal?.groupKey != null)).toBe(true);
+  });
+
+  it('S1: should put two EVENING searchers in the same lobby when the older lobby is anchored on MORNING', async () => {
+    const DATE = '2027-02-04';
+    const { categoryId: C, players: P } = await setupSV('lb-slots2', 4, 0, DATE);
+    expect((await startSlots(P[0]!, C, DATE, ['MORNING'])).status).toBe(201);
+    expect((await startSlots(P[1]!, C, DATE, ['MORNING', 'EVENING'])).status).toBe(201);
+    for (const X of P.slice(2)) expect((await startSlots(X, C, DATE, ['EVENING'])).status).toBe(201);
+    for (const X of P) await get(X);
+    const [SEARCH_C, SEARCH_D] = await Promise.all(P.slice(2).map((_p) => searchOf(_p)));
+    expect(SEARCH_C!.proposal).toMatchObject({ status: 'LOBBY' });
+    expect(SEARCH_D!.proposal).toMatchObject({ status: 'LOBBY', groupKey: SEARCH_C!.proposal!.groupKey });
+    expect([...SEARCH_C!.proposal!.playerIds].sort()).toEqual([P[2]!.id, P[3]!.id].sort());
+  });
+
+  //? A1 (verificador): una lectura vieja de "busco solo" no puede pisar la propuesta de
+  //? alguien que la reposición ya metió en otro grupo. Se simula la lectura vieja
+  //? llamando al repositorio con el estado de antes.
+  it('S1/S8: should not turn a player already pulled into a group into an open-match offer from a stale read', async () => {
+    const DATE = '2027-02-05';
+    const { categoryId: C, players: P } = await setupSV('lb-stale-open', 5, 0, DATE);
+    for (const X of P.slice(0, 4)) expect((await start(X, C, DATE)).status).toBe(201);
+    const MEMBER = await searchOf(P[3]!);
+    expect(MEMBER).toMatchObject({ status: 'PROPOSAL', proposal: { status: 'PENDING' } });
+    const OPEN = await PRISMA.match.create({ data: { sportId, categoryId: C, organizerUserId: P[4]!.id, type: 'REGULAR', status: 'SCHEDULED', scheduledAt: new Date(`${DATE}T22:00:00.000Z`), maxParticipants: 4, participants: { create: [{ userId: P[4]!.id }] } } });
+
+    const RESULT = await new PrismaQuickMatchRepository().createOpenProposalSV(MEMBER.id, { matchId: OPEN.id, participantIds: [P[4]!.id] }, new Date(Date.now() + 120_000));
+
+    expect(RESULT).toBeNull();
+    expect(await searchOf(P[3]!)).toMatchObject({ status: 'PROPOSAL', proposal: { type: 'NEW_GROUP', status: 'PENDING', groupKey: MEMBER.proposal!.groupKey } });
   });
 });

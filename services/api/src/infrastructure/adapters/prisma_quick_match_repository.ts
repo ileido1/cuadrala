@@ -101,6 +101,16 @@ function lobbyExpiresAtSV(_targetDate: Date): Date {
   return END;
 }
 
+/**
+ * Regla única de compatibilidad con un grupo: comparte franja con su miembro más
+ * antiguo (el ancla). La usan tanto el chequeo de "hay un grupo al que sumarse"
+ * como la reposición; si difieren, un buscador queda esperando un grupo que
+ * nunca lo acepta (B1).
+ */
+function fitsAnchorSV(_anchorSlots: QuickMatchSlot[], _slots: QuickMatchSlot[]): boolean {
+  return _slots.some((_slot) => _anchorSlots.includes(_slot));
+}
+
 function sameMembersSV(_a: string[], _b: string[]): boolean {
   return _a.length === _b.length && [..._a].sort().join() === [..._b].sort().join();
 }
@@ -344,13 +354,24 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
       if (MATCH === null || MATCH.status !== 'SCHEDULED') return null;
       const HOLDS = await _tx.quickMatchProposal.count({ where: { type: 'OPEN_MATCH', matchId: _candidate.matchId, status: 'PENDING', expiresAt: { gt: new Date() } } });
       if (MATCH.participants.length + HOLDS >= MATCH.maxParticipants) return null;
-      //? Un buscador solo (lobby de 1) que acepta ver la partida abierta deja su lobby:
-      //? sus invitaciones por disponibilidad se retiran. Con más miembros no se ofrece.
-      const CURRENT = await _tx.quickMatchProposal.findUnique({ where: { searchId: _searchId }, select: { status: true, groupKey: true } });
-      if (CURRENT?.status === 'LOBBY' && CURRENT.groupKey !== null) {
-        await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${CURRENT.groupKey}))`;
-        if ((await this.groupStateSV(_tx, CURRENT.groupKey)).members.length > 1) return null;
-        await this.withdrawInvitationsSV(_tx, CURRENT.groupKey);
+      //? A1: la reposición de otro grupo pudo mover a este buscador después de que leyó su
+      //? estado. Se toma el lock del alcance (el mismo que usa la reposición; orden:
+      //? partida → alcance → grupo, nadie toma partida después de alcance) y se relee.
+      const OWN = await _tx.quickMatchSearch.findUnique({ where: { id: _searchId }, select: { sportId: true, categoryId: true, targetDate: true, slots: true } });
+      if (OWN === null) return null;
+      await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${scopeKeySV(OWN)}))`;
+      const LOBBY_KEY = (await _tx.quickMatchProposal.findUnique({ where: { searchId: _searchId }, select: { status: true, groupKey: true } }));
+      if (LOBBY_KEY?.status === 'LOBBY' && LOBBY_KEY.groupKey !== null) await _tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${LOBBY_KEY.groupKey}))`;
+      //? Relectura bajo los locks: solo sigue si busca solo o en su lobby de 1
+      const CURRENT = await _tx.quickMatchSearch.findUnique({ where: { id: _searchId }, select: { status: true, proposal: { select: { status: true, groupKey: true } } } });
+      if (CURRENT?.status !== 'SEARCHING') return null;
+      const PROPOSAL = CURRENT.proposal;
+      if (PROPOSAL?.status === 'LOBBY') {
+        //? Un buscador solo (lobby de 1) que acepta ver la partida abierta deja su lobby:
+        //? sus invitaciones por disponibilidad se retiran. Con más miembros no se ofrece.
+        if (PROPOSAL.groupKey === null || PROPOSAL.groupKey !== LOBBY_KEY?.groupKey) return null;
+        if ((await this.groupStateSV(_tx, PROPOSAL.groupKey)).members.length > 1) return null;
+        await this.withdrawInvitationsSV(_tx, PROPOSAL.groupKey);
       }
       await _tx.quickMatchProposal.upsert({ where: { searchId: _searchId }, create: { searchId: _searchId, type: 'OPEN_MATCH', matchId: _candidate.matchId, playerIds: _candidate.participantIds, expiresAt: _expiresAt }, update: { type: 'OPEN_MATCH', status: 'PENDING', groupKey: null, matchId: _candidate.matchId, playerIds: _candidate.participantIds, expiresAt: _expiresAt } });
       return _tx.quickMatchSearch.update({ where: { id: _searchId }, data: { status: 'PROPOSAL', noMatchYet: false }, include: SEARCH_INCLUDE });
@@ -398,9 +419,10 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
   }
 
   /**
-   * Grupos sin partido del mismo alcance con algún miembro de franja compatible.
-   * Primero un ready check con cupo (tiene el reloj corriendo), después el lobby
-   * más antiguo con cupo (S1).
+   * Grupo sin partido del mismo alcance al que esta búsqueda puede sumarse de
+   * verdad: tiene cupo y su ancla (miembro más antiguo) comparte franja, la misma
+   * regla que aplica `refillGroupSV`. Primero un ready check con cupo (tiene el
+   * reloj corriendo), después el lobby más antiguo con cupo (S1).
    */
   private async openGroupKeySV(_client: PrismaTransactionClientSV, _search: Pick<QuickMatchSearchDTO, 'sportId' | 'categoryId' | 'targetDate' | 'slots'>): Promise<string | null> {
     const ROWS = await _client.quickMatchProposal.findMany({
@@ -411,6 +433,7 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
     for (const GROUP_KEY of [...new Set(ROWS.map((_row) => _row.groupKey!))]) {
       const STATE = await this.groupStateSV(_client, GROUP_KEY);
       if (STATE.phase === null || STATE.members.length >= GROUP_SIZE) continue;
+      if (!fitsAnchorSV(STATE.members[0]!.search.slots, _search.slots)) continue;
       if (STATE.phase === 'READY_CHECK') return GROUP_KEY;
       openLobby ??= GROUP_KEY;
     }
