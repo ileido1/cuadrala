@@ -6,6 +6,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../router/routes.dart';
 import '../data/matches_repository.dart';
+import '../data/models/match_detail_dto.dart';
 import 'cubit/match_live_cubit.dart';
 import 'cubit/match_live_state.dart';
 
@@ -127,26 +128,10 @@ final class _MatchLiveView extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  //? Equipos (A vs B)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _TeamCard(
-                          teamName: 'Equipo A',
-                          color: scheme.primary,
-                          onForeground: scheme.onPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _TeamCard(
-                          teamName: 'Equipo B',
-                          color: scheme.secondary,
-                          onForeground: scheme.onSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+                  //? Jugadores reales de la partida. Antes había dos tarjetas
+                  //? "Equipo A/B" con un "2/4" fijo que no salía de ningún
+                  //? dato: los equipos recién se arman al cargar el resultado.
+                  _PlayersCard(match: loaded.match),
                   const SizedBox(height: 24),
 
                   //? Botón terminar partido
@@ -193,43 +178,49 @@ final class _MatchLiveView extends StatelessWidget {
   }
 }
 
-class _TeamCard extends StatelessWidget {
-  const _TeamCard({
-    required this.teamName,
-    required this.color,
-    required this.onForeground,
-  });
+class _PlayersCard extends StatelessWidget {
+  const _PlayersCard({required this.match});
 
-  final String teamName;
-  final Color color;
-  final Color onForeground;
+  final MatchDetailDto match;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final players = match.participants;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color,
+        color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            teamName,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: onForeground,
-            ),
+            'Jugadores (${players.length})',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '2/4',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: onForeground,
+          const SizedBox(height: 12),
+          for (final player in players)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Icon(AppIcons.person, size: 18, color: scheme.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      player.displayName ?? 'Jugador',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
+          const SizedBox(height: 4),
+          Text(
+            'Al terminar, cargás los equipos y el marcador.',
+            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
           ),
         ],
       ),

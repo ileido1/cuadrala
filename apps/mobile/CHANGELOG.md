@@ -5,6 +5,21 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.37] - 2026-11-13
+
+### Corregido
+
+- **7-5 rechazado al cargar un resultado de pádel**: con 5-5 se juega a 7, así
+  que 7-5 es un set válido; antes se marcaba "Marcador inválido" y no dejaba
+  continuar.
+- **"Cargar resultado" antes de jugar**: con la partida sin empezar, el botón
+  principal llevaba a cargar el resultado y fallaba al final ("El partido debe
+  estar finalizado"). Ahora el organizador ve "Iniciar partido" y el resto un
+  aviso; y si se llega a cargar un resultado sin que la partida haya terminado,
+  la pantalla lo explica en vez de dejar completar el flujo.
+- **Pantalla "Partido en vivo"**: mostraba "Equipo A 2/4" y "Equipo B 2/4", un
+  texto fijo sin sentido. Ahora muestra los jugadores reales de la partida.
+
 ## [1.7.36] - 2026-11-13
 
 ### Cambiado

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
-import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/match_detail_dto.dart';
 import 'package:cuadrala_mobile/src/features/matches/presentation/match_detail_screen.dart';
@@ -117,9 +116,12 @@ void main() {
     getIt.unregister<MonetizationRepository>();
   });
 
+  //? Antes, con la partida sin empezar, el botón principal era "Cargar
+  //? resultado": llevaba al flujo de 3 pasos y recién al final la API
+  //? respondía "El partido debe estar finalizado para registrar resultado".
   group('pending/confirmed footer', () {
     testWidgets(
-      'shows "Cargar resultado" as the primary CTA instead of "Compartir partida"',
+      'should not offer to load a result before the match is played',
       (tester) async {
         when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
           (_) async => _buildMatch(),
@@ -128,23 +130,49 @@ void main() {
         await tester.pumpWidget(_buildTestApp());
         await tester.pumpAndSettle();
 
-        expect(find.text('Cargar resultado'), findsOneWidget);
+        expect(find.text('Cargar resultado'), findsNothing);
+        expect(find.text('Iniciar partido'), findsOneWidget);
         expect(find.text('Compartir partida'), findsNothing);
-        // El botón cuadrado de compartir se mantiene (appbar + footer).
-        expect(find.byIcon(AppIcons.share), findsNWidgets(2));
       },
     );
 
     testWidgets(
-      'tapping "Cargar resultado" opens the same result-entry route as the played phase',
+      'should start the match when the organizer confirms Iniciar partido',
       (tester) async {
         when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
           (_) async => _buildMatch(),
         );
+        when(
+          () => matchesRepository.startMatch(_matchId),
+        ).thenAnswer((_) async {});
 
         await tester.pumpWidget(_buildTestApp());
         await tester.pumpAndSettle();
+        await tester.tap(find.text('Iniciar partido'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Iniciar').last);
+        await tester.pumpAndSettle();
 
+        verify(() => matchesRepository.startMatch(_matchId)).called(1);
+      },
+    );
+
+    testWidgets(
+      'should still offer to load the result once the match finished',
+      (tester) async {
+        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
+          (_) async => _buildMatch(status: 'FINISHED'),
+        );
+        when(
+          () => profileRepository.getUserRatingHistory(
+            userId: any(named: 'userId'),
+            categoryId: any(named: 'categoryId'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        await tester.pumpWidget(_buildTestApp());
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Cargar resultado'));
         await tester.pumpAndSettle();
 

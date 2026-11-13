@@ -1092,6 +1092,12 @@ final class _Footer extends StatelessWidget {
 
       case _Phase.pending:
       case _Phase.confirmed:
+        //? Antes el botón era "Cargar resultado", pero la API solo acepta el
+        //? resultado de una partida terminada: el flujo fallaba al final. Con
+        //? la partida sin empezar, el organizador la inicia; el resto espera.
+        final isOrganizer =
+            m.participants.isNotEmpty &&
+            m.participants.first.userId == loaded.viewerUserId;
         return Row(
           children: [
             _SquareButton(
@@ -1100,11 +1106,28 @@ final class _Footer extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _PrimaryCta(
-                icon: AppIcons.target,
-                label: 'Cargar resultado',
-                onPressed: () => context.push(Routes.matchResult(m.id)),
-              ),
+              child: isOrganizer
+                  ? _PrimaryCta(
+                      icon: AppIcons.play,
+                      label: 'Iniciar partido',
+                      onPressed: () async {
+                        final cubit = context.read<MatchDetailCubit>();
+                        final ok = await _confirmDialog(
+                          context,
+                          title: 'Iniciar partida',
+                          message: '¿Confirmas que la partida empieza ahora?',
+                          confirmLabel: 'Iniciar',
+                        );
+                        if (ok) cubit.start();
+                      },
+                    )
+                  : Text(
+                      'El organizador inicia la partida. El resultado se carga al terminar.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
             ),
           ],
         );

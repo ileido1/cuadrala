@@ -16,7 +16,7 @@ class _MockMatchesRepository extends Mock implements MatchesRepository {}
 const _matchId = 'match-1';
 
 //? scheduledAt null deja el cronómetro en 0 sin depender de DateTime.now().
-MatchDetailDto _buildMatch() {
+MatchDetailDto _buildMatch({List<MatchParticipantDto> participants = const []}) {
   final at = DateTime(2030, 6, 1, 19);
   return MatchDetailDto(
     id: _matchId,
@@ -34,7 +34,7 @@ MatchDetailDto _buildMatch() {
     courtName: 'Cancha 1',
     locationLabel: 'Las Mercedes, Caracas',
     tournamentId: null,
-    participants: const [],
+    participants: participants,
     createdAt: at,
     updatedAt: at,
   );
@@ -142,20 +142,34 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('should render timer and teams when the match is loaded', (
+  //? Antes mostraba "Equipo A 2/4" y "Equipo B 2/4", un texto fijo que no
+  //? salía de ningún dato. Los equipos se definen al cargar el resultado, así
+  //? que se muestran los jugadores reales de la partida.
+  testWidgets('should render the timer and the real players of the match', (
     tester,
   ) async {
-    when(
-      () => matchesRepository.getMatchDetail(_matchId),
-    ).thenAnswer((_) async => _buildMatch());
+    final joined = DateTime(2030, 6, 1);
+    when(() => matchesRepository.getMatchDetail(_matchId)).thenAnswer(
+      (_) async => _buildMatch(
+        participants: [
+          MatchParticipantDto(userId: 'u1', displayName: 'Ana', joinedAt: joined),
+          MatchParticipantDto(userId: 'u2', displayName: 'Beto', joinedAt: joined),
+          MatchParticipantDto(userId: 'u3', displayName: 'Caro', joinedAt: joined),
+          MatchParticipantDto(userId: 'u4', displayName: null, joinedAt: joined),
+        ],
+      ),
+    );
 
     await tester.pumpWidget(_buildTestApp());
     await tester.pumpAndSettle();
 
     expect(find.text('Partido en vivo'), findsOneWidget);
     expect(find.text('00:00:00'), findsOneWidget);
-    expect(find.text('Equipo A'), findsOneWidget);
-    expect(find.text('Equipo B'), findsOneWidget);
+    expect(find.text('Jugadores (4)'), findsOneWidget);
+    for (final name in ['Ana', 'Beto', 'Caro', 'Jugador']) {
+      expect(find.text(name), findsOneWidget);
+    }
+    expect(find.text('2/4'), findsNothing);
     expect(find.text('Terminar partido'), findsOneWidget);
     await unmount(tester);
   });

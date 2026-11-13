@@ -101,6 +101,22 @@ class _ResultEntryViewState extends State<_ResultEntryView> {
             );
           }
 
+          //? La API solo acepta el resultado de una partida terminada: sin
+          //? esta guarda, el flujo de 3 pasos fallaba recién al enviar.
+          final match = state.match;
+          if (match != null && match.status != 'FINISHED') {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Cargar resultado')),
+              body: ErrorState(
+                icon: AppIcons.clock,
+                title: 'La partida todavía no terminó',
+                message: 'El resultado se carga cuando la partida termina.',
+                retryLabel: 'Volver',
+                onRetry: () => Navigator.of(context).maybePop(),
+              ),
+            );
+          }
+
           return Scaffold(
             key: const Key('result.entry.screen'),
             body: SafeArea(
@@ -736,7 +752,7 @@ class _ScoreEntryStepState extends State<_ScoreEntryStep> {
     if (config == null) return null;
     if (_draftA == 0 && _draftB == 0) return null;
     if (!config.isValidSetScore(_draftA, _draftB)) {
-      return 'Marcador inválido para pádel. Ej: 6-4, 7-6.';
+      return 'Marcador inválido para pádel. Ej: 6-4, 7-5, 7-6.';
     }
     return null;
   }
