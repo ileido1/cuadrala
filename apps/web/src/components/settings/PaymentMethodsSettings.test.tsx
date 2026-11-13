@@ -72,4 +72,49 @@ describe('PaymentMethodsSettings', () => {
     });
     expect(await screen.findByText('Método de pago guardado')).toBeTruthy();
   });
+
+  //? Pago Móvil liquida siempre en bolívares: la API rechaza otra moneda, así
+  //? que el formulario la fija en BS en vez de dejar elegir.
+  it('locks Pago Movil settlement currency to BS', async () => {
+    render(<PaymentMethodsSettings defaultSettlementCurrency="USD" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+    const [typeSelect, currencySelect] = screen.getAllByRole('combobox');
+    fireEvent.change(typeSelect!, { target: { value: 'PAGO_MOVIL' } });
+
+    expect((currencySelect as HTMLSelectElement).value).toBe('BS');
+    expect((currencySelect as HTMLSelectElement).disabled).toBe(true);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Guardar método de pago' }),
+    );
+    await waitFor(() => {
+      expect(updateMock).toHaveBeenCalledWith(
+        'venue-1',
+        'method-1',
+        expect.objectContaining({ type: 'PAGO_MOVIL', settlementCurrency: 'BS' }),
+      );
+    });
+  });
+
+  //? Un Pago Móvil viejo guardado en USD se corrige a BS al editarlo; si no,
+  //? guardar mandaría USD y la API lo rechazaría.
+  it('saves a legacy Pago Movil stored in USD as BS', async () => {
+    listAllMock.mockResolvedValue({
+      data: { data: { items: [{ ...USD_METHOD, type: 'PAGO_MOVIL', name: 'Pago Móvil' }] } },
+    });
+    render(<PaymentMethodsSettings defaultSettlementCurrency="USD" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Guardar método de pago' }),
+    );
+
+    await waitFor(() => {
+      expect(updateMock).toHaveBeenCalledWith(
+        'venue-1',
+        'method-1',
+        expect.objectContaining({ settlementCurrency: 'BS' }),
+      );
+    });
+  });
 });

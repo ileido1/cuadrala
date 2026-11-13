@@ -87,10 +87,11 @@ function buildFormFromMethod(
     id: method.id,
     type: method.type,
     name: method.name,
-    settlementCurrency: resolveCurrencyCode(
-      method.settlementCurrency,
-      defaultCurrency,
-    ),
+    // Pago Móvil liquida siempre en BS (corrige métodos viejos guardados en USD).
+    settlementCurrency:
+      method.type === 'PAGO_MOVIL'
+        ? ('BS' as CurrencyCode)
+        : resolveCurrencyCode(method.settlementCurrency, defaultCurrency),
   };
   const config = method.config as Record<string, string> | null;
   if (method.type === 'BANK_TRANSFER') {
@@ -244,7 +245,13 @@ export function PaymentMethodsSettings({
   };
 
   const updateForm = (patch: Partial<PaymentMethodFormData>) => {
-    setForm((prev) => ({ ...prev, ...patch }));
+    setForm((prev) => {
+      const next = { ...prev, ...patch };
+      // Pago Móvil liquida siempre en bolívares; la API rechaza otra moneda.
+      return next.type === 'PAGO_MOVIL'
+        ? { ...next, settlementCurrency: 'BS' }
+        : next;
+    });
   };
 
   if (loading) return <div className="text-sm text-muted">Cargando...</div>;
@@ -393,6 +400,12 @@ export function PaymentMethodsSettings({
               </label>
               <select
                 value={form.settlementCurrency}
+                disabled={form.type === 'PAGO_MOVIL'}
+                title={
+                  form.type === 'PAGO_MOVIL'
+                    ? 'Pago Móvil siempre se liquida en bolívares'
+                    : undefined
+                }
                 onChange={(e) =>
                   updateForm({
                     settlementCurrency: e.target.value as CurrencyCode,

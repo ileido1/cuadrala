@@ -18,6 +18,21 @@ const VALID_TYPES: VenuePaymentMethodType[] = [
 
 const VALID_ID_TYPES: IdType[] = ['V', 'E', 'P', 'J', 'G', 'R'];
 
+/**
+ * @name    :resolvePagoMovilCurrencySV
+ * @description :Pago Móvil liquida siempre en bolívares. Sin moneda explícita
+ *   queda en BS (antes heredaba la moneda de la sede, p. ej. USD); con otra
+ *   moneda explícita se rechaza en vez de ignorarla.
+ * @returns {string | undefined} moneda a guardar (undefined = no cambiarla)
+ */
+function resolvePagoMovilCurrencySV(_type: string | undefined, _settlementCurrency: string | undefined): string | undefined {
+  if (_type !== 'PAGO_MOVIL') return _settlementCurrency;
+  if (_settlementCurrency !== undefined && _settlementCurrency !== 'BS') {
+    throw new AppError('VALIDACION_FALLIDA', 'Pago Móvil solo puede liquidarse en bolívares (BS).', 400);
+  }
+  return 'BS';
+}
+
 function validatePaymentMethodInputSV(_input: {
   type: string;
   name?: string;
@@ -108,6 +123,7 @@ export class CreateVenuePaymentMethodUseCase {
   ): Promise<VenuePaymentMethodDTO> {
     await assertVenueStaffSV(this._venueStaffRepository, _actorUserId, _venueId);
     const VALIDATED = validatePaymentMethodInputSV(_body);
+    const SETTLEMENT_CURRENCY = resolvePagoMovilCurrencySV(VALIDATED.type, _body.settlementCurrency);
     const POSITION = await this._repository.getNextPositionSV(_venueId);
     return this._repository.createSV({
       venueId: _venueId,
@@ -115,8 +131,8 @@ export class CreateVenuePaymentMethodUseCase {
       name: VALIDATED.name,
       config: VALIDATED.config,
       position: POSITION,
-      ...(_body.settlementCurrency !== undefined
-        ? { settlementCurrency: _body.settlementCurrency }
+      ...(SETTLEMENT_CURRENCY !== undefined
+        ? { settlementCurrency: SETTLEMENT_CURRENCY }
         : {}),
     });
   }
@@ -162,6 +178,13 @@ export class UpdateVenuePaymentMethodUseCase {
       }
     }
 
+    //? El tipo efectivo puede venir del body o ser el que ya tiene el método.
+    const CURRENT = _body.type === undefined
+      ? await this._repository.findByIdSV(_paymentMethodId)
+      : null;
+    const EFFECTIVE_TYPE = _body.type ?? CURRENT?.type;
+    const SETTLEMENT_CURRENCY = resolvePagoMovilCurrencySV(EFFECTIVE_TYPE, _body.settlementCurrency);
+
     return this._repository.updateSV(_paymentMethodId, {
       ...(_body.type !== undefined
         ? { type: _body.type as VenuePaymentMethodType }
@@ -172,8 +195,8 @@ export class UpdateVenuePaymentMethodUseCase {
         : {}),
       ...(_body.isActive !== undefined ? { isActive: _body.isActive } : {}),
       ...(_body.position !== undefined ? { position: _body.position } : {}),
-      ...(_body.settlementCurrency !== undefined
-        ? { settlementCurrency: _body.settlementCurrency }
+      ...(SETTLEMENT_CURRENCY !== undefined
+        ? { settlementCurrency: SETTLEMENT_CURRENCY }
         : {}),
     });
   }
