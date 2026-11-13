@@ -57,6 +57,8 @@ export type MatchParticipantDTO = {
 export type MatchDetailDTO = MatchListItemDTO & {
   /** Quien creó la partida; los clientes no deben suponer que es el primer participante. */
   organizerUserId: string;
+  /** Fin del bloque de cancha (`scheduledAt` + duración de la reserva, o 90 min); null sin hora. */
+  blockEndsAt: Date | null;
   courtId: string | null;
   venueId: string | null;
   clubName?: string | null | undefined;

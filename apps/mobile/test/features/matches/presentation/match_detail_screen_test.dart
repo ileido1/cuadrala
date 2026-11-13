@@ -33,6 +33,7 @@ MatchDetailDto _buildMatch({
   String? organizerUserId,
   List<String> participantIds = const [_viewerId],
   DateTime? scheduledAt,
+  DateTime? blockEndsAt,
 }) {
   final now = DateTime.utc(2026, 5, 5, 12);
   return MatchDetailDto(
@@ -58,6 +59,7 @@ MatchDetailDto _buildMatch({
     createdAt: now,
     updatedAt: now,
     organizerUserId: organizerUserId,
+    blockEndsAt: blockEndsAt,
   );
 }
 
@@ -181,6 +183,25 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Result entry: $_matchId'), findsOneWidget);
+      },
+    );
+
+    //? B1 del verificador: el fin del bloque sale de la API (duración real de
+    //? la reserva), no de 90 minutos fijos.
+    testWidgets(
+      'should show the block end the API reports for a 60-minute court',
+      (tester) async {
+        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
+          (_) async => _buildMatch(
+            status: 'IN_PROGRESS',
+            blockEndsAt: _localStart.add(const Duration(minutes: 60)),
+          ),
+        );
+
+        await tester.pumpWidget(_buildTestApp());
+        await tester.pumpAndSettle();
+
+        expect(find.text('En curso · termina 13:00'), findsOneWidget);
       },
     );
 

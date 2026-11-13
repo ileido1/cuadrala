@@ -368,5 +368,20 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Ciclo de vida de la partida por bloq
       expect(RES.status).toBe(200);
       expect(RES.body.data.organizerUserId).toBe(USER_IDS[0]);
     });
+
+    //? B1 del verificador: mobile mostraba "termina" con 90 minutos fijos, pero
+    //? el worker cierra con la duración real de la reserva (60 por defecto).
+    it('should expose when the court block ends on GET /matches/:id', async () => {
+      const START = new Date(Date.now() + 60 * MINUTE_MS);
+      const WITH_RESERVATION = await createMatchSV({ status: 'SCHEDULED', scheduledAt: START, reservationMinutes: 60 });
+      const WITHOUT_RESERVATION = await createMatchSV({ status: 'SCHEDULED', scheduledAt: START });
+      const WITHOUT_TIME = await createMatchSV({ status: 'SCHEDULED', scheduledAt: null });
+
+      const [A, B, C] = await Promise.all([WITH_RESERVATION, WITHOUT_RESERVATION, WITHOUT_TIME].map((_id) => request(APP).get(`/api/v1/matches/${_id}`)));
+
+      expect(A!.body.data.blockEndsAt).toBe(new Date(START.getTime() + 60 * MINUTE_MS).toISOString());
+      expect(B!.body.data.blockEndsAt).toBe(new Date(START.getTime() + 90 * MINUTE_MS).toISOString());
+      expect(C!.body.data.blockEndsAt).toBeNull();
+    });
   });
 });

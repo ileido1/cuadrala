@@ -12,7 +12,7 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
 - **La partida empieza sola a la hora del bloque**: ya no hay botón "Iniciar
   partido" ni las acciones "Iniciar partida" y "Finalizar partida". Antes de
   empezar, el detalle muestra "Empieza a las HH:MM"; durante el bloque muestra
-  "En curso · termina HH:MM".
+  "En curso · termina HH:MM", con la hora real de fin del bloque de la cancha.
 - **Cargar el resultado termina la partida**: los jugadores pueden cargarlo
   mientras la partida está en curso, no solo cuando ya terminó. Si la partida
   todavía no empezó o fue cancelada, la pantalla de resultado lo explica.
@@ -27,9 +27,9 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
 ### Corregido
 
-- **Hora de la partida en UTC**: el detalle de la partida y la pantalla de
-  resultado mostraban la hora (y a veces el día) en UTC; ahora se muestran en
-  la hora local del jugador.
+- **Hora de la partida en UTC**: el detalle de la partida, la pantalla de
+  resultado y el texto para compartir la partida mostraban la hora (y a veces
+  el día) en UTC; ahora se muestran en la hora local del jugador.
 
 ### Eliminado
 

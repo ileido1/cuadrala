@@ -1162,14 +1162,16 @@ final class _Footer extends StatelessWidget {
   }
 }
 
-//? Duración del bloque cuando la API no informa la reserva: la misma que usa
-//? el worker de la API para cerrar partidas sin reserva (S3).
+//? Solo para APIs anteriores a `blockEndsAt`: la duración que usa el worker
+//? para partidas sin reserva (S3).
 const _defaultBlockMinutes = 90;
 
 String _inProgressLabel(MatchDetailDto m) {
-  final start = m.scheduledAt?.toLocal();
-  if (start == null) return 'En curso';
-  final end = start.add(const Duration(minutes: _defaultBlockMinutes));
+  //? La API manda el fin real del bloque (duración de la reserva): con 90
+  //? minutos fijos, una cancha de 60 mostraba media hora de más.
+  final end = m.blockEndsAt?.toLocal() ??
+      m.scheduledAt?.toLocal().add(const Duration(minutes: _defaultBlockMinutes));
+  if (end == null) return 'En curso';
   return 'En curso · termina ${formatTimeHm(end)}';
 }
 

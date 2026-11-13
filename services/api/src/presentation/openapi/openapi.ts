@@ -1011,6 +1011,7 @@ const OPENAPI_CONST = {
                         status: { type: 'string', enum: ['SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'] },
                         scheduledAt: { type: 'string', format: 'date-time', nullable: true },
                         organizerUserId: { type: 'string', format: 'uuid' },
+                        blockEndsAt: { type: 'string', format: 'date-time', nullable: true, description: 'Fin del bloque de cancha: scheduledAt + duración de la reserva (90 min sin reserva). Null sin hora.' },
                         tournamentId: { type: 'string', format: 'uuid', nullable: true },
                       },
                     },

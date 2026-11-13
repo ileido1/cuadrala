@@ -45,6 +45,7 @@ final class MatchDetailDto {
     this.displayCurrency,
     this.affectsElo = true,
     this.organizerUserId,
+    this.blockEndsAt,
   });
 
   final String id;
@@ -73,6 +74,10 @@ final class MatchDetailDto {
 
   /// Organizador según la API. Nulo con APIs anteriores al campo.
   final String? organizerUserId;
+
+  /// Fin del bloque de cancha según la API (la hora a la que la partida se
+  /// cierra sola). Nulo sin hora o con APIs anteriores al campo.
+  final DateTime? blockEndsAt;
 
   //? Las APIs viejas no mandan `organizerUserId`; ahí se mantiene la regla
   //? anterior (el primer participante es quien creó la partida).
@@ -130,6 +135,9 @@ final class MatchDetailDto {
       displayCurrency: json['displayCurrency'] as String?,
       affectsElo: json['affectsElo'] as bool? ?? true,
       organizerUserId: json['organizerUserId'] as String?,
+      blockEndsAt: json['blockEndsAt'] is String
+          ? DateTime.parse(json['blockEndsAt'] as String)
+          : null,
     );
   }
 }

@@ -25,6 +25,9 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
   `CANCELLED`. Las cancelaciones del organizador o admin conservan su texto.
 - **`organizerUserId` en el detalle**: `GET /api/v1/matches/:id` expone quién
   creó la partida.
+- **`blockEndsAt` en el detalle**: cuándo termina el bloque de cancha (la misma
+  hora a la que el worker cierra la partida), para que las apps no supongan 90
+  minutos.
 - **Silenciar recordatorio y partida rápida**: las preferencias de
   notificación (`enabledTypes`) aceptan `MATCH_RESULT_REMINDER` y
   `QUICK_MATCH_PROPOSAL`; antes respondían 400.

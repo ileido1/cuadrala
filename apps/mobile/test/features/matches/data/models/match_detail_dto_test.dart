@@ -84,5 +84,21 @@ void main() {
         },
       );
     });
+
+    group('blockEndsAt', () {
+      test('should parse when the court block ends', () {
+        final json = Map<String, Object?>.from(baseJson)
+          ..['blockEndsAt'] = '2026-05-05T17:00:00.000Z';
+
+        expect(
+          MatchDetailDto.fromJson(json).blockEndsAt,
+          DateTime.utc(2026, 5, 5, 17),
+        );
+      });
+
+      test('should be null when an older API omits it', () {
+        expect(MatchDetailDto.fromJson(baseJson).blockEndsAt, isNull);
+      });
+    });
   });
 }
