@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/formatting/scheduled_label.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/brand_colors.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -101,16 +102,18 @@ class _ResultEntryViewState extends State<_ResultEntryView> {
             );
           }
 
-          //? La API solo acepta el resultado de una partida terminada: sin
-          //? esta guarda, el flujo de 3 pasos fallaba recién al enviar.
+          //? La API acepta el resultado desde que la partida empieza (cargarlo
+          //? la termina). Sin empezar o cancelada, el flujo de 3 pasos fallaba
+          //? recién al enviar: se explica antes de empezar.
           final match = state.match;
-          if (match != null && match.status != 'FINISHED') {
+          final blocked = match == null ? null : _blockedCopy(match);
+          if (blocked != null) {
             return Scaffold(
               appBar: AppBar(title: const Text('Cargar resultado')),
               body: ErrorState(
-                icon: AppIcons.clock,
-                title: 'La partida todavía no terminó',
-                message: 'El resultado se carga cuando la partida termina.',
+                icon: blocked.icon,
+                title: blocked.title,
+                message: blocked.message,
                 retryLabel: 'Volver',
                 onRetry: () => Navigator.of(context).maybePop(),
               ),
@@ -1360,5 +1363,34 @@ class _ResultSummaryStep extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// Texto de la guarda cuando la partida todavía no admite resultado.
+/// `null` si se puede cargar (en curso o finalizada).
+({IconData icon, String title, String message})? _blockedCopy(
+  MatchDetailDto match,
+) {
+  switch (match.status) {
+    case 'IN_PROGRESS':
+    case 'FINISHED':
+      return null;
+    case 'CANCELLED':
+      return (
+        icon: AppIcons.closeCircle,
+        title: 'La partida fue cancelada',
+        message: 'No se puede cargar el resultado de una partida cancelada.',
+      );
+    default:
+      //? Hora local del jugador: la API manda el instante en UTC.
+      final start = match.scheduledAt?.toLocal();
+      const tail = 'El resultado se carga una vez que empieza.';
+      return (
+        icon: AppIcons.clock,
+        title: 'La partida todavía no empezó',
+        message: start == null
+            ? tail
+            : 'Empieza a las ${formatTimeHm(start)}. $tail',
+      );
   }
 }

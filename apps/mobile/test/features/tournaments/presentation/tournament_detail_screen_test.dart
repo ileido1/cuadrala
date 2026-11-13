@@ -149,10 +149,10 @@ Widget _buildTestApp({
         ),
       ),
       GoRoute(
-        path: '/matches/:matchId/live',
+        path: '/matches/:matchId',
         builder: (context, state) {
           final matchId = state.pathParameters['matchId'] ?? '';
-          return Scaffold(body: Center(child: Text('Live match: $matchId')));
+          return Scaffold(body: Center(child: Text('Match detail: $matchId')));
         },
       ),
     ],
@@ -414,20 +414,22 @@ void main() {
     );
   });
 
-  group('_ScheduleList — tap live match navigates (D2)', () {
-    testWidgets('tapping a materialized match navigates to MatchLiveScreen', (
+  //? S7: la pantalla en vivo se eliminó; el partido materializado abre su
+  //? detalle. Antes este test ni tocaba la fila (solo verificaba el render).
+  group('_ScheduleList — tap materialized match navigates (D2)', () {
+    testWidgets('tapping a materialized match opens the match detail', (
       tester,
     ) async {
       when(() => registrationsCubit.state).thenReturn(
-        TournamentRegistrationsLoaded(
-          items: [_authRegistration(userId: 'user-1')],
+        const TournamentRegistrationsLoaded(
+          items: [],
           total: 0,
           invitations: [],
         ),
       );
       when(() => registrationsCubit.currentUserId).thenReturn('user-1');
       when(() => scheduleCubit.state).thenReturn(
-        TournamentScheduleSuccess(
+        const TournamentScheduleSuccess(
           schedule: TournamentScheduleDto(
             rounds: [
               TournamentScheduleRoundDto(
@@ -454,9 +456,13 @@ void main() {
           tournament: _tournament(status: 'IN_PROGRESS', organizerUserId: null),
         ),
       );
-      await tester.pump();
-      expect(find.byKey(const Key('tournament.detail')), findsOneWidget);
-      expect(find.text('Mis partidos'), findsOneWidget);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Calendario'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Partido 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Match detail: match-123'), findsOneWidget);
     });
 
     testWidgets(

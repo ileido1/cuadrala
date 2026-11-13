@@ -11,6 +11,7 @@ enum NotificationType {
   tournamentStarted,
   tournamentMatchNeedsAttention,
   quickMatchProposal,
+  matchResultReminder,
   unknown,
 }
 
@@ -33,6 +34,7 @@ extension NotificationTypeWire on NotificationType {
     NotificationType.tournamentMatchNeedsAttention =>
       'TOURNAMENT_MATCH_NEEDS_ATTENTION',
     NotificationType.quickMatchProposal => 'QUICK_MATCH_PROPOSAL',
+    NotificationType.matchResultReminder => 'MATCH_RESULT_REMINDER',
     NotificationType.unknown => '',
   };
 }
@@ -55,6 +57,7 @@ NotificationType notificationTypeFromWire(String raw) {
     'TOURNAMENT_MATCH_NEEDS_ATTENTION' =>
       NotificationType.tournamentMatchNeedsAttention,
     'QUICK_MATCH_PROPOSAL' => NotificationType.quickMatchProposal,
+    'MATCH_RESULT_REMINDER' => NotificationType.matchResultReminder,
     _ => NotificationType.unknown,
   };
 }
@@ -98,8 +101,10 @@ final class NotificationDeliveryDto {
       type: type,
       title: title != null && title.isNotEmpty
           ? title
-          : _defaultTitleForType(type),
-      body: body != null && body.isNotEmpty ? body : _defaultBodyForType(type),
+          : notificationDefaultTitle(type),
+      body: body != null && body.isNotEmpty
+          ? body
+          : notificationDefaultBody(type),
       //? El sujeto puede ser un partido o un torneo; antes solo se contemplaba
       //? el partido y las notificaciones de torneo quedaban sin destino.
       deepLink:
@@ -115,51 +120,58 @@ final class NotificationDeliveryDto {
           : DateTime.parse(json['readAt'] as String),
     );
   }
+}
 
-  static String _defaultTitleForType(NotificationType type) {
-    return switch (type) {
-      NotificationType.chatMessage => 'Nuevo mensaje',
-      NotificationType.matchSlotOpened => 'Se abrió una vacante',
-      NotificationType.matchCancelled => 'Partida cancelada',
-      NotificationType.paymentPending => 'Pago pendiente',
-      NotificationType.matchPlayerJoined => 'Nuevo jugador',
-      NotificationType.paymentConfirmed => 'Pago confirmado',
-      NotificationType.tournamentRegistrationReceived => 'Nueva inscripción',
-      NotificationType.tournamentRegistrationConfirmed => 'Estás dentro',
-      NotificationType.tournamentSchedulePublished => 'Ya está el calendario',
-      NotificationType.tournamentStarted => 'Arrancó el torneo',
-      NotificationType.tournamentMatchNeedsAttention =>
-        'Un partido necesita horario',
-      NotificationType.quickMatchProposal => 'Encontramos una partida',
-      NotificationType.unknown => 'Notificación',
-    };
-  }
+//? Texto por defecto de cada tipo cuando la API no manda título/cuerpo. Lo
+//? comparten la bandeja in-app y el banner de foreground: antes cada uno tenía
+//? su copia y un tipo nuevo había que agregarlo en los dos lados.
 
-  static String _defaultBodyForType(NotificationType type) {
-    return switch (type) {
-      NotificationType.chatMessage =>
-        'Tienes un nuevo mensaje en el chat de la partida.',
-      NotificationType.matchSlotOpened =>
-        'Hay una vacante en una partida que coincide con tus preferencias.',
-      NotificationType.matchCancelled => 'Una partida fue cancelada.',
-      NotificationType.paymentPending =>
-        'Hay un pago pendiente de revisión en tu partida.',
-      NotificationType.matchPlayerJoined => 'Alguien se unió a tu partida.',
-      NotificationType.paymentConfirmed =>
-        'Tu pago fue confirmado por el club.',
-      NotificationType.tournamentRegistrationReceived =>
-        'Alguien se anotó a tu torneo y espera tu confirmación.',
-      NotificationType.tournamentRegistrationConfirmed =>
-        'El organizador confirmó tu inscripción al torneo.',
-      NotificationType.tournamentSchedulePublished =>
-        'Se publicó el calendario del torneo. Mirá cuándo te toca jugar.',
-      NotificationType.tournamentStarted =>
-        'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
-      NotificationType.tournamentMatchNeedsAttention =>
-        'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
-      NotificationType.quickMatchProposal =>
-        'Tenés una propuesta lista para confirmar.',
-      NotificationType.unknown => '',
-    };
-  }
+/// Título por defecto de una notificación de tipo [type].
+String notificationDefaultTitle(NotificationType type) {
+  return switch (type) {
+    NotificationType.chatMessage => 'Nuevo mensaje',
+    NotificationType.matchSlotOpened => 'Se abrió una vacante',
+    NotificationType.matchCancelled => 'Partida cancelada',
+    NotificationType.paymentPending => 'Pago pendiente',
+    NotificationType.matchPlayerJoined => 'Nuevo jugador',
+    NotificationType.paymentConfirmed => 'Pago confirmado',
+    NotificationType.tournamentRegistrationReceived => 'Nueva inscripción',
+    NotificationType.tournamentRegistrationConfirmed => 'Estás dentro',
+    NotificationType.tournamentSchedulePublished => 'Ya está el calendario',
+    NotificationType.tournamentStarted => 'Arrancó el torneo',
+    NotificationType.tournamentMatchNeedsAttention =>
+      'Un partido necesita horario',
+    NotificationType.quickMatchProposal => 'Encontramos una partida',
+    NotificationType.matchResultReminder => '¿Cómo salió la partida?',
+    NotificationType.unknown => 'Notificación',
+  };
+}
+
+/// Cuerpo por defecto de una notificación de tipo [type].
+String notificationDefaultBody(NotificationType type) {
+  return switch (type) {
+    NotificationType.chatMessage =>
+      'Tienes un nuevo mensaje en el chat de la partida.',
+    NotificationType.matchSlotOpened =>
+      'Hay una vacante en una partida que coincide con tus preferencias.',
+    NotificationType.matchCancelled => 'Una partida fue cancelada.',
+    NotificationType.paymentPending =>
+      'Hay un pago pendiente de revisión en tu partida.',
+    NotificationType.matchPlayerJoined => 'Alguien se unió a tu partida.',
+    NotificationType.paymentConfirmed => 'Tu pago fue confirmado por el club.',
+    NotificationType.tournamentRegistrationReceived =>
+      'Alguien se anotó a tu torneo y espera tu confirmación.',
+    NotificationType.tournamentRegistrationConfirmed =>
+      'El organizador confirmó tu inscripción al torneo.',
+    NotificationType.tournamentSchedulePublished =>
+      'Se publicó el calendario del torneo. Mirá cuándo te toca jugar.',
+    NotificationType.tournamentStarted =>
+      'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
+    NotificationType.tournamentMatchNeedsAttention =>
+      'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
+    NotificationType.quickMatchProposal =>
+      'Tenés una propuesta lista para confirmar.',
+    NotificationType.matchResultReminder => 'Cargá el resultado de tu partida.',
+    NotificationType.unknown => '',
+  };
 }

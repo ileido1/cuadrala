@@ -34,6 +34,18 @@ void main() {
       }
     });
 
+    //? S9: el recordatorio lleva directo a cargar el resultado.
+    test('should open the result entry for a result reminder', () {
+      final d = notificationDestination(
+        eventType: 'MATCH_RESULT_REMINDER',
+        matchId: 'm-1',
+        tournamentId: null,
+      );
+
+      expect(d.route, Routes.matchResult('m-1'));
+      expect(d.replacesStack, isFalse);
+    });
+
     test('should open quick match for a proposal notification', () {
       final d = notificationDestination(
         eventType: 'QUICK_MATCH_PROPOSAL',
@@ -114,6 +126,15 @@ void main() {
       );
 
       expect(d?.route, Routes.matchChat('m-9'));
+    });
+
+    test('should open the result entry from a reminder deep link', () {
+      final d = notificationDestinationFromDeepLink(
+        '/matches/m-9',
+        eventType: 'MATCH_RESULT_REMINDER',
+      );
+
+      expect(d?.route, Routes.matchResult('m-9'));
     });
 
     test('should open quick match from its API deep link', () {

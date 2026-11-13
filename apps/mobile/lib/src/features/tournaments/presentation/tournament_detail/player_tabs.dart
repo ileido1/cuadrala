@@ -449,14 +449,15 @@ final class _MatchTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final canNavigateToLive = match.matchId != null;
+    //? S7: sin pantalla en vivo; el partido materializado abre su detalle.
+    final canOpenMatch = match.matchId != null;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: canNavigateToLive
-            ? () => context.push(Routes.matchLive(match.matchId!))
+        onTap: canOpenMatch
+            ? () => context.push(Routes.matchDetail(match.matchId!))
             : null,
         child: Container(
           padding: const EdgeInsets.all(12),

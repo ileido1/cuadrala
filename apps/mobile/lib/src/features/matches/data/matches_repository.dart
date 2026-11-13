@@ -232,7 +232,7 @@ class MatchesRepository {
     );
   }
 
-  //? Alias para getMatchById (compatibilidad con match_live_cubit)
+  //? Alias de getMatchById que devuelve null en vez de lanzar
   Future<MatchDetailDto?> getMatchDetail(String matchId) async {
     try {
       return await getMatchById(matchId);

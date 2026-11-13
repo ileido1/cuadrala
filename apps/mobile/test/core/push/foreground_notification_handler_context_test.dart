@@ -77,6 +77,12 @@ void main() {
         path: Routes.quickMatch,
         builder: (_, _) => const Scaffold(body: Text('QUICK MATCH SCREEN')),
       ),
+      GoRoute(
+        path: '/matches/:matchId/result',
+        builder: (_, state) => Scaffold(
+          body: Text('RESULT ENTRY ${state.pathParameters['matchId']}'),
+        ),
+      ),
     ],
   );
 
@@ -114,6 +120,35 @@ void main() {
       //? Desmonta el árbol en un frame controlado antes de que termine el
       //? test — evita que el framework dispare dispose() en medio de su
       //? propio desmontaje final.
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  //? S9: el recordatorio usa el mismo texto que la bandeja in-app y lleva a
+  //? cargar el resultado de esa partida.
+  testWidgets(
+    'shows the result reminder copy and opens the result entry when tapped',
+    (tester) async {
+      await tester.pumpWidget(buildAppLikeTree(buildTestRouter()));
+      await tester.pumpAndSettle();
+
+      FirebaseMessagingPlatform.onMessage.add(
+        RemoteMessage(
+          data: const {'eventType': 'MATCH_RESULT_REMINDER', 'matchId': 'm-1'},
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('¿Cómo salió la partida?'), findsOneWidget);
+      expect(find.text('Cargá el resultado de tu partida.'), findsOneWidget);
+
+      await tester.tap(find.text('¿Cómo salió la partida?'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('RESULT ENTRY m-1'), findsOneWidget);
+
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

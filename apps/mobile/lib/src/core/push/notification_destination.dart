@@ -57,6 +57,11 @@ NotificationDestination notificationDestination({
     NotificationType.matchCancelled => NotificationDestination(
       Routes.matchDetail(matchId),
     ),
+    //? S9: el recordatorio existe para cargar el resultado; abrir el detalle
+    //? obligaría a buscar el botón.
+    NotificationType.matchResultReminder => NotificationDestination(
+      Routes.matchResult(matchId),
+    ),
     _ => _fallback,
   };
 }

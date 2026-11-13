@@ -256,22 +256,6 @@ final class MatchDetailCubit extends Cubit<MatchDetailState> {
     );
   }
 
-  Future<void> start() async {
-    await _runAction(
-      action: () => _matchesRepository.startMatch(_matchId),
-      successMessage: 'Partida iniciada.',
-      fallbackError: 'No se pudo iniciar.',
-    );
-  }
-
-  Future<void> finish() async {
-    await _runAction(
-      action: () => _matchesRepository.finishMatch(_matchId),
-      successMessage: 'Partida finalizada.',
-      fallbackError: 'No se pudo finalizar.',
-    );
-  }
-
   Future<void> _runAction({
     required Future<void> Function() action,
     required String successMessage,

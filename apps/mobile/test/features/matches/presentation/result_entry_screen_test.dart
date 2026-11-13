@@ -151,24 +151,68 @@ void main() {
     _lastCubit = null;
   });
 
-  //? Si se llega a "Cargar resultado" con la partida sin terminar (por un
-  //? enlace o un botón viejo), el flujo de 3 pasos terminaba en un error de la
-  //? API. Ahora la pantalla lo dice antes de empezar.
-  testWidgets('should explain it cannot load a result before the match ends', (
-    tester,
-  ) async {
-    when(
-      () => matchesApi.getMatchEnvelope(matchId: any(named: 'matchId')),
-    ).thenAnswer((_) async => {..._matchJson, 'status': 'IN_PROGRESS'});
-    await _setupGetIt(matchesApi, catalogApi);
-    await tester.pumpWidget(_buildTestApp());
-    await tester.pumpAndSettle();
+  //? S2/S8: cargar el resultado termina la partida, así que se acepta desde
+  //? que empieza (IN_PROGRESS). Antes (7952ff4) se bloqueaba todo lo que no
+  //? fuera FINISHED; sin empezar o cancelada se explica antes del flujo.
+  group('match status guard', () {
+    //? Instante UTC armado desde la hora local 12:00: la guarda debe mostrar
+    //? la hora del jugador en cualquier zona horaria.
+    final localNoonUtc = DateTime(2026, 5, 25, 12).toUtc().toIso8601String();
 
-    expect(
-      find.text('El resultado se carga cuando la partida termina.'),
-      findsOneWidget,
+    Future<void> pumpWithStatus(WidgetTester tester, String status) async {
+      when(
+        () => matchesApi.getMatchEnvelope(matchId: any(named: 'matchId')),
+      ).thenAnswer(
+        (_) async => {
+          ..._matchJson,
+          'status': status,
+          'scheduledAt': localNoonUtc,
+        },
+      );
+      await _setupGetIt(matchesApi, catalogApi);
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+    }
+
+    for (final status in ['IN_PROGRESS', 'FINISHED']) {
+      testWidgets('should open the result flow when the match is $status', (
+        tester,
+      ) async {
+        await pumpWithStatus(tester, status);
+
+        expect(find.byKey(const Key('result.entry.screen')), findsOneWidget);
+        expect(find.text('La partida todavía no empezó'), findsNothing);
+      });
+    }
+
+    testWidgets(
+      'should say the match has not started and its local start time when scheduled',
+      (tester) async {
+        await pumpWithStatus(tester, 'SCHEDULED');
+
+        expect(find.text('La partida todavía no empezó'), findsOneWidget);
+        expect(
+          find.text(
+            'Empieza a las 12:00. El resultado se carga una vez que empieza.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('result.entry.screen')), findsNothing);
+      },
     );
-    expect(find.text('Continuar'), findsNothing);
+
+    testWidgets('should say the match was cancelled when cancelled', (
+      tester,
+    ) async {
+      await pumpWithStatus(tester, 'CANCELLED');
+
+      expect(find.text('La partida fue cancelada'), findsOneWidget);
+      expect(
+        find.text('No se puede cargar el resultado de una partida cancelada.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('result.entry.screen')), findsNothing);
+    });
   });
 
   // --------------------------------------------------------------------------

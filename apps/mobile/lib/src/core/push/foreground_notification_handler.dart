@@ -109,7 +109,8 @@ class _ForegroundNotificationState
     //? Overlay interno del Navigator (un lookup por `InheritedWidget` solo
     //? mira hacia los ancestros). El `navigatorKey` del propio router sí tiene
     //? acceso directo a su `OverlayState`, sin pasar por `context` en absoluto.
-    final overlay = widget.router.routerDelegate.navigatorKey.currentState?.overlay;
+    final overlay =
+        widget.router.routerDelegate.navigatorKey.currentState?.overlay;
     if (overlay == null) return;
     final entry = OverlayEntry(
       builder: (context) => _NotificationBanner(
@@ -156,56 +157,14 @@ class _ForegroundNotificationState
     widget.router.push(destination.route);
   }
 
-  String _defaultTitle(String? eventType) {
-    if (eventType == null) return 'Notificación';
-    final type = notificationTypeFromWire(eventType);
-    return switch (type) {
-      NotificationType.chatMessage => 'Nuevo mensaje',
-      NotificationType.matchSlotOpened => 'Se abrió una vacante',
-      NotificationType.matchCancelled => 'Partida cancelada',
-      NotificationType.paymentPending => 'Pago pendiente',
-      NotificationType.matchPlayerJoined => 'Nuevo jugador',
-      NotificationType.paymentConfirmed => 'Pago confirmado',
-      NotificationType.tournamentRegistrationReceived => 'Nueva inscripción',
-      NotificationType.tournamentRegistrationConfirmed => 'Estás dentro',
-      NotificationType.tournamentSchedulePublished => 'Ya está el calendario',
-      NotificationType.tournamentStarted => 'Arrancó el torneo',
-      NotificationType.tournamentMatchNeedsAttention =>
-        'Un partido necesita horario',
-      NotificationType.quickMatchProposal => 'Encontramos una partida',
-      NotificationType.unknown => 'Notificación',
-    };
-  }
+  //? El texto por defecto sale del mismo lugar que el de la bandeja in-app.
+  String _defaultTitle(String? eventType) => eventType == null
+      ? 'Notificación'
+      : notificationDefaultTitle(notificationTypeFromWire(eventType));
 
-  String _defaultBody(String? eventType) {
-    if (eventType == null) return '';
-    final type = notificationTypeFromWire(eventType);
-    return switch (type) {
-      NotificationType.chatMessage =>
-        'Tienes un nuevo mensaje en el chat de la partida.',
-      NotificationType.matchSlotOpened =>
-        'Hay una vacante en una partida que coincide con tus preferencias.',
-      NotificationType.matchCancelled => 'Una partida fue cancelada.',
-      NotificationType.paymentPending =>
-        'Hay un pago pendiente de revisión en tu partida.',
-      NotificationType.matchPlayerJoined => 'Alguien se unió a tu partida.',
-      NotificationType.paymentConfirmed =>
-        'Tu pago fue confirmado por el club.',
-      NotificationType.tournamentRegistrationReceived =>
-        'Alguien se anotó a tu torneo y espera tu confirmación.',
-      NotificationType.tournamentRegistrationConfirmed =>
-        'El organizador confirmó tu inscripción al torneo.',
-      NotificationType.tournamentSchedulePublished =>
-        'Se publicó el calendario del torneo. Mirá cuándo te toca jugar.',
-      NotificationType.tournamentStarted =>
-        'Tu torneo comenzó. Seguí los resultados y la tabla desde la app.',
-      NotificationType.tournamentMatchNeedsAttention =>
-        'Un partido de tu torneo se quedó sin cancha. Reubicalo desde el calendario.',
-      NotificationType.quickMatchProposal =>
-        'Tenés una propuesta lista para confirmar.',
-      NotificationType.unknown => '',
-    };
-  }
+  String _defaultBody(String? eventType) => eventType == null
+      ? ''
+      : notificationDefaultBody(notificationTypeFromWire(eventType));
 
   @override
   Widget build(BuildContext context) => widget.child;
