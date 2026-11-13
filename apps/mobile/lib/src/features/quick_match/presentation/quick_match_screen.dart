@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'cubit/quick_match_cubit.dart';
 import 'cubit/quick_match_state.dart';
+import 'widgets/web_push_queue_prompt.dart';
 import '../data/models/quick_match_search_dto.dart';
 import '../../matches/data/matches_repository.dart';
 import '../../matches/data/models/match_detail_dto.dart';
@@ -1791,6 +1792,7 @@ final class _Lobby extends StatelessWidget {
           filled: proposal.playerIds.length,
           label: (count) => '$count de $_groupSize jugadores',
         ),
+        const WebPushQueuePrompt(),
         const SizedBox(height: 24),
         OutlinedButton(
           onPressed: () => _leaveQueue(context),
@@ -1941,6 +1943,7 @@ final class _SearchingState extends State<_Searching> {
               ),
               const SizedBox(height: 22),
               _QueueProgressCard(search: search),
+              const WebPushQueuePrompt(),
               const SizedBox(height: 14),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
