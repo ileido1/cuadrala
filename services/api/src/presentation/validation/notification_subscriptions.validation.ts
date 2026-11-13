@@ -25,6 +25,8 @@ export const UPSERT_NOTIFICATION_SUBSCRIPTION_BODY_SCHEMA = z
         MATCH_CANCELLED: z.boolean().optional(),
         CHAT_MESSAGE: z.boolean().optional(),
         PAYMENT_PENDING: z.boolean().optional(),
+        QUICK_MATCH_PROPOSAL: z.boolean().optional(),
+        MATCH_RESULT_REMINDER: z.boolean().optional(),
       })
       .strict()
       .optional(),

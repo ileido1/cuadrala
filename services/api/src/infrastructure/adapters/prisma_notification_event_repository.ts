@@ -7,6 +7,7 @@ import type {
   CreatePaymentPendingEventDTO,
   CreateMatchPlayerJoinedEventDTO,
   CreatePaymentConfirmedEventDTO,
+  CreateMatchResultReminderEventDTO,
   NotificationEventDTO,
   NotificationEventRepository,
 } from '../../domain/ports/notification_event_repository.js';
@@ -18,6 +19,17 @@ export class PrismaNotificationEventRepository implements NotificationEventRepos
     return PRISMA.notificationEvent.create({
       data: {
         type: 'MATCH_SLOT_OPENED',
+        matchId: _dto.matchId,
+        categoryId: _dto.categoryId,
+        payload: _dto.payload as never,
+      },
+    });
+  }
+
+  async createMatchResultReminderSV(_dto: CreateMatchResultReminderEventDTO): Promise<NotificationEventDTO> {
+    return PRISMA.notificationEvent.create({
+      data: {
+        type: 'MATCH_RESULT_REMINDER',
         matchId: _dto.matchId,
         categoryId: _dto.categoryId,
         payload: _dto.payload as never,

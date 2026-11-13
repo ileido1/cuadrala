@@ -5,7 +5,31 @@ import type {
   MatchResultDraftStatusDTO,
 } from '../../domain/ports/match_result_draft_repository.js';
 
+import type { Prisma } from '../../generated/prisma/client.js';
+import { AppError } from '../../domain/errors/app_error.js';
 import { PRISMA } from '../prisma_client.js';
+
+/**
+ * Pasa la partida (y su reserva) de IN_PROGRESS a FINISHED dentro de `_tx`.
+ * Si otro proceso la terminó primero (worker al vencer el bloque) sigue igual;
+ * si quedó en otro estado (cancelada) aborta la transacción.
+ */
+async function finishInProgressMatchTxSV(_tx: Prisma.TransactionClient, _matchId: string): Promise<void> {
+  const UPDATED = await _tx.match.updateMany({
+    where: { id: _matchId, status: 'IN_PROGRESS' },
+    data: { status: 'FINISHED' },
+  });
+  if (UPDATED.count === 0) {
+    const CURRENT = await _tx.match.findUnique({ where: { id: _matchId }, select: { status: true } });
+    if (CURRENT?.status !== 'FINISHED') {
+      throw new AppError('TRANSICION_INVALIDA', 'No se pudo terminar la partida por su estado actual.', 409);
+    }
+  }
+  await _tx.reservation.updateMany({
+    where: { matchId: _matchId, matchStatus: { in: ['SCHEDULED', 'IN_PROGRESS'] } },
+    data: { matchStatus: 'FINISHED' },
+  });
+}
 
 function toDraftDTO(_row: {
   id: string;
@@ -53,40 +77,53 @@ export class PrismaMatchResultDraftRepository implements MatchResultDraftReposit
     version: number;
     payload: unknown;
     proposedByUserId: string;
+    finishInProgressMatch?: boolean;
   }): Promise<MatchResultDraftDTO> {
-    const ROW = await PRISMA.matchResultDraft.create({
-      data: {
-        matchId: _input.matchId,
-        version: _input.version,
-        status: 'DRAFT',
-        payload: _input.payload as never,
-        proposedByUserId: _input.proposedByUserId,
-      },
-      select: {
-        id: true,
-        matchId: true,
-        version: true,
-        status: true,
-        payload: true,
-        proposedByUserId: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const ROW = await PRISMA.$transaction(async (_tx) => {
+      //? 1. Cargar el resultado termina la partida en curso (S2)
+      if (_input.finishInProgressMatch === true) {
+        await finishInProgressMatchTxSV(_tx, _input.matchId);
+      }
+      //? 2. Guardar el borrador
+      return _tx.matchResultDraft.create({
+        data: {
+          matchId: _input.matchId,
+          version: _input.version,
+          status: 'DRAFT',
+          payload: _input.payload as never,
+          proposedByUserId: _input.proposedByUserId,
+        },
+        select: {
+          id: true,
+          matchId: true,
+          version: true,
+          status: true,
+          payload: true,
+          proposedByUserId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
     });
     return toDraftDTO(ROW as unknown as Parameters<typeof toDraftDTO>[0]);
   }
 
   async updateDraftSV(
     _draftId: string,
-    _patch: { payload?: unknown; status?: MatchResultDraftStatusDTO },
+    _patch: { payload?: unknown; status?: MatchResultDraftStatusDTO; finishInProgressMatchId?: string },
   ): Promise<void> {
-    await PRISMA.matchResultDraft.update({
-      where: { id: _draftId },
-      data: {
-        ...(_patch.payload !== undefined ? { payload: _patch.payload as never } : {}),
-        ...(_patch.status !== undefined ? { status: _patch.status } : {}),
-      },
-      select: { id: true },
+    await PRISMA.$transaction(async (_tx) => {
+      if (_patch.finishInProgressMatchId !== undefined) {
+        await finishInProgressMatchTxSV(_tx, _patch.finishInProgressMatchId);
+      }
+      await _tx.matchResultDraft.update({
+        where: { id: _draftId },
+        data: {
+          ...(_patch.payload !== undefined ? { payload: _patch.payload as never } : {}),
+          ...(_patch.status !== undefined ? { status: _patch.status } : {}),
+        },
+        select: { id: true },
+      });
     });
   }
 

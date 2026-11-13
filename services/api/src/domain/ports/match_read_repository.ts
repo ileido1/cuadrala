@@ -5,6 +5,8 @@ export type MatchSnapshotDTO = {
   status: string;
   maxParticipants: number;
   affectsElo: boolean;
+  /** Null en partidas regulares (abiertas / rápidas). */
+  tournamentId: string | null;
 };
 
 export interface MatchReadRepository {

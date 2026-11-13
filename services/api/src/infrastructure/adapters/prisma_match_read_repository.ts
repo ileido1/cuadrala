@@ -13,6 +13,7 @@ export class PrismaMatchReadRepository implements MatchReadRepository {
         status: true,
         maxParticipants: true,
         affectsElo: true,
+        tournamentId: true,
       },
     });
   }

@@ -10,6 +10,7 @@ export type NotificationEventDTO = {
     | 'MATCH_PLAYER_JOINED'
     | 'PAYMENT_CONFIRMED'
     | 'QUICK_MATCH_PROPOSAL'
+    | 'MATCH_RESULT_REMINDER'
     | TournamentNotificationEventType;
   /// Sujeto del evento: uno de los dos, nunca ambos (CHECK en la base).
   matchId: string | null;
@@ -69,6 +70,12 @@ export type CreateQuickMatchProposalEventDTO = {
   payload: unknown;
 };
 
+export type CreateMatchResultReminderEventDTO = {
+  matchId: string;
+  categoryId: string;
+  payload: unknown;
+};
+
 export type CreateTournamentEventDTO = {
   type: TournamentNotificationEventType;
   tournamentId: string;
@@ -85,6 +92,7 @@ export interface NotificationEventRepository {
   createPaymentPendingSV(_dto: CreatePaymentPendingEventDTO): Promise<NotificationEventDTO>;
   createMatchPlayerJoinedSV(_dto: CreateMatchPlayerJoinedEventDTO): Promise<NotificationEventDTO>;
   createPaymentConfirmedSV(_dto: CreatePaymentConfirmedEventDTO): Promise<NotificationEventDTO>;
+  createMatchResultReminderSV(_dto: CreateMatchResultReminderEventDTO): Promise<NotificationEventDTO>;
   listPendingSV(_limit: number): Promise<NotificationEventDTO[]>;
   countPendingSV(): Promise<number>;
   markProcessedSV(_eventId: string, _processedAt: Date): Promise<void>;

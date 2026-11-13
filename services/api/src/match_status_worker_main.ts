@@ -2,13 +2,11 @@ import 'dotenv/config';
 
 import { disconnectDatabaseSV } from './infrastructure/prisma_client.js';
 import { PrismaDistributedLockRepository } from './infrastructure/adapters/prisma_distributed_lock_repository.js';
-import { PrismaMatchStatusRepository } from './infrastructure/adapters/prisma_match_status_repository.js';
-import { UpdateMatchStatusUseCase } from './application/use_cases/update_match_status.use_case.js';
+import { UPDATE_MATCH_STATUS_UC } from './presentation/composition/matches.composition.js';
 import { startMatchStatusWorkerSV } from './presentation/workers/match_status.worker.js';
 
 const LOCK_REPOSITORY = new PrismaDistributedLockRepository();
-const MATCH_STATUS_REPOSITORY = new PrismaMatchStatusRepository();
-const UPDATE_MATCH_STATUS_UC = new UpdateMatchStatusUseCase(MATCH_STATUS_REPOSITORY);
+//? Caso de uso de la composición: incluye recordatorio y aviso de cancelación (S4/S5).
 const WORKER = startMatchStatusWorkerSV(UPDATE_MATCH_STATUS_UC, LOCK_REPOSITORY);
 
 if (WORKER === null) {

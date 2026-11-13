@@ -50,7 +50,16 @@ export class UpsertMatchResultDraftUseCase {
     if (MATCH === null) {
       throw new AppError('PARTIDO_NO_ENCONTRADO', 'El partido indicado no existe.', 404);
     }
-    if (MATCH.status !== 'FINISHED') {
+    if (MATCH.status === 'SCHEDULED') {
+      throw new AppError('PARTIDO_NO_INICIADO', 'La partida todavía no empezó.', 409);
+    }
+    if (MATCH.status === 'CANCELLED') {
+      throw new AppError('PARTIDO_CANCELADO', 'La partida fue cancelada.', 409);
+    }
+    //? Una partida regular en curso se puede cargar: el resultado la termina (S2).
+    //? Los partidos de torneo siguen pidiendo estar finalizados.
+    const FINISHES_MATCH = MATCH.status === 'IN_PROGRESS' && MATCH.tournamentId === null;
+    if (MATCH.status !== 'FINISHED' && !FINISHES_MATCH) {
       throw new AppError('PARTIDO_NO_FINALIZADO', 'El partido debe estar finalizado para registrar resultado.', 409);
     }
 
@@ -89,6 +98,7 @@ export class UpsertMatchResultDraftUseCase {
         version: 1,
         payload: NEW_PAYLOAD,
         proposedByUserId: _input.actorUserId,
+        finishInProgressMatch: FINISHES_MATCH,
       });
       return { draft: CREATED, created: true };
     }
@@ -111,7 +121,11 @@ export class UpsertMatchResultDraftUseCase {
       await this._matchResultDraftRepository.deleteConfirmationsByDraftIdSV(LATEST.id);
     }
 
-    await this._matchResultDraftRepository.updateDraftSV(LATEST.id, { payload: NEW_PAYLOAD, status: 'DRAFT' });
+    await this._matchResultDraftRepository.updateDraftSV(LATEST.id, {
+      payload: NEW_PAYLOAD,
+      status: 'DRAFT',
+      ...(FINISHES_MATCH ? { finishInProgressMatchId: _input.matchId } : {}),
+    });
 
     const UPDATED = await this._matchResultDraftRepository.findLatestByMatchIdSV(_input.matchId);
     if (UPDATED === null) {

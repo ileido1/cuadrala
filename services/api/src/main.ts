@@ -9,8 +9,7 @@ import { REFRESH_EXCHANGE_RATES_UC } from './presentation/composition/exchange_r
 import { startNotificationsWorkerSV } from './presentation/workers/notifications.worker.js';
 import { startExchangeRatesWorkerSV } from './presentation/workers/exchange_rates.worker.js';
 import { startMatchStatusWorkerSV } from './presentation/workers/match_status.worker.js';
-import { PrismaMatchStatusRepository } from './infrastructure/adapters/prisma_match_status_repository.js';
-import { UpdateMatchStatusUseCase } from './application/use_cases/update_match_status.use_case.js';
+import { UPDATE_MATCH_STATUS_UC } from './presentation/composition/matches.composition.js';
 
 const APP = createApp();
 
@@ -29,10 +28,9 @@ const EXCHANGE_RATES_WORKER = startExchangeRatesWorkerSV(
   REFRESH_EXCHANGE_RATES_UC,
   LOCK_REPOSITORY,
 );
-const MATCH_STATUS_WORKER = startMatchStatusWorkerSV(
-  new UpdateMatchStatusUseCase(new PrismaMatchStatusRepository()),
-  LOCK_REPOSITORY,
-);
+//? Mismo caso de uso que la composición: con notificaciones de recordatorio y
+//? de cancelación (S4/S5). Armarlo acá sin ellas las dejaba mudas en producción.
+const MATCH_STATUS_WORKER = startMatchStatusWorkerSV(UPDATE_MATCH_STATUS_UC, LOCK_REPOSITORY);
 
 async function shutdownSV(_signal: string): Promise<void> {
   console.log(`Cerrando API (${_signal})...`);

@@ -154,6 +154,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
           },
         },
         tournamentId: true,
+        organizerUserId: true,
         createdAt: true,
         updatedAt: true,
         _count: { select: { participants: true } },
@@ -182,6 +183,7 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
 
     return {
       ...BASE,
+      organizerUserId: ROW.organizerUserId,
       courtId: ROW.courtId,
       venueId: ROW.court?.venue.id ?? null,
       ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),
