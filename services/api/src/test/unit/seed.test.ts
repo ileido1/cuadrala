@@ -139,3 +139,23 @@ it('should seed all seven schedulable modalities and preserve QA progress when r
   expect(REGISTRATIONS[0]!.status).toBe('WITHDRAWN');
   expect(TOURNAMENTS.map((_t) => _t.startsAt)).toEqual(BEFORE.map((_t) => _t.startsAt));
 });
+
+//? Pádel Center Chacao y Canchas del Sur quedaban sin owner: nadie podía
+//? administrarlas (agenda, pagos, ajustes) desde la web de staff.
+it('should give every seed venue its own owner with an OWNER staff role', async () => {
+  vi.stubEnv('DATABASE_URL', 'postgresql://unused:unused@localhost:1/unused');
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  DATABASE.tables.set('venue', [{ id: 'real-venue', placeId: 'real:venue' }]);
+  await runSeedSV();
+  const SEED_VENUES = DATABASE.tables.get('venue')!.filter((_v) => String(_v.placeId).startsWith('seed:venue:'));
+  expect(SEED_VENUES).toHaveLength(3);
+  const USERS = DATABASE.tables.get('user')!;
+  const STAFF = DATABASE.tables.get('venueStaff')!;
+  for (const VENUE of SEED_VENUES) {
+    expect(VENUE.ownerUserId, String(VENUE.placeId)).toBeDefined();
+    expect(USERS.some((_u) => _u.id === VENUE.ownerUserId)).toBe(true);
+    expect(STAFF).toContainEqual(expect.objectContaining({ venueId: VENUE.id, userId: VENUE.ownerUserId, role: 'OWNER' }));
+  }
+  expect(new Set(SEED_VENUES.map((_v) => _v.ownerUserId)).size).toBe(3);
+  expect(DATABASE.tables.get('venue')!.find((_v) => _v.id === 'real-venue')!.ownerUserId).toBeUndefined();
+});

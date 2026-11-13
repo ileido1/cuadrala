@@ -394,6 +394,10 @@ async function seedTestUsersSV(): Promise<Array<{ id: string; email: string; nam
     { email: 'player6@test.dev', name: 'Jugador Básico 2' },
     { email: 'player7@test.dev', name: 'Jugador de Prueba 7' },
     { email: 'player8@test.dev', name: 'Jugador de Prueba 8' },
+    //? Owners de las otras dos sedes del seed. Van al final para no correr los
+    //? índices de los jugadores que usan los partidos y torneos de prueba.
+    { email: 'owner.padelcenter@test.dev', name: 'Owner Pádel Center Chacao' },
+    { email: 'owner.canchassur@test.dev', name: 'Owner Canchas del Sur' },
   ];
 
   //? 3. Crear/actualizar usuarios
@@ -944,15 +948,19 @@ async function mainSV(): Promise<void> {
   //? 4. Crear tasas de cambio
   await seedExchangeRatesSV();
 
-  //? 5. Asignar owner al primer venue (Club Cuádrala)
-  const OWNER = TEST_USERS[0]!;
-  const VENUE_CUADRALA = await PRISMA.venue.findUnique({
-    where: { placeId: 'seed:venue:club-cuadrala' },
-    select: { id: true },
-  });
-  if (VENUE_CUADRALA !== null) {
-    await seedVenueOwnerSV(VENUE_CUADRALA.id, OWNER.id);
-    console.log(`[seed] Owner '${OWNER.email}' asignado al venue Club Cuádrala`);
+  //? 5. Asignar un owner a cada sede del seed. Antes solo Club Cuádrala tenía
+  //? owner: las otras dos no se podían administrar desde la web de staff.
+  const VENUE_OWNERS: Array<{ placeId: string; ownerEmail: string }> = [
+    { placeId: 'seed:venue:club-cuadrala', ownerEmail: 'owner@test.dev' },
+    { placeId: 'seed:venue:padel-center', ownerEmail: 'owner.padelcenter@test.dev' },
+    { placeId: 'seed:venue:canchas-sur', ownerEmail: 'owner.canchassur@test.dev' },
+  ];
+  for (const { placeId, ownerEmail } of VENUE_OWNERS) {
+    const OWNER = TEST_USERS.find((_u) => _u.email === ownerEmail);
+    const VENUE = await PRISMA.venue.findUnique({ where: { placeId }, select: { id: true, name: true } });
+    if (OWNER === undefined || VENUE === null) continue;
+    await seedVenueOwnerSV(VENUE.id, OWNER.id);
+    console.log(`[seed] Owner '${OWNER.email}' asignado al venue ${VENUE.name}`);
   }
 
   //? 6. Crear matches de prueba en diferentes estados

@@ -5,6 +5,15 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.15.1] - 2026-11-13
+
+### Corregido
+
+- **Sedes de prueba sin owner**: `npm run seed` ahora asigna un owner (y rol
+  `OWNER` de staff) a cada sede de prueba. Pádel Center Chacao queda a cargo de
+  `owner.padelcenter@test.dev` y Canchas del Sur de `owner.canchassur@test.dev`
+  (contraseña `password123`); antes solo Club Cuádrala tenía owner.
+
 ## [1.15.0] - 2026-11-12
 
 ### Cambiado

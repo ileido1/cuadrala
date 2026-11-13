@@ -54,7 +54,7 @@ El seed es **idempotente**: crea los cuatro deportes de raqueta, cuatro presets 
 
 Usar solo una base de desarrollo/QA autorizada, nunca producción. El seed agrega **7 torneos PUBLIC/OPEN**, separados por una semana, desde 14 días después de la primera corrida. No genera cuadros ni partidos de torneo: el organizador recorre el flujo real.
 
-Todas las cuentas usan `password123`: `organizer@test.dev` organiza los siete torneos; `player1@test.dev` a `player8@test.dev` son jugadores. `owner@test.dev` administra **solo Club Cuádrala** (no Canchas del Sur).
+Todas las cuentas usan `password123`: `organizer@test.dev` organiza los siete torneos; `player1@test.dev` a `player8@test.dev` son jugadores. Cada sede tiene su owner: `owner@test.dev` administra Club Cuádrala, `owner.padelcenter@test.dev` administra Pádel Center Chacao y `owner.canchassur@test.dev` administra Canchas del Sur.
 
 | Formato | Modalidad | Sede | Inscripciones iniciales |
 |---|---|---|---|
