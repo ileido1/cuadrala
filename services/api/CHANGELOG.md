@@ -5,6 +5,16 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.16.0] - 2026-11-13
+
+### Cambiado
+
+- **Pago Móvil liquida siempre en bolívares**: al crear un método Pago Móvil
+  sin moneda queda en BS (antes heredaba la moneda de la sede, p. ej. USD), y
+  cambiar un método a Pago Móvil lo pasa a BS. Pedir otra moneda para Pago Móvil
+  responde 400 `VALIDACION_FALLIDA`. Los métodos Pago Móvil que ya estaban en USD
+  no se migran solos: se corrigen al editarlos desde la web de staff.
+
 ## [1.15.1] - 2026-11-13
 
 ### Corregido
