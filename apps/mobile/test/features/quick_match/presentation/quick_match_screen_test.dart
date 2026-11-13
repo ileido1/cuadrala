@@ -313,7 +313,11 @@ void main() {
 
     expect(find.text('Búsqueda activa'), findsOneWidget);
     expect(find.text('Buscando jugadores'), findsOneWidget);
+    //? Una sola pantalla de espera: solo, el grupo arranca en 1 de 4.
+    expect(find.text('1 de 4 jugadores'), findsOneWidget);
     expect(find.text('Revisando partidas abiertas'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Cambiar horario'), 200);
+    expect(find.text('Cambiar horario'), findsOneWidget);
     expect(find.text('Editar preferencias'), findsOneWidget);
     expect(find.text('Salir de la cola'), findsOneWidget);
   });
@@ -438,7 +442,9 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
 
-    expect(find.text('Seguimos buscando'), findsOneWidget);
+    //? Antes "Seguimos buscando" era otra pantalla; ahora es la misma.
+    expect(find.text('Buscando jugadores'), findsOneWidget);
+    expect(find.text('Seguimos buscando'), findsNothing);
     expect(callCount, greaterThanOrEqualTo(2));
   });
 
@@ -989,6 +995,13 @@ void main() {
     expect(find.text('2 de 4 jugadores'), findsOneWidget);
     expect(find.text('Salir de la cola'), findsOneWidget);
     expect(find.text('Buscando jugadores'), findsNothing);
+    //? Mismo diseño que la búsqueda en solitario (antes era otra pantalla),
+    //? sin opciones que sacarían al jugador del grupo.
+    expect(find.text('Revisando partidas abiertas'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Ver partidas abiertas'), 200);
+    expect(find.text('Ver partidas abiertas'), findsOneWidget);
+    expect(find.text('Cambiar horario'), findsNothing);
+    expect(find.text('Editar preferencias'), findsNothing);
   });
 
   testWidgets('should show new lobby members by polling', (tester) async {

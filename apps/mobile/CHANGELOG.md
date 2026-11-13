@@ -5,6 +5,27 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.36] - 2026-11-13
+
+### Cambiado
+
+- **Una sola pantalla de espera en la cola**: "Buscando jugadores", "Seguimos
+  buscando" y "Grupo armándose" eran tres pantallas distintas para el mismo
+  momento. Ahora es una sola: muestra cuántos jugadores hay en el grupo (1 de 4
+  cuando estás solo), el progreso de la búsqueda y las opciones. Dentro de un
+  grupo no se ofrece cambiar horario, zona ni preferencias, porque eso te
+  sacaría del grupo.
+
+## [1.7.35] - 2026-11-13
+
+### Agregado
+
+- **Aviso para activar notificaciones en la cola (web)**: mientras buscás
+  partida o esperás en un grupo, la app te ofrece activar las notificaciones
+  del navegador con un botón, para enterarte cuando se arme tu partida. Si el
+  navegador las bloqueó, explica cómo permitirlas. En iPhone, explica que hay
+  que agregar Cuádrala a la pantalla de inicio desde Safari para recibirlas.
+
 ## [1.7.34] - 2026-11-12
 
 ### Cambiado
