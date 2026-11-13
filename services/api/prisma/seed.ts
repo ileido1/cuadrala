@@ -270,7 +270,7 @@ async function seedVenuesSV(): Promise<void> {
         { name: 'Cancha Sur 3', indoor: false, surfaceType: 'Cemento' },
       ],
       phone: '+58-212-555-0300',
-      email: 'contacto@canchasursur.ve',
+      email: 'contacto@canchassur.ve',
       description: 'Instalaciones de pádel tradicionales en el sur de Caracas, opciones de canchas roja y cemento.',
       openingHours: {
         monday: { open: '08:00', close: '20:00' },
@@ -394,6 +394,10 @@ async function seedTestUsersSV(): Promise<Array<{ id: string; email: string; nam
     { email: 'player6@test.dev', name: 'Jugador Básico 2' },
     { email: 'player7@test.dev', name: 'Jugador de Prueba 7' },
     { email: 'player8@test.dev', name: 'Jugador de Prueba 8' },
+    //? Completan 8 jugadores de pádel 5ta (player3 a player10) para los
+    //? torneos de pádel por parejas.
+    { email: 'player9@test.dev', name: 'Jugador de Prueba 9' },
+    { email: 'player10@test.dev', name: 'Jugador de Prueba 10' },
     //? Owners de las otras dos sedes del seed. Van al final para no correr los
     //? índices de los jugadores que usan los partidos y torneos de prueba.
     { email: 'owner.padelcenter@test.dev', name: 'Owner Pádel Center Chacao' },
@@ -671,9 +675,11 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
     throw new Error('[seed] No hay courts disponibles para crear matches.');
   }
 
-  //? 5. Definir matches seed con diferentes estados. Las fechas se derivan del
-  //? momento de la corrida: con fechas fijas, "en Vivo" y "Ayer" iban quedando
-  //? cada vez más lejos de lo que el rótulo promete.
+  //? 5. Definir matches seed con diferentes estados. Las fechas se calculan
+  //? desde el momento de la PRIMERA corrida; las siguientes no tocan un match
+  //? que ya existe (para no pisar progreso de QA), así que con el tiempo
+  //? "en Vivo" y "Programado" quedan desfasados. Para refrescarlos hay que
+  //? borrar esos matches y volver a correr el seed.
   const NOW_MS = Date.now();
   const DAY_MS = 24 * 60 * 60 * 1000;
   //? TEST_USERS arranca con owner y organizer, así que estos cortes incluyen a
@@ -682,6 +688,10 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
   const ORGANIZER = _users[1]!; // organizer@test.dev
   const PLAYERS_4TA = _users.slice(0, 4); // owner, organizer, player1, player2
   const PLAYERS_5TA = _users.slice(4, 8); // player3 a player6
+  //? La API exige que quien crea el partido tenga su categoría y solo deja
+  //? proponer resultados a participantes: el partido de 5ta lo organiza
+  //? player3, uno de sus jugadores.
+  const ORGANIZER_5TA = PLAYERS_5TA[0]!; // player3@test.dev
 
   const MATCHES_DEF: Array<{
     id: string;
@@ -689,6 +699,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
     category: typeof CATEGORY_4TA;
     court: (typeof COURTS_CUADRALA)[0];
     players: Array<typeof ORGANIZER>;
+    organizer: typeof ORGANIZER;
     status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED';
     scheduledAt: Date;
     withResult: boolean;
@@ -699,6 +710,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
       category: CATEGORY_4TA,
       court: COURTS_CUADRALA[0]!,
       players: PLAYERS_4TA,
+      organizer: ORGANIZER,
       status: 'SCHEDULED',
       scheduledAt: new Date(NOW_MS + 7 * DAY_MS),
       withResult: false,
@@ -709,6 +721,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
       category: CATEGORY_4TA,
       court: COURTS_CUADRALA[1]!,
       players: PLAYERS_4TA,
+      organizer: ORGANIZER,
       status: 'IN_PROGRESS',
       scheduledAt: new Date(NOW_MS - 30 * 60 * 1000),
       withResult: false,
@@ -719,6 +732,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
       category: CATEGORY_5TA,
       court: COURTS_PADELCENTER[0]!,
       players: PLAYERS_5TA,
+      organizer: ORGANIZER_5TA,
       status: 'FINISHED',
       scheduledAt: new Date(NOW_MS - DAY_MS),
       withResult: true,
@@ -735,15 +749,13 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
     //? No reiniciar fechas, participantes o resultados ya usados en QA.
     if (EXISTING_MATCH !== null) continue;
 
-    //? 6.2. Crear o actualizar match
-    const MATCH =
-      EXISTING_MATCH ??
-      (await PRISMA.match.create({
+    //? 6.2. Crear match (solo si no existía; ver 6.1)
+    const MATCH = await PRISMA.match.create({
         data: {
           id: MATCH_DEF.id,
           sportId: SPORT.id,
           categoryId: MATCH_DEF.category.id,
-          organizerUserId: ORGANIZER.id,
+          organizerUserId: MATCH_DEF.organizer.id,
           formatPresetId: PRESET_AMERICANO.id,
           formatParameters: { rounds: 3, courts: 1 } satisfies Prisma.InputJsonValue,
           courtId: MATCH_DEF.court.id,
@@ -754,7 +766,7 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
           maxParticipants: 4,
         },
         select: { id: true },
-      }));
+      });
 
     //? 6.3. Agregar participantes (4 jugadores, 2 vs 2)
     for (let i = 0; i < MATCH_DEF.players.length; i++) {
@@ -782,16 +794,18 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
 
     //? 6.5. Crear resultado si el match está FINISHED
     if (MATCH_DEF.withResult && MATCH_DEF.status === 'FINISHED') {
+      //? Mismo formato que `DraftPayload` de la API (scores/teams/sets). Los
+      //? índices pares son el equipo A (ver 6.3) y ganan 6-3 6-4.
       const DRAFT_PAYLOAD: Prisma.InputJsonValue = {
-        winnerTeam: 'A',
-        sets: [
-          { a: 6, b: 3 },
-          { a: 6, b: 4 },
+        scores: MATCH_DEF.players.map((_u, _idx) => ({ userId: _u.id, points: _idx % 2 === 0 ? 21 : 15 })),
+        teams: [
+          { label: 'A', userIds: MATCH_DEF.players.filter((_u, _idx) => _idx % 2 === 0).map((_u) => _u.id) },
+          { label: 'B', userIds: MATCH_DEF.players.filter((_u, _idx) => _idx % 2 === 1).map((_u) => _u.id) },
         ],
-        pointsByUser: Object.fromEntries(
-          MATCH_DEF.players.map((_u, _idx) => [_u.id, _idx % 2 === 0 ? 21 : 15]),
-        ),
-        notes: 'Resultado propuesto por seed — match completado',
+        sets: [
+          { teamA: 6, teamB: 3 },
+          { teamA: 6, teamB: 4 },
+        ],
       };
 
       const DRAFT = await PRISMA.matchResultDraft.upsert({
@@ -801,11 +815,11 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
           version: 1,
           status: 'DRAFT',
           payload: DRAFT_PAYLOAD,
-          proposedByUserId: ORGANIZER.id,
+          proposedByUserId: MATCH_DEF.organizer.id,
         },
         update: {
           payload: DRAFT_PAYLOAD,
-          proposedByUserId: ORGANIZER.id,
+          proposedByUserId: MATCH_DEF.organizer.id,
         },
         select: { id: true },
       });
@@ -836,7 +850,8 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
       const RESULT =
         EXISTING_RESULT ??
         (await PRISMA.matchResult.create({
-          data: { matchId: MATCH.id },
+          //? La API guarda el payload del draft al finalizar el resultado.
+          data: { matchId: MATCH.id, payload: DRAFT_PAYLOAD },
           select: { id: true },
         }));
 
@@ -865,7 +880,20 @@ async function seedTestMatchesSV(_users: Array<{ id: string; email: string; name
 
 async function seedTestTournamentsSV(_users: Array<{ id: string; email: string; name: string }>): Promise<void> {
   const ORGANIZER = _users.find((_u) => _u.email === 'organizer@test.dev')!;
-  const PLAYERS = Array.from({ length: 8 }, (_, _i) => _users.find((_u) => _u.email === `player${_i + 1}@test.dev`)!);
+  const BY_EMAIL = (_email: string) => _users.find((_u) => _u.email === _email)!;
+  //? Cada torneo inscribe solo jugadores con su categoría: tenis 4ta con
+  //? player1 a player8; pádel 5ta con player3 a player10 (los que tienen pádel
+  //? 5ta, ver seedTestMatchesSV).
+  const TENNIS_PLAYERS = Array.from({ length: 8 }, (_, _i) => BY_EMAIL(`player${_i + 1}@test.dev`));
+  const PADEL_PLAYERS = Array.from({ length: 8 }, (_, _i) => BY_EMAIL(`player${_i + 3}@test.dev`));
+  //? Categoría de tenis en cada corrida (antes solo al crear el torneo 2, y
+  //? un torneo ya creado salteaba la asignación para siempre).
+  const TENNIS_SPORT = await PRISMA.sport.findUniqueOrThrow({ where: { code: 'TENNIS' } });
+  const TENNIS_4TA = await PRISMA.category.findUniqueOrThrow({ where: { sportId_slug: { sportId: TENNIS_SPORT.id, slug: '4ta' } } });
+  for (const PLAYER of TENNIS_PLAYERS) {
+    await PRISMA.userCategory.upsert({ where: { userId_categoryId: { userId: PLAYER.id, categoryId: TENNIS_4TA.id } }, create: { userId: PLAYER.id, categoryId: TENNIS_4TA.id }, update: {} });
+    await PRISMA.userSportCategory.upsert({ where: { userId_sportId: { userId: PLAYER.id, sportId: TENNIS_SPORT.id } }, create: { userId: PLAYER.id, sportId: TENNIS_SPORT.id, categoryId: TENNIS_4TA.id }, update: {} });
+  }
   const FORMATS = ['AMERICANO', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'GROUPS_PLUS_KNOCKOUT'] as const;
   const MODALITIES = [
     { code: FORMATS[0], sport: 'PADEL', paired: false },
@@ -877,13 +905,9 @@ async function seedTestTournamentsSV(_users: Array<{ id: string; email: string; 
     //? No reiniciar estados, fechas, parejas ni inscripciones luego de una prueba manual.
     if (await PRISMA.tournament.findUnique({ where: { id: ID }, select: { id: true } })) continue;
     const SPORT = await PRISMA.sport.findUniqueOrThrow({ where: { code: MODALITY.sport } });
-    const CATEGORY = await PRISMA.category.findUniqueOrThrow({ where: { sportId_slug: { sportId: SPORT.id, slug: '4ta' } } });
-    if (MODALITY.sport === 'TENNIS' && INDEX === 1) {
-      for (const PLAYER of PLAYERS) {
-        await PRISMA.userCategory.upsert({ where: { userId_categoryId: { userId: PLAYER.id, categoryId: CATEGORY.id } }, create: { userId: PLAYER.id, categoryId: CATEGORY.id }, update: {} });
-        await PRISMA.userSportCategory.upsert({ where: { userId_sportId: { userId: PLAYER.id, sportId: SPORT.id } }, create: { userId: PLAYER.id, sportId: SPORT.id, categoryId: CATEGORY.id }, update: {} });
-      }
-    }
+    const PLAYERS = MODALITY.sport === 'TENNIS' ? TENNIS_PLAYERS : PADEL_PLAYERS;
+    const CATEGORY_SLUG = MODALITY.sport === 'TENNIS' ? '4ta' : '5ta';
+    const CATEGORY = await PRISMA.category.findUniqueOrThrow({ where: { sportId_slug: { sportId: SPORT.id, slug: CATEGORY_SLUG } } });
     const VENUE = await PRISMA.venue.findUniqueOrThrow({ where: { placeId: MODALITY.sport === 'TENNIS' ? 'seed:venue:canchas-sur' : 'seed:venue:club-cuadrala' } });
     const PRESET = await PRISMA.tournamentFormatPreset.findUniqueOrThrow({ where: { sportId_code_version: { sportId: SPORT.id, code: MODALITY.code, version: MODALITY.sport === 'TENNIS' && MODALITY.code === 'ROUND_ROBIN' ? 2 : 1 } } });
     const STARTS_AT = new Date();
@@ -927,7 +951,7 @@ async function seedTestTournamentsSV(_users: Array<{ id: string; email: string; 
       }
     });
   }
-  console.log('[seed] Siete torneos QA públicos y abiertos, listos para generar cuadros desde la API.');
+  console.log(`[seed] ${MODALITIES.length} torneos QA públicos y abiertos (los que ya existían no se tocan).`);
 }
 
 async function mainSV(): Promise<void> {

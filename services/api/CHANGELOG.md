@@ -13,6 +13,19 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
   `OWNER` de staff) a cada sede de prueba. Pádel Center Chacao queda a cargo de
   `owner.padelcenter@test.dev` y Canchas del Sur de `owner.canchassur@test.dev`
   (contraseña `password123`); antes solo Club Cuádrala tenía owner.
+- **Datos del seed que la API nunca generaría**:
+  - El resultado del partido terminado ahora usa el formato que lee la API
+    (`scores`, `teams`, `sets` con `teamA`/`teamB`) y queda también en el
+    resultado final.
+  - El partido de 5ta lo organiza y propone su resultado `player3@test.dev`,
+    un jugador de 5ta del partido (antes era el organizador de 4ta, que no
+    jugaba).
+  - Los torneos de pádel pasan a 5ta e inscriben solo jugadores de 5ta
+    (`player3` a `player10`; se agregan `player9` y `player10`). Las categorías
+    de tenis se asignan en cada corrida, no solo la primera vez.
+- **Documentación del seed**: README y `AGENTS.md` reflejan los 14 usuarios,
+  los 7 torneos y el preset extra de tenis; el email de Canchas del Sur
+  corrige un error de tipeo.
 
 ## [1.15.0] - 2026-11-12
 

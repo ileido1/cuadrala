@@ -159,3 +159,57 @@ it('should give every seed venue its own owner with an OWNER staff role', async 
   expect(new Set(SEED_VENUES.map((_v) => _v.ownerUserId)).size).toBe(3);
   expect(DATABASE.tables.get('venue')!.find((_v) => _v.id === 'real-venue')!.ownerUserId).toBeUndefined();
 });
+
+//? El resultado del partido terminado tenía un formato que la API no lee
+//? (`DraftPayload` = scores/teams/sets{teamA,teamB}); el MatchResult quedaba
+//? sin payload aunque la API siempre lo guarda al finalizar.
+it('should seed the finished match result in the shape the API reads', async () => {
+  vi.stubEnv('DATABASE_URL', 'postgresql://unused:unused@localhost:1/unused');
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  await runSeedSV();
+  const DRAFT = DATABASE.tables.get('matchResultDraft')![0]!;
+  const PAYLOAD = DRAFT.payload as { scores: Array<{ userId: string; points: number }>; teams: Array<{ label: string; userIds: string[] }>; sets: Array<{ teamA: number; teamB: number }> };
+  const PARTICIPANTS = DATABASE.tables.get('matchParticipant')!.filter((_p) => _p.matchId === DRAFT.matchId);
+  expect(PAYLOAD.scores.map((_s) => _s.userId).sort()).toEqual(PARTICIPANTS.map((_p) => _p.userId).sort());
+  for (const TEAM of PAYLOAD.teams) {
+    expect(TEAM.userIds.sort()).toEqual(PARTICIPANTS.filter((_p) => _p.teamLabel === TEAM.label).map((_p) => _p.userId).sort());
+  }
+  expect(PAYLOAD.sets.every((_set) => typeof _set.teamA === 'number' && typeof _set.teamB === 'number')).toBe(true);
+  expect(DATABASE.tables.get('matchResult')![0]!.payload).toEqual(DRAFT.payload);
+});
+
+//? La API exige que quien crea un partido tenga esa categoría del deporte y que
+//? solo los participantes propongan resultados.
+it('should only seed matches the API itself could create', async () => {
+  vi.stubEnv('DATABASE_URL', 'postgresql://unused:unused@localhost:1/unused');
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  await runSeedSV();
+  const SPORT_CATEGORIES = DATABASE.tables.get('userSportCategory')!;
+  for (const MATCH of DATABASE.tables.get('match')!) {
+    expect(SPORT_CATEGORIES).toContainEqual(expect.objectContaining({ userId: MATCH.organizerUserId, sportId: MATCH.sportId, categoryId: MATCH.categoryId }));
+    for (const PARTICIPANT of DATABASE.tables.get('matchParticipant')!.filter((_p) => _p.matchId === MATCH.id)) {
+      expect(SPORT_CATEGORIES).toContainEqual(expect.objectContaining({ userId: PARTICIPANT.userId, sportId: MATCH.sportId, categoryId: MATCH.categoryId }));
+    }
+  }
+  for (const DRAFT of DATABASE.tables.get('matchResultDraft')!) {
+    expect(DATABASE.tables.get('matchParticipant')!).toContainEqual(expect.objectContaining({ matchId: DRAFT.matchId, userId: DRAFT.proposedByUserId }));
+  }
+});
+
+//? Los torneos de pádel eran de 4ta pero la mayoría de sus inscriptos tenían
+//? pádel 5ta; las categorías de tenis solo se asignaban en la primera corrida.
+it('should register only players who hold the tournament category, on every run', async () => {
+  vi.stubEnv('DATABASE_URL', 'postgresql://unused:unused@localhost:1/unused');
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  await runSeedSV();
+  const TENNIS = DATABASE.tables.get('sport')!.find((_s) => _s.code === 'TENNIS')!;
+  DATABASE.tables.set('userSportCategory', DATABASE.tables.get('userSportCategory')!.filter((_r) => _r.sportId !== TENNIS.id));
+  await runSeedSV();
+  const SPORT_CATEGORIES = DATABASE.tables.get('userSportCategory')!;
+  const REGISTRATIONS = DATABASE.tables.get('tournamentRegistration')!.filter((_r) => _r.status === 'CONFIRMED');
+  for (const TOURNAMENT of DATABASE.tables.get('tournament')!) {
+    for (const REGISTRATION of REGISTRATIONS.filter((_r) => _r.tournamentId === TOURNAMENT.id)) {
+      expect(SPORT_CATEGORIES).toContainEqual(expect.objectContaining({ userId: REGISTRATION.userId, sportId: TOURNAMENT.sportId, categoryId: TOURNAMENT.categoryId }));
+    }
+  }
+});
