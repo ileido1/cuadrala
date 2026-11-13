@@ -199,7 +199,8 @@ export class DispatchNotificationsUseCase {
       remainingTokenBudget -= tokensToSend.length;
 
       const BATCH_STARTED_AT = Date.now();
-      const CONTENT = notificationContentForTypeSV(EVENT.type);
+      //? El payload decide el texto de partida rápida (igual que la lista in-app).
+      const CONTENT = notificationContentForTypeSV(EVENT.type, EVENT.payload);
 
       const PUSH_RESULT = await this._pushNotificationProvider.sendToDeviceTokensSV(tokensToSend, {
         title: CONTENT.title,

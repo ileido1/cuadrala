@@ -24,4 +24,17 @@ void main() {
 
     expect(search.acceptedCount, 0);
   });
+
+  //? S12: el flag distingue una invitación de un miembro del ready check cuyo
+  //? grupo perdió a alguien (ambos PENDING con menos de 4 jugadores).
+  test('should parse invitedByAvailability and default it to false', () {
+    final invited = QuickMatchSearchDto.fromJson({
+      ..._json(acceptedCount: 0),
+      'invitedByAvailability': true,
+    });
+    final legacy = QuickMatchSearchDto.fromJson(_json(acceptedCount: 0));
+
+    expect(invited.invitedByAvailability, isTrue);
+    expect(legacy.invitedByAvailability, isFalse);
+  });
 }

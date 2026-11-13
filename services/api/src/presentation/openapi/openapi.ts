@@ -842,7 +842,7 @@ const OPENAPI_CONST = {
       get: {
         tags: ['Matchmaking'],
         summary: 'Consultar la búsqueda automática de partida del usuario',
-        description: 'El grupo nuevo se forma solo con 4 jugadores y abre un ready check: los 4 aceptan o rechazan antes de `proposal.expiresAt`. `acceptedCount` indica cuántos miembros del grupo ya aceptaron (0 para partida abierta o sin propuesta). Si alguien rechaza, sale o vence su plazo, solo esa persona sale de la cola: quienes aceptaron siguen en el grupo y el lugar libre se ofrece al siguiente jugador compatible.',
+        description: 'Lobby: los que buscan con deporte, categoría, fecha y franja compatibles se juntan de a uno sin aceptar nada (`status` SEARCHING, `proposal.status` LOBBY, `proposal.playerIds` con los 2–3 miembros). Solo en la cola no hay propuesta (`noMatchYet: true`). Invitación por disponibilidad: `status` PROPOSAL, `invitedByAvailability: true`, `proposal.status` PENDING con los miembros actuales en `playerIds` (sin el invitado); se acepta con `/proposal/confirm` y se rechaza con `/proposal/dismiss`. Al llegar a 4 arranca el ready check: los 4 aceptan o rechazan antes de `proposal.expiresAt`. `acceptedCount` indica cuántos miembros del ready check ya aceptaron (0 en el lobby, en partida abierta o sin propuesta). Si alguien rechaza, sale o vence su plazo, solo esa persona sale de la cola y el lugar libre se ofrece al siguiente jugador compatible.',
         security: [{ bearerAuth: [] }],
         responses: { '200': { description: 'Estado de búsqueda (incluye `acceptedCount`)' }, '401': { description: 'No autorizado' } },
       },
@@ -864,6 +864,7 @@ const OPENAPI_CONST = {
       post: {
         tags: ['Matchmaking'],
         summary: 'Confirmar una propuesta de Quick Match',
+        description: 'Acepta el ready check o una invitación por disponibilidad. Aceptar una invitación suma al jugador al lobby; si con él son 4, arranca el ready check para los 4.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: false,
@@ -888,7 +889,7 @@ const OPENAPI_CONST = {
       post: {
         tags: ['Matchmaking'],
         summary: 'Descartar una propuesta de Quick Match',
-        description: 'Grupo nuevo: rechaza el ready check y el jugador sale de la cola (`CANCELLED`); el resto sigue en el grupo y su lugar se ofrece a otro jugador. Partida abierta: se descarta y se sigue buscando.',
+        description: 'Grupo nuevo: rechaza el ready check o la invitación por disponibilidad y el jugador sale de la cola (`CANCELLED`); el resto sigue en el grupo y su lugar se ofrece a otro jugador. Partida abierta: se descarta y se sigue buscando. Para salir de un lobby se usa `DELETE /quick-match`.',
         security: [{ bearerAuth: [] }],
         responses: { '200': { description: 'Propuesta descartada' }, '401': { description: 'No autorizado' }, '409': { description: 'Propuesta no disponible' } },
       },

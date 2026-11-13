@@ -54,7 +54,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
         status: true,
         attemptCount: true,
         nextAttemptAt: true,
-        event: { select: { type: true, matchId: true, tournamentId: true, categoryId: true } },
+        event: { select: { type: true, matchId: true, tournamentId: true, categoryId: true, payload: true } },
       },
     });
 
@@ -70,6 +70,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
         matchId: _r.event.matchId,
         tournamentId: _r.event.tournamentId,
         categoryId: _r.event.categoryId,
+        payload: _r.event.payload,
       },
     }));
   }

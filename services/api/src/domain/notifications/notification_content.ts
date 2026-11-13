@@ -1,12 +1,33 @@
 import { TOURNAMENT_NOTIFICATION_EVENT_TYPES } from './tournament_notification_events.js';
 
-/** Títulos y cuerpos de notificaciones in-app / push por tipo de evento. */
+/** Qué anuncia un evento QUICK_MATCH_PROPOSAL (va en `payload.kind`). */
+export type QuickMatchNotificationKind = 'READY_CHECK' | 'INVITATION' | 'LOBBY_JOINED';
+
+/**
+ * Partida rápida comparte un solo tipo de evento: el payload dice si es el
+ * ready check, una invitación por disponibilidad (S12) o que se sumó alguien
+ * al lobby (S13). Sin `kind` (eventos viejos) se lee como propuesta.
+ */
+function quickMatchContentSV(_payload: unknown): { title: string; body: string } {
+  const PAYLOAD = _payload !== null && typeof _payload === 'object' ? _payload as Record<string, unknown> : {};
+  if (PAYLOAD.kind === 'INVITATION') {
+    return { title: 'Hay un grupo armándose a tu horario, ¿te sumás?', body: 'Aceptá la invitación para entrar al grupo de partida rápida.' };
+  }
+  if (PAYLOAD.kind === 'LOBBY_JOINED') {
+    const COUNT = typeof PAYLOAD.memberCount === 'number' ? PAYLOAD.memberCount : null;
+    return { title: COUNT === null ? 'Se sumó un jugador' : `Se sumó un jugador (${COUNT} de 4)`, body: 'Tu grupo de partida rápida se está armando.' };
+  }
+  return { title: 'Encontramos una partida', body: 'Tenés una propuesta lista para confirmar.' };
+}
+
+/** Títulos y cuerpos de notificaciones in-app / push por tipo de evento (y payload cuando hace falta). */
 export function notificationContentForTypeSV(
   _type: string,
+  _payload?: unknown,
 ): { title: string; body: string } {
   switch (_type) {
     case 'QUICK_MATCH_PROPOSAL':
-      return { title: 'Encontramos una partida', body: 'Tenés una propuesta lista para confirmar.' };
+      return quickMatchContentSV(_payload);
     case 'MATCH_SLOT_OPENED':
       return {
         title: 'Se abrió una vacante',

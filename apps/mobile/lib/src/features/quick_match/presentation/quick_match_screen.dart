@@ -50,10 +50,26 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
   //? búsqueda cancelada cualquiera, que muestra el estado idle.
   var _declined = false;
 
+  /// Lo rechazado fue una invitación por disponibilidad, no un ready check.
+  var _declinedInvitation = false;
+
   /// Rechaza el ready check. Rechazar saca al jugador de la cola (S5): la
   /// pantalla lo dice y ofrece volver a buscar o volver al inicio (L7).
   Future<void> _declineReadyCheck() async {
-    setState(() => _declined = true);
+    setState(() {
+      _declined = true;
+      _declinedInvitation = false;
+    });
+    await context.read<QuickMatchCubit>().dismissProposal();
+  }
+
+  /// Rechaza una invitación por disponibilidad (S12): la búsqueda queda
+  /// CANCELLED y se ofrecen las mismas salidas que al rechazar un ready check.
+  Future<void> _declineInvitation() async {
+    setState(() {
+      _declined = true;
+      _declinedInvitation = true;
+    });
     await context.read<QuickMatchCubit>().dismissProposal();
   }
 
@@ -106,8 +122,11 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
       actions: [
         BlocBuilder<QuickMatchCubit, QuickMatchState>(
           builder: (context, state) {
+            //? En un lobby, editar reinicia la búsqueda y saca al jugador
+            //? del grupo sin avisar: no se ofrece.
             if (state is! QuickMatchActive ||
-                state.search.status != 'SEARCHING') {
+                state.search.status != 'SEARCHING' ||
+                _isLobby(state.search)) {
               return const SizedBox(width: 48);
             }
             return TextButton(
@@ -151,6 +170,7 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                   when search.status == 'CANCELLED' && _declined =>
                 _QueueEnded(
                   declined: true,
+                  invitation: _declinedInvitation,
                   onSearchAgain: _showInitialConfiguration,
                 ),
               //? Una búsqueda cancelada ya no está en la cola: se ofrece
@@ -158,6 +178,14 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
               QuickMatchActive(:final search)
                   when search.status == 'CANCELLED' =>
                 _IdleQuickMatch(onStart: _showInitialConfiguration),
+              QuickMatchActive(:final search)
+                  when search.status == 'PROPOSAL' && _isInvitation(search) =>
+                _Polling(
+                  child: _Invitation(
+                    proposal: search.proposal!,
+                    onDecline: _declineInvitation,
+                  ),
+                ),
               QuickMatchActive(:final search, :final exchangeRates)
                   when search.status == 'PROPOSAL' &&
                       search.proposal?.status == 'PENDING' =>
@@ -197,6 +225,9 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
                         declined: false,
                         onSearchAgain: _showInitialConfiguration,
                       ),
+              QuickMatchActive(:final search) when _isLobby(search) => _Polling(
+                child: _Lobby(proposal: search.proposal!),
+              ),
               QuickMatchActive(:final search) => _Searching(search: search),
             },
           ),
@@ -218,6 +249,9 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
       'declined',
     QuickMatchActive(:final search) when search.status == 'CANCELLED' => 'idle',
     QuickMatchActive(:final search)
+        when search.status == 'PROPOSAL' && _isInvitation(search) =>
+      'invitation',
+    QuickMatchActive(:final search)
         when search.status == 'PROPOSAL' &&
             search.proposal?.status == 'PENDING' =>
       'proposal',
@@ -228,6 +262,7 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
       'confirmed',
     QuickMatchActive(:final search) when search.status == 'EXPIRED' =>
       'expired',
+    QuickMatchActive(:final search) when _isLobby(search) => 'lobby',
     QuickMatchActive() => 'searching',
   };
 
@@ -256,6 +291,25 @@ final class _QuickMatchScreenState extends State<QuickMatchScreen> {
       ),
     );
   }
+}
+
+/// Lobby que se llena de a uno (S1): el jugador sigue SEARCHING y la
+/// propuesta LOBBY lista a quienes ya están en el grupo.
+bool _isLobby(QuickMatchSearchDto search) =>
+    search.status == 'SEARCHING' &&
+    search.proposal?.type == 'NEW_GROUP' &&
+    search.proposal?.status == 'LOBBY';
+
+/// Invitación por disponibilidad (S12): una propuesta NEW_GROUP pendiente
+/// de alguien que no tocó "buscar". No alcanza con mirar la cantidad de
+/// jugadores: un miembro del ready check cuyo grupo perdió a alguien también
+/// queda PENDING con menos de 4.
+bool _isInvitation(QuickMatchSearchDto search) {
+  final proposal = search.proposal;
+  return search.invitedByAvailability &&
+      proposal != null &&
+      proposal.type == 'NEW_GROUP' &&
+      proposal.status == 'PENDING';
 }
 
 bool _hasMatch(QuickMatchSearchDto search) {
@@ -1606,9 +1660,23 @@ final class _AcceptedProgress extends StatelessWidget {
   final int acceptedCount;
 
   @override
+  Widget build(BuildContext context) => _GroupProgress(
+    filled: acceptedCount,
+    label: (count) => '$count de $_groupSize aceptaron',
+  );
+}
+
+/// Conteo del grupo sobre 4 con un indicador por lugar.
+final class _GroupProgress extends StatelessWidget {
+  const _GroupProgress({required this.filled, required this.label});
+
+  final int filled;
+  final String Function(int count) label;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accepted = acceptedCount.clamp(0, _groupSize);
+    final accepted = filled.clamp(0, _groupSize);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1620,7 +1688,7 @@ final class _AcceptedProgress extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              '$accepted de $_groupSize aceptaron',
+              label(accepted),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
@@ -1640,10 +1708,17 @@ final class _AcceptedProgress extends StatelessWidget {
 }
 
 final class _ReadyCheckFooter extends StatelessWidget {
-  const _ReadyCheckFooter({required this.onAccept, required this.onDecline});
+  const _ReadyCheckFooter({
+    required this.onAccept,
+    required this.onDecline,
+    this.acceptLabel = 'Aceptar',
+    this.declineLabel = 'Rechazar',
+  });
 
   final VoidCallback onAccept;
   final VoidCallback onDecline;
+  final String acceptLabel;
+  final String declineLabel;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -1664,7 +1739,7 @@ final class _ReadyCheckFooter extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onAccept,
                 icon: const Icon(AppIcons.check),
-                label: const Text('Aceptar'),
+                label: Text(acceptLabel),
               ),
             ),
             const SizedBox(height: 6),
@@ -1672,7 +1747,7 @@ final class _ReadyCheckFooter extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: onDecline,
-                child: const Text('Rechazar'),
+                child: Text(declineLabel),
               ),
             ),
           ],
@@ -1680,6 +1755,104 @@ final class _ReadyCheckFooter extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Lobby que se llena de a uno (S1). Se consulta cada pocos segundos para
+/// que cada jugador que se suma aparezca sin depender del push.
+final class _Lobby extends StatelessWidget {
+  const _Lobby({required this.proposal});
+
+  final QuickMatchProposalDto proposal;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 32, 20, 28),
+      children: [
+        _PulseIcon(icon: AppIcons.people),
+        const SizedBox(height: 22),
+        Text(
+          'Grupo armándose',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w900,
+            letterSpacing: -.5,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          'Otros jugadores con tu horario y nivel ya están en el grupo. Te avisamos cuando se complete para confirmar la partida.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 20),
+        _GroupProgress(
+          filled: proposal.playerIds.length,
+          label: (count) => '$count de $_groupSize jugadores',
+        ),
+        const SizedBox(height: 24),
+        OutlinedButton(
+          onPressed: () => _leaveQueue(context),
+          child: const Text('Salir de la cola'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Invitación por disponibilidad (S12): el jugador no buscó, pero su
+/// disponibilidad coincide con un lobby abierto. Se suma solo si acepta.
+/// No usa el texto del ready check: el grupo todavía no está completo.
+final class _Invitation extends StatelessWidget {
+  const _Invitation({required this.proposal, required this.onDecline});
+
+  final QuickMatchProposalDto proposal;
+  final Future<void> Function() onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
+            children: [
+              Text(
+                'Hay un grupo armándose a tu horario',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.6,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Coincide con tu disponibilidad. Si te sumas, te avisamos cuando el grupo se complete para confirmar la partida.',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 15),
+              ),
+              const SizedBox(height: 18),
+              _ProposalHold(
+                expiresAt: proposal.expiresAt,
+                label: 'Tiempo para responder',
+              ),
+              const SizedBox(height: 14),
+              _GroupProgress(
+                filled: proposal.playerIds.length,
+                label: (count) => '$count de $_groupSize jugadores',
+              ),
+            ],
+          ),
+        ),
+        _ReadyCheckFooter(
+          acceptLabel: 'Sumarme',
+          declineLabel: 'No, gracias',
+          onAccept: () => context.read<QuickMatchCubit>().confirmProposal(),
+          onDecline: onDecline,
+        ),
+      ],
+    );
+  }
 }
 
 String _formatProposalDate(DateTime value) {
@@ -2186,9 +2359,16 @@ final class _Expired extends StatelessWidget {
 /// tiempo (EXPIRED) o rechazó (CANCELLED). Su búsqueda ya terminó, así que
 /// "Volver al inicio" solo navega, sin cancelar nada (L7).
 final class _QueueEnded extends StatelessWidget {
-  const _QueueEnded({required this.declined, required this.onSearchAgain});
+  const _QueueEnded({
+    required this.declined,
+    required this.onSearchAgain,
+    this.invitation = false,
+  });
 
   final bool declined;
+
+  /// Lo rechazado fue una invitación por disponibilidad (S12).
+  final bool invitation;
   final Future<void> Function() onSearchAgain;
 
   @override
@@ -2198,7 +2378,11 @@ final class _QueueEnded extends StatelessWidget {
       _PulseIcon(icon: declined ? AppIcons.close : AppIcons.clock),
       const SizedBox(height: 20),
       Text(
-        declined ? 'Rechazaste la partida' : 'La propuesta expiró',
+        declined
+            ? (invitation
+                  ? 'Rechazaste la invitación'
+                  : 'Rechazaste la partida')
+            : 'La propuesta expiró',
         textAlign: TextAlign.center,
         style: Theme.of(
           context,
@@ -2207,7 +2391,9 @@ final class _QueueEnded extends StatelessWidget {
       const SizedBox(height: 10),
       Text(
         declined
-            ? 'Saliste de la cola. No se cobró nada.'
+            ? (invitation
+                  ? 'No te sumaste al grupo. No se cobró nada.'
+                  : 'Saliste de la cola. No se cobró nada.')
             : 'No aceptaste a tiempo y saliste de la cola. No se cobró nada.',
         textAlign: TextAlign.center,
       ),

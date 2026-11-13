@@ -66,14 +66,12 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match ready check (HTTP + DB)'
     return { categoryId: CATEGORY_ID, players: PLAYERS, groupKey: GROUP_KEY };
   }
 
-  it('S1: should keep searching without a group when fewer than 4 players are available', async () => {
+  //? S1 (lobby): con menos de 4 no hay ready check; los que buscan esperan en el lobby.
+  it('S1: should not start a ready check with fewer than 4 players', async () => {
     const { categoryId: CATEGORY_ID, players: PLAYERS } = await setupSV('rc-s1a', 3);
-    for (const PLAYER of PLAYERS) {
-      const RES = await start(PLAYER, CATEGORY_ID);
-      expect(RES.status).toBe(201);
-      expect(RES.body.data).toMatchObject({ status: 'SEARCHING', noMatchYet: true, proposal: null, acceptedCount: 0 });
-    }
-    expect(await PRISMA.quickMatchProposal.count({ where: { search: { categoryId: CATEGORY_ID } } })).toBe(0);
+    for (const PLAYER of PLAYERS) expect((await start(PLAYER, CATEGORY_ID)).status).toBe(201);
+    for (const PLAYER of PLAYERS) expect((await get(PLAYER)).body.data).toMatchObject({ status: 'SEARCHING', acceptedCount: 0, proposal: { status: 'LOBBY' } });
+    expect(await PRISMA.quickMatchProposal.count({ where: { search: { categoryId: CATEGORY_ID }, status: { in: ['PENDING', 'CONFIRMED'] } } })).toBe(0);
   });
 
   it('S1: should form one group of 4 when the 4th compatible searcher arrives, and never add a 5th to it', async () => {
@@ -90,42 +88,14 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match ready check (HTTP + DB)'
     expect(GROUP).toHaveLength(4);
   });
 
-  it('S1: should count saved availability toward the 4 and invite only the players needed', async () => {
+  //? S12 (T4, decisión 2 corregida): un buscador solo también invita por disponibilidad,
+  //? sin pasar de los cupos libres; él sigue viendo que está solo.
+  it('S12: should invite availability players for a searcher who is alone, up to the free slots', async () => {
     const { categoryId: CATEGORY_ID, players: PLAYERS, invitees: INVITEES } = await setupSV('rc-s1c', 1, 4);
-    const FIRST = await start(PLAYERS[0]!, CATEGORY_ID);
-    expect(FIRST.body.data).toMatchObject({ status: 'PROPOSAL', acceptedCount: 0, proposal: { type: 'NEW_GROUP', status: 'PENDING' } });
-    const MEMBERS: string[] = FIRST.body.data.proposal.playerIds;
-    expect(MEMBERS).toHaveLength(4);
-    const INVITED = INVITEES.filter((_p) => MEMBERS.includes(_p.id));
+    expect((await start(PLAYERS[0]!, CATEGORY_ID)).body.data).toMatchObject({ status: 'SEARCHING', noMatchYet: true, proposal: null, invitedByAvailability: false });
+    const INVITED = (await Promise.all(INVITEES.map((_p) => PRISMA.quickMatchSearch.findUnique({ where: { userId: _p.id }, include: { proposal: true } })))).filter((_s) => _s !== null);
     expect(INVITED).toHaveLength(3);
-    const NOT_INVITED = INVITEES.find((_p) => !MEMBERS.includes(_p.id))!;
-    expect(await PRISMA.quickMatchSearch.findUnique({ where: { userId: NOT_INVITED.id } })).toBeNull();
-    for (const INVITEE of INVITED) expect(await searchOf(INVITEE)).toMatchObject({ status: 'PROPOSAL', proposal: { status: 'PENDING' } });
-  });
-
-  it('S1: should not invite availability players when the total stays below 4', async () => {
-    const { categoryId: CATEGORY_ID, players: PLAYERS, invitees: INVITEES } = await setupSV('rc-s1d', 2, 1);
-    expect((await start(PLAYERS[0]!, CATEGORY_ID)).status).toBe(201);
-    const SECOND = await start(PLAYERS[1]!, CATEGORY_ID);
-    expect(SECOND.body.data).toMatchObject({ status: 'SEARCHING', noMatchYet: true, proposal: null });
-    expect(await PRISMA.quickMatchSearch.findUnique({ where: { userId: INVITEES[0]!.id } })).toBeNull();
-  });
-
-  it('S2: should send the ready check to all 4 at once and notify everyone except the searcher who triggered it', async () => {
-    const { categoryId: CATEGORY_ID, players: PLAYERS, invitees: INVITEES } = await setupSV('rc-s2', 3, 1);
-    expect((await start(PLAYERS[0]!, CATEGORY_ID)).status).toBe(201);
-    expect((await start(PLAYERS[1]!, CATEGORY_ID)).status).toBe(201);
-    const TRIGGER = await start(PLAYERS[2]!, CATEGORY_ID);
-    expect(TRIGGER.body.data.status).toBe('PROPOSAL');
-
-    const GROUP = await PRISMA.quickMatchProposal.findMany({ where: { groupKey: TRIGGER.body.data.proposal.groupKey } });
-    expect(GROUP).toHaveLength(4);
-    expect(GROUP.every((_p) => _p.status === 'PENDING')).toBe(true);
-    expect(new Set(GROUP.map((_p) => _p.expiresAt.getTime())).size).toBe(1);
-    expect(GROUP[0]!.expiresAt.getTime() - Date.now()).toBeGreaterThan(60_000);
-
-    const DELIVERIES = await PRISMA.notificationDelivery.findMany({ where: { event: { type: 'QUICK_MATCH_PROPOSAL' }, userId: { in: [...PLAYERS, ...INVITEES].map((_p) => _p.id) } }, select: { userId: true } });
-    expect(DELIVERIES.map((_d) => _d.userId).sort()).toEqual([PLAYERS[0]!.id, PLAYERS[1]!.id, INVITEES[0]!.id].sort());
+    for (const SEARCH of INVITED) expect(SEARCH).toMatchObject({ status: 'PROPOSAL', invitedByAvailability: true, proposal: { status: 'PENDING', playerIds: [PLAYERS[0]!.id] } });
   });
 
   it('S3/S7: should mark only the accepting member confirmed and expose the honest acceptedCount', async () => {

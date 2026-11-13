@@ -78,7 +78,7 @@ export class ListMyInAppNotificationsUseCase {
 
     return {
       items: RES.items.map((_n) => {
-        const CONTENT = notificationContentForTypeSV(_n.event.type);
+        const CONTENT = notificationContentForTypeSV(_n.event.type, _n.event.payload);
         const BODY = resolveNotificationBodySV(_n.event.type, _n.event.payload, CONTENT.body);
         return {
           deliveryId: _n.deliveryId,

@@ -222,6 +222,9 @@ String _initialsFrom(String name) {
 // Quick Match home hero — the primary entry point from the supplied handoff.
 // ---------------------------------------------------------------------------
 
+/// Tamaño del grupo NEW_GROUP de partida rápida.
+const _quickMatchGroupSize = 4;
+
 final class _QuickMatchHomeBanner extends StatefulWidget {
   const _QuickMatchHomeBanner();
 
@@ -331,10 +334,22 @@ final class _HeroCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final active = activeSearch;
     final proposalReady = active?.status == 'PROPOSAL';
-    final readyCheck =
+    final proposal = active?.proposal;
+    final newGroupPending =
         proposalReady &&
-        active?.proposal?.type == 'NEW_GROUP' &&
-        active?.proposal?.status == 'PENDING';
+        proposal?.type == 'NEW_GROUP' &&
+        proposal?.status == 'PENDING';
+    //? S12: invitación por disponibilidad. Se usa el flag, no la cantidad de
+    //? jugadores: un ready check que perdió a alguien también tiene menos de 4.
+    final invitation = newGroupPending && active!.invitedByAvailability;
+    final readyCheck = newGroupPending && !invitation;
+    //? S1: lobby que se llena de a uno; se muestra cuántos ya están.
+    final lobbySize =
+        active?.status == 'SEARCHING' &&
+            proposal?.type == 'NEW_GROUP' &&
+            proposal?.status == 'LOBBY'
+        ? proposal!.playerIds.length
+        : null;
 
     return Container(
       decoration: BoxDecoration(
@@ -423,6 +438,8 @@ final class _HeroCard extends StatelessWidget {
               _ActiveSearchCallout(
                 proposalReady: proposalReady,
                 readyCheck: readyCheck,
+                invitation: invitation,
+                lobbySize: lobbySize,
                 onTap: onFind,
               ),
             const SizedBox(height: 10),
@@ -490,6 +507,8 @@ final class _ActiveSearchCallout extends StatelessWidget {
   const _ActiveSearchCallout({
     required this.proposalReady,
     required this.readyCheck,
+    required this.invitation,
+    required this.lobbySize,
     required this.onTap,
   });
 
@@ -497,6 +516,12 @@ final class _ActiveSearchCallout extends StatelessWidget {
 
   /// Ready check NEW_GROUP pendiente de aceptar.
   final bool readyCheck;
+
+  /// Invitación por disponibilidad a un lobby abierto (S12).
+  final bool invitation;
+
+  /// Jugadores en el lobby del jugador (S1); `null` si no está en uno.
+  final int? lobbySize;
   final VoidCallback onTap;
 
   @override
@@ -529,6 +554,10 @@ final class _ActiveSearchCallout extends StatelessWidget {
                     Text(
                       readyCheck
                           ? '¡Partida encontrada!'
+                          : invitation
+                          ? 'Te invitaron a un grupo'
+                          : lobbySize != null
+                          ? 'Grupo armándose ($lobbySize de $_quickMatchGroupSize)'
                           : proposalReady
                           ? '¡Tu propuesta está lista!'
                           : 'Tu búsqueda está activa',
@@ -540,6 +569,10 @@ final class _ActiveSearchCallout extends StatelessWidget {
                     Text(
                       readyCheck
                           ? 'Acepta antes de que termine el tiempo.'
+                          : invitation
+                          ? 'Coincide con tu horario. Responde a tiempo.'
+                          : lobbySize != null
+                          ? 'Te avisamos cuando el grupo se complete.'
                           : proposalReady
                           ? 'Tenés tiempo limitado para confirmar.'
                           : 'Te avisamos cuando encontremos una opción.',

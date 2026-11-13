@@ -5,6 +5,32 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.15.0] - 2026-11-12
+
+### Cambiado
+
+- **Partida rápida con lobby: los jugadores se van sumando de a uno**: apenas
+  dos jugadores compatibles buscan partida (mismo deporte, categoría, fecha y
+  franja), quedan juntos en un grupo sin tener que aceptar nada. Los que buscan
+  después se suman a ese grupo hasta completar 4, y recién ahí llega el aviso
+  para aceptar la partida. Antes hacían falta 4 buscando al mismo tiempo, y dos
+  jugadores que buscaban a la vez nunca se juntaban.
+- **Invitaciones por disponibilidad**: apenas alguien busca partida, aunque
+  esté solo, se invita a quienes guardaron disponibilidad para ese horario
+  ("Hay un grupo armándose a tu horario, ¿te sumás?"), nunca más invitados que
+  lugares libres. Solo entran si aceptan; si rechazan o no responden a tiempo,
+  no se los vuelve a invitar ese día. Si quien buscaba sale de la cola, las
+  invitaciones se retiran.
+- **Notificaciones push con el texto correcto**: el push de una invitación o de
+  un jugador que se sumó al grupo ahora dice lo mismo que la notificación en la
+  app; antes siempre decía "Encontramos una partida".
+- **Aviso cuando se suma alguien**: los jugadores del grupo reciben "Se sumó un
+  jugador (N de 4)" cada vez que entra uno nuevo.
+- **Salir del grupo**: quien sale de la cola deja el grupo y el resto sigue
+  esperando; si queda uno solo, vuelve a buscar normalmente.
+- **API**: nuevo estado `LOBBY` en `proposal.status` y nuevo campo
+  `invitedByAvailability` en `GET/POST /quick-match`.
+
 ## [1.14.0] - 2026-11-12
 
 ### Cambiado

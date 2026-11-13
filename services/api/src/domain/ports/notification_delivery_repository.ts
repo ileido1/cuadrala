@@ -32,7 +32,8 @@ export type DueNotificationDeliveryWithEventDTO = {
   status: 'PENDING' | 'FAILED';
   attemptCount: number;
   nextAttemptAt: Date | null;
-  event: { type: string; matchId: string | null; tournamentId: string | null; categoryId: string };
+  /** `payload` decide el texto de algunos tipos (partida rápida: ready check, invitación o lobby). */
+  event: { type: string; matchId: string | null; tournamentId: string | null; categoryId: string; payload: unknown };
 };
 
 export type InAppNotificationDTO = {

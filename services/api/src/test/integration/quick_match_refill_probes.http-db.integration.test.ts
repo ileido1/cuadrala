@@ -236,23 +236,27 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match ready check — concurre
     }
   }, 60_000);
 
+  //? Lobby (S12): un reemplazo que buscaba entra directo con aviso de ready check;
+  //? uno por disponibilidad recibe una invitación y no es miembro hasta aceptar.
   it('P8 refill newcomers (searcher + availability) get a QUICK_MATCH_PROPOSAL delivery', async () => {
     const D = '2027-02-01';
-    const { categoryId: C, players: P, invitees: I } = await setupSV('pz-notif', 2, 3, D);
-    const FIRST = await start(P[0]!, C, D);
-    const G = FIRST.body.data.proposal.groupKey;
-    expect(FIRST.body.data.proposal.playerIds).toHaveLength(4);
-    await seedSearching(P[1]!, C, D);
-    expect((await dismiss(I[0]!)).status).toBe(200);
-    expect((await searchOf(P[1]!)).proposal?.groupKey).toBe(G);
-    // extra availability user, then another decline -> invitee refill
+    const { categoryId: C, players: P } = await setupSV('pz-notif', 6, 0, D);
+    for (const PLAYER of P.slice(0, 4)) expect((await start(PLAYER, C, D)).status).toBe(201);
+    const G = (await searchOf(P[0]!)).proposal!.groupKey!;
+    expect((await searchOf(P[3]!)).proposal).toMatchObject({ status: 'PENDING', groupKey: G });
+    await seedSearching(P[4]!, C, D);
+    expect((await dismiss(P[1]!)).status).toBe(200);
+    expect((await searchOf(P[4]!)).proposal).toMatchObject({ groupKey: G, status: 'PENDING' });
+    // extra availability user, then another decline -> invitation (not a member until it accepts)
     const U = await PRISMA.user.create({ data: { email: `pz-x-${Date.now()}@test.local`, name: 'pz x' } });
     await PRISMA.userCategory.create({ data: { userId: U.id, categoryId: C } });
     await PRISMA.userSportCategory.create({ data: { userId: U.id, sportId, categoryId: C } });
     await PRISMA.userAvailability.create({ data: { userId: U.id, dayOfWeek: 'MONDAY' as never, slot: 'EVENING' } });
-    expect((await dismiss(I[1]!)).status).toBe(200);
-    expect(await PRISMA.quickMatchSearch.findUniqueOrThrow({ where: { userId: U.id }, include: { proposal: true } })).toMatchObject({ status: 'PROPOSAL', proposal: { groupKey: G, status: 'PENDING' } });
-    const DEL = await PRISMA.notificationDelivery.findMany({ where: { event: { type: 'QUICK_MATCH_PROPOSAL' }, userId: { in: [P[1]!.id, U.id] } }, select: { userId: true } });
-    expect(DEL.map((d) => d.userId).sort()).toEqual([P[1]!.id, U.id].sort());
+    expect((await dismiss(P[2]!)).status).toBe(200);
+    const INVITED = await PRISMA.quickMatchSearch.findUniqueOrThrow({ where: { userId: U.id }, include: { proposal: true } });
+    expect(INVITED).toMatchObject({ status: 'PROPOSAL', invitedByAvailability: true, proposal: { groupKey: G, status: 'PENDING' } });
+    expect(INVITED.proposal!.playerIds).not.toContain(U.id);
+    const DEL = await PRISMA.notificationDelivery.findMany({ where: { event: { type: 'QUICK_MATCH_PROPOSAL' }, userId: { in: [P[4]!.id, U.id] } }, select: { userId: true, event: { select: { payload: true } } } });
+    expect(DEL.map((d) => [d.userId, (d.event.payload as { kind?: string }).kind]).sort()).toEqual([[P[4]!.id, 'READY_CHECK'], [U.id, 'INVITATION']].sort());
   });
 });

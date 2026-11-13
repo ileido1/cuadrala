@@ -149,6 +149,7 @@ void main() {
     when(
       () => messagingPlatform.onTokenRefresh,
     ).thenAnswer((_) => Stream<String>.empty().asBroadcastStream());
+    when(() => messagingPlatform.isSupported()).thenAnswer((_) async => true);
 
     secureTokenStorage = MockSecureTokenStorage();
     authRepository = MockAuthRepository();
@@ -209,6 +210,54 @@ void main() {
   }
 
   group('FcmPushTokenSyncService', () {
+    //? S15 / Sentry CUADRALA-MOBILE-5: en navegadores sin soporte (iOS Safari
+    //? sin instalar la app, navegadores in-app) cualquier uso de messaging
+    //? terminaba en una promesa rechazada sin manejar.
+    test(
+      'reports web push unavailable without touching messaging when the browser is unsupported',
+      () async {
+        when(
+          () => messagingPlatform.isSupported(),
+        ).thenAnswer((_) async => false);
+        clearInteractions(messagingPlatform);
+        final dynamic webService = createWebService(appEnv: createWebEnv());
+
+        await webService.initialize();
+
+        expect(webService.isWebPushAvailable, isFalse);
+        expect(await webService.isWebPushEnabled(), isFalse);
+        expect(
+          (await webService.enableWebPush()).toString(),
+          'PushEnrollmentResult.unavailable',
+        );
+        verifyNever(() => messagingPlatform.onTokenRefresh);
+        verifyNever(() => messagingPlatform.getToken());
+        verifyNever(
+          () => messagingPlatform.getToken(vapidKey: any(named: 'vapidKey')),
+        );
+      },
+    );
+
+    test(
+      'reports web push unavailable when the support check itself fails',
+      () async {
+        when(
+          () => messagingPlatform.isSupported(),
+        ).thenAnswer((_) async => throw Exception('unsupported-browser'));
+        clearInteractions(messagingPlatform);
+        final dynamic webService = createWebService(appEnv: createWebEnv());
+
+        await webService.initialize();
+
+        expect(webService.isWebPushAvailable, isFalse);
+        expect(
+          (await webService.enableWebPush()).toString(),
+          'PushEnrollmentResult.unavailable',
+        );
+        verifyNever(() => messagingPlatform.onTokenRefresh);
+      },
+    );
+
     test('does not prompt or register before explicit web opt-in', () async {
       final dynamic webService = createWebService(appEnv: createWebEnv());
       await webService.initialize();
