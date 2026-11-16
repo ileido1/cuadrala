@@ -1,4 +1,5 @@
 import { CreateQuickMatchProposalNotificationEventUseCase } from '../../application/use_cases/create_quick_match_proposal_notification_event.use_case.js';
+import { CreateMatchResultReminderNotificationEventUseCase } from '../../application/use_cases/create_match_result_reminder_notification_event.use_case.js';
 import { CreateMatchCancelledNotificationEventUseCase } from '../../application/use_cases/create_match_cancelled_notification_event.use_case.js';
 import { CreateChatMessageNotificationEventUseCase } from '../../application/use_cases/create_chat_message_notification_event.use_case.js';
 import { CreatePaymentPendingNotificationEventUseCase } from '../../application/use_cases/create_payment_pending_notification_event.use_case.js';
@@ -118,3 +119,11 @@ export const CREATE_QUICK_MATCH_PROPOSAL_NOTIFICATION_EVENT_UC = new CreateQuick
   NOTIFICATION_DELIVERY_REPOSITORY,
   NOTIFICATION_SUBSCRIPTION_REPOSITORY,
 );
+
+/** Pide cargar el resultado cuando la partida termina por el bloque (respeta preferencias). */
+export const CREATE_MATCH_RESULT_REMINDER_NOTIFICATION_EVENT_UC =
+  new CreateMatchResultReminderNotificationEventUseCase(
+    NOTIFICATION_EVENT_REPOSITORY,
+    NOTIFICATION_DELIVERY_REPOSITORY,
+    NOTIFICATION_SUBSCRIPTION_REPOSITORY,
+  );

@@ -31,6 +31,32 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)(
       await PRISMA.$disconnect();
     });
 
+    //? El recordatorio de resultado y la propuesta de partida rápida existen
+    //? como tipos, pero la validación solo aceptaba cuatro claves: no había
+    //? forma de silenciarlos desde la API.
+    it('acepta silenciar MATCH_RESULT_REMINDER y QUICK_MATCH_PROPOSAL', async () => {
+      const TS = Date.now();
+      const USER = await request(APP)
+        .post('/api/v1/auth/register')
+        .send({ email: `s35-mute-${TS}@test.local`, password: 'password123', name: 'User S35 mute' })
+        .set('Content-Type', 'application/json');
+      expect(USER.status).toBe(201);
+
+      const SUB = await request(APP)
+        .post('/api/v1/users/me/notification-subscriptions')
+        .set('Authorization', `Bearer ${USER.body.data.accessToken as string}`)
+        .send({
+          categoryId,
+          enabled: true,
+          enabledTypes: { MATCH_RESULT_REMINDER: false, QUICK_MATCH_PROPOSAL: false },
+        })
+        .set('Content-Type', 'application/json');
+
+      expect(SUB.status).toBe(200);
+      const ROW = await PRISMA.notificationSubscription.findFirstOrThrow({ where: { userId: USER.body.data.user.id as string } });
+      expect(ROW.enabledTypes).toMatchObject({ MATCH_RESULT_REMINDER: false, QUICK_MATCH_PROPOSAL: false });
+    });
+
     it('si enabledTypes deshabilita MATCH_SLOT_OPENED => dispatch no crea deliveries', async () => {
       const TS = Date.now();
       const SUBSCRIBER = await request(APP)

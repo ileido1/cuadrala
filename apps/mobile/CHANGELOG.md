@@ -5,6 +5,52 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.38] - 2026-11-13
+
+### Cambiado
+
+- **La partida empieza sola a la hora del bloque**: ya no hay botón "Iniciar
+  partido" ni las acciones "Iniciar partida" y "Finalizar partida". Antes de
+  empezar, el detalle muestra "Empieza a las HH:MM"; durante el bloque muestra
+  "En curso · termina HH:MM", con la hora real de fin del bloque de la cancha.
+- **Cargar el resultado termina la partida**: los jugadores pueden cargarlo
+  mientras la partida está en curso, no solo cuando ya terminó. Si la partida
+  todavía no empezó o fue cancelada, la pantalla de resultado lo explica.
+- **Organizador de la partida**: se toma del dato que manda la API en vez de
+  suponer que es el primer jugador anotado.
+
+### Agregado
+
+- **Recordatorio para cargar el resultado**: si terminó el bloque y nadie cargó
+  el resultado, llega el aviso "¿Cómo salió la partida?" (push y bandeja de
+  avisos). Al tocarlo se abre directo la carga del resultado de esa partida.
+
+### Corregido
+
+- **Hora de la partida en UTC**: el detalle de la partida, la pantalla de
+  resultado y el texto para compartir la partida mostraban la hora (y a veces
+  el día) en UTC; ahora se muestran en la hora local del jugador.
+
+### Eliminado
+
+- **Pantalla "Partido en vivo"**: los partidos de torneo y el detalle de la
+  partida ya no llevan a ella; tocar un partido de torneo abre su detalle.
+
+## [1.7.37] - 2026-11-13
+
+### Corregido
+
+- **7-5 rechazado al cargar un resultado de pádel**: con 5-5 se juega a 7, así
+  que 7-5 es un set válido; antes se marcaba "Marcador inválido" y no dejaba
+  continuar.
+- **"Cargar resultado" antes de jugar**: con la partida sin empezar, el botón
+  principal llevaba a cargar el resultado y fallaba al final ("El partido debe
+  estar finalizado"). Ahora el organizador ve "Iniciar partido" y el resto un
+  aviso; y si se llega a cargar un resultado sin que la partida haya terminado,
+  la pantalla lo explica en vez de dejar completar el flujo.
+- **Pantalla "Partido en vivo"**: mostraba "Equipo A 2/4" y "Equipo B 2/4", un
+  texto fijo sin sentido. Ahora muestra los jugadores reales de la partida.
+
 ## [1.7.36] - 2026-11-13
 
 ### Cambiado

@@ -38,5 +38,67 @@ void main() {
         expect(dto.affectsElo, isFalse);
       });
     });
+
+    //? S6: la API expone quién organiza; antes se asumía el primer
+    //? participante, que deja de valer cuando el organizador sale y vuelve.
+    group('organizer', () {
+      final participantsJson = <Map<String, Object?>>[
+        {'userId': 'first', 'joinedAt': '2026-05-01T10:00:00.000Z'},
+        {'userId': 'second', 'joinedAt': '2026-05-01T11:00:00.000Z'},
+      ];
+
+      test('should use organizerUserId when the API sends it', () {
+        final json = Map<String, Object?>.from(baseJson)
+          ..['participants'] = participantsJson
+          ..['organizerUserId'] = 'second';
+
+        final dto = MatchDetailDto.fromJson(json);
+
+        expect(dto.organizerUserId, 'second');
+        expect(dto.resolvedOrganizerUserId, 'second');
+        expect(dto.isOrganizer('second'), isTrue);
+        expect(dto.isOrganizer('first'), isFalse);
+      });
+
+      test(
+        'should fall back to the first participant when organizerUserId is absent',
+        () {
+          final json = Map<String, Object?>.from(baseJson)
+            ..['participants'] = participantsJson;
+
+          final dto = MatchDetailDto.fromJson(json);
+
+          expect(dto.organizerUserId, isNull);
+          expect(dto.resolvedOrganizerUserId, 'first');
+          expect(dto.isOrganizer('first'), isTrue);
+        },
+      );
+
+      test(
+        'should have no organizer when there are no participants nor organizerUserId',
+        () {
+          final dto = MatchDetailDto.fromJson(baseJson);
+
+          expect(dto.resolvedOrganizerUserId, isNull);
+          expect(dto.isOrganizer(null), isFalse);
+        },
+      );
+    });
+
+    group('blockEndsAt', () {
+      test('should parse when the court block ends', () {
+        final json = Map<String, Object?>.from(baseJson)
+          ..['blockEndsAt'] = '2026-05-05T17:00:00.000Z';
+
+        expect(
+          MatchDetailDto.fromJson(json).blockEndsAt,
+          DateTime.utc(2026, 5, 5, 17),
+        );
+      });
+
+      test('should be null when an older API omits it', () {
+        expect(MatchDetailDto.fromJson(baseJson).blockEndsAt, isNull);
+      });
+    });
   });
 }

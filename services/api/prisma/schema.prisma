@@ -196,6 +196,8 @@ enum NotificationEventType {
   /// El organizador cancelo el torneo: avisa a los inscritos activos excepto al actor.
   TOURNAMENT_CANCELLED
   QUICK_MATCH_PROPOSAL
+  /// La partida termino por el bloque de cancha y nadie cargo el resultado: avisa a los participantes.
+  MATCH_RESULT_REMINDER
 }
 
 enum NotificationDeliveryStatus {

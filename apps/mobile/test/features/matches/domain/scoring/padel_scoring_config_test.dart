@@ -42,11 +42,21 @@ void main() {
       test('6-3 es válido', () {
         expect(config.isValidSetScore(6, 3), isTrue);
       });
+
+      //? Con 5-5 se juega a 7: 7-5 es un set válido (antes se rechazaba y no
+      //? dejaba cargar el resultado).
+      test('7-5 es válido (5-5 se juega a 7)', () {
+        expect(config.isValidSetScore(7, 5), isTrue);
+      });
+
+      test('5-7 es válido', () {
+        expect(config.isValidSetScore(5, 7), isTrue);
+      });
     });
 
     group('invalid scores', () {
-      test('7-5 es inválido (no existe en pádel)', () {
-        expect(config.isValidSetScore(7, 5), isFalse);
+      test('7-4 es inválido (a 7 solo se llega desde 5-5 o 6-6)', () {
+        expect(config.isValidSetScore(7, 4), isFalse);
       });
 
       test('6-6 es inválido (empate no permitido, debe jugarse tiebreak)', () {

@@ -5,6 +5,44 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.17.0] - 2026-11-13
+
+### Agregado
+
+- **La partida termina con su bloque de cancha**: el worker de estado pasa a
+  `FINISHED` las partidas regulares en curso cuando vence el bloque
+  (`scheduledAt` + `durationMinutes` de la reserva, o 90 minutos si no hay
+  reserva). Las partidas sin hora y las de torneo no se tocan.
+- **Recordatorio para cargar el resultado**: nuevo tipo de notificación
+  `MATCH_RESULT_REMINDER` (migración aditiva del enum). Cuando el worker
+  termina una partida sin resultado propuesto, avisa una sola vez a cada
+  participante ("¿Cómo salió la partida? Cargá el resultado…"), respetando
+  sus preferencias. El evento lleva `matchId` en la columna y en el payload.
+- **Aviso cuando el worker cancela**: al llegar la hora de una partida
+  incompleta o con pagos sin confirmar, cada participante recibe una sola vez
+  `MATCH_CANCELLED` con el motivo en el texto (`payload.reason`:
+  `INCOMPLETE` o `UNPAID`). La reserva asociada queda con `matchStatus`
+  `CANCELLED`. Las cancelaciones del organizador o admin conservan su texto.
+- **`organizerUserId` en el detalle**: `GET /api/v1/matches/:id` expone quién
+  creó la partida.
+- **`blockEndsAt` en el detalle**: cuándo termina el bloque de cancha (la misma
+  hora a la que el worker cierra la partida), para que las apps no supongan 90
+  minutos.
+- **Silenciar recordatorio y partida rápida**: las preferencias de
+  notificación (`enabledTypes`) aceptan `MATCH_RESULT_REMINDER` y
+  `QUICK_MATCH_PROPOSAL`; antes respondían 400.
+
+### Cambiado
+
+- **Cargar el resultado termina la partida**: `PUT /matches/:id/result-draft`
+  acepta partidas regulares `IN_PROGRESS` y las pasa a `FINISHED` (con su
+  reserva) en la misma transacción. Una partida `SCHEDULED` responde 409
+  `PARTIDO_NO_INICIADO` ("La partida todavía no empezó.") y una `CANCELLED`
+  409 `PARTIDO_CANCELADO` ("La partida fue cancelada."); antes ambas
+  respondían `PARTIDO_NO_FINALIZADO`.
+- `POST /matches/:id/start` sigue disponible pero ninguna app lo usa: las
+  partidas empiezan solas a la hora del bloque.
+
 ## [1.16.0] - 2026-11-13
 
 ### Cambiado

@@ -20,6 +20,22 @@ function quickMatchContentSV(_payload: unknown): { title: string; body: string }
   return { title: 'Encontramos una partida', body: 'Tenés una propuesta lista para confirmar.' };
 }
 
+/**
+ * Cancelación de partida. Cuando la cancela el worker al llegar la hora, el
+ * payload trae `reason` y el texto dice por qué; las demás cancelaciones
+ * (organizador, admin) no lo traen y conservan el texto genérico.
+ */
+function matchCancelledContentSV(_payload: unknown): { title: string; body: string } {
+  const PAYLOAD = _payload !== null && typeof _payload === 'object' ? _payload as Record<string, unknown> : {};
+  if (PAYLOAD.reason === 'INCOMPLETE') {
+    return { title: 'Partida cancelada', body: 'La partida se canceló porque no se completó a la hora de empezar.' };
+  }
+  if (PAYLOAD.reason === 'UNPAID') {
+    return { title: 'Partida cancelada', body: 'La partida se canceló porque faltaban pagos confirmados a la hora de empezar.' };
+  }
+  return { title: 'Partida cancelada', body: 'Una partida fue cancelada.' };
+}
+
 /** Títulos y cuerpos de notificaciones in-app / push por tipo de evento (y payload cuando hace falta). */
 export function notificationContentForTypeSV(
   _type: string,
@@ -35,7 +51,12 @@ export function notificationContentForTypeSV(
           'Hay una vacante disponible en una partida que coincide con tus preferencias.',
       };
     case 'MATCH_CANCELLED':
-      return { title: 'Partida cancelada', body: 'Una partida fue cancelada.' };
+      return matchCancelledContentSV(_payload);
+    case 'MATCH_RESULT_REMINDER':
+      return {
+        title: '¿Cómo salió la partida?',
+        body: 'Cargá el resultado para que todos lo confirmen.',
+      };
     case 'CHAT_MESSAGE':
       return {
         title: 'Nuevo mensaje',
@@ -103,6 +124,7 @@ export const DIRECT_NOTIFICATION_EVENT_TYPES = new Set<string>([
   'MATCH_PLAYER_JOINED',
   'PAYMENT_CONFIRMED',
   'QUICK_MATCH_PROPOSAL',
+  'MATCH_RESULT_REMINDER',
   //? Los de torneo no tienen `matchId`: si salieran de este conjunto, el
   //? despachador buscaría contexto de partido, no lo encontraría y los daría
   //? por procesados sin enviar nada.

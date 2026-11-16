@@ -143,7 +143,10 @@ final class _MatchDetailView extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         _LocationRow(match: m),
-                        _Banner(phase: phase, eloChange: loaded.viewerEloChange),
+                        _Banner(
+                          phase: phase,
+                          eloChange: loaded.viewerEloChange,
+                        ),
                         const SizedBox(height: 14),
                         _InfoTilesRow(
                           match: m,
@@ -333,7 +336,7 @@ final class _Banner extends StatelessWidget {
         AppIcons.play,
         scheme.primary,
         'Partida en curso',
-        'Seguí el resultado en vivo',
+        'Al terminar, cargá el resultado',
       ),
       _Phase.played => (
         AppIcons.target,
@@ -411,10 +414,11 @@ final class _InfoTilesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = match;
-    final scheduled = m.scheduledAt;
+    //? La API manda el instante en UTC; el jugador lo lee en su hora local.
+    final scheduled = m.scheduledAt?.toLocal();
     final hasPrice = m.pricePerPlayerCents > 0;
-    final pricePerPlayerMinor =
-        (m.pricePerPlayerCents / m.maxParticipants).toInt();
+    final pricePerPlayerMinor = (m.pricePerPlayerCents / m.maxParticipants)
+        .toInt();
     final dateIso = scheduled != null
         ? localCalendarDateIsoSV(scheduled)
         : localCalendarDateIsoSV(DateTime.now());
@@ -871,7 +875,11 @@ final class _EmptySlot extends StatelessWidget {
             CircleAvatar(
               radius: 22,
               backgroundColor: scheme.surfaceContainerHighest,
-              child: Icon(AppIcons.add, color: scheme.onSurfaceVariant, size: 20),
+              child: Icon(
+                AppIcons.add,
+                color: scheme.onSurfaceVariant,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Text(
@@ -950,11 +958,7 @@ final class _ChatFab extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: scheme.outlineVariant, width: 1.5),
           ),
-          child: Icon(
-            AppIcons.chat,
-            size: 22,
-            color: scheme.onSurface,
-          ),
+          child: Icon(AppIcons.chat, size: 22, color: scheme.onSurface),
         ),
       ),
     );
@@ -978,7 +982,8 @@ final class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final m = loaded.match;
-    final pricePerPlayerMinor = (m.pricePerPlayerCents / m.maxParticipants).toInt();
+    final pricePerPlayerMinor = (m.pricePerPlayerCents / m.maxParticipants)
+        .toInt();
     final currency = matchDetailDisplayCurrency(m);
     final priceLabel = formatMoneyLabel(pricePerPlayerMinor, currency);
     final scheduled = m.scheduledAt;
@@ -1030,10 +1035,7 @@ final class _Footer extends StatelessWidget {
       case _Phase.browse:
         final canJoin = m.status == 'SCHEDULED' && m.openSpots > 0;
         if (!canJoin) {
-          return _DisabledCta(
-            icon: AppIcons.group,
-            label: 'Partida llena',
-          );
+          return _DisabledCta(icon: AppIcons.group, label: 'Partida llena');
         }
         if (usesCourt) {
           return _DisabledCta(
@@ -1092,6 +1094,8 @@ final class _Footer extends StatelessWidget {
 
       case _Phase.pending:
       case _Phase.confirmed:
+        //? La partida empieza sola a la hora del bloque (sin botón de
+        //? iniciar) y el resultado recién se puede cargar una vez empezada.
         return Row(
           children: [
             _SquareButton(
@@ -1100,24 +1104,39 @@ final class _Footer extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _PrimaryCta(
-                icon: AppIcons.target,
-                label: 'Cargar resultado',
-                onPressed: () => context.push(Routes.matchResult(m.id)),
+              child: Text(
+                m.scheduledAt == null
+                    ? 'El horario de la partida está por confirmar.'
+                    : 'Empieza a las ${formatTimeHm(m.scheduledAt!.toLocal())}',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],
         );
 
       case _Phase.inProgress:
-        return Row(
+        //? Cargar el resultado termina la partida (la API la pasa a
+        //? FINISHED), así que se ofrece a los jugadores durante el bloque.
+        final inProgressLabel = Text(
+          _inProgressLabel(m),
+          style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+        );
+        if (!loaded.isParticipant) {
+          return Row(children: [Expanded(child: inProgressLabel)]);
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: _PrimaryCta(
-                icon: AppIcons.play,
-                label: 'Ver partido en vivo',
-                onPressed: () => context.push('/matches/${m.id}/live'),
-              ),
+            inProgressLabel,
+            const SizedBox(height: 10),
+            _PrimaryCta(
+              icon: AppIcons.target,
+              label: 'Cargar resultado',
+              onPressed: () => context.push(Routes.matchResult(m.id)),
             ),
           ],
         );
@@ -1141,6 +1160,19 @@ final class _Footer extends StatelessWidget {
         );
     }
   }
+}
+
+//? Solo para APIs anteriores a `blockEndsAt`: la duración que usa el worker
+//? para partidas sin reserva (S3).
+const _defaultBlockMinutes = 90;
+
+String _inProgressLabel(MatchDetailDto m) {
+  //? La API manda el fin real del bloque (duración de la reserva): con 90
+  //? minutos fijos, una cancha de 60 mostraba media hora de más.
+  final end = m.blockEndsAt?.toLocal() ??
+      m.scheduledAt?.toLocal().add(const Duration(minutes: _defaultBlockMinutes));
+  if (end == null) return 'En curso';
+  return 'En curso · termina ${formatTimeHm(end)}';
 }
 
 final class _PrimaryCta extends StatelessWidget {
@@ -1349,10 +1381,11 @@ final class _EmptyState extends StatelessWidget {
 void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
   final cubit = context.read<MatchDetailCubit>();
   final m = loaded.match;
-  final isOrganizer =
-      m.participants.isNotEmpty &&
-      m.participants.first.userId == loaded.viewerUserId;
+  final isOrganizer = m.isOrganizer(loaded.viewerUserId);
   final isFinished = m.status == 'FINISHED';
+  //? El resultado se carga desde que la partida empieza: cargarlo la termina.
+  final canLoadResult =
+      loaded.isParticipant && (isFinished || m.status == 'IN_PROGRESS');
 
   showModalBottomSheet<void>(
     context: context,
@@ -1396,37 +1429,7 @@ void _showActionsSheet(BuildContext context, MatchDetailLoaded loaded) {
                 context.push(Routes.matchChat(m.id));
               },
             ),
-            if (isOrganizer && m.status == 'SCHEDULED')
-              _SheetAction(
-                icon: AppIcons.playCircle,
-                label: 'Iniciar partida',
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final ok = await _confirmDialog(
-                    context,
-                    title: 'Iniciar partida',
-                    message: '¿Confirmas que la partida empieza ahora?',
-                    confirmLabel: 'Iniciar',
-                  );
-                  if (ok) cubit.start();
-                },
-              ),
-            if (isOrganizer && m.status == 'IN_PROGRESS')
-              _SheetAction(
-                icon: AppIcons.stopCircle,
-                label: 'Finalizar partida',
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final ok = await _confirmDialog(
-                    context,
-                    title: 'Finalizar partida',
-                    message: '¿Confirmas que la partida terminó?',
-                    confirmLabel: 'Finalizar',
-                  );
-                  if (ok) cubit.finish();
-                },
-              ),
-            if (isOrganizer && isFinished)
+            if (canLoadResult)
               _SheetAction(
                 icon: AppIcons.scoreboard,
                 label: 'Cargar resultado',
@@ -1523,7 +1526,8 @@ void _confirmLeave(BuildContext context) async {
 }
 
 void _shareMatchInvite(BuildContext context, MatchDetailDto match) {
-  final scheduled = match.scheduledAt;
+  //? Hora local del jugador, igual que el resto del detalle (no UTC).
+  final scheduled = match.scheduledAt?.toLocal();
   final when = scheduled == null
       ? 'Fecha por confirmar'
       : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';

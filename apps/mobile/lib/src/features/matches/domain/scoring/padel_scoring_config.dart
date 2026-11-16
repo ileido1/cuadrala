@@ -35,6 +35,9 @@ final class PadelScoringConfig implements ScoringConfig {
     final low = a >= b ? b : a;
     if (high < _regularGames) return false;
     if (high == _regularGames && low <= 4) return true;
+    //? Con 5-5 se juega a 7 (gana por dos): 7-5.
+    if (high == _tiebreakGames && low == _regularGames - 1) return true;
+    //? Con 6-6 se define en tie-break: 7-6.
     if (high == _tiebreakGames && low == _tiebreakAt) return true;
     return false;
   }

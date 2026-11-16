@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cuadrala_mobile/src/core/di/service_locator.dart';
-import 'package:cuadrala_mobile/src/core/theme/app_icons.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/matches_repository.dart';
 import 'package:cuadrala_mobile/src/features/matches/data/models/match_detail_dto.dart';
 import 'package:cuadrala_mobile/src/features/matches/presentation/match_detail_screen.dart';
@@ -23,9 +22,18 @@ class _MockMonetizationRepository extends Mock
 const _matchId = 'match-1';
 const _viewerId = 'user-1';
 
+//? La API manda instantes UTC. Se arma la hora local 12:00 y se pasa a UTC
+//? (como llega del JSON) para que la hora esperada sea la misma en cualquier
+//? zona horaria donde corran los tests.
+final _localStart = DateTime(2026, 5, 5, 12).toUtc();
+
 MatchDetailDto _buildMatch({
   String status = 'SCHEDULED',
   int pricePerPlayerCents = 0,
+  String? organizerUserId,
+  List<String> participantIds = const [_viewerId],
+  DateTime? scheduledAt,
+  DateTime? blockEndsAt,
 }) {
   final now = DateTime.utc(2026, 5, 5, 12);
   return MatchDetailDto(
@@ -34,7 +42,7 @@ MatchDetailDto _buildMatch({
     categoryId: 'cat',
     type: 'REGULAR',
     status: status,
-    scheduledAt: now,
+    scheduledAt: scheduledAt ?? _localStart,
     pricePerPlayerCents: pricePerPlayerCents,
     maxParticipants: 2,
     participantCount: 1,
@@ -45,10 +53,13 @@ MatchDetailDto _buildMatch({
     locationLabel: 'Dirección',
     tournamentId: null,
     participants: [
-      MatchParticipantDto(userId: _viewerId, joinedAt: DateTime.utc(2026, 5, 1)),
+      for (final id in participantIds)
+        MatchParticipantDto(userId: id, joinedAt: DateTime.utc(2026, 5, 1)),
     ],
     createdAt: now,
     updatedAt: now,
+    organizerUserId: organizerUserId,
+    blockEndsAt: blockEndsAt,
   );
 }
 
@@ -58,9 +69,8 @@ Widget _buildTestApp() {
     routes: [
       GoRoute(
         path: '/matches/:matchId',
-        builder: (context, state) => MatchDetailScreen(
-          matchId: state.pathParameters['matchId']!,
-        ),
+        builder: (context, state) =>
+            MatchDetailScreen(matchId: state.pathParameters['matchId']!),
       ),
       GoRoute(
         path: '/matches/:matchId/result',
@@ -104,10 +114,8 @@ void main() {
         limit: any(named: 'limit'),
       ),
     ).thenAnswer(
-      (_) async => const UserTransactionsResult(
-        userId: _viewerId,
-        transactions: [],
-      ),
+      (_) async =>
+          const UserTransactionsResult(userId: _viewerId, transactions: []),
     );
   });
 
@@ -117,38 +125,201 @@ void main() {
     getIt.unregister<MonetizationRepository>();
   });
 
-  group('pending/confirmed footer', () {
+  //? S1/S8: la partida empieza sola a la hora del bloque; el organizador ya
+  //? no la inicia. Antes el footer mostraba "Iniciar partido" (7952ff4).
+  group('scheduled footer', () {
+    //? Antes se formateaba el instante UTC tal cual: en Venezuela (UTC-4) una
+    //? partida de las 22:30 aparecía a las 02:30 del día siguiente.
     testWidgets(
-      'shows "Cargar resultado" as the primary CTA instead of "Compartir partida"',
+      'should show the start date and time in local time when scheduled',
       (tester) async {
         when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
-          (_) async => _buildMatch(),
+          (_) async =>
+              _buildMatch(scheduledAt: DateTime(2026, 5, 5, 22, 30).toUtc()),
         );
 
         await tester.pumpWidget(_buildTestApp());
         await tester.pumpAndSettle();
 
-        expect(find.text('Cargar resultado'), findsOneWidget);
-        expect(find.text('Compartir partida'), findsNothing);
-        // El botón cuadrado de compartir se mantiene (appbar + footer).
-        expect(find.byIcon(AppIcons.share), findsNWidgets(2));
+        expect(find.text('Empieza a las 22:30'), findsOneWidget);
+        expect(find.text('22:30 hs'), findsOneWidget);
+        expect(find.textContaining('05 May'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'tapping "Cargar resultado" opens the same result-entry route as the played phase',
+      'should show the start time and no start or result buttons when scheduled',
+      (tester) async {
+        when(
+          () => matchesRepository.getMatchById(_matchId),
+        ).thenAnswer((_) async => _buildMatch());
+
+        await tester.pumpWidget(_buildTestApp());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Empieza a las 12:00'), findsOneWidget);
+        expect(find.text('Cargar resultado'), findsNothing);
+        expect(find.text('Iniciar partido'), findsNothing);
+      },
+    );
+  });
+
+  //? S2/S8: cargar el resultado termina la partida, así que se ofrece
+  //? mientras está en curso; la pantalla en vivo se eliminó (S7).
+  group('in-progress footer', () {
+    testWidgets(
+      'should show the block end and let a participant load the result when in progress',
+      (tester) async {
+        when(
+          () => matchesRepository.getMatchById(_matchId),
+        ).thenAnswer((_) async => _buildMatch(status: 'IN_PROGRESS'));
+
+        await tester.pumpWidget(_buildTestApp());
+        await tester.pumpAndSettle();
+
+        expect(find.text('En curso · termina 13:30'), findsOneWidget);
+        expect(find.text('Ver partido en vivo'), findsNothing);
+        await tester.tap(find.text('Cargar resultado'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Result entry: $_matchId'), findsOneWidget);
+      },
+    );
+
+    //? B1 del verificador: el fin del bloque sale de la API (duración real de
+    //? la reserva), no de 90 minutos fijos.
+    testWidgets(
+      'should show the block end the API reports for a 60-minute court',
       (tester) async {
         when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
-          (_) async => _buildMatch(),
+          (_) async => _buildMatch(
+            status: 'IN_PROGRESS',
+            blockEndsAt: _localStart.add(const Duration(minutes: 60)),
+          ),
         );
 
         await tester.pumpWidget(_buildTestApp());
         await tester.pumpAndSettle();
 
+        expect(find.text('En curso · termina 13:00'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'should not offer to load the result to a non participant when in progress',
+      (tester) async {
+        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
+          (_) async => _buildMatch(
+            status: 'IN_PROGRESS',
+            participantIds: const ['other-user'],
+          ),
+        );
+
+        await tester.pumpWidget(_buildTestApp());
+        await tester.pumpAndSettle();
+
+        expect(find.text('En curso · termina 13:30'), findsOneWidget);
+        expect(find.text('Cargar resultado'), findsNothing);
+      },
+    );
+  });
+
+  group('finished footer', () {
+    testWidgets(
+      'should still offer to load the result once the match finished',
+      (tester) async {
+        when(
+          () => matchesRepository.getMatchById(_matchId),
+        ).thenAnswer((_) async => _buildMatch(status: 'FINISHED'));
+        when(
+          () => profileRepository.getUserRatingHistory(
+            userId: any(named: 'userId'),
+            categoryId: any(named: 'categoryId'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        await tester.pumpWidget(_buildTestApp());
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Cargar resultado'));
         await tester.pumpAndSettle();
 
         expect(find.text('Result entry: $_matchId'), findsOneWidget);
+      },
+    );
+  });
+
+  //? S6/S8: el sheet ya no ofrece iniciar ni finalizar a mano, y el
+  //? organizador sale de `organizerUserId` (con fallback al primer jugador).
+  group('actions sheet', () {
+    Future<void> openSheet(WidgetTester tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Acciones'));
+      await tester.pumpAndSettle();
+    }
+
+    for (final status in ['SCHEDULED', 'IN_PROGRESS']) {
+      testWidgets(
+        'should not offer manual start or finish to the organizer when $status',
+        (tester) async {
+          when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
+            (_) async =>
+                _buildMatch(status: status, organizerUserId: _viewerId),
+          );
+
+          await openSheet(tester);
+
+          expect(find.text('Iniciar partida'), findsNothing);
+          expect(find.text('Finalizar partida'), findsNothing);
+        },
+      );
+    }
+
+    testWidgets(
+      'should treat organizerUserId as organizer even when not first participant',
+      (tester) async {
+        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
+          (_) async => _buildMatch(
+            organizerUserId: _viewerId,
+            participantIds: const ['other-user', _viewerId],
+          ),
+        );
+
+        await openSheet(tester);
+
+        expect(find.text('Cancelar partida'), findsOneWidget);
+        expect(find.text('Salir de la partida'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'should not treat the first participant as organizer when organizerUserId differs',
+      (tester) async {
+        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
+          (_) async => _buildMatch(
+            organizerUserId: 'other-user',
+            participantIds: const [_viewerId, 'other-user'],
+          ),
+        );
+
+        await openSheet(tester);
+
+        expect(find.text('Cancelar partida'), findsNothing);
+        expect(find.text('Salir de la partida'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'should fall back to the first participant when organizerUserId is absent',
+      (tester) async {
+        when(
+          () => matchesRepository.getMatchById(_matchId),
+        ).thenAnswer((_) async => _buildMatch());
+
+        await openSheet(tester);
+
+        expect(find.text('Cancelar partida'), findsOneWidget);
       },
     );
   });
@@ -158,9 +329,9 @@ void main() {
       'muestra el número real de ELO cuando el historial ya tiene una fila '
       'para este match',
       (tester) async {
-        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
-          (_) async => _buildMatch(status: 'FINISHED'),
-        );
+        when(
+          () => matchesRepository.getMatchById(_matchId),
+        ).thenAnswer((_) async => _buildMatch(status: 'FINISHED'));
         when(
           () => profileRepository.getUserRatingHistory(
             userId: _viewerId,
@@ -192,9 +363,9 @@ void main() {
       'mantiene el texto genérico mientras el resultado sigue sin las 4 '
       'confirmaciones (sin fila en el historial para este match)',
       (tester) async {
-        when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
-          (_) async => _buildMatch(status: 'FINISHED'),
-        );
+        when(
+          () => matchesRepository.getMatchById(_matchId),
+        ).thenAnswer((_) async => _buildMatch(status: 'FINISHED'));
         when(
           () => profileRepository.getUserRatingHistory(
             userId: _viewerId,

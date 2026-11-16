@@ -11,6 +11,7 @@ import { GetMatchPaymentInfoUseCase } from '../../application/use_cases/get_matc
 import { ListMatchesUseCase } from '../../application/use_cases/list_matches.use_case.js';
 import { ListMyMatchesUseCase } from '../../application/use_cases/list_my_matches.use_case.js';
 import { UpdateMatchUseCase } from '../../application/use_cases/update_match.use_case.js';
+import { UpdateMatchStatusUseCase } from '../../application/use_cases/update_match_status.use_case.js';
 import { PrismaMatchNotificationContextReadRepository } from '../../infrastructure/adapters/prisma_match_notification_context_read_repository.js';
 import { PrismaMatchRepository } from '../../infrastructure/adapters/prisma_match_repository.js';
 import { PrismaVenueRepository } from '../../infrastructure/adapters/prisma_venue_repository.js';
@@ -27,6 +28,7 @@ import { PRISMA } from '../../infrastructure/prisma_client.js';
 import {
   CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_UC,
   CREATE_MATCH_PLAYER_JOINED_NOTIFICATION_EVENT_UC,
+  CREATE_MATCH_RESULT_REMINDER_NOTIFICATION_EVENT_UC,
 } from './notifications.composition.js';
 
 const MATCH_REPOSITORY = new PrismaMatchRepository();
@@ -68,6 +70,16 @@ export const FINISH_MATCH_UC = new FinishMatchUseCase(
   MATCH_PARTICIPATION_REPOSITORY,
   MATCH_STATUS_REPOSITORY,
 );
+
+/**
+ * Worker de estado por bloque de cancha, con sus avisos (cancelación con
+ * motivo y recordatorio de resultado). Los entrypoints deben usar este y no
+ * armar uno sin notificadores.
+ */
+export const UPDATE_MATCH_STATUS_UC = new UpdateMatchStatusUseCase(MATCH_STATUS_REPOSITORY, {
+  matchCancelled: CREATE_MATCH_CANCELLED_NOTIFICATION_EVENT_UC,
+  resultReminder: CREATE_MATCH_RESULT_REMINDER_NOTIFICATION_EVENT_UC,
+});
 
 export const LIST_MATCHES_UC = new ListMatchesUseCase(MATCH_QUERY_REPOSITORY);
 export const LIST_MY_MATCHES_UC = new ListMyMatchesUseCase(MATCH_QUERY_REPOSITORY);

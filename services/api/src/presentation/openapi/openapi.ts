@@ -995,7 +995,31 @@ const OPENAPI_CONST = {
           },
         ],
         responses: {
-          '200': { description: 'OK' },
+          '200': {
+            description: 'OK. `data` incluye, entre otros campos, `organizerUserId` (quien creó la partida).',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        status: { type: 'string', enum: ['SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'] },
+                        scheduledAt: { type: 'string', format: 'date-time', nullable: true },
+                        organizerUserId: { type: 'string', format: 'uuid' },
+                        blockEndsAt: { type: 'string', format: 'date-time', nullable: true, description: 'Fin del bloque de cancha: scheduledAt + duración de la reserva (90 min sin reserva). Null sin hora.' },
+                        tournamentId: { type: 'string', format: 'uuid', nullable: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           '400': { description: 'Validación fallida' },
           '404': { description: 'Partido no encontrado' },
         },
@@ -1110,6 +1134,8 @@ const OPENAPI_CONST = {
       post: {
         tags: ['Matches'],
         summary: 'Iniciar un partido (SCHEDULED -> IN_PROGRESS)',
+        description:
+          'Ninguna app lo usa: las partidas empiezan solas a la hora del bloque (worker de estado). Se mantiene por compatibilidad.',
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1153,7 +1179,10 @@ const OPENAPI_CONST = {
     '/api/v1/matches/{matchId}/result-draft': {
       put: {
         tags: ['Matches'],
-        summary: 'Guardar borrador de resultado (requiere partido FINISHED y 4 participantes)',
+        summary: 'Guardar borrador de resultado (partido IN_PROGRESS o FINISHED, 4 participantes)',
+        description:
+          'Si la partida regular está IN_PROGRESS, proponer el resultado la pasa a FINISHED en la misma transacción. ' +
+          'SCHEDULED responde 409 `PARTIDO_NO_INICIADO` y CANCELLED 409 `PARTIDO_CANCELADO`.',
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2246,6 +2275,8 @@ const OPENAPI_CONST = {
                       MATCH_CANCELLED: { type: 'boolean' },
                       CHAT_MESSAGE: { type: 'boolean' },
                       PAYMENT_PENDING: { type: 'boolean' },
+                      QUICK_MATCH_PROPOSAL: { type: 'boolean' },
+                      MATCH_RESULT_REMINDER: { type: 'boolean' },
                     },
                     additionalProperties: false,
                   },

@@ -1,3 +1,4 @@
+import { matchBlockEndsAtSV } from '../../domain/match_lifecycle/match_block.js';
 import type {
   ListMatchesFiltersDTO,
   ListMyMatchesFiltersDTO,
@@ -154,6 +155,8 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
           },
         },
         tournamentId: true,
+        organizerUserId: true,
+        reservation: { select: { durationMinutes: true } },
         createdAt: true,
         updatedAt: true,
         _count: { select: { participants: true } },
@@ -182,6 +185,11 @@ export class PrismaMatchQueryRepository implements MatchQueryRepository {
 
     return {
       ...BASE,
+      organizerUserId: ROW.organizerUserId,
+      //? Mismo cálculo que usa el worker para cerrar la partida (S3).
+      blockEndsAt: ROW.scheduledAt === null
+        ? null
+        : matchBlockEndsAtSV(ROW.scheduledAt, ROW.reservation?.durationMinutes ?? null),
       courtId: ROW.courtId,
       venueId: ROW.court?.venue.id ?? null,
       ...(CLUB_NAME !== undefined ? { clubName: CLUB_NAME } : {}),

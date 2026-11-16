@@ -44,6 +44,8 @@ final class MatchDetailDto {
     this.pricingCurrency,
     this.displayCurrency,
     this.affectsElo = true,
+    this.organizerUserId,
+    this.blockEndsAt,
   });
 
   final String id;
@@ -70,13 +72,29 @@ final class MatchDetailDto {
   final String? displayCurrency;
   final bool affectsElo;
 
+  /// Organizador según la API. Nulo con APIs anteriores al campo.
+  final String? organizerUserId;
+
+  /// Fin del bloque de cancha según la API (la hora a la que la partida se
+  /// cierra sola). Nulo sin hora o con APIs anteriores al campo.
+  final DateTime? blockEndsAt;
+
+  //? Las APIs viejas no mandan `organizerUserId`; ahí se mantiene la regla
+  //? anterior (el primer participante es quien creó la partida).
+  String? get resolvedOrganizerUserId =>
+      organizerUserId ??
+      (participants.isEmpty ? null : participants.first.userId);
+
+  bool isOrganizer(String? userId) =>
+      userId != null && userId == resolvedOrganizerUserId;
+
   static MatchDetailDto fromJson(Map<String, Object?> json) {
     final participantsRaw = json['participants'];
     final participants = participantsRaw is List
         ? participantsRaw
-            .whereType<Map<String, Object?>>()
-            .map(MatchParticipantDto.fromJson)
-            .toList()
+              .whereType<Map<String, Object?>>()
+              .map(MatchParticipantDto.fromJson)
+              .toList()
         : <MatchParticipantDto>[];
 
     final maxParticipants = (json['maxParticipants'] as num).toInt();
@@ -116,6 +134,10 @@ final class MatchDetailDto {
       pricingCurrency: json['pricingCurrency'] as String?,
       displayCurrency: json['displayCurrency'] as String?,
       affectsElo: json['affectsElo'] as bool? ?? true,
+      organizerUserId: json['organizerUserId'] as String?,
+      blockEndsAt: json['blockEndsAt'] is String
+          ? DateTime.parse(json['blockEndsAt'] as String)
+          : null,
     );
   }
 }

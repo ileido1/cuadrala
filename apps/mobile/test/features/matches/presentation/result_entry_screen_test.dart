@@ -151,6 +151,70 @@ void main() {
     _lastCubit = null;
   });
 
+  //? S2/S8: cargar el resultado termina la partida, así que se acepta desde
+  //? que empieza (IN_PROGRESS). Antes (7952ff4) se bloqueaba todo lo que no
+  //? fuera FINISHED; sin empezar o cancelada se explica antes del flujo.
+  group('match status guard', () {
+    //? Instante UTC armado desde la hora local 12:00: la guarda debe mostrar
+    //? la hora del jugador en cualquier zona horaria.
+    final localNoonUtc = DateTime(2026, 5, 25, 12).toUtc().toIso8601String();
+
+    Future<void> pumpWithStatus(WidgetTester tester, String status) async {
+      when(
+        () => matchesApi.getMatchEnvelope(matchId: any(named: 'matchId')),
+      ).thenAnswer(
+        (_) async => {
+          ..._matchJson,
+          'status': status,
+          'scheduledAt': localNoonUtc,
+        },
+      );
+      await _setupGetIt(matchesApi, catalogApi);
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+    }
+
+    for (final status in ['IN_PROGRESS', 'FINISHED']) {
+      testWidgets('should open the result flow when the match is $status', (
+        tester,
+      ) async {
+        await pumpWithStatus(tester, status);
+
+        expect(find.byKey(const Key('result.entry.screen')), findsOneWidget);
+        expect(find.text('La partida todavía no empezó'), findsNothing);
+      });
+    }
+
+    testWidgets(
+      'should say the match has not started and its local start time when scheduled',
+      (tester) async {
+        await pumpWithStatus(tester, 'SCHEDULED');
+
+        expect(find.text('La partida todavía no empezó'), findsOneWidget);
+        expect(
+          find.text(
+            'Empieza a las 12:00. El resultado se carga una vez que empieza.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('result.entry.screen')), findsNothing);
+      },
+    );
+
+    testWidgets('should say the match was cancelled when cancelled', (
+      tester,
+    ) async {
+      await pumpWithStatus(tester, 'CANCELLED');
+
+      expect(find.text('La partida fue cancelada'), findsOneWidget);
+      expect(
+        find.text('No se puede cargar el resultado de una partida cancelada.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('result.entry.screen')), findsNothing);
+    });
+  });
+
   // --------------------------------------------------------------------------
   // T-08: Court assignment step
   // --------------------------------------------------------------------------
@@ -235,7 +299,7 @@ void main() {
   // --------------------------------------------------------------------------
 
   group('T-10 — Score entry step', () {
-    testWidgets('entering 7-5 shows inline validation error', (tester) async {
+    testWidgets('entering 7-4 shows inline validation error', (tester) async {
       await _setupGetIt(matchesApi, catalogApi);
       await tester.pumpWidget(_buildTestApp());
       await _pumpToScoreStep(tester);
@@ -250,12 +314,12 @@ void main() {
         await tester.pump();
       }
 
-      // Tap + on team B until 5
+      // Tap + on team B until 4
       final incrementB = find.descendant(
         of: find.byKey(const Key('draft.score.b')),
         matching: find.byIcon(AppIcons.addCircle),
       );
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         await tester.tap(incrementB);
         await tester.pump();
       }
@@ -263,7 +327,7 @@ void main() {
 
       expect(find.byKey(const Key('draft.error')), findsOneWidget);
       expect(
-        find.text('Marcador inválido para pádel. Ej: 6-4, 7-6.'),
+        find.text('Marcador inválido para pádel. Ej: 6-4, 7-5, 7-6.'),
         findsOneWidget,
       );
 
@@ -274,6 +338,34 @@ void main() {
         ),
       );
       expect(addSetButton.onPressed, isNull);
+    });
+
+    //? Con 5-5 se juega a 7: 7-5 es válido (antes no dejaba cargarlo).
+    testWidgets('entering 7-5 enables Agregar set button', (tester) async {
+      await _setupGetIt(matchesApi, catalogApi);
+      await tester.pumpWidget(_buildTestApp());
+      await _pumpToScoreStep(tester);
+
+      for (final (key, taps) in [('draft.score.a', 7), ('draft.score.b', 5)]) {
+        final increment = find.descendant(
+          of: find.byKey(Key(key)),
+          matching: find.byIcon(AppIcons.addCircle),
+        );
+        for (int i = 0; i < taps; i++) {
+          await tester.tap(increment);
+          await tester.pump();
+        }
+      }
+      await tester.pump();
+
+      expect(find.byKey(const Key('draft.error')), findsNothing);
+      final addSetButton = tester.widget<OutlinedButton>(
+        find.ancestor(
+          of: find.text('Agregar set'),
+          matching: find.byType(OutlinedButton),
+        ),
+      );
+      expect(addSetButton.onPressed, isNotNull);
     });
 
     testWidgets('entering 6-4 enables Agregar set button', (tester) async {

@@ -17,7 +17,6 @@ import '../features/matches/presentation/discover_matches_screen.dart';
 import '../features/quick_match/presentation/quick_match_screen.dart';
 import '../features/quick_match/presentation/cubit/quick_match_cubit.dart';
 import '../features/matches/presentation/match_detail_screen.dart';
-import '../features/matches/presentation/match_live_screen.dart';
 import '../features/matches/presentation/confirm_match_result_screen.dart';
 import '../features/matches/presentation/result_entry_screen.dart';
 import '../features/chat/presentation/match_chat_screen.dart';
@@ -247,14 +246,6 @@ final class AppRouter {
             builder: (context, state) {
               final matchId = state.pathParameters['matchId'] ?? '';
               return MatchmakingScreen(matchId: matchId);
-            },
-          ),
-          GoRoute(
-            name: 'matchLive',
-            path: '/matches/:matchId/live',
-            builder: (context, state) {
-              final matchId = state.pathParameters['matchId'] ?? '';
-              return MatchLiveScreen(matchId: matchId);
             },
           ),
           GoRoute(

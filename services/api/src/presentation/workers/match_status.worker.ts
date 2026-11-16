@@ -24,7 +24,7 @@ export function startMatchStatusWorkerSV(
 
   let isRunning = false;
 
-  //? 3. Definir función tick (actualiza estado de partidas)
+  //? 3. Definir función tick (inicia, cancela y termina partidas según su bloque)
   const tickSV = async (): Promise<void> => {
     if (isRunning) {
       console.log('[worker] Match status: tick anterior aún en progreso, saltando...');
@@ -51,13 +51,16 @@ export function startMatchStatusWorkerSV(
         ),
       ]);
 
-      if (RES.updatedCount > 0 || RES.cancelledCount > 0) {
+      if (RES.updatedCount > 0 || RES.cancelledCount > 0 || RES.finishedCount > 0 || RES.notificationFailures > 0) {
         console.log(
           JSON.stringify({
             kind: 'match_status.update.tick',
             status: 'SUCCESS',
             updatedCount: RES.updatedCount,
             cancelledCount: RES.cancelledCount,
+            finishedCount: RES.finishedCount,
+            remindedCount: RES.remindedCount,
+            notificationFailures: RES.notificationFailures,
             elapsedMs: Date.now() - TICK_STARTED_AT,
           }),
         );

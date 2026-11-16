@@ -400,7 +400,7 @@ void main() {
       );
 
       blocTest<ResultEntryCubit, ResultEntryState>(
-        'rechaza set inválido (7-5)',
+        'rechaza set inválido (7-4)',
         setUp: () {
           when(() => matchesApi.getMatchEnvelope(matchId: matchId))
               .thenAnswer((_) async => buildMatchJson(buildMatch()));
@@ -410,7 +410,7 @@ void main() {
         build: buildCubit,
         act: (cubit) async {
           await cubit.load();
-          cubit.addSet(const SetScore(teamA: 7, teamB: 5));
+          cubit.addSet(const SetScore(teamA: 7, teamB: 4));
         },
         verify: (cubit) {
           expect(cubit.state.sets, isEmpty);
