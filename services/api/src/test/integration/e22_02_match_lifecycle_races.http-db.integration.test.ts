@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
+import { wallClockNowSV } from '../../domain/match_lifecycle/match_block.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { loadVenuePricingCurrencySV, reservationMoneyCreateFieldsSV } from '../../infrastructure/prisma_money_fields.js';
 import { UPDATE_MATCH_STATUS_UC } from '../../presentation/composition/matches.composition.js';
@@ -71,7 +72,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Ciclo de vida por bloque — carrera
   }
 
   function minutesAgo(_minutes: number): Date {
-    return new Date(Date.now() - _minutes * MINUTE_MS);
+    return new Date(wallClockNowSV(new Date()).getTime() - _minutes * MINUTE_MS);
   }
 
   async function eventsSV(_matchId: string, _type: 'MATCH_RESULT_REMINDER' | 'MATCH_CANCELLED') {

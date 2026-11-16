@@ -25,7 +25,7 @@ const _viewerId = 'user-1';
 //? La API manda instantes UTC. Se arma la hora local 12:00 y se pasa a UTC
 //? (como llega del JSON) para que la hora esperada sea la misma en cualquier
 //? zona horaria donde corran los tests.
-final _localStart = DateTime(2026, 5, 5, 12).toUtc();
+final _localStart = DateTime.utc(2026, 5, 5, 12);
 
 MatchDetailDto _buildMatch({
   String status = 'SCHEDULED',
@@ -131,11 +131,11 @@ void main() {
     //? Antes se formateaba el instante UTC tal cual: en Venezuela (UTC-4) una
     //? partida de las 22:30 aparecía a las 02:30 del día siguiente.
     testWidgets(
-      'should show the start date and time in local time when scheduled',
+      'should show the start date and time as the venue wall clock when scheduled',
       (tester) async {
         when(() => matchesRepository.getMatchById(_matchId)).thenAnswer(
           (_) async =>
-              _buildMatch(scheduledAt: DateTime(2026, 5, 5, 22, 30).toUtc()),
+              _buildMatch(scheduledAt: DateTime.utc(2026, 5, 5, 22, 30)),
         );
 
         await tester.pumpWidget(_buildTestApp());

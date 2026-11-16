@@ -5,6 +5,18 @@ Todos los cambios notables de la API se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.17.1] - 2026-11-16
+
+### Corregido
+
+- **El worker cancelaba partidas 4 horas antes**: los `scheduledAt` guardan la
+  hora de pared de la sede con componentes UTC (19:00 en Caracas = `19:00Z`),
+  pero el worker los comparaba contra el reloj real. Una partida de las 19:00
+  armada a las 16:49 ya figuraba como empezada y se cancelaba por pago
+  pendiente. Inicio, cancelación, cierre por fin de bloque y recordatorio ahora
+  usan la hora de la sede (`wallClockNowSV`).
+- **Partida rápida**: ya no ofrece bloques de hoy que ya empezaron en la sede.
+
 ## [1.17.0] - 2026-11-13
 
 ### Agregado

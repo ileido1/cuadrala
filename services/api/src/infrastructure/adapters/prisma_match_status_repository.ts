@@ -1,4 +1,4 @@
-import { matchBlockEndsAtSV, type MatchAutoCancelReason } from '../../domain/match_lifecycle/match_block.js';
+import { matchBlockEndsAtSV, wallClockNowSV, type MatchAutoCancelReason } from '../../domain/match_lifecycle/match_block.js';
 import type {
   AutoCancelledMatchDTO,
   AutoFinishedMatchDTO,
@@ -19,7 +19,7 @@ export class PrismaMatchStatusRepository implements MatchStatusRepository {
     cancelledCount: number;
     cancelled: AutoCancelledMatchDTO[];
   }> {
-    const NOW = new Date();
+    const NOW = wallClockNowSV(new Date());
 
     //? 1. Partidas programadas cuya hora de bloque ya llegó
     const EXPIRED = await PRISMA.match.findMany({

@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app.js';
+import { wallClockNowSV } from '../../domain/match_lifecycle/match_block.js';
 import { PRISMA } from '../../infrastructure/prisma_client.js';
 import { loadVenuePricingCurrencySV, reservationMoneyCreateFieldsSV } from '../../infrastructure/prisma_money_fields.js';
 import { UPDATE_MATCH_STATUS_UC } from '../../presentation/composition/matches.composition.js';
@@ -70,8 +71,9 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Ciclo de vida de la partida por bloq
     return MATCH.id;
   }
 
+  //? scheduledAt es hora de pared de la sede con componentes UTC.
   function minutesAgo(_minutes: number): Date {
-    return new Date(Date.now() - _minutes * MINUTE_MS);
+    return new Date(wallClockNowSV(new Date()).getTime() - _minutes * MINUTE_MS);
   }
 
   async function eventsSV(_matchId: string, _type: 'MATCH_RESULT_REMINDER' | 'MATCH_CANCELLED') {
@@ -161,7 +163,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Ciclo de vida de la partida por bloq
     });
 
     it('should reject a result saying the match has not started when it is SCHEDULED', async () => {
-      const MATCH_ID = await createMatchSV({ status: 'SCHEDULED', scheduledAt: new Date(Date.now() + 60 * MINUTE_MS) });
+      const MATCH_ID = await createMatchSV({ status: 'SCHEDULED', scheduledAt: new Date(wallClockNowSV(new Date()).getTime() + 60 * MINUTE_MS) });
 
       const RES = await request(APP)
         .put(`/api/v1/matches/${MATCH_ID}/result-draft`)
@@ -305,11 +307,25 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Ciclo de vida de la partida por bloq
     });
 
     it('should not start a match before scheduledAt', async () => {
-      const MATCH_ID = await createMatchSV({ status: 'SCHEDULED', scheduledAt: new Date(Date.now() + 10 * MINUTE_MS) });
+      const MATCH_ID = await createMatchSV({ status: 'SCHEDULED', scheduledAt: new Date(wallClockNowSV(new Date()).getTime() + 10 * MINUTE_MS) });
 
       await UPDATE_MATCH_STATUS_UC.execute();
 
       expect((await PRISMA.match.findUnique({ where: { id: MATCH_ID } }))?.status).toBe('SCHEDULED');
+    });
+
+    //? Reproduce el bug reportado: a las 16:49 de Caracas (20:49Z) una partida
+    //? de las 19:00 se guarda como 19:00Z (hora de pared con componentes UTC).
+    //? Comparada contra el reloj real ya "pasó" y el worker la cancelaba.
+    it('should not start nor cancel a match whose venue hour has not arrived although its UTC instant passed', async () => {
+      const SCHEDULED_AT = new Date(Date.now() - 2 * 60 * MINUTE_MS);
+      expect(SCHEDULED_AT.getTime()).toBeGreaterThan(wallClockNowSV(new Date()).getTime());
+      const MATCH_ID = await createMatchSV({ status: 'SCHEDULED', scheduledAt: SCHEDULED_AT, participants: 2 });
+
+      await UPDATE_MATCH_STATUS_UC.execute();
+
+      expect((await PRISMA.match.findUnique({ where: { id: MATCH_ID } }))?.status).toBe('SCHEDULED');
+      expect(await PRISMA.notificationEvent.count({ where: { matchId: MATCH_ID } })).toBe(0);
     });
 
     it('should cancel an incomplete match and tell every participant why, once', async () => {
@@ -361,7 +377,7 @@ describe.skipIf(!HAS_INTEGRATION_DATABASE)('Ciclo de vida de la partida por bloq
 
   describe('S6 — organizador en el detalle', () => {
     it('should expose organizerUserId on GET /matches/:id', async () => {
-      const MATCH_ID = await createMatchSV({ status: 'SCHEDULED', scheduledAt: new Date(Date.now() + 60 * MINUTE_MS) });
+      const MATCH_ID = await createMatchSV({ status: 'SCHEDULED', scheduledAt: new Date(wallClockNowSV(new Date()).getTime() + 60 * MINUTE_MS) });
 
       const RES = await request(APP).get(`/api/v1/matches/${MATCH_ID}`);
 

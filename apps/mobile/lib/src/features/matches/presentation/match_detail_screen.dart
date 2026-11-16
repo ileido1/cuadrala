@@ -414,8 +414,8 @@ final class _InfoTilesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = match;
-    //? La API manda el instante en UTC; el jugador lo lee en su hora local.
-    final scheduled = m.scheduledAt?.toLocal();
+    //? scheduledAt es hora de pared de la sede en componentes UTC: se muestra tal cual.
+    final scheduled = m.scheduledAt;
     final hasPrice = m.pricePerPlayerCents > 0;
     final pricePerPlayerMinor = (m.pricePerPlayerCents / m.maxParticipants)
         .toInt();
@@ -1107,7 +1107,7 @@ final class _Footer extends StatelessWidget {
               child: Text(
                 m.scheduledAt == null
                     ? 'El horario de la partida está por confirmar.'
-                    : 'Empieza a las ${formatTimeHm(m.scheduledAt!.toLocal())}',
+                    : 'Empieza a las ${formatTimeHm(m.scheduledAt!)}',
                 style: TextStyle(
                   fontSize: 12.5,
                   color: scheme.onSurfaceVariant,
@@ -1169,8 +1169,8 @@ const _defaultBlockMinutes = 90;
 String _inProgressLabel(MatchDetailDto m) {
   //? La API manda el fin real del bloque (duración de la reserva): con 90
   //? minutos fijos, una cancha de 60 mostraba media hora de más.
-  final end = m.blockEndsAt?.toLocal() ??
-      m.scheduledAt?.toLocal().add(const Duration(minutes: _defaultBlockMinutes));
+  final end = m.blockEndsAt ??
+      m.scheduledAt?.add(const Duration(minutes: _defaultBlockMinutes));
   if (end == null) return 'En curso';
   return 'En curso · termina ${formatTimeHm(end)}';
 }
@@ -1526,8 +1526,8 @@ void _confirmLeave(BuildContext context) async {
 }
 
 void _shareMatchInvite(BuildContext context, MatchDetailDto match) {
-  //? Hora local del jugador, igual que el resto del detalle (no UTC).
-  final scheduled = match.scheduledAt?.toLocal();
+  //? Hora de pared de la sede (componentes UTC), igual que el resto del detalle.
+  final scheduled = match.scheduledAt;
   final when = scheduled == null
       ? 'Fecha por confirmar'
       : '${shortDateLabel(scheduled)}, ${formatTimeHm(scheduled)} hs';
