@@ -1382,8 +1382,8 @@ class _ResultSummaryStep extends StatelessWidget {
         message: 'No se puede cargar el resultado de una partida cancelada.',
       );
     default:
-      //? Hora local del jugador: la API manda el instante en UTC.
-      final start = match.scheduledAt?.toLocal();
+      //? Hora de pared de la sede (componentes UTC), tal cual.
+      final start = match.scheduledAt;
       const tail = 'El resultado se carga una vez que empieza.';
       return (
         icon: AppIcons.clock,

@@ -1,6 +1,7 @@
 import type { MatchStatusRepository } from '../../domain/ports/match_status_repository.js';
 import type { CreateMatchCancelledNotificationEventUseCase } from './create_match_cancelled_notification_event.use_case.js';
 import type { CreateMatchResultReminderNotificationEventUseCase } from './create_match_result_reminder_notification_event.use_case.js';
+import { wallClockNowSV } from '../../domain/match_lifecycle/match_block.js';
 
 export interface UpdateMatchStatusUseCaseResult {
   updatedCount: number;
@@ -54,7 +55,7 @@ export class UpdateMatchStatusUseCase {
     }
 
     //? 3. Fin del bloque: terminar las partidas en curso
-    const FINISHED = await this._matchStatusRepository.finishExpiredInProgressSV(new Date());
+    const FINISHED = await this._matchStatusRepository.finishExpiredInProgressSV(wallClockNowSV(new Date()));
 
     //? 4. Pedir el resultado solo donde nadie lo propuso todavía
     let remindedCount = 0;

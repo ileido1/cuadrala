@@ -157,7 +157,7 @@ void main() {
   group('match status guard', () {
     //? Instante UTC armado desde la hora local 12:00: la guarda debe mostrar
     //? la hora del jugador en cualquier zona horaria.
-    final localNoonUtc = DateTime(2026, 5, 25, 12).toUtc().toIso8601String();
+    final localNoonUtc = DateTime.utc(2026, 5, 25, 12).toIso8601String();
 
     Future<void> pumpWithStatus(WidgetTester tester, String status) async {
       when(
@@ -186,7 +186,7 @@ void main() {
     }
 
     testWidgets(
-      'should say the match has not started and its local start time when scheduled',
+      'should say the match has not started and its venue start time when scheduled',
       (tester) async {
         await pumpWithStatus(tester, 'SCHEDULED');
 

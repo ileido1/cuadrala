@@ -14,7 +14,8 @@ type Player = { id: string; token: string };
 
 describe.skipIf(!HAS_INTEGRATION_DATABASE)('Quick Match group departure', () => {
   let sportId: string; let categoryId: string; let venueId: string; let courtId: string; let players: Player[];
-  const date = '2026-10-20';
+  //? Mañana: un bloque de una fecha pasada ya no se ofrece como sede.
+  const date = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
   beforeAll(async () => {
     await resetDatabaseForTestsSV();
     sportId = (await ensureTestCatalogSV()).sportPadelId;

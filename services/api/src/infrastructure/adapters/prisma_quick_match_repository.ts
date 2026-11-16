@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { AppError } from '../../domain/errors/app_error.js';
+import { wallClockNowSV } from '../../domain/match_lifecycle/match_block.js';
 import { QUICK_MATCH_HOLD_MS } from '../../domain/ports/quick_match_repository.js';
 import type {
   QuickMatchOpenCandidateDTO,
@@ -167,6 +168,8 @@ export class PrismaQuickMatchRepository implements QuickMatchRepository {
     for (const COURT of COURTS) {
       for (const SLOT of _search.slots) {
         const SCHEDULED_AT = slotStartSV(_search.targetDate, SLOT);
+        //? Un bloque de hoy que ya empezó en la sede no se ofrece
+        if (SCHEDULED_AT.getTime() <= wallClockNowSV(new Date()).getTime()) continue;
         if (!(await isCourtSlotFreeSV(PRISMA, COURT.id, SCHEDULED_AT))) continue;
         OPTIONS.push({
           id: `${COURT.id}:${SCHEDULED_AT.toISOString()}`,

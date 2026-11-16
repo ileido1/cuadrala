@@ -5,6 +5,16 @@ Todos los cambios notables de la app móvil/web se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.7.39] - 2026-11-16
+
+### Corregido
+
+- **Hora de la partida corrida 4 horas**: 1.7.38 convertía la hora de la
+  partida a la zona del teléfono, pero la API ya la manda como hora de la sede.
+  Una partida de las 19:00 se mostraba "15:00 hs". El detalle, el pie
+  ("Empieza a las", "termina") y la carga de resultado vuelven a mostrar la
+  hora de la sede.
+
 ## [1.7.38] - 2026-11-13
 
 ### Cambiado
